@@ -1,0 +1,73 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    function isSignedIn() { 
+      return request.auth != null; 
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation functions
+    function isValidBallot(data) {
+      return data.keys().hasAll(['name', 'hasVoted', 'createdAt']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.hasVoted is bool &&
+             data.createdAt is timestamp &&
+             (data.keys().size() == 3 || (data.keys().size() == 4 && data.keys().hasAll(['votedAt']) && data.votedAt is timestamp));
+    }
+
+    function isValidVote(data) {
+      return data.keys().hasAll(['ballotNumber', 'timestamp', 'selections']) &&
+             data.keys().size() == 3 &&
+             data.ballotNumber is string && data.ballotNumber.size() <= 64 &&
+             data.timestamp == request.time &&
+             data.selections is map;
+    }
+
+    match /ballots/{ballotId} {
+      allow read: if isValidId(ballotId);
+      
+      allow create: if isValidId(ballotId) && 
+        isValidBallot(incoming()) && 
+        incoming().hasVoted == false &&
+        incoming().createdAt == request.time;
+      
+      allow update: if isValidId(ballotId) && (
+        // Action: Cast Vote
+        (incoming().diff(existing()).affectedKeys().hasOnly(['hasVoted', 'votedAt']) &&
+         existing().hasVoted == false &&
+         incoming().hasVoted == true &&
+         incoming().votedAt == request.time) ||
+        // Action: Admin Re-Init (unprotected for now as we don't have auth, but validated)
+        (isValidBallot(incoming()) && incoming().createdAt == existing().createdAt)
+      );
+    }
+
+    match /nominees/{nomineeId} {
+      allow read: if isValidId(nomineeId);
+      allow write: if false;
+    }
+
+    match /votes/{voteId} {
+      allow read: if isValidId(voteId);
+
+      allow create: if isValidId(voteId) && 
+        isValidVote(incoming()) &&
+        incoming().ballotNumber == voteId &&
+        getAfter(/databases/$(database)/documents/ballots/$(voteId)).data.hasVoted == true;
+    }
+  }
+}

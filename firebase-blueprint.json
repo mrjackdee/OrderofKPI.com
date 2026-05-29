@@ -1,0 +1,56 @@
+{
+  "entities": {
+    "ballot": {
+      "title": "Ballot Record",
+      "description": "Represents a member's authorization to vote.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The member's full name." },
+        "hasVoted": { "type": "boolean", "description": "Whether the ballot has been used." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp." },
+        "votedAt": { "type": "string", "format": "date-time", "description": "Timestamp of the vote." }
+      },
+      "required": ["name", "hasVoted", "createdAt"]
+    },
+    "nominee": {
+      "title": "Nominee",
+      "description": "A candidate running for a specific position.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "position": { "type": "string" },
+        "biography": { "type": "string" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["name", "position"]
+    },
+    "vote": {
+      "title": "Vote Record",
+      "description": "An anonymized or linked vote record.",
+      "type": "object",
+      "properties": {
+        "ballotNumber": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "selections": { 
+          "type": "object",
+          "description": "Map of position title to nominee ID or name."
+        }
+      },
+      "required": ["ballotNumber", "timestamp", "selections"]
+    }
+  },
+  "firestore": {
+    "ballots/{ballotId}": {
+      "schema": "ballot",
+      "description": "Authorized ballot numbers."
+    },
+    "nominees/{nomineeId}": {
+      "schema": "nominee",
+      "description": "List of candidates."
+    },
+    "votes/{voteId}": {
+      "schema": "vote",
+      "description": "Cast votes."
+    }
+  }
+}
