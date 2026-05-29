@@ -93,7 +93,7 @@ export default function Layout() {
                 )
               ))}
               <motion.a
-                href="http://www.instagram.com/kpi2012"
+                href="http://www.instagram.com/orderofkpi"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/30 rounded-full text-primary hover:bg-primary hover:text-black transition-all ml-4 group"
@@ -152,7 +152,7 @@ export default function Layout() {
                 )
               ))}
               <motion.a
-                href="http://www.instagram.com/kpi2012"
+                href="http://www.instagram.com/orderofkpi"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setIsMenuOpen(false)}
@@ -165,7 +165,7 @@ export default function Layout() {
                 <div className="w-20 h-20 rounded-full border-2 border-primary flex items-center justify-center bg-primary/5 group-hover:bg-primary group-hover:text-black transition-all duration-300 shadow-[0_0_20px_rgba(212,175,55,0.2)] group-hover:shadow-[0_0_30px_rgba(212,175,55,0.5)]">
                   <Instagram size={40} />
                 </div>
-                <span className="text-primary text-sm font-bold tracking-[0.3em] uppercase group-hover:text-white transition-colors">Follow Us @kpi2012</span>
+                <span className="text-primary text-sm font-bold tracking-[0.3em] uppercase group-hover:text-white transition-colors">Follow Us @orderofkpi</span>
               </motion.a>
             </motion.div>
           )}
@@ -200,7 +200,7 @@ export default function Layout() {
                 conference@orderofkpi.com
               </a>
               <motion.a 
-                href="http://www.instagram.com/kpi2012" 
+                href="http://www.instagram.com/orderofkpi" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 px-5 py-2.5 bg-primary/5 border border-primary/20 rounded-full text-primary hover:bg-primary hover:text-black transition-all group"
