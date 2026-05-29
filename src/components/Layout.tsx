@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, ChevronUp, Instagram } from 'lucide-react';
-import PromoPopup from './PromoPopup';
 
 const MotionLink = motion(Link);
 
@@ -245,8 +244,6 @@ export default function Layout() {
             </motion.button>
           )}
         </AnimatePresence>
-
-        <PromoPopup />
       </div>
     </div>
   );

@@ -189,9 +189,11 @@ export default function Home() {
               <span className="material-symbols-outlined">checkroom</span>
               Business Attire
             </h3>
-            <p className="text-primary/80 font-light leading-relaxed">
-              Black suit, White Shirt, and the conference gift tie.
-            </p>
+            <ul className="text-primary/80 font-light leading-relaxed list-disc pl-5 space-y-1">
+              <li>Black Suit</li>
+              <li>White Shirt</li>
+              <li>Conference Gift Tie</li>
+            </ul>
           </div>
           <div className="space-y-4 border border-primary/30 p-6 rounded-xl bg-black/40">
             <h3 className="text-primary text-xl font-bold uppercase tracking-widest flex items-center gap-3">
