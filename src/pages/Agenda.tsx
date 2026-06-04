@@ -693,8 +693,8 @@ export default function Agenda() {
       </div>
 
       {/* Printable version of the COMPLETE agenda - ONLY visible when printing */}
-      <div id="printable-agenda" className="hidden print:block w-full text-black bg-white p-6 space-y-8 font-sans">
-        <div className="text-center pb-6 border-b-2 border-black">
+      <div id="printable-agenda" className="hidden print:block w-full text-black bg-white p-12 space-y-8 font-sans">
+        <div className="text-center pb-6">
           <h1 id="printable-title" className="text-3xl font-black uppercase tracking-widest mb-1 text-black">
             Details
           </h1>
@@ -705,7 +705,7 @@ export default function Agenda() {
 
         {agendaData.map((day, dIdx) => (
           <div key={dIdx} className="space-y-4 break-inside-avoid">
-            <h2 className="text-xl font-bold uppercase tracking-widest pb-2 border-b border-black mt-6 text-black">
+            <h2 className="text-xl font-black uppercase tracking-widest mt-8 mb-4 text-black text-center">
               Day {dIdx + 1}: {day.day}, {day.date}
             </h2>
 
@@ -713,7 +713,7 @@ export default function Agenda() {
               {day.events.map((event, eIdx) => {
                 if (event.type === "header") {
                   return (
-                    <div key={eIdx} className="font-extrabold text-sm uppercase tracking-wider text-black/70 pt-2 border-l-4 border-black/30 pl-3 break-inside-avoid">
+                    <div key={eIdx} className="font-extrabold text-sm uppercase tracking-wider text-black/80 pt-4 break-inside-avoid">
                       {event.title}
                     </div>
                   );
@@ -721,7 +721,7 @@ export default function Agenda() {
 
                 if (event.type === "session") {
                   return (
-                    <div key={eIdx} className="p-3 bg-black/5 rounded-lg border border-black/15 font-bold uppercase tracking-widest text-sm text-black flex justify-between items-center break-inside-avoid">
+                    <div key={eIdx} className="py-2.5 font-bold uppercase tracking-widest text-sm text-black flex justify-between items-center break-inside-avoid">
                       <span>{event.title}</span>
                       {event.virtual && (
                         <span className="text-[10px] lowercase tracking-normal bg-black/10 px-2 py-0.5 rounded font-normal shrink-0">
@@ -733,7 +733,7 @@ export default function Agenda() {
                 }
 
                 return (
-                  <div key={eIdx} className="grid grid-cols-[140px_1fr] gap-4 py-3 border-b border-black/10 align-top break-inside-avoid">
+                  <div key={eIdx} className="grid grid-cols-[140px_1fr] gap-4 py-3 align-top break-inside-avoid">
                     <div className="font-bold text-xs uppercase tracking-wider text-black pt-0.5 font-mono">
                       {event.time}
                     </div>
@@ -758,7 +758,7 @@ export default function Agenda() {
                       {event.subitems && (
                         <ul className="mt-1.5 space-y-1 list-disc pl-5">
                           {event.subitems.map((sub, sIdx) => (
-                            <li key={sIdx} className="text-xs text-black/80 font-light">
+                             <li key={sIdx} className="text-xs text-black/80 font-light">
                               {sub}
                             </li>
                           ))}
