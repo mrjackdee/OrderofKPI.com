@@ -44,11 +44,14 @@ service cloud.firestore {
              data.originalText is string && data.originalText.size() <= 10000 &&
              data.proposedText is string && data.proposedText.size() <= 10000 &&
              data.submittedAt == request.time &&
-             (data.keys().size() == 5 || (data.keys().size() == 6 && data.keys().hasAll(['submitterName']) && data.submitterName is string && data.submitterName.size() <= 256));
+             (data.keys().size() >= 5 && data.keys().size() <= 7) &&
+             (!data.keys().hasAll(['submitterName']) || (data.submitterName is string && data.submitterName.size() <= 256)) &&
+             (!data.keys().hasAll(['documentType']) || (data.documentType is string && data.documentType.size() <= 128));
     }
 
     match /ballots/{ballotId} {
-      allow read: if isValidId(ballotId);
+      allow get: if isValidId(ballotId);
+      allow list: if true;
       
       allow create: if isValidId(ballotId) && 
         isValidBallot(incoming()) && 
@@ -67,12 +70,14 @@ service cloud.firestore {
     }
 
     match /nominees/{nomineeId} {
-      allow read: if isValidId(nomineeId);
+      allow get: if isValidId(nomineeId);
+      allow list: if true;
       allow write: if false;
     }
 
     match /votes/{voteId} {
-      allow read: if isValidId(voteId);
+      allow get: if isValidId(voteId);
+      allow list: if true;
 
       allow create: if isValidId(voteId) && 
         isValidVote(incoming()) &&
@@ -81,10 +86,11 @@ service cloud.firestore {
     }
 
     match /revisions/{revisionId} {
-      allow read: if isValidId(revisionId);
+      allow get: if isValidId(revisionId);
       allow list: if true;
       allow create: if isValidId(revisionId) && isValidRevision(incoming());
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if isValidId(revisionId);
     }
   }
 }

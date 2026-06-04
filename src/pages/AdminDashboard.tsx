@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
+import { jsPDF } from 'jspdf';
 import { db } from '../lib/firebase';
 import { 
   collection, 
@@ -9,7 +10,8 @@ import {
   writeBatch,
   query,
   onSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  deleteDoc
 } from 'firebase/firestore';
 import { 
   Users, 
@@ -21,7 +23,8 @@ import {
   CheckCircle2,
   AlertCircle,
   FileText,
-  Download
+  Download,
+  Trash2
 } from 'lucide-react';
 
 // --- Data ---
@@ -47,7 +50,21 @@ export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState(false);
-  const [activeTab, setActiveTab] = useState<'ballots' | 'results' | 'revisions'>('results');
+  const [activeTab, setActiveTab] = useState<'ballots' | 'results' | 'revisions'>(() => {
+    try {
+      const search = window.location.search;
+      if (search) {
+        const params = new URLSearchParams(search);
+        const t = params.get('tab');
+        if (t === 'ballots' || t === 'results' || t === 'revisions') {
+          return t;
+        }
+      }
+    } catch (e) {
+      // Ignored
+    }
+    return 'results';
+  });
   const [ballots, setBallots] = useState<any[]>([]);
   const [votes, setVotes] = useState<any[]>([]);
   const [revisions, setRevisions] = useState<any[]>([]);
@@ -187,7 +204,7 @@ export default function AdminDashboard() {
     }
     
     // CSV headers
-    const headers = ["ID", "Article", "Section", "Original Text", "Proposed Text", "Submitter Name", "Submitted At"];
+    const headers = ["ID", "Document", "Article", "Section", "Original Text", "Proposed Text", "Submitter Name", "Submitted At"];
     
     const rows = revisions.map(r => {
       let dateStr = "";
@@ -195,8 +212,18 @@ export default function AdminDashboard() {
         const dateObj = r.submittedAt.toDate ? r.submittedAt.toDate() : new Date(r.submittedAt);
         dateStr = dateObj.toLocaleString();
       }
+      let docName = r.documentType || "";
+      if (docName.toLowerCase().includes('constitution')) {
+        docName = "KP Constitution (2021)";
+      } else if (docName.toLowerCase().includes('by-laws') || docName.toLowerCase().includes('bylaws')) {
+        docName = "KP By-laws (2022)";
+      } else {
+        docName = "KP Constitution (2021)";
+      }
+
       return [
         r.id || "",
+        docName,
         r.article || "",
         r.section || "",
         r.originalText || "",
@@ -220,6 +247,171 @@ export default function AdminDashboard() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const exportRevisionsToPDF = () => {
+    if (revisions.length === 0) {
+      alert("No revisions available to export.");
+      return;
+    }
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+    
+    // Page constraints
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 15;
+    const contentWidth = pageWidth - (margin * 2);
+
+    let y = 15;
+
+    // Helper functions
+    const addHeader = (pdfDoc: typeof doc) => {
+      pdfDoc.setFont("helvetica", "bold");
+      pdfDoc.setFontSize(16);
+      pdfDoc.setTextColor(0, 0, 0);
+      pdfDoc.text("THE ORDER OF KP, INC.", margin, y);
+      y += 6;
+      pdfDoc.setFontSize(11);
+      pdfDoc.setFont("helvetica", "normal");
+      pdfDoc.setTextColor(100, 100, 100);
+      pdfDoc.text("Bylaws & Constitution Revisions - Member Submissions Log", margin, y);
+      
+      const dateStr = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      pdfDoc.text(`Exported on: ${dateStr}`, margin, y + 5);
+      y += 12;
+
+      // Draw horizontal line
+      pdfDoc.setDrawColor(200, 200, 200);
+      pdfDoc.setLineWidth(0.5);
+      pdfDoc.line(margin, y, pageWidth - margin, y);
+      y += 10;
+    };
+
+    addHeader(doc);
+
+    revisions.forEach((rev, index) => {
+      // Check if we need a new page for the upcoming entry
+      if (y > 230) {
+        doc.addPage();
+        y = 15;
+        addHeader(doc);
+      }
+
+      // Entry Card Layout Calculation
+      const cardY = y;
+      const docType = rev.documentType || "KP Constitution (2021)";
+      const submitter = rev.submitterName || "Anonymous Member";
+      
+      let dateVal = "Pending";
+      if (rev.submittedAt) {
+        const dateObj = rev.submittedAt.toDate ? rev.submittedAt.toDate() : new Date(rev.submittedAt);
+        dateVal = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      }
+
+      // We'll write to PDF but check height dynamically
+      // Header for this card
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`#${index + 1} - ${docType}`, margin + 4, y + 6);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(110, 110, 110);
+      doc.text(`Submitted By: ${submitter} | Date: ${dateVal}`, margin + 4, y + 11);
+      
+      y += 15;
+
+      // Position info
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(50, 50, 50);
+      doc.text(`Target Segment: ${rev.article} - ${rev.section}`, margin + 4, y);
+      y += 5;
+
+      // Original Text section
+      if (rev.originalText && rev.originalText.trim() !== "" && rev.originalText !== "(No original text specified)") {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120);
+        doc.text("Original Verbiage:", margin + 4, y);
+        y += 4;
+
+        doc.setFont("helvetica", "oblique");
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        const origLines = doc.splitTextToSize(`"${rev.originalText}"`, contentWidth - 10);
+        origLines.forEach((line: string) => {
+          if (y > 275) {
+            doc.addPage();
+            y = 15;
+            addHeader(doc);
+          }
+          doc.text(line, margin + 6, y);
+          y += 4;
+        });
+        y += 2;
+      }
+
+      // Proposed Text section
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(30, 41, 59);
+      doc.text("Proposed Language Change:", margin + 4, y);
+      y += 4;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(0, 0, 0);
+      const proposedLines = doc.splitTextToSize(rev.proposedText || "(Empty)", contentWidth - 10);
+      proposedLines.forEach((line: string) => {
+        if (y > 275) {
+          doc.addPage();
+          y = 15;
+          addHeader(doc);
+        }
+        doc.text(line, margin + 6, y);
+        y += 4;
+      });
+
+      // Draw boundary box border
+      const cardHeight = y - cardY + 2;
+      doc.setDrawColor(220, 225, 230);
+      doc.setLineWidth(0.15);
+      doc.rect(margin, cardY, contentWidth, cardHeight);
+
+      y += 10; // margin separation
+    });
+
+    // Save output PDF
+    doc.save(`kpi_constitution_revisions_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  const handleDeleteRevision = async (id: string, submitter: string) => {
+    if (!confirm(`Are you sure you want to permanently delete the submission from ${submitter || 'Anonymous KPI Member'}?`)) {
+      return;
+    }
+    
+    setActionLoading(true);
+    try {
+      await deleteDoc(doc(db, 'revisions', id));
+    } catch (err) {
+      console.error("Error deleting revision:", err);
+      alert("Error deleting submission. Please try again.");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   return (
@@ -403,13 +595,22 @@ export default function AdminDashboard() {
                 <h2 className="text-xl font-bold uppercase tracking-widest">Proposed Bylaw Revisions</h2>
                 <p className="text-silver/40 text-[10px] uppercase tracking-[0.2em] mt-1">Submitted by members of the organization</p>
               </div>
-              <button 
-                onClick={exportRevisionsToCSV}
-                className="px-6 py-3 bg-primary text-black font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/10"
-              >
-                <Download size={14} />
-                Export to CSV (for Google Sheets)
-              </button>
+              <div className="flex flex-wrap gap-3">
+                <button 
+                  onClick={exportRevisionsToCSV}
+                  className="px-5 py-3 bg-white/5 border border-white/10 hover:border-white/20 text-white font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-white hover:text-black transition-all flex items-center justify-center gap-2"
+                >
+                  <Download size={14} />
+                  Export to CSV
+                </button>
+                <button 
+                  onClick={exportRevisionsToPDF}
+                  className="px-5 py-3 bg-primary text-black font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/10"
+                >
+                  <FileText size={14} />
+                  Download PDF
+                </button>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -423,11 +624,18 @@ export default function AdminDashboard() {
                     className="bg-black border border-white/10 p-6 rounded-2xl space-y-4"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-1 bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold uppercase tracking-widest rounded-md">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest rounded border ${
+                          (rev.documentType || '').toLowerCase().includes('by-laws') || (rev.documentType || '').toLowerCase().includes('bylaws')
+                            ? 'bg-silver/5 text-silver border-silver/15'
+                            : 'bg-primary/5 text-primary border-primary/20'
+                        }`}>
+                          {rev.documentType || 'KP Constitution (2021)'}
+                        </span>
+                        <span className="px-2 py-0.5 bg-white/5 text-silver border border-white/5 text-[9px] font-bold uppercase tracking-widest rounded">
                           {rev.article}
                         </span>
-                        <span className="px-2.5 py-1 bg-white/5 text-silver text-[10px] font-bold uppercase tracking-widest rounded-md">
+                        <span className="px-2 py-0.5 bg-white/5 text-silver border border-white/5 text-[9px] font-bold uppercase tracking-widest rounded">
                           {rev.section}
                         </span>
                       </div>
@@ -455,7 +663,17 @@ export default function AdminDashboard() {
                       <div className="text-[10px] uppercase tracking-wider text-silver/40">
                         Proposed By: <span className="text-primary font-bold">{rev.submitterName || "Anonymous KPI Member"}</span>
                       </div>
-                      <span className="text-[9px] font-mono text-silver/20">{rev.id}</span>
+                      <div className="flex items-center gap-4">
+                        <span className="text-[9px] font-mono text-silver/20">{rev.id}</span>
+                        <button
+                          onClick={() => handleDeleteRevision(rev.id, rev.submitterName)}
+                          className="flex items-center gap-1.5 px-3 py-1 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/20 hover:border-red-500 text-[10px] font-bold uppercase tracking-widest rounded-lg cursor-pointer transition-all duration-200"
+                          title="Delete submission"
+                        >
+                          <Trash2 size={11} />
+                          <span>Delete</span>
+                        </button>
+                      </div>
                     </div>
                   </motion.div>
                 );

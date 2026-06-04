@@ -43,6 +43,7 @@
       "description": "A proposed amendment to the constitution or by-laws.",
       "type": "object",
       "properties": {
+        "documentType": { "type": "string", "description": "Whether Constitution or By-laws" },
         "article": { "type": "string" },
         "section": { "type": "string" },
         "originalText": { "type": "string" },

@@ -15,7 +15,18 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { db } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
+
+interface RevisionSubmission {
+  id: string;
+  documentType?: string;
+  article: string;
+  section: string;
+  originalText?: string;
+  proposedText: string;
+  submitterName: string;
+  submittedAt: any;
+}
 
 // Enum for operations (following error guidelines)
 enum OperationType {
@@ -48,34 +59,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
-const STATIC_CONSTITUTION_DATA = [
-  {
-    id: "Article I",
-    title: "Article I: Name and Object",
-    sections: [
-      { id: "Section 1", text: "The name of this organization shall be The Order of KP, Inc." },
-      { id: "Section 2", text: "The objective and purposes of this organization is to foster fraternal bonds, support community leadership, and promote excellence among members and community partners." }
-    ]
-  },
-  {
-    id: "Article II",
-    title: "Article II: Membership",
-    sections: [
-      { id: "Section 1", text: "Membership shall be open to individuals who meet the recruitment and financial criteria established by the Directorate." },
-      { id: "Section 2", text: "Active membership requires timely payment of annual dues and active participation in organizational events." }
-    ]
-  },
-  {
-    id: "Article VI",
-    title: "Article VI: Officers",
-    sections: [
-      { id: "Section 1", text: "The members of the Directorate shall be the Basileus, the 1st Anti-Basileus, the 2nd Anti-Basileus, the Grammateus, the Pecunious Grammateus, the Tamiouchos, the Epistoleus, the Hodegos, and the Historian." },
-      { id: "Section 2", text: "The term of office for each officer shall be for two years. Term is from July 1 – June 30." },
-      { id: "Section 3", text: "Officers shall be elected in May and installed at the last meeting in June. Members shall be nominated by the organization and names will be submitted to the Nominating Committee after verification of financial obligations." },
-      { id: "Section 4", text: "It shall be the duty of each officer to deliver to his successor all files, supplies, materials, and records in his possession within 14 calendar days after the installation. If not complied with, it shall be the duty of the Basileus to ensure that transfers are facilitated." }
-    ]
-  }
-];
+import { CONSTITUTION_DATA, BYLAWS_DATA } from '../data/governingCode';
 
 export default function Constitution() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -89,8 +73,11 @@ export default function Constitution() {
   const [passcode, setPasscode] = useState('');
   const [loginError, setLoginError] = useState('');
 
+  // Governing Document style selection state
+  const [docType, setDocType] = useState<'constitution' | 'bylaws'>('constitution');
+
   // form States
-  const [selectedArticle, setSelectedArticle] = useState('Article VI');
+  const [selectedArticle, setSelectedArticle] = useState('Article I');
   const [selectedSection, setSelectedSection] = useState('Section 1');
   
   // Custom states if 'Other' is chosen
@@ -105,6 +92,13 @@ export default function Constitution() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const [submissionError, setSubmissionError] = useState('');
+
+  // Submissions archive states
+  const [viewingSubmissions, setViewingSubmissions] = useState(false);
+  const [submissions, setSubmissions] = useState<RevisionSubmission[]>([]);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [docFilter, setDocFilter] = useState<'all' | 'constitution' | 'bylaws'>('all');
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,7 +130,8 @@ export default function Constitution() {
     if (selectedArticle === 'Other') {
       return customOriginalText;
     }
-    const articleObj = STATIC_CONSTITUTION_DATA.find(a => a.id === selectedArticle);
+    const data = docType === 'constitution' ? CONSTITUTION_DATA : BYLAWS_DATA;
+    const articleObj = data.find(a => a.id === selectedArticle);
     if (!articleObj) return '';
     
     if (selectedSection === 'Other') {
@@ -146,19 +141,115 @@ export default function Constitution() {
     return sectionObj ? sectionObj.text : '';
   };
 
+  // Reset selected article/section when document type changes
+  useEffect(() => {
+    const data = docType === 'constitution' ? CONSTITUTION_DATA : BYLAWS_DATA;
+    if (data.length > 0) {
+      setSelectedArticle(data[0].id);
+      if (data[0].sections.length > 0) {
+        setSelectedSection(data[0].sections[0].id);
+      } else {
+        setSelectedSection('Other');
+      }
+    } else {
+      setSelectedArticle('Other');
+      setSelectedSection('Other');
+    }
+  }, [docType]);
+
   // Update dynamic defaults when article changes
   useEffect(() => {
     if (selectedArticle !== 'Other') {
-      const articleObj = STATIC_CONSTITUTION_DATA.find(a => a.id === selectedArticle);
+      const data = docType === 'constitution' ? CONSTITUTION_DATA : BYLAWS_DATA;
+      const articleObj = data.find(a => a.id === selectedArticle);
       if (articleObj && articleObj.sections.length > 0) {
-        setSelectedSection(articleObj.sections[0].id);
+        // Only override selectedSection if the current one doesn't exist in the new article
+        const sectionExists = articleObj.sections.some(s => s.id === selectedSection);
+        if (!sectionExists) {
+          setSelectedSection(articleObj.sections[0].id);
+        }
       } else {
         setSelectedSection('Other');
       }
     } else {
       setSelectedSection('Other');
     }
-  }, [selectedArticle]);
+  }, [selectedArticle, docType]);
+
+  // Load submissions in real-time
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    setLoadingSubmissions(true);
+    const q = query(collection(db, 'revisions'), orderBy('submittedAt', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list: RevisionSubmission[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        list.push({
+          id: doc.id,
+          documentType: data.documentType,
+          article: data.article,
+          section: data.section,
+          originalText: data.originalText,
+          proposedText: data.proposedText,
+          submitterName: data.submitterName,
+          submittedAt: data.submittedAt
+        });
+      });
+      setSubmissions(list);
+      setLoadingSubmissions(false);
+    }, (error) => {
+      console.error("Firestore loading error:", error);
+      setLoadingSubmissions(false);
+      try {
+        handleFirestoreError(error, OperationType.LIST, 'revisions');
+      } catch (e) {
+        // Logged
+      }
+    });
+
+    return () => unsubscribe();
+  }, [isLoggedIn]);
+
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return 'Just now';
+    if (typeof timestamp.toDate === 'function') {
+      try {
+        const d = timestamp.toDate();
+        return d.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } catch {
+        return 'Recent';
+      }
+    }
+    if (timestamp instanceof Date) {
+      return timestamp.toLocaleDateString();
+    }
+    return 'Recent';
+  };
+
+  const filteredSubmissions = submissions.filter(sub => {
+    const matchesDoc = docFilter === 'all' || 
+      (docFilter === 'constitution' && (sub.documentType || '').toLowerCase().includes('constitution')) ||
+      (docFilter === 'bylaws' && (sub.documentType || '').toLowerCase().includes('by-laws'));
+
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = 
+      (sub.submitterName || '').toLowerCase().includes(searchLower) ||
+      (sub.article || '').toLowerCase().includes(searchLower) ||
+      (sub.section || '').toLowerCase().includes(searchLower) ||
+      (sub.proposedText || '').toLowerCase().includes(searchLower) ||
+      (sub.originalText || '').toLowerCase().includes(searchLower);
+
+    return matchesDoc && matchesSearch;
+  });
 
   const handleSubmitRevision = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,6 +281,7 @@ export default function Constitution() {
 
     try {
       const docPayload = {
+        documentType: docType === 'constitution' ? 'KP Constitution (2021)' : 'KP By-laws (2022)',
         article: articleVal,
         section: sectionVal,
         originalText: originalTextVal || '(No original text specified)',
@@ -319,9 +411,6 @@ export default function Constitution() {
           <h1 className="text-3xl md:text-5xl font-display font-bold text-white uppercase tracking-[0.1em] mb-4">
             Constitution & Bylaws Revisions
           </h1>
-          <p className="text-silver/40 text-xs uppercase tracking-[0.25em] max-w-[500px] mx-auto leading-relaxed">
-            Submit proposed changes to governing organizational documents directly to the Directorate
-          </p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -335,11 +424,8 @@ export default function Constitution() {
               <FileText className="text-primary mb-4" size={28} />
               
               <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-2">
-                Governing Code
+                Documents
               </h3>
-              <p className="text-silver/50 text-[11px] leading-relaxed mb-4 uppercase tracking-wider">
-                Review the latest active constitution and by-laws draft for reference.
-              </p>
               
               <div className="space-y-3">
                 {/* PDF Clickable Link 1 */}
@@ -368,7 +454,7 @@ export default function Constitution() {
 
             {/* Quick Reference Box */}
             <div className="bg-pure-black border border-silver/5 p-6 rounded-2xl">
-              <h4 className="text-xs font-bold text-silver uppercase tracking-wider mb-3">Revision Rulebook</h4>
+              <h4 className="text-xs font-bold text-silver uppercase tracking-wider mb-3">Steps</h4>
               <ul className="space-y-4 text-[11px] leading-relaxed text-silver/50 uppercase tracking-wide">
                 <li className="flex items-start gap-2">
                   <ChevronRight size={12} className="text-primary shrink-0 mt-0.5" />
@@ -395,252 +481,447 @@ export default function Constitution() {
 
           </section>
 
-          {/* Right Column: Submission Form */}
+          {/* Right Column: Submission Form or Submissions List */}
           <section className="lg:col-span-8">
+            
+            {/* LINK ABOVE PROPOSED AMENDMENT FORM */}
+            <div className="flex justify-end mb-4">
+              <button
+                type="button"
+                onClick={() => setViewingSubmissions(!viewingSubmissions)}
+                className="group inline-flex items-center gap-1.5 text-primary hover:text-white text-xs uppercase font-extrabold tracking-widest transition-all cursor-pointer py-1.5 px-3.5 bg-primary/5 hover:bg-primary/10 border border-primary/20 hover:border-primary/40 rounded-full"
+              >
+                {viewingSubmissions ? (
+                  <>
+                    <ArrowLeft size={13} className="transition-transform group-hover:-translate-x-0.5" />
+                    <span>Back to Proposed Amendment Form</span>
+                  </>
+                ) : (
+                  <>
+                    <span>View Submitted Revisions</span>
+                    <ChevronRight size={13} className="transition-transform group-hover:translate-x-0.5" />
+                  </>
+                )}
+              </button>
+            </div>
+
             <div className="bg-silver/5 border border-silver/10 p-6 md:p-8 rounded-3xl relative backdrop-blur-md">
               
-              {/* Submission Heading */}
-              <div className="flex items-center gap-3 border-b border-silver/10 pb-4 mb-6">
-                <BookOpen size={20} className="text-primary" />
-                <h3 className="text-base font-bold text-white uppercase tracking-widest">
-                  Proposed Amendment Form
-                </h3>
-              </div>
-
-              {/* Success Notification */}
-              {submissionSuccess && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-start gap-3"
-                >
-                  <CheckCircle2 size={18} className="text-green-400 shrink-0 mt-0.5" />
-                  <div>
-                    <h5 className="text-xs font-bold text-green-400 uppercase tracking-widest mb-1">
-                      Submission Successful
-                    </h5>
-                    <p className="text-[11px] text-silver/60 uppercase leading-relaxed font-semibold">
-                      Your proposed revised language has been was recorded. Thank you for your submission!
-                    </p>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Error Notification */}
-              {submissionError && (
-                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3">
-                  <AlertCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
-                  <div>
-                    <h5 className="text-xs font-bold text-red-400 uppercase tracking-widest mb-1">
-                      Amendment Error
-                    </h5>
-                    <p className="text-[11px] text-red-300 uppercase leading-relaxed">
-                      {submissionError}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmitRevision} className="space-y-6">
-                
-                {/* Selector Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  
-                  {/* Article select */}
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] uppercase tracking-wider text-silver/60 font-semibold">
-                      Target Article
-                    </label>
-                    <select
-                      value={selectedArticle}
-                      onChange={(e) => setSelectedArticle(e.target.value)}
-                      className="w-full bg-pure-black border border-silver/20 focus:border-primary/50 text-white rounded-xl px-3 py-3 text-xs uppercase tracking-wider focus:outline-none transition-colors"
-                    >
-                      {STATIC_CONSTITUTION_DATA.map(a => (
-                        <option key={a.id} value={a.id}>{a.title}</option>
-                      ))}
-                      <option value="Other">Other (Custom Article)</option>
-                    </select>
+              {viewingSubmissions ? (
+                <div className="space-y-6">
+                  {/* Submissions Title */}
+                  <div className="flex items-center gap-3 border-b border-silver/10 pb-4">
+                    <FileText size={20} className="text-primary" />
+                    <h3 className="text-base font-bold text-white uppercase tracking-widest">
+                      Submitted Revisions
+                    </h3>
                   </div>
 
-                  {/* Section select */}
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] uppercase tracking-wider text-silver/60 font-semibold">
-                      Target Section
-                    </label>
-                    <select
-                      value={selectedSection}
-                      onChange={(e) => setSelectedSection(e.target.value)}
-                      disabled={selectedArticle === 'Other'}
-                      className="w-full bg-pure-black border border-silver/20 focus:border-primary/50 text-white rounded-xl px-3 py-3 text-xs uppercase tracking-wider focus:outline-none transition-colors disabled:opacity-50"
-                    >
-                      {selectedArticle !== 'Other' && STATIC_CONSTITUTION_DATA.find(a => a.id === selectedArticle)?.sections.map(s => (
-                        <option key={s.id} value={s.id}>{s.id}</option>
-                      ))}
-                      <option value="Other">Other / Custom</option>
-                    </select>
-                  </div>
+                  <p className="text-silver/50 text-[11px] uppercase tracking-wider leading-relaxed">
+                    Read-only archive of all proposed amendments received from the membership portal.
+                  </p>
 
-                </div>
-
-                {/* Custom input fields if 'Other' is selected */}
-                {selectedArticle === 'Other' && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1"
-                  >
-                    <div className="space-y-1.5">
-                      <label className="block text-[10px] uppercase tracking-wider text-primary font-semibold">
-                        Custom Article Title / Number *
-                      </label>
+                  {/* Filters & Search Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    {/* Search Field */}
+                    <div className="relative">
                       <input
                         type="text"
-                        required
-                        placeholder="e.g. Article VII"
-                        value={customArticle}
-                        onChange={(e) => setCustomArticle(e.target.value)}
-                        className="w-full bg-pure-black border border-primary/20 focus:border-primary text-white rounded-xl px-3 py-3 text-xs focus:outline-none transition-colors"
+                        placeholder="Search by submitter, article, or text..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-pure-black border border-silver/20 focus:border-primary/50 text-white rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none transition-colors"
                       />
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-silver/40">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </span>
+                      {searchTerm && (
+                        <button 
+                          onClick={() => setSearchTerm('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white text-[10px] uppercase font-bold tracking-widest cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      )}
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="block text-[10px] uppercase tracking-wider text-primary font-semibold">
-                        Custom Section Title / Number *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Section 1"
-                        value={customSection}
-                        onChange={(e) => setCustomSection(e.target.value)}
-                        className="w-full bg-pure-black border border-primary/20 focus:border-primary text-white rounded-xl px-3 py-3 text-xs focus:outline-none transition-colors"
-                      />
+
+                    {/* Doc Filter Toggles */}
+                    <div className="grid grid-cols-3 gap-1 bg-pure-black p-1 rounded-xl border border-silver/10">
+                      {(['all', 'constitution', 'bylaws'] as const).map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setDocFilter(t)}
+                          className={`py-1.5 rounded-lg text-[9px] uppercase font-extrabold tracking-wider transition-all text-center cursor-pointer ${
+                            docFilter === t
+                              ? 'bg-primary/20 text-primary border border-primary/25'
+                              : 'text-silver/50 hover:text-white border border-transparent'
+                          }`}
+                        >
+                          {t === 'all' ? 'All' : t === 'constitution' ? 'Constitution' : 'By-Laws'}
+                        </button>
+                      ))}
                     </div>
-                  </motion.div>
-                )}
+                  </div>
 
-                {/* Section Input text if other section was selected */}
-                {selectedSection === 'Other' && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="space-y-1.5"
-                  >
-                    {selectedArticle !== 'Other' && (
-                      <div className="space-y-1.5 mb-3">
-                        <label className="block text-[10px] uppercase tracking-wider text-primary font-semibold">
-                          Custom Section Title / Number *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. Section 5"
-                          value={customSection}
-                          onChange={(e) => setCustomSection(e.target.value)}
-                          className="w-full bg-pure-black border border-primary/20 focus:border-primary text-white rounded-xl px-3 py-3 text-xs focus:outline-none transition-colors"
-                        />
-                      </div>
-                    )}
-                    <label className="block text-[10px] uppercase tracking-wider text-primary font-semibold">
-                      Current Verbiage / Reference Text (Optional)
-                    </label>
-                    <textarea
-                      placeholder="Type the constitution passage that you wish to propose revisions for..."
-                      rows={3}
-                      value={customOriginalText}
-                      onChange={(e) => setCustomOriginalText(e.target.value)}
-                      className="w-full bg-pure-black border border-primary/20 focus:border-primary text-white rounded-xl px-4 py-3 text-xs focus:outline-none transition-colors font-light leading-relaxed resize-y"
-                    />
-                  </motion.div>
-                )}
-
-                {/* Display Current Selected Text (Display Only) */}
-                {selectedSection !== 'Other' && selectedArticle !== 'Other' && (
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] uppercase tracking-wider text-silver/40 font-semibold">
-                      Active Governing Verbiage:
-                    </label>
-                    <div className="p-4 bg-pure-black/60 border border-silver/10 rounded-2xl">
-                      <p className="text-silver/80 text-xs font-light leading-relaxed italic">
-                        "{getCurrentOriginalText()}"
+                  {/* Loader / Empty / Content */}
+                  {loadingSubmissions ? (
+                    <div className="py-20 flex flex-col items-center justify-center gap-3">
+                      <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-silver/40">Loading Archive...</span>
+                    </div>
+                  ) : filteredSubmissions.length === 0 ? (
+                    <div className="py-16 text-center border border-dashed border-silver/10 rounded-2xl bg-pure-black/20">
+                      <p className="text-silver/40 text-xs uppercase tracking-widest font-semibold mb-1">No submissions found</p>
+                      <p className="text-silver/20 text-[10px] uppercase tracking-wider">
+                        {searchTerm || docFilter !== 'all' ? 'Try clearing your filters' : 'Be the first to submit a proposal'}
                       </p>
                     </div>
+                  ) : (
+                    <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
+                      {filteredSubmissions.map((sub) => (
+                        <div 
+                          key={sub.id}
+                          className="bg-pure-black border border-silver/15 rounded-2xl p-5 hover:border-silver/20 transition-all space-y-4"
+                        >
+                          {/* Card Meta Header */}
+                          <div className="flex items-center justify-between flex-wrap gap-2 text-[10px] uppercase tracking-wider font-bold">
+                            <span className={`px-2 py-0.5 rounded border ${
+                              (sub.documentType || '').includes('Constitution')
+                                ? 'bg-primary/5 text-primary border-primary/20'
+                                : 'bg-silver/5 text-silver border-silver/10'
+                            }`}>
+                              {sub.documentType || 'Governing Document'}
+                            </span>
+                            <span className="text-silver/40 font-semibold">
+                              {formatDate(sub.submittedAt)}
+                            </span>
+                          </div>
+
+                          {/* Target Article Reference */}
+                          <div className="bg-silver/5 px-4 py-2.5 rounded-xl flex items-center justify-between border border-silver/5">
+                            <div className="text-[10px] uppercase tracking-widest text-silver/60">
+                              Target Segment:
+                            </div>
+                            <div className="text-[10px] uppercase font-black tracking-widest text-white">
+                              {sub.article} &bull; {sub.section}
+                            </div>
+                          </div>
+
+                          {/* Reference Text (Original Text) */}
+                          {sub.originalText && sub.originalText !== '(No original text specified)' && (
+                            <div className="space-y-1">
+                              <span className="block text-[9px] uppercase tracking-widest text-silver/40 font-bold">Original Reference Text:</span>
+                              <p className="text-xs text-silver/60 italic leading-relaxed pl-3 border-l border-silver/10 py-0.5">
+                                "{sub.originalText}"
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Proposed Revision Text (Submitted Change) */}
+                          <div className="space-y-1">
+                            <span className="block text-[9px] uppercase tracking-widest text-primary font-black">Proposed Submitted Change:</span>
+                            <div className="bg-pure-black/95 border border-primary/10 rounded-xl p-3.5 mt-1">
+                              <p className="text-white text-xs font-light leading-relaxed whitespace-pre-wrap">
+                                {sub.proposedText}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Submitter info */}
+                          <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-widest text-silver/50 pt-2 border-t border-silver/5">
+                            <span>Submitted By:</span>
+                            <span className="text-white font-extrabold">{sub.submitterName}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {/* Submission Heading */}
+                  <div className="flex items-center gap-3 border-b border-silver/10 pb-4 mb-6">
+                    <BookOpen size={20} className="text-primary" />
+                    <h3 className="text-base font-bold text-white uppercase tracking-widest">
+                      Proposed Amendment Form
+                    </h3>
                   </div>
-                )}
 
-                {/* User Proposed Language Textbox */}
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] uppercase tracking-wider text-primary font-bold">
-                    Proposed Revised Language *
-                  </label>
-                  <textarea
-                    required
-                    placeholder="Enter the proposed revised text or new language to be presented to the Directorate..."
-                    rows={6}
-                    value={proposedText}
-                    onChange={(e) => setProposedText(e.target.value)}
-                    className="w-full bg-pure-black border border-silver/20 focus:border-primary text-white rounded-xl px-4 py-3.5 text-xs focus:outline-none transition-colors leading-relaxed resize-y font-light shadow-inner"
-                  />
-                </div>
+                  {/* Success Notification */}
+                  {submissionSuccess && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-start gap-3"
+                    >
+                      <CheckCircle2 size={18} className="text-green-400 shrink-0 mt-0.5" />
+                      <div>
+                        <h5 className="text-xs font-bold text-green-400 uppercase tracking-widest mb-1">
+                          Submission Successful
+                        </h5>
+                        <p className="text-[11px] text-silver/60 uppercase leading-relaxed font-semibold">
+                          Your proposed revised language has been was recorded. Thank you for your submission!
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
 
-                {/* User Info Row */}
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] uppercase tracking-wider text-primary font-bold">
-                    Submitted By *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Anthony Jones"
-                    value={submitterName}
-                    onChange={(e) => setSubmitterName(e.target.value)}
-                    className="w-full bg-pure-black border border-silver/20 focus:border-primary/50 text-white rounded-xl px-3 py-3 text-xs focus:outline-none transition-colors font-semibold"
-                  />
-                </div>
+                  {/* Error Notification */}
+                  {submissionError && (
+                    <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3">
+                      <AlertCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
+                      <div>
+                        <h5 className="text-xs font-bold text-red-400 uppercase tracking-widest mb-1">
+                          Amendment Error
+                        </h5>
+                        <p className="text-[11px] text-red-300 uppercase leading-relaxed">
+                          {submissionError}
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
-                {/* Submit button */}
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    disabled={
-                      isSubmitting || 
-                      !submitterName.trim() || 
-                      !proposedText.trim() || 
-                      (selectedArticle === 'Other' && !customArticle.trim()) || 
-                      (selectedSection === 'Other' && !customSection.trim())
-                    }
-                    className="w-full py-4 bg-primary hover:bg-white text-black font-bold uppercase tracking-widest rounded-xl transition-all text-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-primary/10"
-                    title={
-                      !submitterName.trim() || !proposedText.trim() 
-                        ? "Please fill in 'Submitted By' and proposed text to submit." 
-                        : "Submit proposal"
-                    }
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                        <span>Transmitting Revision...</span>
-                      </>
-                    ) : (
-                      <>
-                        <PlusCircle size={14} />
-                        <span>Submit Proposal</span>
-                      </>
+                  <form onSubmit={handleSubmitRevision} className="space-y-6">
+                    
+                    {/* Governing Document Selector Card/Toggles */}
+                    <div className="space-y-2">
+                      <label className="block text-[10px] uppercase tracking-wider text-silver/60 font-bold">
+                        Select Governing Document *
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setDocType('constitution')}
+                          className={`py-3.5 px-4 rounded-xl text-xs uppercase font-extrabold tracking-widest transition-all border text-center cursor-pointer ${
+                            docType === 'constitution'
+                              ? 'bg-primary/20 border-primary text-primary shadow-lg shadow-primary/5'
+                              : 'bg-pure-black border-silver/10 text-silver/60 hover:border-silver/25 hover:text-white'
+                          }`}
+                        >
+                          KP Constitution (2021)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDocType('bylaws')}
+                          className={`py-3.5 px-4 rounded-xl text-xs uppercase font-extrabold tracking-widest transition-all border text-center cursor-pointer ${
+                            docType === 'bylaws'
+                              ? 'bg-primary/20 border-primary text-primary shadow-lg shadow-primary/5'
+                              : 'bg-pure-black border-silver/10 text-silver/60 hover:border-silver/25 hover:text-white'
+                          }`}
+                        >
+                          KP By-Laws (2022)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Selector Row */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      
+                      {/* Article select */}
+                      <div className="space-y-1.5 font-sans">
+                        <label className="block text-[10px] uppercase tracking-wider text-silver/60 font-semibold">
+                          Target Article
+                        </label>
+                        <select
+                          value={selectedArticle}
+                          onChange={(e) => setSelectedArticle(e.target.value)}
+                          className="w-full bg-pure-black border border-silver/20 focus:border-primary/50 text-white rounded-xl px-3 py-3 text-xs uppercase tracking-wider focus:outline-none transition-colors"
+                        >
+                          {(docType === 'constitution' ? CONSTITUTION_DATA : BYLAWS_DATA).map(a => (
+                            <option key={a.id} value={a.id}>{a.title}</option>
+                          ))}
+                          <option value="Other">Other (Custom Article)</option>
+                        </select>
+                      </div>
+
+                      {/* Section select */}
+                      <div className="space-y-1.5 font-sans">
+                        <label className="block text-[10px] uppercase tracking-wider text-silver/60 font-semibold">
+                          Target Section
+                        </label>
+                        <select
+                          value={selectedSection}
+                          onChange={(e) => setSelectedSection(e.target.value)}
+                          disabled={selectedArticle === 'Other'}
+                          className="w-full bg-pure-black border border-silver/20 focus:border-primary/50 text-white rounded-xl px-3 py-3 text-xs uppercase tracking-wider focus:outline-none transition-colors disabled:opacity-50"
+                        >
+                          {selectedArticle !== 'Other' && (docType === 'constitution' ? CONSTITUTION_DATA : BYLAWS_DATA).find(a => a.id === selectedArticle)?.sections.map(s => (
+                            <option key={s.id} value={s.id}>{s.id}</option>
+                          ))}
+                          <option value="Other">Other / Custom</option>
+                        </select>
+                      </div>
+
+                    </div>
+
+                    {/* Custom input fields if 'Other' is selected */}
+                    {selectedArticle === 'Other' && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1"
+                      >
+                        <div className="space-y-1.5">
+                          <label className="block text-[10px] uppercase tracking-wider text-primary font-semibold">
+                            Custom Article Title / Number *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Article VII"
+                            value={customArticle}
+                            onChange={(e) => setCustomArticle(e.target.value)}
+                            className="w-full bg-pure-black border border-primary/20 focus:border-primary text-white rounded-xl px-3 py-3 text-xs focus:outline-none transition-colors"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="block text-[10px] uppercase tracking-wider text-primary font-semibold">
+                            Custom Section Title / Number *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Section 1"
+                            value={customSection}
+                            onChange={(e) => setCustomSection(e.target.value)}
+                            className="w-full bg-pure-black border border-primary/20 focus:border-primary text-white rounded-xl px-3 py-3 text-xs focus:outline-none transition-colors"
+                          />
+                        </div>
+                      </motion.div>
                     )}
-                  </button>
-                </div>
 
-              </form>
+                    {/* Section Input text if other section was selected */}
+                    {selectedSection === 'Other' && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="space-y-1.5"
+                      >
+                        {selectedArticle !== 'Other' && (
+                          <div className="space-y-1.5 mb-3">
+                            <label className="block text-[10px] uppercase tracking-wider text-primary font-semibold">
+                              Custom Section Title / Number *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. Section 5"
+                              value={customSection}
+                              onChange={(e) => setCustomSection(e.target.value)}
+                              className="w-full bg-pure-black border border-primary/20 focus:border-primary text-white rounded-xl px-3 py-3 text-xs focus:outline-none transition-colors"
+                            />
+                          </div>
+                        )}
+                        <label className="block text-[10px] uppercase tracking-wider text-primary font-semibold">
+                          Current Verbiage / Reference Text (Optional)
+                        </label>
+                        <textarea
+                          placeholder="Type the constitution passage that you wish to propose revisions for..."
+                          rows={3}
+                          value={customOriginalText}
+                          onChange={(e) => setCustomOriginalText(e.target.value)}
+                          className="w-full bg-pure-black border border-primary/20 focus:border-primary text-white rounded-xl px-4 py-3 text-xs focus:outline-none transition-colors font-light leading-relaxed resize-y"
+                        />
+                      </motion.div>
+                    )}
+
+                    {/* Display Current Selected Text (Display Only) */}
+                    {selectedSection !== 'Other' && selectedArticle !== 'Other' && (
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] uppercase tracking-wider text-silver/40 font-semibold">
+                          Active Governing Verbiage:
+                        </label>
+                        <div className="p-4 bg-pure-black/60 border border-silver/10 rounded-2xl">
+                          <p className="text-silver/80 text-xs font-light leading-relaxed italic">
+                            "{getCurrentOriginalText()}"
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* User Proposed Language Textbox */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] uppercase tracking-wider text-primary font-bold">
+                        Proposed Revised Language *
+                      </label>
+                      <textarea
+                        required
+                        placeholder="Enter the proposed revised text or new language to be presented to the Directorate..."
+                        rows={6}
+                        value={proposedText}
+                        onChange={(e) => setProposedText(e.target.value)}
+                        className="w-full bg-pure-black border border-silver/20 focus:border-primary text-white rounded-xl px-4 py-3.5 text-xs focus:outline-none transition-colors leading-relaxed resize-y font-light shadow-inner"
+                      />
+                    </div>
+
+                    {/* User Info Row */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] uppercase tracking-wider text-primary font-bold">
+                        Submitted By *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Jason Purify"
+                        value={submitterName}
+                        onChange={(e) => setSubmitterName(e.target.value)}
+                        className="w-full bg-pure-black border border-silver/20 focus:border-primary/50 text-white rounded-xl px-3 py-3 text-xs focus:outline-none transition-colors font-semibold"
+                      />
+                    </div>
+
+                    {/* Submit button */}
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        disabled={
+                          isSubmitting || 
+                          !submitterName.trim() || 
+                          !proposedText.trim() || 
+                          (selectedArticle === 'Other' && !customArticle.trim()) || 
+                          (selectedSection === 'Other' && !customSection.trim())
+                        }
+                        className="w-full py-4 bg-primary hover:bg-white text-black font-bold uppercase tracking-widest rounded-xl transition-all text-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-primary/10"
+                        title={
+                          !submitterName.trim() || !proposedText.trim() 
+                            ? "Please fill in 'Submitted By' and proposed text to submit." 
+                            : "Submit proposal"
+                        }
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                            <span>Transmitting Revision...</span>
+                          </>
+                        ) : (
+                          <>
+                            <PlusCircle size={14} />
+                            <span>Submit Proposal</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                  </form>
+                </>
+              )}
             </div>
           </section>
 
         </div>
 
-        <footer className="mt-20 pt-12 border-t border-silver/10 text-center">
-          <p className="text-silver/20 text-[10px] uppercase tracking-[0.4em]">
-            Official Constitution of The Order of KP, Inc.
-          </p>
-        </footer>
+        {/* Admin Login Pill */}
+        <div className="mt-16 flex justify-center">
+          <Link
+            to="/admin-dashboard?tab=revisions"
+            className="group inline-flex items-center gap-2 bg-silver/5 hover:bg-silver/10 text-silver/40 hover:text-white border border-silver/10 hover:border-silver/20 px-4 py-2 rounded-full text-[10px] uppercase font-bold tracking-widest transition-all cursor-pointer hover:translate-y-[-1px]"
+          >
+            <Lock size={12} className="text-silver/40 group-hover:text-white transition-colors" />
+            <span>Admin Login</span>
+          </Link>
+        </div>
 
       </div>
     </main>
