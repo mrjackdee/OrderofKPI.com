@@ -341,21 +341,29 @@ export default function Constitution() {
                 Review the latest active constitution and by-laws draft for reference.
               </p>
               
-              {/* PDF Clickable Link */}
-              <a 
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  alert("Official PDF Link is TBD. This placeholder is primed to route to your hosted bylaws PDF once available.");
-                }}
-                className="w-full inline-flex items-center justify-between p-3.5 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-xl transition-all text-[10px] uppercase font-bold tracking-widest text-primary hover:text-white"
-              >
-                <span>Download Governing Code</span>
-                <ExternalLink size={12} />
-              </a>
-              <p className="text-[9px] text-silver/30 text-center mt-2 font-mono uppercase tracking-widest">
-                [Link TBD]
-              </p>
+              <div className="space-y-3">
+                {/* PDF Clickable Link 1 */}
+                <a 
+                  href="/KP_Constitution_2021.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full inline-flex items-center justify-between p-3.5 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-xl transition-all text-[10px] uppercase font-bold tracking-widest text-primary hover:text-white"
+                >
+                  <span>Download KP Constitution (2021)</span>
+                  <ExternalLink size={12} />
+                </a>
+
+                {/* PDF Clickable Link 2 */}
+                <a 
+                  href="/KP_Bylaws_2022.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full inline-flex items-center justify-between p-3.5 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-xl transition-all text-[10px] uppercase font-bold tracking-widest text-primary hover:text-white"
+                >
+                  <span>Download KP By-laws (2022)</span>
+                  <ExternalLink size={12} />
+                </a>
+              </div>
             </div>
 
             {/* Quick Reference Box */}

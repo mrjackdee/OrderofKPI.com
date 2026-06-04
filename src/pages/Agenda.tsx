@@ -22,10 +22,10 @@ import {
   Lock,
   Unlock,
   X,
-  FileText
+  FileText,
+  ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence, useScroll, useSpring } from 'motion/react';
-import AddToCalendar from '../components/AddToCalendar';
 
 const MotionLink = motion(Link);
 
@@ -65,43 +65,6 @@ export default function Agenda() {
   });
 
   const [activeTab, setActiveTab] = useState(0);
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    try {
-      return localStorage.getItem('kpi_member_logged_in') === 'true';
-    } catch {
-      return false;
-    }
-  });
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [passcode, setPasscode] = useState('');
-  const [loginError, setLoginError] = useState('');
-
-  const handleLoginSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const preparedPasscode = passcode.trim();
-    if (preparedPasscode === '2012') {
-      try {
-        localStorage.setItem('kpi_member_logged_in', 'true');
-      } catch (err) {
-        console.warn('Failed to save log in state:', err);
-      }
-      setIsLoggedIn(true);
-      setIsLoginModalOpen(false);
-      setPasscode('');
-      setLoginError('');
-    } else {
-      setLoginError('Invalid passcode. Please enter the valid KPI member passcode.');
-    }
-  };
-
-  const handleLogout = () => {
-    try {
-      localStorage.removeItem('kpi_member_logged_in');
-    } catch (err) {
-      console.warn('Failed to remove log in state:', err);
-    }
-    setIsLoggedIn(false);
-  };
 
   const agendaData = [
     {
@@ -357,18 +320,7 @@ export default function Agenda() {
               <h2 className="text-silver text-sm md:text-lg font-medium tracking-widest uppercase">June 26-28, 2026</h2>
               <span className="h-px w-10 md:w-16 bg-silver"></span>
             </div>
-            <h2 className="text-silver text-sm md:text-lg font-medium tracking-widest uppercase mb-4">Charlotte, NC</h2>
-            <div className="flex flex-col sm:flex-row items-center gap-3 md:gap-4 mt-2">
-              <AddToCalendar variant="silver" />
-              <button
-                id="print-agenda-btn"
-                onClick={() => window.print()}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-full border border-silver/30 bg-pure-black hover:bg-silver hover:text-black font-semibold text-sm text-silver transition-all duration-300 shadow-lg hover:shadow-[0_0_15px_rgba(192,192,192,0.3)] active:scale-95 cursor-pointer"
-              >
-                <Printer size={16} />
-                <span>Print Details</span>
-              </button>
-            </div>
+            <h2 className="text-silver text-sm md:text-lg font-medium tracking-widest uppercase">Charlotte, NC</h2>
           </div>
         </motion.div>
 
@@ -385,145 +337,37 @@ export default function Agenda() {
                   Conference Materials
                 </h3>
               </div>
-              {isLoggedIn && (
-                <button
-                  onClick={handleLogout}
-                  className="text-[10px] font-bold uppercase tracking-widest text-primary/70 hover:text-white transition-colors cursor-pointer"
-                >
-                  Log Out
-                </button>
-              )}
             </div>
 
             <div className="space-y-3">
-              {!isLoggedIn ? (
-                <button
-                  id="lock-revision-btn"
-                  onClick={() => setIsLoginModalOpen(true)}
-                  className="w-full flex items-center justify-between p-4 bg-silver/5 hover:bg-silver/10 border border-silver/10 hover:border-silver/30 rounded-xl transition-all duration-300 text-left group cursor-pointer"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-silver/10 rounded-lg group-hover:bg-silver/20 transition-all text-primary">
-                      <Lock size={16} className="text-primary animate-pulse" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs md:text-sm font-semibold uppercase tracking-wider text-white group-hover:text-primary transition-colors">
-                        Constitution & By-Laws Revisions
-                      </h4>
-                      <p className="text-[9px] text-silver/50 tracking-wide uppercase mt-0.5">
-                        Restricted to KPI Members
-                      </p>
-                    </div>
+              <Link
+                id="unlock-revision-btn"
+                to="/constitution"
+                className="w-full flex items-center justify-between p-4 bg-silver/5 hover:bg-silver/10 border border-silver/10 hover:border-silver/30 rounded-xl transition-all duration-300 text-left group cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-silver/10 rounded-lg group-hover:bg-primary/20 group-hover:text-primary transition-all text-silver">
+                    <FileText size={16} />
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-silver/40 group-hover:text-primary/70 flex items-center gap-1">
-                    Unlock <Lock size={10} />
-                  </span>
-                </button>
-              ) : (
-                <Link
-                  id="unlock-revision-btn"
-                  to="/constitution"
-                  className="w-full flex items-center justify-between p-4 bg-primary/10 hover:bg-primary/15 border border-primary/30 hover:border-primary/50 rounded-xl transition-all duration-300 text-left group cursor-pointer"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/20 rounded-lg text-primary">
-                      <Unlock size={16} className="text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs md:text-sm font-semibold uppercase tracking-wider text-primary group-hover:text-white transition-colors">
-                        Constitution & By-Laws Revisions
-                      </h4>
-                      <p className="text-[9px] text-primary/70 tracking-wide uppercase mt-0.5">
-                        Access Granted • KPI Member
-                      </p>
-                    </div>
+                  <div>
+                    <h4 className="text-xs md:text-sm font-semibold uppercase tracking-wider text-white group-hover:text-primary transition-colors">
+                      Constitution & By-Laws Revisions
+                    </h4>
+                    <p className="text-[9px] text-silver/50 tracking-wide uppercase mt-0.5">
+                      Open to Revisions & Proposals
+                    </p>
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary group-hover:text-white flex items-center gap-1">
-                    View <Unlock size={10} />
-                  </span>
-                </Link>
-              )}
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-silver/40 group-hover:text-primary/70 flex items-center gap-1">
+                  View & Revise <ChevronRight size={12} />
+                </span>
+              </Link>
             </div>
           </div>
         </motion.div>
 
-        {/* Guest/Member Login Modal */}
-        <AnimatePresence>
-          {isLoginModalOpen && (
-            <div className="fixed inset-0 flex items-center justify-center z-50 px-4">
-              {/* Backdrop */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setIsLoginModalOpen(false)}
-                className="absolute inset-0 bg-black/85 backdrop-blur-sm"
-              />
-
-              {/* Modal Core */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="relative max-w-md w-full bg-pure-black border border-silver/20 p-6 md:p-8 rounded-3xl z-50 shadow-2xl"
-              >
-                <button
-                  type="button"
-                  onClick={() => setIsLoginModalOpen(false)}
-                  className="absolute top-4 right-4 text-silver/50 hover:text-white transition-colors cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4 border border-primary/20">
-                    <Lock size={22} className="animate-pulse" />
-                  </div>
-                  <h3 className="text-xl font-display font-bold text-white uppercase tracking-widest mb-1">
-                    Enter Passcode to Submit Revisions
-                  </h3>
-                  <p className="text-silver/40 text-[10px] uppercase tracking-[0.2em] mb-6">
-                    Enter passcode to enter this members only area
-                  </p>
-
-                  <form onSubmit={handleLoginSubmit} className="w-full space-y-4">
-                    <div className="space-y-1.5 text-left">
-                      <label className="block text-[10px] uppercase tracking-wider text-silver/50 font-semibold">
-                        KPI Member Passcode
-                      </label>
-                      <input
-                        type="text"
-                        autoFocus
-                        value={passcode}
-                        onChange={(e) => setPasscode(e.target.value)}
-                        placeholder="Enter Passcode"
-                        className="w-full bg-silver/5 border border-silver/20 focus:border-primary/50 text-white rounded-xl px-4 py-3 text-sm tracking-widest placeholder-white/20 focus:outline-none transition-all text-center uppercase"
-                      />
-                    </div>
-
-                    {loginError && (
-                      <p className="text-xs text-red-400 font-semibold mt-1">
-                        {loginError}
-                      </p>
-                    )}
-
-                    <div className="pt-2">
-                      <button
-                        type="submit"
-                        className="w-full py-3 bg-silver hover:bg-white text-black font-bold uppercase tracking-widest rounded-xl transition-all text-sm cursor-pointer"
-                      >
-                        Verify Credentials
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-
         {/* Interactive Tabs Slider */}
-        <motion.div variants={itemVariants} className="flex flex-row justify-center gap-2 md:gap-4 mb-10 relative z-10 w-full max-w-xl px-2">
+        <motion.div variants={itemVariants} className="flex flex-row justify-center gap-2 md:gap-4 mb-6 relative z-10 w-full max-w-xl px-2">
           {agendaData.map((day, idx) => (
             <button
               key={idx}
@@ -538,6 +382,21 @@ export default function Agenda() {
               <span className="block text-xs md:text-sm font-semibold tracking-wide">{day.day}</span>
             </button>
           ))}
+        </motion.div>
+
+        {/* Print Button below the Day cards */}
+        <motion.div 
+          variants={itemVariants} 
+          className="flex justify-center mb-10 relative z-10 w-full"
+        >
+          <button
+            id="print-agenda-btn"
+            onClick={() => window.print()}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-full border border-silver/30 bg-pure-black hover:bg-silver hover:text-black font-semibold text-sm text-silver transition-all duration-300 shadow-lg hover:shadow-[0_0_15px_rgba(192,192,192,0.3)] active:scale-95 cursor-pointer"
+          >
+            <Printer size={16} />
+            <span>Print Conference Schedule</span>
+          </button>
         </motion.div>
 
         {/* Timeline Content */}

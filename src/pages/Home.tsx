@@ -67,9 +67,9 @@ export default function Home() {
         <div className="bg-primary/20 backdrop-blur-md border-b border-primary/30 py-3.5 px-4 text-center z-20 relative flex items-center justify-center gap-2 flex-wrap">
           <Calendar size={14} className="text-primary animate-pulse shrink-0" />
           <span className="text-white text-[10px] md:text-xs font-bold uppercase tracking-[0.2em]">
-            Conference Schedule Now Available —{' '}
+            Now Available —{' '}
             <Link to="/agenda" className="text-primary hover:text-white underline transition-colors inline-flex items-center gap-1">
-              View Schedule <ArrowRight size={12} />
+              View Conference Details <ArrowRight size={12} />
             </Link>
           </span>
         </div>
