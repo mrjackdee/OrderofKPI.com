@@ -50,13 +50,13 @@ export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState(false);
-  const [activeTab, setActiveTab] = useState<'ballots' | 'results' | 'revisions'>(() => {
+  const [activeTab, setActiveTab] = useState<'results' | 'revisions'>(() => {
     try {
       const search = window.location.search;
       if (search) {
         const params = new URLSearchParams(search);
         const t = params.get('tab');
-        if (t === 'ballots' || t === 'results' || t === 'revisions') {
+        if (t === 'results' || t === 'revisions') {
           return t;
         }
       }
@@ -437,15 +437,6 @@ export default function AdminDashboard() {
               Live Results
             </button>
             <button 
-              onClick={() => setActiveTab('ballots')}
-              className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
-                activeTab === 'ballots' ? 'bg-primary text-black' : 'text-silver/60 hover:text-white'
-              }`}
-            >
-              <Ticket className="inline-block mr-2" size={14} />
-              Ballot Management
-            </button>
-            <button 
               onClick={() => setActiveTab('revisions')}
               className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
                 activeTab === 'revisions' ? 'bg-primary text-black' : 'text-silver/60 hover:text-white'
@@ -457,7 +448,7 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        {activeTab === 'results' ? (
+        {activeTab === 'results' && (
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="bg-white/5 border border-white/10 p-6 rounded-2xl">
@@ -507,83 +498,6 @@ export default function AdminDashboard() {
                   </div>
                 </motion.div>
               ))}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold uppercase tracking-widest">KPI Member Registry</h2>
-              <button 
-                onClick={generateBallots}
-                disabled={actionLoading}
-                className="px-6 py-3 bg-primary text-black font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-white transition-all flex items-center gap-2"
-              >
-                <RefreshCcw size={14} className={actionLoading ? 'animate-spin' : ''} />
-                Generate Master Ballot List
-              </button>
-            </div>
-
-            <div className="overflow-hidden border border-white/10 rounded-2xl bg-white/5">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-white/10 bg-white/5">
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-silver/60">Member Name</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-silver/60">Secure Ballot ID</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-silver/60">Status</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-silver/60">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/10">
-                  {ballots.sort((a,b) => a.name.localeCompare(b.name)).map((ballot) => (
-                    <tr key={ballot.id} className="hover:bg-white/5 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
-                            {ballot.name.charAt(0)}
-                          </div>
-                          <span className="text-sm font-bold uppercase tracking-wider">{ballot.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <code className="text-xs text-primary font-mono bg-primary/5 px-2 py-1 rounded">
-                          {ballot.id}
-                        </code>
-                      </td>
-                      <td className="px-6 py-4">
-                        {ballot.hasVoted ? (
-                          <span className="flex items-center gap-1.5 text-green-500 text-[10px] font-bold uppercase tracking-widest">
-                            <CheckCircle2 size={12} />
-                            Vote Cast
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1.5 text-silver/40 text-[10px] font-bold uppercase tracking-widest">
-                            <AlertCircle size={12} />
-                            Pending
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <button 
-                          onClick={() => {
-                            navigator.clipboard.writeText(`Name: ${ballot.name}\nBallot: ${ballot.id}`);
-                            alert(`Copied credentials for ${ballot.name}`);
-                          }}
-                          className="text-[10px] font-bold uppercase tracking-widest text-silver/40 hover:text-white transition-colors"
-                        >
-                          Copy Credentials
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {ballots.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-silver/40 italic">
-                        No ballots generated yet. Click "Generate Master Ballot List" to initialize.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
             </div>
           </div>
         )}
