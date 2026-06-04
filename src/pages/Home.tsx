@@ -214,8 +214,7 @@ export default function Home() {
               There will be an in-person and virtual option for the conference. Please see the{' '}
               <Link to="/registration" className="text-white hover:text-primary transition-colors underline font-medium">
                 conference registration page
-              </Link>{' '}
-              for more details to go to the registration page.
+              </Link>.
             </p>
           </div>
           <div className="space-y-4 border border-primary/30 p-6 rounded-xl bg-black/40">

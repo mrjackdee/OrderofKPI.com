@@ -163,7 +163,7 @@ export default function Constitution() {
   const handleSubmitRevision = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!submitterName.trim()) {
-      setSubmissionError('Please enter your name/submitter before submitting.');
+      setSubmissionError("Please enter your name under 'Submitted By' before submitting.");
       return;
     }
     if (!proposedText.trim()) {
@@ -368,15 +368,19 @@ export default function Constitution() {
                 </li>
                 <li className="flex items-start gap-2">
                   <ChevronRight size={12} className="text-primary shrink-0 mt-0.5" />
-                  <span>Read the display text or provide custom fields if not listed.</span>
+                  <span>Review the displayed text</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <ChevronRight size={12} className="text-primary shrink-0 mt-0.5" />
-                  <span>Enter clear, concise revised terminology in the inputs box.</span>
+                  <span>Enter clear, concise revised language is the text box.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <ChevronRight size={12} className="text-primary shrink-0 mt-0.5" />
-                  <span>Click Submit. Submissions are written synchronously to the database.</span>
+                  <span>Enter your name</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <ChevronRight size={12} className="text-primary shrink-0 mt-0.5" />
+                  <span>Click Submit.</span>
                 </li>
               </ul>
             </div>
@@ -574,7 +578,7 @@ export default function Constitution() {
                 {/* User Info Row */}
                 <div className="space-y-1.5">
                   <label className="block text-[10px] uppercase tracking-wider text-primary font-bold">
-                    Your Name / Submitter *
+                    Submitted By *
                   </label>
                   <input
                     type="text"
@@ -600,7 +604,7 @@ export default function Constitution() {
                     className="w-full py-4 bg-primary hover:bg-white text-black font-bold uppercase tracking-widest rounded-xl transition-all text-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-primary/10"
                     title={
                       !submitterName.trim() || !proposedText.trim() 
-                        ? "Please fill in your name and proposed text to submit." 
+                        ? "Please fill in 'Submitted By' and proposed text to submit." 
                         : "Submit proposal"
                     }
                   >
