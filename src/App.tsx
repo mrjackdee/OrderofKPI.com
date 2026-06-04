@@ -22,14 +22,29 @@ import LandingPage from './components/LandingPage';
 import { AnimatePresence } from 'motion/react';
 
 export default function App() {
-  const [hasEntered, setHasEntered] = useState(false);
+  const [hasEntered, setHasEntered] = useState(() => {
+    try {
+      return localStorage.getItem('kpi_splash_entered') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleEnter = () => {
+    try {
+      localStorage.setItem('kpi_splash_entered', 'true');
+    } catch (error) {
+      console.warn('Failed to set localStorage key:', error);
+    }
+    setHasEntered(true);
+  };
 
   return (
     <Router>
       <ScrollToTop />
       <AnimatePresence mode="wait">
         {!hasEntered ? (
-          <LandingPage onEnter={() => setHasEntered(true)} />
+          <LandingPage onEnter={handleEnter} />
         ) : (
           <React.Fragment key="app-content">
             <Routes>

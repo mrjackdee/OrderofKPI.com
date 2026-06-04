@@ -23,6 +23,7 @@ export default function Layout() {
 
   const navItems = [
     { name: 'HOME', path: '/' },
+    { name: 'CONFERENCE SCHEDULE', path: '/agenda' },
     { name: 'CONFERENCE REGISTRATION', path: '/registration' },
     { name: 'CONTACT US', path: 'mailto:conference@orderofkpi.com', isExternal: true },
   ];
