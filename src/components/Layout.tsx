@@ -34,7 +34,7 @@ export default function Layout() {
         <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-primary px-4 md:px-10 py-4 md:py-6 bg-black/95 backdrop-blur fixed top-0 left-0 right-0 z-50">
           <div className="flex items-center gap-2 md:gap-4 text-primary">
             <img 
-              src="https://orderofkpi.com/kpi_logo.jpg" 
+              src="https://assets.orderofkpi.org/images/logos/kpi_logo.png" 
               alt="KP Logo" 
               className="w-8 h-8 md:w-10 md:h-10 object-contain"
               referrerPolicy="no-referrer"
@@ -189,7 +189,7 @@ export default function Layout() {
           <div className="flex flex-col items-center gap-4">
             <div className="flex items-center gap-3 text-primary opacity-80">
               <img 
-                src="https://orderofkpi.com/kpi_logo.jpg" 
+                src="https://assets.orderofkpi.org/images/logos/kpi_logo.png" 
                 alt="KP Logo" 
                 className="w-8 h-8 object-contain"
                 referrerPolicy="no-referrer"

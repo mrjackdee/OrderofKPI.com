@@ -84,7 +84,7 @@ export default function Home() {
             className="mb-2 md:mb-4 z-10 flex justify-center"
           >
             <img 
-              src="https://orderofkpi.com/kpi_logo.jpg" 
+              src="https://assets.orderofkpi.org/images/logos/kpi_logo.png" 
               alt="The Order of KP Logo" 
               className="w-24 h-24 md:w-40 md:h-40 object-contain drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]"
               referrerPolicy="no-referrer"

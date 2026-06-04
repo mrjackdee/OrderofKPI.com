@@ -51,7 +51,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
               className="mb-4"
             >
               <img 
-                src="https://orderofkpi.com/kpi_logo.jpg" 
+                src="https://assets.orderofkpi.org/images/logos/kpi_logo.png" 
                 alt="Logo" 
                 className="w-24 h-24 md:w-32 md:h-32 object-contain opacity-80"
                 referrerPolicy="no-referrer"

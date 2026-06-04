@@ -92,5 +92,12 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if isValidId(revisionId);
     }
+
+    match /archived_revisions/{archiveId} {
+      allow get: if isValidId(archiveId);
+      allow list: if true;
+      allow create: if isValidId(archiveId);
+      allow delete: if isValidId(archiveId);
+    }
   }
 }

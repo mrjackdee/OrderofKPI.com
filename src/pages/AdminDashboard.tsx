@@ -11,7 +11,8 @@ import {
   query,
   onSnapshot,
   serverTimestamp,
-  deleteDoc
+  deleteDoc,
+  addDoc
 } from 'firebase/firestore';
 import { 
   Users, 
@@ -70,6 +71,8 @@ export default function AdminDashboard() {
   const [revisions, setRevisions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [revisionToDelete, setRevisionToDelete] = useState<any | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -398,17 +401,40 @@ export default function AdminDashboard() {
     doc.save(`kpi_constitution_revisions_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  const handleDeleteRevision = async (id: string, submitter: string) => {
-    if (!confirm(`Are you sure you want to permanently delete the submission from ${submitter || 'Anonymous KPI Member'}?`)) {
-      return;
-    }
-    
+  const handleDeleteRevision = (rev: any) => {
+    setRevisionToDelete(rev);
+    setDeleteError(null);
+  };
+
+  const confirmDeleteAndArchive = async () => {
+    if (!revisionToDelete) return;
     setActionLoading(true);
+    setDeleteError(null);
     try {
-      await deleteDoc(doc(db, 'revisions', id));
-    } catch (err) {
-      console.error("Error deleting revision:", err);
-      alert("Error deleting submission. Please try again.");
+      // 1. Store/Archive submission first
+      const archiveData = {
+        originalId: revisionToDelete.id,
+        documentType: revisionToDelete.documentType || 'KP Constitution (2021)',
+        article: revisionToDelete.article || '',
+        section: revisionToDelete.section || '',
+        originalText: revisionToDelete.originalText || '',
+        proposedText: revisionToDelete.proposedText || '',
+        submitterName: revisionToDelete.submitterName || 'Anonymous KPI Member',
+        submittedAt: revisionToDelete.submittedAt || null,
+        archivedAt: serverTimestamp()
+      };
+
+      // Create new archived document
+      await addDoc(collection(db, 'archived_revisions'), archiveData);
+
+      // 2. Delete from active list
+      await deleteDoc(doc(db, 'revisions', revisionToDelete.id));
+
+      // 3. Clear modal state
+      setRevisionToDelete(null);
+    } catch (err: any) {
+      console.error("Error archiving and deleting revision:", err);
+      setDeleteError(err.message || "Failed to archive and delete this submission. Please try again.");
     } finally {
       setActionLoading(false);
     }
@@ -579,7 +605,7 @@ export default function AdminDashboard() {
                       <div className="flex items-center gap-4">
                         <span className="text-[9px] font-mono text-silver/20">{rev.id}</span>
                         <button
-                          onClick={() => handleDeleteRevision(rev.id, rev.submitterName)}
+                          onClick={() => handleDeleteRevision(rev)}
                           className="flex items-center gap-1.5 px-3 py-1 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/20 hover:border-red-500 text-[10px] font-bold uppercase tracking-widest rounded-lg cursor-pointer transition-all duration-200"
                           title="Delete submission"
                         >
@@ -598,6 +624,79 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal Overlay */}
+        {revisionToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-zinc-950 border border-white/10 max-w-xl w-full rounded-3xl p-8 shadow-2xl relative space-y-6"
+            >
+              <div className="flex items-center gap-3 text-red-500">
+                <AlertCircle size={28} />
+                <h3 className="text-xl font-display font-bold uppercase tracking-widest">Confirm Archiving</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <p className="text-silver/70 text-sm leading-relaxed">
+                  Are you sure you want to remove and archive the revision submitted by <span className="text-white font-bold">{revisionToDelete.submitterName || 'Anonymous KPI Member'}</span>? 
+                  Once confirmed, this submission will be removed from the active revisions view and stored securely in the archive log.
+                </p>
+
+                <div className="border border-white/5 rounded-2xl p-4 bg-white/5 space-y-3 text-xs leading-relaxed">
+                  <div className="flex justify-between text-silver/40">
+                    <span className="uppercase tracking-wider">Document Segment</span>
+                    <span className="text-white font-mono uppercase">
+                      {revisionToDelete.documentType || 'KP Constitution'} {revisionToDelete.article} - {revisionToDelete.section}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-silver/40 uppercase tracking-wider block">Proposed Language Change:</span>
+                    <div className="text-white p-2.5 bg-white/5 border border-white/5 rounded-xl font-medium max-h-[120px] overflow-y-auto">
+                      {revisionToDelete.proposedText}
+                    </div>
+                  </div>
+                </div>
+
+                {deleteError && (
+                  <p className="text-red-500 font-bold text-xs uppercase tracking-wide bg-red-500/10 p-3 rounded-lg border border-red-500/20">
+                    {deleteError}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-4 border-t border-white/5 pt-6">
+                <button
+                  type="button"
+                  onClick={() => setRevisionToDelete(null)}
+                  disabled={actionLoading}
+                  className="px-5 py-3 rounded-xl border border-white/10 hover:border-white/20 text-silver/60 hover:text-white uppercase font-bold text-xs tracking-widest cursor-pointer transition-all disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteAndArchive}
+                  disabled={actionLoading}
+                  className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-red-500/10 disabled:opacity-50"
+                >
+                  {actionLoading ? (
+                    <>
+                      <RefreshCcw size={14} className="animate-spin" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={14} />
+                      <span>Confirm & Archive</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
           </div>
         )}
       </div>
