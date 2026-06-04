@@ -193,7 +193,7 @@ export default function Home() {
             className="absolute bottom-0 left-0 h-1 bg-primary"
           />
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full mt-2 md:mt-4 text-left">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full mt-2 md:mt-4 text-left">
           <div className="space-y-4 border border-primary/30 p-6 rounded-xl bg-black/40">
             <h3 className="text-primary text-xl font-bold uppercase tracking-widest flex items-center gap-3">
               <span className="material-symbols-outlined">checkroom</span>
@@ -207,20 +207,15 @@ export default function Home() {
           </div>
           <div className="space-y-4 border border-primary/30 p-6 rounded-xl bg-black/40">
             <h3 className="text-primary text-xl font-bold uppercase tracking-widest flex items-center gap-3">
-              <span className="material-symbols-outlined">hotel</span>
-              Lodging Options
-            </h3>
-            <p className="text-primary/80 font-light leading-relaxed">
-              We recommend Airbnb for Organization House or individual stays. Nearby hotels are also available for preferred lodging.
-            </p>
-          </div>
-          <div className="space-y-4 border border-primary/30 p-6 rounded-xl bg-black/40">
-            <h3 className="text-primary text-xl font-bold uppercase tracking-widest flex items-center gap-3">
-              <span className="material-symbols-outlined">devices_off</span>
+              <span className="material-symbols-outlined">groups</span>
               Attendance
             </h3>
             <p className="text-primary/80 font-light leading-relaxed">
-              Please note that there is <strong>no virtual option</strong> for this conference. We look forward to seeing everyone in person!
+              There will be an in-person and virtual option for the conference. Please see the{' '}
+              <Link to="/registration" className="text-white hover:text-primary transition-colors underline font-medium">
+                conference registration page
+              </Link>{' '}
+              for more details to go to the registration page.
             </p>
           </div>
           <div className="space-y-4 border border-primary/30 p-6 rounded-xl bg-black/40">

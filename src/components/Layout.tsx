@@ -23,8 +23,8 @@ export default function Layout() {
 
   const navItems = [
     { name: 'HOME', path: '/' },
-    { name: 'CONFERENCE SCHEDULE', path: '/agenda' },
-    { name: 'CONFERENCE REGISTRATION', path: '/registration' },
+    { name: 'REGISTRATION', path: '/registration' },
+    { name: 'CONFERENCE DETAILS', path: '/agenda' },
     { name: 'CONTACT US', path: 'mailto:conference@orderofkpi.com', isExternal: true },
   ];
 
@@ -66,12 +66,12 @@ export default function Layout() {
                     key={item.name}
                     to={item.path}
                     className={`relative transition-colors text-sm font-semibold uppercase tracking-[0.15em] group ${
-                      item.name === 'CONFERENCE REGISTRATION' 
+                      item.name === 'REGISTRATION' 
                         ? 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' 
                         : 'text-primary hover:text-white'
                     }`}
                     whileHover={{ y: -2 }}
-                    animate={item.name === 'CONFERENCE REGISTRATION' ? {
+                    animate={item.name === 'REGISTRATION' ? {
                       textShadow: [
                         "0 0 4px rgba(255,255,255,0.4)",
                         "0 0 12px rgba(255,255,255,0.8)",
@@ -143,7 +143,7 @@ export default function Layout() {
                     to={item.path}
                     onClick={() => setIsMenuOpen(false)}
                     className={`text-xl md:text-2xl font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] transition-colors ${
-                      item.name === 'CONFERENCE REGISTRATION'
+                      item.name === 'REGISTRATION'
                         ? 'text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]'
                         : 'text-primary hover:text-white'
                     }`}
