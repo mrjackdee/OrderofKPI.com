@@ -124,7 +124,7 @@ export default function AdminDashboard() {
   }
 
   const generateBallots = async (silent = false) => {
-    if (!silent && !confirm("Are you sure? This will overwrite or create ballots for all financial members.")) return;
+    if (!silent && !confirm("Are you sure? This will overwrite or create ballots for all KPI members.")) return;
     setActionLoading(true);
     try {
       const batch = writeBatch(db);
@@ -140,7 +140,7 @@ export default function AdminDashboard() {
       });
 
       await batch.commit();
-      if (!silent) alert("Successfully generated ballots for all financial members.");
+      if (!silent) alert("Successfully generated ballots for all KPI members.");
     } catch (err) {
       console.error(err);
       if (!silent) alert("Error generating ballots.");
@@ -260,7 +260,7 @@ export default function AdminDashboard() {
         ) : (
           <div className="space-y-8">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold uppercase tracking-widest">Financial Member Registry</h2>
+              <h2 className="text-xl font-bold uppercase tracking-widest">KPI Member Registry</h2>
               <button 
                 onClick={generateBallots}
                 disabled={actionLoading}

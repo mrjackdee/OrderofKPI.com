@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Clock, 
@@ -18,9 +18,13 @@ import {
   MessageSquare, 
   Flame,
   ArrowRight,
-  Printer
+  Printer,
+  Lock,
+  Unlock,
+  X,
+  FileText
 } from 'lucide-react';
-import { motion, useScroll, useSpring } from 'motion/react';
+import { motion, AnimatePresence, useScroll, useSpring } from 'motion/react';
 import AddToCalendar from '../components/AddToCalendar';
 
 const MotionLink = motion(Link);
@@ -61,6 +65,43 @@ export default function Agenda() {
   });
 
   const [activeTab, setActiveTab] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    try {
+      return localStorage.getItem('kpi_member_logged_in') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [passcode, setPasscode] = useState('');
+  const [loginError, setLoginError] = useState('');
+
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const preparedPasscode = passcode.trim().toUpperCase();
+    if (preparedPasscode === 'KPI2026' || preparedPasscode === 'KPI1911' || preparedPasscode === 'KP2026') {
+      try {
+        localStorage.setItem('kpi_member_logged_in', 'true');
+      } catch (err) {
+        console.warn('Failed to save log in state:', err);
+      }
+      setIsLoggedIn(true);
+      setIsLoginModalOpen(false);
+      setPasscode('');
+      setLoginError('');
+    } else {
+      setLoginError('Invalid passcode. Please enter a valid KPI member passcode.');
+    }
+  };
+
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem('kpi_member_logged_in');
+    } catch (err) {
+      console.warn('Failed to remove log in state:', err);
+    }
+    setIsLoggedIn(false);
+  };
 
   const agendaData = [
     {
@@ -330,6 +371,160 @@ export default function Agenda() {
             </div>
           </div>
         </motion.div>
+
+        {/* Conference Materials Section */}
+        <motion.div 
+          variants={itemVariants}
+          className="w-full max-w-xl mx-auto mb-10 relative z-10 px-2"
+        >
+          <div className="bg-pure-black/60 border border-silver/10 p-5 md:p-6 rounded-2xl backdrop-blur-sm shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
+            <div className="flex items-center justify-between gap-3 mb-4 border-b border-silver/10 pb-3">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
+                <h3 className="text-silver text-sm md:text-base font-bold uppercase tracking-widest">
+                  Conference Materials
+                </h3>
+              </div>
+              {isLoggedIn && (
+                <button
+                  onClick={handleLogout}
+                  className="text-[10px] font-bold uppercase tracking-widest text-primary/70 hover:text-white transition-colors cursor-pointer"
+                >
+                  Log Out
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              {!isLoggedIn ? (
+                <button
+                  id="lock-revision-btn"
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="w-full flex items-center justify-between p-4 bg-silver/5 hover:bg-silver/10 border border-silver/10 hover:border-silver/30 rounded-xl transition-all duration-300 text-left group cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-silver/10 rounded-lg group-hover:bg-silver/20 transition-all text-primary">
+                      <Lock size={16} className="text-primary animate-pulse" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs md:text-sm font-semibold uppercase tracking-wider text-white group-hover:text-primary transition-colors">
+                        Constitution & By-Laws Revisions
+                      </h4>
+                      <p className="text-[9px] text-silver/50 tracking-wide uppercase mt-0.5">
+                        Restricted to KPI Members
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-silver/40 group-hover:text-primary/70 flex items-center gap-1">
+                    Unlock <Lock size={10} />
+                  </span>
+                </button>
+              ) : (
+                <Link
+                  id="unlock-revision-btn"
+                  to="/constitution"
+                  className="w-full flex items-center justify-between p-4 bg-primary/10 hover:bg-primary/15 border border-primary/30 hover:border-primary/50 rounded-xl transition-all duration-300 text-left group cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/20 rounded-lg text-primary">
+                      <Unlock size={16} className="text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs md:text-sm font-semibold uppercase tracking-wider text-primary group-hover:text-white transition-colors">
+                        Constitution & By-Laws Revisions
+                      </h4>
+                      <p className="text-[9px] text-primary/70 tracking-wide uppercase mt-0.5">
+                        Access Granted • KPI Member
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary group-hover:text-white flex items-center gap-1">
+                    View <Unlock size={10} />
+                  </span>
+                </Link>
+              )}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Guest/Member Login Modal */}
+        <AnimatePresence>
+          {isLoginModalOpen && (
+            <div className="fixed inset-0 flex items-center justify-center z-50 px-4">
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsLoginModalOpen(false)}
+                className="absolute inset-0 bg-black/85 backdrop-blur-sm"
+              />
+
+              {/* Modal Core */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="relative max-w-md w-full bg-pure-black border border-silver/20 p-6 md:p-8 rounded-3xl z-50 shadow-2xl"
+              >
+                <button
+                  type="button"
+                  onClick={() => setIsLoginModalOpen(false)}
+                  className="absolute top-4 right-4 text-silver/50 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4 border border-primary/20">
+                    <Lock size={22} className="animate-pulse" />
+                  </div>
+                  <h3 className="text-xl font-display font-bold text-white uppercase tracking-widest mb-1">
+                    Members Only Area
+                  </h3>
+                  <p className="text-silver/40 text-[10px] uppercase tracking-[0.2em] mb-6">
+                    Enter passcode to access revisions
+                  </p>
+
+                  <form onSubmit={handleLoginSubmit} className="w-full space-y-4">
+                    <div className="space-y-1.5 text-left">
+                      <label className="block text-[10px] uppercase tracking-wider text-silver/50 font-semibold">
+                        KPI Member Passcode
+                      </label>
+                      <input
+                        type="text"
+                        autoFocus
+                        value={passcode}
+                        onChange={(e) => setPasscode(e.target.value)}
+                        placeholder="e.g. KPI2026"
+                        className="w-full bg-silver/5 border border-silver/20 focus:border-primary/50 text-white rounded-xl px-4 py-3 text-sm tracking-widest placeholder-white/20 focus:outline-none transition-all text-center uppercase"
+                      />
+                    </div>
+
+                    {loginError && (
+                      <p className="text-xs text-red-400 font-semibold mt-1">
+                        {loginError}
+                      </p>
+                    )}
+
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        className="w-full py-3 bg-silver hover:bg-white text-black font-bold uppercase tracking-widest rounded-xl transition-all text-sm cursor-pointer"
+                      >
+                        Verify Credentials
+                      </button>
+                    </div>
+
+                    <p className="text-[10px] text-silver/40 leading-relaxed max-w-[280px] mx-auto mt-4">
+                      Please enter the organization passcode (e.g. <span className="font-bold text-silver/60">KPI2026</span>) to instantly verify your login.
+                    </p>
+                  </form>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
         {/* Interactive Tabs Slider */}
         <motion.div variants={itemVariants} className="flex flex-row justify-center gap-2 md:gap-4 mb-10 relative z-10 w-full max-w-xl px-2">
