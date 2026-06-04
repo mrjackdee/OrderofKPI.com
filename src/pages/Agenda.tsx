@@ -563,8 +563,11 @@ export default function Agenda() {
         </div>
 
         {agendaData.map((day, dIdx) => (
-          <div key={dIdx} className="space-y-4 break-inside-avoid">
-            <h2 className="text-xl font-black uppercase tracking-widest mt-8 mb-4 text-black text-center">
+          <div 
+            key={dIdx} 
+            className={`space-y-4 ${dIdx > 0 ? "break-before-page" : ""}`}
+          >
+            <h2 className="text-xl font-black uppercase tracking-widest mt-8 mb-4 text-black text-center break-after-avoid">
               Day {dIdx + 1}: {day.day}, {day.date}
             </h2>
 
