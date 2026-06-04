@@ -415,15 +415,14 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-pure-black text-white p-8 md:p-12">
+    <div className="min-h-screen bg-pure-black text-white p-6 md:p-8">
       <div className="max-w-6xl mx-auto">
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 border-b border-white/5 pb-8">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 border-b border-white/5 pb-6">
           <div>
-            <h1 className="text-4xl font-display font-bold uppercase tracking-widest mb-2 flex items-center gap-3">
+            <h1 className="text-4xl font-display font-bold uppercase tracking-widest flex items-center gap-3">
               <ShieldCheck className="text-primary" size={32} />
               Admin Dashboard
             </h1>
-            <p className="text-silver/40 text-xs uppercase tracking-[0.3em]">Election Management & Live Tabulation</p>
           </div>
           
           <div className="flex bg-white/5 border border-white/10 rounded-xl p-1">
