@@ -405,10 +405,10 @@ export default function Constitution() {
                   <CheckCircle2 size={18} className="text-green-400 shrink-0 mt-0.5" />
                   <div>
                     <h5 className="text-xs font-bold text-green-400 uppercase tracking-widest mb-1">
-                      Submission Transmitted Successfully
+                      Submission Successful
                     </h5>
                     <p className="text-[11px] text-silver/60 uppercase leading-relaxed font-semibold">
-                      Your proposed revised language was recorded on the database registry and can be exported at any time. Thank you for your active participation!
+                      Your proposed revised language has been was recorded. Thank you for your submission!
                     </p>
                   </div>
                 </motion.div>
