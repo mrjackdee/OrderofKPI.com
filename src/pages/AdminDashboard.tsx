@@ -4,24 +4,16 @@ import { jsPDF } from 'jspdf';
 import { db } from '../lib/firebase';
 import { 
   collection, 
-  getDocs, 
   doc, 
-  setDoc, 
-  writeBatch,
-  query,
-  onSnapshot,
-  serverTimestamp,
-  deleteDoc,
+  query, 
+  onSnapshot, 
+  serverTimestamp, 
+  deleteDoc, 
   addDoc
 } from 'firebase/firestore';
 import { 
-  Users, 
-  Ticket, 
-  BarChart3, 
   ShieldCheck, 
-  Save, 
   RefreshCcw, 
-  CheckCircle2,
   AlertCircle,
   FileText,
   Download,
@@ -29,45 +21,25 @@ import {
 } from 'lucide-react';
 
 // --- Data ---
-const FINANCIAL_MEMBERS = [
-  "Anthony Jones", "Brandon Owens", "Brian Goings", "Brian Johnson",
-  "Dameone Ferguson", "Darron Jenkins", "Deshaun Stafford", "Dominic Goodman",
-  "Donald Mitchell", "Edward Cook", "Ishmeal Allensworth", "Jack Dee",
-  "James Haywood Jr", "Jason Pilar", "Kameron Whitfield", "Keith Woods", "Tobias Bordley",
-  "Test User A", "Test User B"
-];
-
-const NOMINEES = [
-  { id: "1ab-aj", name: "Anthony Jones", position: "1st Anti-Basileus" },
-  { id: "2ab-jh", name: "James “JR” Hayward", position: "2nd Anti-Basileus" },
-  { id: "gram-bj", name: "Brian Johnson", position: "Grammateus" },
-  { id: "epis-ec", name: "Edward Cook", position: "Epistoleus" },
-  { id: "hist-bo", name: "Brandon Owens", position: "Historian" },
-  { id: "hod-dj", name: "Darron Jenkins", position: "Hodegos" },
-  { id: "tam-ia", name: "Ishmael Allensworth", position: "Tamiouchos" }
-];
-
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState(false);
-  const [activeTab, setActiveTab] = useState<'results' | 'revisions'>(() => {
+  const [activeTab, setActiveTab] = useState<'revisions'>(() => {
     try {
       const search = window.location.search;
       if (search) {
         const params = new URLSearchParams(search);
         const t = params.get('tab');
-        if (t === 'results' || t === 'revisions') {
+        if (t === 'revisions') {
           return t;
         }
       }
     } catch (e) {
       // Ignored
     }
-    return 'results';
+    return 'revisions';
   });
-  const [ballots, setBallots] = useState<any[]>([]);
-  const [votes, setVotes] = useState<any[]>([]);
   const [revisions, setRevisions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -87,31 +59,13 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!isAuthenticated) return;
     
-    const qBallots = query(collection(db, 'ballots'));
-    const unsubBallots = onSnapshot(qBallots, (snap) => {
-      setBallots(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      
-      // Auto-seed if empty
-      if (snap.empty && !actionLoading) {
-        console.log("Seeding ballots...");
-        generateBallots(true); // silent seed
-      }
-    });
-
-    const qVotes = query(collection(db, 'votes'));
-    const unsubVotes = onSnapshot(qVotes, (snap) => {
-      setVotes(snap.docs.map(d => d.data()));
-      setLoading(false);
-    });
-
     const qRevisions = query(collection(db, 'revisions'));
     const unsubRevisions = onSnapshot(qRevisions, (snap) => {
       setRevisions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
     });
 
     return () => {
-      unsubBallots();
-      unsubVotes();
       unsubRevisions();
     };
   }, [isAuthenticated]);
@@ -122,7 +76,7 @@ export default function AdminDashboard() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-md w-full bg-white/5 border border-white/10 p-12 rounded-3xl text-center"
+          className="max-w-md w-full bg-white/5 border border-white/10 p-8 md:p-10 rounded-3xl text-center"
         >
           <ShieldCheck className="text-primary mx-auto mb-6" size={48} />
           <h2 className="text-2xl font-display font-bold uppercase tracking-widest mb-2">Committee Access</h2>
@@ -151,54 +105,6 @@ export default function AdminDashboard() {
       </div>
     );
   }
-
-  const generateBallots = async (silent = false) => {
-    if (!silent && !confirm("Are you sure? This will overwrite or create ballots for all KPI members.")) return;
-    setActionLoading(true);
-    try {
-      const batch = writeBatch(db);
-      
-      FINANCIAL_MEMBERS.forEach((name, index) => {
-        const id = `KPI-2026-${(index + 1).toString().padStart(4, '0')}`;
-        const ref = doc(db, 'ballots', id);
-        batch.set(ref, {
-          name,
-          hasVoted: false,
-          createdAt: serverTimestamp()
-        });
-      });
-
-      await batch.commit();
-      if (!silent) alert("Successfully generated ballots for all KPI members.");
-    } catch (err) {
-      console.error(err);
-      if (!silent) alert("Error generating ballots.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const getResults = () => {
-    const results: Record<string, Record<string, number>> = {};
-    
-    // Group nominees by position
-    NOMINEES.forEach(n => {
-      if (!results[n.position]) results[n.position] = {};
-      results[n.position][n.name] = 0;
-    });
-
-    // Count votes
-    votes.forEach(v => {
-      Object.entries(v.selections).forEach(([posId, nomineeId]: [any, any]) => {
-        const nominee = NOMINEES.find(n => n.id === nomineeId);
-        if (nominee) {
-          results[nominee.position][nominee.name]++;
-        }
-      });
-    });
-
-    return results;
-  };
 
   const exportRevisionsToCSV = () => {
     if (revisions.length === 0) {
@@ -441,9 +347,9 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-pure-black text-white p-6 md:p-8">
+    <div className="min-h-screen bg-pure-black text-white p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 border-b border-white/5 pb-6">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6 border-b border-white/5 pb-6">
           <div>
             <h1 className="text-4xl font-display font-bold uppercase tracking-widest flex items-center gap-3">
               <ShieldCheck className="text-primary" size={32} />
@@ -453,79 +359,13 @@ export default function AdminDashboard() {
           
           <div className="flex bg-white/5 border border-white/10 rounded-xl p-1">
             <button 
-              onClick={() => setActiveTab('results')}
-              className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
-                activeTab === 'results' ? 'bg-primary text-black' : 'text-silver/60 hover:text-white'
-              }`}
-            >
-              <BarChart3 className="inline-block mr-2" size={14} />
-              Live Results
-            </button>
-            <button 
-              onClick={() => setActiveTab('revisions')}
-              className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
-                activeTab === 'revisions' ? 'bg-primary text-black' : 'text-silver/60 hover:text-white'
-              }`}
+              className="px-6 py-2 bg-primary text-black rounded-lg text-xs font-bold uppercase tracking-widest transition-all"
             >
               <FileText className="inline-block mr-2" size={14} />
               Bylaw Revisions
             </button>
           </div>
         </header>
-
-        {activeTab === 'results' && (
-          <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="bg-white/5 border border-white/10 p-6 rounded-2xl">
-                <p className="text-silver/40 text-[10px] uppercase tracking-widest mb-1">Total Ballots</p>
-                <p className="text-3xl font-bold text-white">{ballots.length}</p>
-              </div>
-              <div className="bg-white/5 border border-white/10 p-6 rounded-2xl">
-                <p className="text-silver/40 text-[10px] uppercase tracking-widest mb-1">Votes Cast</p>
-                <p className="text-3xl font-bold text-primary">{votes.length}</p>
-              </div>
-              <div className="bg-white/5 border border-white/10 p-6 rounded-2xl">
-                <p className="text-silver/40 text-[10px] uppercase tracking-widest mb-1">Turnout</p>
-                <p className="text-3xl font-bold text-white">
-                  {ballots.length ? `${Math.round((votes.length / ballots.length) * 100)}%` : '0%'}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {Object.entries(getResults()).map(([position, candidates]) => (
-                <motion.div 
-                  key={position}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-black border border-white/10 p-8 rounded-3xl"
-                >
-                  <h3 className="text-lg font-bold uppercase tracking-widest mb-6 text-primary flex items-center justify-between">
-                    {position}
-                    <span className="text-[10px] px-2 py-1 bg-white/5 rounded text-silver/40">Official Slate</span>
-                  </h3>
-                  <div className="space-y-6">
-                    {Object.entries(candidates).map(([name, count]) => (
-                      <div key={name} className="space-y-2">
-                        <div className="flex justify-between text-sm uppercase tracking-wider">
-                          <span className="text-white">{name}</span>
-                          <span className="text-primary font-bold">{count} Votes</span>
-                        </div>
-                        <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                          <motion.div 
-                            initial={{ width: 0 }}
-                            animate={{ width: votes.length > 0 ? `${(count / votes.length) * 100}%` : '0%' }}
-                            className="h-full bg-primary"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {activeTab === 'revisions' && (
           <div className="space-y-8">

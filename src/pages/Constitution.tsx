@@ -314,38 +314,32 @@ export default function Constitution() {
   // If not logged in, show the Enter Passcode screen
   if (!isLoggedIn) {
     return (
-      <main className="w-full bg-pure-black min-h-screen py-20 px-6 flex items-center justify-center relative overflow-hidden">
+      <main className="w-full bg-pure-black min-h-screen py-8 px-6 flex items-center justify-center relative overflow-hidden">
         {/* Abstract glowing background lines */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-silver/20 to-transparent" />
         
         <div className="max-w-md w-full relative z-10">
-          <div className="text-center mb-10">
-            <Link to="/agenda" className="inline-flex items-center gap-1.5 text-silver/40 hover:text-white text-[10px] uppercase font-bold tracking-widest transition-colors mb-6">
+          <div className="text-center mb-6">
+            <Link to="/agenda" className="inline-flex items-center gap-1.5 text-silver/40 hover:text-white text-[10px] uppercase font-bold tracking-widest transition-colors mb-4">
               <ArrowLeft size={12} /> Back to Conference
             </Link>
             
-            <div className="w-16 h-16 rounded-full bg-primary/5 border border-primary/20 flex items-center justify-center text-primary mx-auto mb-6">
+            <div className="w-16 h-16 rounded-full bg-primary/5 border border-primary/20 flex items-center justify-center text-primary mx-auto mb-4">
               <Lock size={28} className="animate-pulse text-primary" />
             </div>
             
             <h1 className="text-2xl md:text-3xl font-display font-bold text-white uppercase tracking-widest mb-2">
               KPI Revisions Portal
             </h1>
-            <p className="text-silver/40 text-xs uppercase tracking-[0.2em] max-w-[320px] mx-auto leading-relaxed">
-              Administrative & Financial Member access only
-            </p>
           </div>
 
-          <div className="bg-silver/5 border border-silver/10 p-8 rounded-3xl backdrop-blur-md shadow-2xl">
+          <div className="bg-silver/5 border border-silver/10 p-7 rounded-3xl backdrop-blur-md shadow-2xl">
             <h3 className="text-base font-bold text-silver uppercase tracking-widest mb-6 text-center">
               Enter Passcode to Submit Revisions
             </h3>
 
             <form onSubmit={handleLoginSubmit} className="space-y-6">
               <div className="space-y-2">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-silver/60">
-                  Financial Member Passcode
-                </label>
                 <input
                   type="text"
                   autoFocus
@@ -378,14 +372,14 @@ export default function Constitution() {
 
   // Loaded Revisions content
   return (
-    <main className="w-full bg-pure-black min-h-screen py-20 px-4 md:px-8 relative overflow-hidden">
+    <main className="w-full bg-pure-black min-h-screen py-8 px-4 md:px-8 relative overflow-hidden">
       {/* Dynamic Background Accents */}
       <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
       
       <div className="max-w-4xl mx-auto relative z-10">
         
         {/* Navigation & Logout Header */}
-        <div className="flex items-center justify-between mb-12">
+        <div className="flex items-center justify-between mb-8">
           <Link 
             to="/agenda" 
             className="inline-flex items-center gap-2 text-silver/50 hover:text-white text-[10px] uppercase font-bold tracking-widest transition-colors py-1.5 px-3 bg-silver/5 border border-silver/10 rounded-full"
@@ -402,7 +396,7 @@ export default function Constitution() {
         </div>
 
         {/* Header Block */}
-        <header className="text-center mb-16">
+        <header className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 mb-6">
             <Unlock size={12} className="text-primary" />
             <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary">Access Granted • KPI Member</span>
