@@ -158,14 +158,14 @@ export default function Agenda() {
         },
         {
           time: "10:00 – 10:30 AM",
-          title: "“How Today’s Climate Impacts Our Families”",
+          title: "How Today’s Climate Impacts Our Families",
           description: "Guest Speaker: Alabama State Representative",
           icon: Mic,
           type: "event" as const,
         },
         {
           time: "10:45 – 11:00 AM",
-          title: "“Our Family, Our Future: The Vision Ahead”",
+          title: "Our Family, Our Future: The Vision Ahead",
           description: "Formerly Forging a Way",
           facilitator: "Jack Dee",
           icon: Flame,
@@ -192,7 +192,7 @@ export default function Agenda() {
         },
         {
           time: "1:00 – 3:00 PM",
-          title: "“From Our Family to Yours: A Community Service Initiative”",
+          title: "From Our Family to Yours: A Community Service Initiative",
           virtual: true,
           description: "Include virtual participation option for remote attendees",
           icon: Heart,
@@ -207,7 +207,7 @@ export default function Agenda() {
         },
         {
           time: "3:15 – 3:45 PM",
-          title: "“Check-In: My Vision Is Blurred”",
+          title: "Check-In: My Vision Is Blurred",
           description: "Mental Health & Wellness Discussion",
           facilitator: "Social Worker / Mental Health Professional (TBD)",
           icon: MessageSquare,
@@ -303,7 +303,7 @@ export default function Agenda() {
 
       <motion.div variants={itemVariants} className="text-center mb-8 md:mb-12 relative z-10">
         <h1 className="text-4xl md:text-8xl font-outline text-outline uppercase tracking-widest mb-4 md:mb-6" style={{ transform: 'scaleY(1.2)' }}>
-          Conference Agenda
+          Agenda
         </h1>
         <motion.div 
           initial={{ width: 0 }}
