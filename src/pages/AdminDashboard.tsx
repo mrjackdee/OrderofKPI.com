@@ -19,7 +19,9 @@ import {
   Save, 
   RefreshCcw, 
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  FileText,
+  Download
 } from 'lucide-react';
 
 // --- Data ---
@@ -45,9 +47,10 @@ export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState(false);
-  const [activeTab, setActiveTab] = useState<'ballots' | 'results'>('results');
+  const [activeTab, setActiveTab] = useState<'ballots' | 'results' | 'revisions'>('results');
   const [ballots, setBallots] = useState<any[]>([]);
   const [votes, setVotes] = useState<any[]>([]);
+  const [revisions, setRevisions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -81,9 +84,15 @@ export default function AdminDashboard() {
       setLoading(false);
     });
 
+    const qRevisions = query(collection(db, 'revisions'));
+    const unsubRevisions = onSnapshot(qRevisions, (snap) => {
+      setRevisions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
     return () => {
       unsubBallots();
       unsubVotes();
+      unsubRevisions();
     };
   }, [isAuthenticated]);
 
@@ -171,6 +180,48 @@ export default function AdminDashboard() {
     return results;
   };
 
+  const exportRevisionsToCSV = () => {
+    if (revisions.length === 0) {
+      alert("No revisions available to export.");
+      return;
+    }
+    
+    // CSV headers
+    const headers = ["ID", "Article", "Section", "Original Text", "Proposed Text", "Submitter Name", "Submitted At"];
+    
+    const rows = revisions.map(r => {
+      let dateStr = "";
+      if (r.submittedAt) {
+        const dateObj = r.submittedAt.toDate ? r.submittedAt.toDate() : new Date(r.submittedAt);
+        dateStr = dateObj.toLocaleString();
+      }
+      return [
+        r.id || "",
+        r.article || "",
+        r.section || "",
+        r.originalText || "",
+        r.proposedText || "",
+        r.submitterName || "",
+        dateStr
+      ];
+    });
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `kpi_constitution_revisions_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-pure-black text-white p-8 md:p-12">
       <div className="max-w-6xl mx-auto">
@@ -201,6 +252,15 @@ export default function AdminDashboard() {
             >
               <Ticket className="inline-block mr-2" size={14} />
               Ballot Management
+            </button>
+            <button 
+              onClick={() => setActiveTab('revisions')}
+              className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
+                activeTab === 'revisions' ? 'bg-primary text-black' : 'text-silver/60 hover:text-white'
+              }`}
+            >
+              <FileText className="inline-block mr-2" size={14} />
+              Bylaw Revisions
             </button>
           </div>
         </header>
@@ -332,6 +392,80 @@ export default function AdminDashboard() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'revisions' && (
+          <div className="space-y-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold uppercase tracking-widest">Proposed Bylaw Revisions</h2>
+                <p className="text-silver/40 text-[10px] uppercase tracking-[0.2em] mt-1">Submitted by members of the organization</p>
+              </div>
+              <button 
+                onClick={exportRevisionsToCSV}
+                className="px-6 py-3 bg-primary text-black font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/10"
+              >
+                <Download size={14} />
+                Export to CSV (for Google Sheets)
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {revisions.map((rev) => {
+                const dateVal = rev.submittedAt ? (rev.submittedAt.toDate ? rev.submittedAt.toDate().toLocaleString() : new Date(rev.submittedAt).toLocaleString()) : "Pending";
+                return (
+                  <motion.div 
+                    key={rev.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-black border border-white/10 p-6 rounded-2xl space-y-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-1 bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold uppercase tracking-widest rounded-md">
+                          {rev.article}
+                        </span>
+                        <span className="px-2.5 py-1 bg-white/5 text-silver text-[10px] font-bold uppercase tracking-widest rounded-md">
+                          {rev.section}
+                        </span>
+                      </div>
+                      <div className="text-[10px] uppercase tracking-wider text-silver/40">
+                        Submitted: <span className="text-white font-mono">{dateVal}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-1.5">
+                        <h4 className="text-[10px] uppercase tracking-wider text-silver/40 font-bold">Original Verbiage:</h4>
+                        <div className="p-3 bg-white/5 rounded-xl text-xs text-silver/70 italic leading-relaxed">
+                          "{rev.originalText || '(No reference text)'}"
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <h4 className="text-[10px] uppercase tracking-wider text-primary font-bold">Proposed Language Change:</h4>
+                        <div className="p-3 bg-primary/5 border border-primary/10 rounded-xl text-xs text-white font-medium leading-relaxed">
+                          {rev.proposedText}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5">
+                      <div className="text-[10px] uppercase tracking-wider text-silver/40">
+                        Proposed By: <span className="text-primary font-bold">{rev.submitterName || "Anonymous KPI Member"}</span>
+                      </div>
+                      <span className="text-[9px] font-mono text-silver/20">{rev.id}</span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+
+              {revisions.length === 0 && (
+                <div className="border border-white/10 rounded-2xl bg-white/5 p-12 text-center text-silver/40 italic">
+                  No constitution or bylaw revisions have been submitted yet.
+                </div>
+              )}
             </div>
           </div>
         )}

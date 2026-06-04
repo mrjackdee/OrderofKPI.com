@@ -37,6 +37,20 @@
         }
       },
       "required": ["ballotNumber", "timestamp", "selections"]
+    },
+    "revision": {
+      "title": "Constitution Revision",
+      "description": "A proposed amendment to the constitution or by-laws.",
+      "type": "object",
+      "properties": {
+        "article": { "type": "string" },
+        "section": { "type": "string" },
+        "originalText": { "type": "string" },
+        "proposedText": { "type": "string" },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "submitterName": { "type": "string" }
+      },
+      "required": ["article", "section", "originalText", "proposedText", "submittedAt"]
     }
   },
   "firestore": {
@@ -51,6 +65,10 @@
     "votes/{voteId}": {
       "schema": "vote",
       "description": "Cast votes."
+    },
+    "revisions/{revisionId}": {
+      "schema": "revision",
+      "description": "Proposed amendments to the constitution."
     }
   }
 }

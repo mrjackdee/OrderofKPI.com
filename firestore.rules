@@ -37,6 +37,16 @@ service cloud.firestore {
              data.selections is map;
     }
 
+    function isValidRevision(data) {
+      return data.keys().hasAll(['article', 'section', 'originalText', 'proposedText', 'submittedAt']) &&
+             data.article is string && data.article.size() <= 128 &&
+             data.section is string && data.section.size() <= 128 &&
+             data.originalText is string && data.originalText.size() <= 10000 &&
+             data.proposedText is string && data.proposedText.size() <= 10000 &&
+             data.submittedAt == request.time &&
+             (data.keys().size() == 5 || (data.keys().size() == 6 && data.keys().hasAll(['submitterName']) && data.submitterName is string && data.submitterName.size() <= 256));
+    }
+
     match /ballots/{ballotId} {
       allow read: if isValidId(ballotId);
       
@@ -68,6 +78,13 @@ service cloud.firestore {
         isValidVote(incoming()) &&
         incoming().ballotNumber == voteId &&
         getAfter(/databases/$(database)/documents/ballots/$(voteId)).data.hasVoted == true;
+    }
+
+    match /revisions/{revisionId} {
+      allow read: if isValidId(revisionId);
+      allow list: if true;
+      allow create: if isValidId(revisionId) && isValidRevision(incoming());
+      allow update, delete: if false;
     }
   }
 }

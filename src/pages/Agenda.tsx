@@ -78,8 +78,8 @@ export default function Agenda() {
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const preparedPasscode = passcode.trim().toUpperCase();
-    if (preparedPasscode === 'KPI2026' || preparedPasscode === 'KPI1911' || preparedPasscode === 'KP2026') {
+    const preparedPasscode = passcode.trim();
+    if (preparedPasscode === '2012') {
       try {
         localStorage.setItem('kpi_member_logged_in', 'true');
       } catch (err) {
@@ -90,7 +90,7 @@ export default function Agenda() {
       setPasscode('');
       setLoginError('');
     } else {
-      setLoginError('Invalid passcode. Please enter a valid KPI member passcode.');
+      setLoginError('Invalid passcode. Please enter the valid KPI member passcode.');
     }
   };
 
@@ -343,7 +343,7 @@ export default function Agenda() {
 
         <motion.div variants={itemVariants} className="text-center mb-8 md:mb-12 relative z-10">
           <h1 className="text-4xl md:text-8xl font-outline text-outline uppercase tracking-widest mb-4 md:mb-6" style={{ transform: 'scaleY(1.2)' }}>
-            Agenda
+            Details
           </h1>
           <motion.div 
             initial={{ width: 0 }}
@@ -366,7 +366,7 @@ export default function Agenda() {
                 className="flex items-center gap-2 px-6 py-2.5 rounded-full border border-silver/30 bg-pure-black hover:bg-silver hover:text-black font-semibold text-sm text-silver transition-all duration-300 shadow-lg hover:shadow-[0_0_15px_rgba(192,192,192,0.3)] active:scale-95 cursor-pointer"
               >
                 <Printer size={16} />
-                <span>Print Agenda</span>
+                <span>Print Details</span>
               </button>
             </div>
           </div>
@@ -480,10 +480,10 @@ export default function Agenda() {
                     <Lock size={22} className="animate-pulse" />
                   </div>
                   <h3 className="text-xl font-display font-bold text-white uppercase tracking-widest mb-1">
-                    Members Only Area
+                    Enter Passcode to Submit Revisions
                   </h3>
                   <p className="text-silver/40 text-[10px] uppercase tracking-[0.2em] mb-6">
-                    Enter passcode to access revisions
+                    Enter passcode to enter this members only area
                   </p>
 
                   <form onSubmit={handleLoginSubmit} className="w-full space-y-4">
@@ -496,7 +496,7 @@ export default function Agenda() {
                         autoFocus
                         value={passcode}
                         onChange={(e) => setPasscode(e.target.value)}
-                        placeholder="e.g. KPI2026"
+                        placeholder="Enter Passcode"
                         className="w-full bg-silver/5 border border-silver/20 focus:border-primary/50 text-white rounded-xl px-4 py-3 text-sm tracking-widest placeholder-white/20 focus:outline-none transition-all text-center uppercase"
                       />
                     </div>
@@ -515,10 +515,6 @@ export default function Agenda() {
                         Verify Credentials
                       </button>
                     </div>
-
-                    <p className="text-[10px] text-silver/40 leading-relaxed max-w-[280px] mx-auto mt-4">
-                      Please enter the organization passcode (e.g. <span className="font-bold text-silver/60">KPI2026</span>) to instantly verify your login.
-                    </p>
                   </form>
                 </div>
               </motion.div>
@@ -700,7 +696,7 @@ export default function Agenda() {
       <div id="printable-agenda" className="hidden print:block w-full text-black bg-white p-6 space-y-8 font-sans">
         <div className="text-center pb-6 border-b-2 border-black">
           <h1 id="printable-title" className="text-3xl font-black uppercase tracking-widest mb-1 text-black">
-            Agenda
+            Details
           </h1>
           <p className="text-xs font-semibold tracking-widest uppercase text-black/70">
             June 26-28, 2026 — Charlotte, NC
