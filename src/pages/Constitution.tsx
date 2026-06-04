@@ -424,7 +424,7 @@ export default function Constitution() {
               <div className="space-y-3">
                 {/* PDF Clickable Link 1 */}
                 <a 
-                  href="/KP_Constitution_2021.pdf"
+                  href="https://assets.orderofkpi.org/files/KP_Constitution_2021.pdf"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full inline-flex items-center justify-between p-3.5 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-xl transition-all text-[10px] uppercase font-bold tracking-widest text-primary hover:text-white"
@@ -435,7 +435,7 @@ export default function Constitution() {
 
                 {/* PDF Clickable Link 2 */}
                 <a 
-                  href="/KP_Bylaws_2022.pdf"
+                  href="https://assets.orderofkpi.org/files/KP_Bylaws_2022.pdf"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full inline-flex items-center justify-between p-3.5 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-xl transition-all text-[10px] uppercase font-bold tracking-widest text-primary hover:text-white"
