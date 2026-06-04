@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
+import { Calendar, ArrowRight } from 'lucide-react';
 import AddToCalendar from '../components/AddToCalendar';
 
 const MotionLink = motion(Link);
@@ -63,6 +64,15 @@ export default function Home() {
       className="w-full max-w-[1200px] flex flex-col items-center px-4 py-8 gap-12"
     >
       <motion.div variants={itemVariants} className="w-full relative rounded-xl overflow-hidden @container border border-primary">
+        <div className="bg-primary/20 backdrop-blur-md border-b border-primary/30 py-3.5 px-4 text-center z-20 relative flex items-center justify-center gap-2 flex-wrap">
+          <Calendar size={14} className="text-primary animate-pulse shrink-0" />
+          <span className="text-white text-[10px] md:text-xs font-bold uppercase tracking-[0.2em]">
+            Conference Schedule Now Available —{' '}
+            <Link to="/agenda" className="text-primary hover:text-white underline transition-colors inline-flex items-center gap-1">
+              View Schedule <ArrowRight size={12} />
+            </Link>
+          </span>
+        </div>
         <div 
           className="flex min-h-[500px] md:min-h-[600px] flex-col gap-6 md:gap-8 bg-cover bg-center bg-no-repeat items-center justify-center p-6 md:p-8 relative grayscale" 
           style={{ backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.95)), url("https://lh3.googleusercontent.com/aida-public/AB6AXuD0EqJVJjaJxQiZB7JHdhGwO_BkCcaTpRL3BDSKPcap-6dQNxCF_PtQEn3QO1E2YTwL-GlbgHjnYmHSWkZjdcXA7q6xgE3rWRJEX4XJgVE7Sj9nhglcFYLpxMsQ9t8EYJKf4fbXIYS3vQtSbzjvmPh-XUa4rrvAwvyH9obEXBj_1nv_HhGKpL5RKQyCEUKPqMVjNPj62YQlK1hywaehIrHO5dqFI8e17cVg-a9manE6DyHfsJCJph2lprdTLBTZp4GG0rauBDZi0N0Q")' }}
