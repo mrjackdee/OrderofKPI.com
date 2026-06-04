@@ -166,7 +166,6 @@ export default function Agenda() {
         {
           time: "10:45 – 11:00 AM",
           title: "Our Family, Our Future: The Vision Ahead",
-          description: "Formerly Forging a Way",
           facilitator: "Jack Dee",
           icon: Flame,
           type: "event" as const,
@@ -174,7 +173,6 @@ export default function Agenda() {
         {
           time: "11:00 – 12:00 PM",
           title: "Our Family, Our Programs: Planning with Purpose",
-          description: "Formerly Signature Programs & Strategic Planning",
           facilitator: "Anthony Jones",
           icon: Compass,
           type: "event" as const,
@@ -216,7 +214,6 @@ export default function Agenda() {
         {
           time: "4:00 – 4:30 PM",
           title: "Membership Certification Training",
-          inPersonOnly: true,
           facilitator: "James Hayward",
           icon: Award,
           type: "event" as const,
