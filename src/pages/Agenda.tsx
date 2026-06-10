@@ -26,6 +26,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence, useScroll, useSpring } from 'motion/react';
+import EventAddToCalendar from '../components/EventAddToCalendar';
 
 const MotionLink = motion(Link);
 
@@ -76,21 +77,29 @@ export default function Agenda() {
           title: "Check-In & Registration",
           icon: CheckCircle2,
           type: "event" as const,
+          startTime: "20260626T203000Z",
+          endTime: "20260626T223000Z"
         },
         {
-          time: "7:08 PM ET",
-          title: "Opening Ceremony: Are You Okay…Really?",
+          time: "7:00 – 8:00 PM ET",
+          title: "Opening Ceremony: Are You Okay...Really?",
           facilitator: "Brian Goings",
           virtual: true,
           icon: Mic,
           highlight: true,
           type: "event" as const,
+          startTime: "20260626T230000Z",
+          endTime: "20260627T000000Z"
         },
         {
-          time: "8:08 PM ET",
+          time: "8:30 PM – Until ET",
           title: "Game Night / Fellowship Activity",
+          description: "Pink Out",
           icon: Gamepad2,
+          highlight: true,
           type: "event" as const,
+          startTime: "20260627T003000Z",
+          endTime: "20260627T033000Z"
         }
       ]
     },
@@ -104,21 +113,24 @@ export default function Agenda() {
           icon: Sparkles,
         },
         {
-          time: "8:00 AM ET",
-          title: "Morning Workout / Wellness Activity",
+          time: "8:00 – 8:45 AM ET",
+          title: "Tobias Takes Us Through It",
           facilitator: "Tobias Bordley",
-          virtual: true,
           icon: Dumbbell,
           type: "event" as const,
+          startTime: "20260627T120000Z",
+          endTime: "20260627T124500Z"
         },
         {
-          time: "8:45 AM ET",
+          time: "9:00 – 9:30 AM ET",
           title: "Breakfast",
           icon: Utensils,
           type: "event" as const,
+          startTime: "20260627T130000Z",
+          endTime: "20260627T133000Z"
         },
         {
-          time: "9:00 AM ET",
+          time: "9:30 – 9:40 AM ET",
           title: "Opening Remarks & Business",
           virtual: true,
           subitems: [
@@ -127,6 +139,8 @@ export default function Agenda() {
           ],
           icon: MessageSquare,
           type: "event" as const,
+          startTime: "20260627T133000Z",
+          endTime: "20260627T134000Z"
         },
         {
           title: "Session 1: Our Organization in Action",
@@ -135,18 +149,22 @@ export default function Agenda() {
           icon: Compass,
         },
         {
-          time: "9:30 – 9:40 AM ET",
+          time: "9:40 – 9:45 AM ET",
           title: "State of the Organization",
           facilitator: "Edward J. Cook",
           icon: Globe,
           type: "event" as const,
+          startTime: "20260627T134000Z",
+          endTime: "20260627T134500Z"
         },
         {
-          time: "9:40 – 9:50 AM ET",
+          time: "9:45 – 9:50 AM ET",
           title: "1st Anti Report",
           facilitator: "Brian Goings",
           icon: User,
           type: "event" as const,
+          startTime: "20260627T134500Z",
+          endTime: "20260627T135000Z"
         },
         {
           time: "9:50 – 10:00 AM ET",
@@ -154,104 +172,114 @@ export default function Agenda() {
           facilitator: "Ishmeal Allensworth",
           icon: Award,
           type: "event" as const,
+          startTime: "20260627T135000Z",
+          endTime: "20260627T140000Z"
         },
         {
-          title: "Session 2: Vision, Climate & Strategy",
+          title: "Session 2: Vision, Community & Strategy",
           type: "session" as const,
           virtual: true,
           icon: Globe,
         },
         {
           time: "10:00 – 10:30 AM ET",
-          title: "How Today’s Climate Impacts Our Families",
-          description: "Guest Speaker: Alabama State Representative",
+          title: "Mental Health in the LGBT Community",
+          facilitator: "Social Worker / Mental Health Professional",
           icon: Mic,
           type: "event" as const,
+          startTime: "20260627T140000Z",
+          endTime: "20260627T143000Z"
         },
         {
-          time: "10:45 – 11:00 AM ET",
-          title: "Our Family, Our Future: The Vision Ahead",
+          time: "10:30 – 11:00 AM ET",
+          title: "Our Family, Our Future: Building the Digital Legacy",
           facilitator: "Jack Dee",
           icon: Flame,
           type: "event" as const,
+          startTime: "20260627T143000Z",
+          endTime: "20260627T150000Z"
         },
         {
-          time: "11:00 – 12:00 PM ET",
+          time: "11:00 – 11:45 AM ET",
           title: "Our Family, Our Programs: Planning with Purpose",
           facilitator: "Anthony Jones",
           icon: Compass,
           type: "event" as const,
+          startTime: "20260627T150000Z",
+          endTime: "20260627T154500Z"
         },
         {
-          time: "12:00 – 1:00 PM ET",
-          title: "Lunch",
+          time: "11:45 AM – 1:00 PM ET",
+          title: "Lunch / Amendments to the Constitution",
           icon: Utensils,
           type: "event" as const,
+          startTime: "20260627T154500Z",
+          endTime: "20260627T170000Z"
         },
         {
-          title: "Community Service",
+          title: "Community Service & Training",
           type: "session" as const,
           icon: Heart,
         },
         {
-          time: "1:00 – 3:00 PM ET",
+          time: "1:00 – 2:30 PM ET",
           title: "From Our Family to Yours: A Community Service Initiative",
           virtual: true,
           description: "Include virtual participation option for remote attendees",
           icon: Heart,
           highlight: true,
           type: "event" as const,
+          startTime: "20260627T170000Z",
+          endTime: "20260627T183000Z"
         },
         {
-          title: "Session 3: Reflection, Growth & Leadership",
+          title: "Session 3: Certification & Directorate Transition",
           type: "session" as const,
           virtual: true,
           icon: Sparkles,
         },
         {
-          time: "3:15 – 3:45 PM ET",
-          title: "Check-In: My Vision Is Blurred",
-          description: "Mental Health & Wellness Discussion",
-          facilitator: "Social Worker / Mental Health Professional (TBD)",
-          icon: MessageSquare,
-          type: "event" as const,
-        },
-        {
-          time: "4:00 – 4:30 PM ET",
+          time: "3:00 – 4:00 PM ET",
           title: "Membership Certification Training",
           facilitator: "James Hayward",
           icon: Award,
           type: "event" as const,
+          startTime: "20260627T190000Z",
+          endTime: "20260627T200000Z"
         },
         {
-          time: "4:30 – 4:45 PM ET",
+          time: "4:00 – 4:45 PM ET",
           title: "Directorate Installation Ceremony",
           icon: Award,
           type: "event" as const,
+          startTime: "20260627T200000Z",
+          endTime: "20260627T204500Z"
         },
         {
-          time: "5:00 – 6:00 PM ET",
-          title: "New Directorate Call to Action",
-          subitems: [
-            "Amendments & Addendums",
-            "Strategic Direction & Commitments"
-          ],
+          time: "4:45 – 5:15 PM ET",
+          title: "New Directorate Call to Action, Immediate Past Basileus Final Remarks, Current Basileus Address",
           icon: MessageSquare,
           type: "event" as const,
+          startTime: "20260627T204500Z",
+          endTime: "20260627T211500Z"
         },
         {
-          time: "7:30 – 9:00 PM ET",
-          title: "Dinner",
+          time: "7:00 – 9:00 PM ET",
+          title: "Organizational Dinner",
           icon: Utensils,
           highlight: true,
           type: "event" as const,
+          startTime: "20260627T230000Z",
+          endTime: "20260628T010000Z"
         },
         {
           time: "11:00 PM – Until ET",
-          title: "Night on the Town",
+          title: "Night on the Town / Social Event",
           icon: Sparkles,
           highlight: true,
           type: "event" as const,
+          startTime: "20260628T030000Z",
+          endTime: "20260628T050000Z"
         }
       ]
     },
@@ -260,12 +288,30 @@ export default function Agenda() {
       date: "June 28",
       events: [
         {
-          time: "9:00 AM ET",
-          title: "Rededication and Closing Reflection",
+          time: "9:00 – 9:30 AM ET",
+          title: "Family Matters: True to Our Core Again Reflection",
           virtual: true,
           icon: Award,
           highlight: true,
           type: "event" as const,
+          startTime: "20260628T130000Z",
+          endTime: "20260628T133000Z"
+        },
+        {
+          time: "9:30 – 9:45 AM ET",
+          title: "Closing Remarks",
+          icon: MessageSquare,
+          type: "event" as const,
+          startTime: "20260628T133000Z",
+          endTime: "20260628T134500Z"
+        },
+        {
+          time: "11:00 AM ET",
+          title: "Check-Out & Departure",
+          icon: CheckCircle2,
+          type: "event" as const,
+          startTime: "20260628T150000Z",
+          endTime: "20260628T160000Z"
         }
       ]
     }
@@ -526,6 +572,15 @@ export default function Agenda() {
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-pure-black border border-silver/20 text-silver/60 text-[9px] font-bold uppercase tracking-[0.1em] shrink-0">
                         <MapPin size={9} className="text-red-400 animate-bounce" /> In-person Only
                       </span>
+                    )}
+                    {event.startTime && event.endTime && (
+                      <EventAddToCalendar
+                        title={event.title}
+                        description={event.description}
+                        facilitator={event.facilitator}
+                        startTime={event.startTime}
+                        endTime={event.endTime}
+                      />
                     )}
                   </div>
                 </div>

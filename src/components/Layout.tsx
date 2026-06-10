@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, ChevronUp, Instagram } from 'lucide-react';
-import RegistrationPopup from './RegistrationPopup';
 
 const MotionLink = motion(Link);
 
@@ -31,7 +30,6 @@ export default function Layout() {
 
   return (
     <div className="relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden bg-[#000000] text-primary font-display antialiased">
-      <RegistrationPopup />
       <div className="layout-container flex h-full grow flex-col pt-[72px] md:pt-[88px]">
         <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-primary px-4 md:px-10 py-4 md:py-6 bg-black/95 backdrop-blur fixed top-0 left-0 right-0 z-50">
           <div className="flex items-center gap-2 md:gap-4 text-primary">
