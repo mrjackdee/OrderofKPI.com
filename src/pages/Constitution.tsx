@@ -93,6 +93,36 @@ export default function Constitution() {
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const [submissionError, setSubmissionError] = useState('');
 
+  // Deadline calculation: June 19, 2026 at 12:00 PM ET
+  const targetDate = new Date(Date.UTC(2026, 5, 19, 16, 0, 0));
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: false });
+  const [isDeadlinePassed, setIsDeadlinePassed] = useState(false);
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const difference = targetDate.getTime() - now.getTime();
+      
+      if (difference <= 0) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true });
+        setIsDeadlinePassed(true);
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((difference / (1000 * 60)) % 60);
+      const seconds = Math.floor((difference / 1000) % 60);
+
+      setTimeLeft({ days, hours, minutes, seconds, isExpired: false });
+      setIsDeadlinePassed(false);
+    };
+
+    calculateTimeLeft();
+    const interval = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Submissions archive states
   const [viewingSubmissions, setViewingSubmissions] = useState(false);
   const [submissions, setSubmissions] = useState<RevisionSubmission[]>([]);
@@ -253,6 +283,10 @@ export default function Constitution() {
 
   const handleSubmitRevision = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isDeadlinePassed) {
+      setSubmissionError('The deadline for submitting proposed changes has passed. No additional proposed changes are accepted after June 19, 2026, 12:00 p.m. ET.');
+      return;
+    }
     if (!submitterName.trim()) {
       setSubmissionError("Please enter your name under 'Submitted By' before submitting.");
       return;
@@ -406,6 +440,65 @@ export default function Constitution() {
             Constitution & Bylaws Revisions
           </h1>
         </header>
+
+        {/* Disclaimer & Countdown Banner */}
+        <div className="w-full bg-primary/5 border border-primary/30 rounded-3xl p-6 md:p-8 backdrop-blur-md relative overflow-hidden mb-8">
+          <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-primary to-transparent" />
+          
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+            <div className="space-y-2.5 max-w-xl text-center md:text-left">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/15 border border-primary/30 text-[9px] font-black uppercase tracking-[0.2em] text-primary">
+                Revision Deadline Disclaimer
+              </div>
+              <p className="text-white text-xs md:text-[13px] leading-relaxed uppercase tracking-wider font-semibold">
+                All proposed changes to either document must be submitted by <span className="text-primary font-extrabold">12:00 p.m. ET on Friday, June 19, 2026</span>. No additional proposed changes will be accepted after that deadline.
+              </p>
+            </div>
+
+            <div className="bg-pure-black/85 border border-silver/10 rounded-2xl py-3 px-5 flex items-center gap-4 shrink-0 shadow-inner">
+              {timeLeft.isExpired ? (
+                <div className="text-center px-4 py-2">
+                  <span className="text-red-400 font-bold uppercase tracking-widest text-[11px] block animate-pulse">
+                    Submission Deadline Passed
+                  </span>
+                  <span className="text-[9px] text-silver/50 uppercase font-medium tracking-wide mt-1 block">
+                    June 19, 2026 — 12:00 PM ET
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <div className="text-center min-w-[35px]">
+                    <span className="font-mono text-xl md:text-2xl font-black text-primary block leading-none">
+                      {String(timeLeft.days).padStart(2, '0')}
+                    </span>
+                    <span className="text-[8px] uppercase tracking-widest text-silver/40 font-bold block mt-1">Days</span>
+                  </div>
+                  <div className="text-silver/25 font-mono text-lg font-bold select-none">:</div>
+                  <div className="text-center min-w-[35px]">
+                    <span className="font-mono text-xl md:text-2xl font-black text-primary block leading-none">
+                      {String(timeLeft.hours).padStart(2, '0')}
+                    </span>
+                    <span className="text-[8px] uppercase tracking-widest text-silver/40 font-bold block mt-1">Hrs</span>
+                  </div>
+                  <div className="text-silver/25 font-mono text-lg font-bold select-none">:</div>
+                  <div className="text-center min-w-[35px]">
+                    <span className="font-mono text-xl md:text-2xl font-black text-primary block leading-none">
+                      {String(timeLeft.minutes).padStart(2, '0')}
+                    </span>
+                    <span className="text-[8px] uppercase tracking-widest text-silver/40 font-bold block mt-1">Mins</span>
+                  </div>
+                  <div className="text-silver/25 font-mono text-lg font-bold select-none">:</div>
+                  <div className="text-center min-w-[35px]">
+                    <span className="font-mono text-xl md:text-2xl font-black text-primary block leading-none">
+                      {String(timeLeft.seconds).padStart(2, '0')}
+                    </span>
+                    <span className="text-[8px] uppercase tracking-widest text-silver/40 font-bold block mt-1">Secs</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
@@ -644,6 +737,21 @@ export default function Constitution() {
                     </h3>
                   </div>
 
+                  {/* Submission Deadline Pass Notification */}
+                  {isDeadlinePassed && (
+                    <div className="mb-6 p-4 bg-red-500/10 border border-red-500/25 rounded-2xl flex items-start gap-3">
+                      <AlertCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
+                      <div>
+                        <h5 className="text-xs font-bold text-red-500 uppercase tracking-widest mb-1">
+                          Revisions Are Closed
+                        </h5>
+                        <p className="text-[11px] text-silver/60 uppercase leading-relaxed font-semibold">
+                          The official deadline to submit proposed changes was June 19, 2026, at 12:00 PM ET. No additional proposed revisions are accepted after this date.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Success Notification */}
                   {submissionSuccess && (
                     <motion.div 
@@ -872,6 +980,7 @@ export default function Constitution() {
                         type="submit"
                         disabled={
                           isSubmitting || 
+                          isDeadlinePassed ||
                           !submitterName.trim() || 
                           !proposedText.trim() || 
                           (selectedArticle === 'Other' && !customArticle.trim()) || 
@@ -879,15 +988,22 @@ export default function Constitution() {
                         }
                         className="w-full py-4 bg-primary hover:bg-white text-black font-bold uppercase tracking-widest rounded-xl transition-all text-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-primary/10"
                         title={
-                          !submitterName.trim() || !proposedText.trim() 
-                            ? "Please fill in 'Submitted By' and proposed text to submit." 
-                            : "Submit proposal"
+                          isDeadlinePassed
+                            ? "Submission deadline has passed."
+                            : !submitterName.trim() || !proposedText.trim() 
+                              ? "Please fill in 'Submitted By' and proposed text to submit." 
+                              : "Submit proposal"
                         }
                       >
                         {isSubmitting ? (
                           <>
                             <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
                             <span>Transmitting Revision...</span>
+                          </>
+                        ) : isDeadlinePassed ? (
+                          <>
+                            <Lock size={14} />
+                            <span>Deadline Passed</span>
                           </>
                         ) : (
                           <>
