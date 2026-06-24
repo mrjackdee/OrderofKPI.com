@@ -506,7 +506,7 @@ export default function ConferencePortal() {
                 </div>
               </div>
               <p className="text-silver/60 text-[10px] leading-relaxed uppercase tracking-wide font-semibold mb-5">
-                Explore the full, comprehensive conference guidebook including detailed session briefs, venue locations, dress codes, speaker profiles, and download resources.
+                Explore the session schedule and resources.
               </p>
               <Link
                 to="/agenda"
@@ -533,7 +533,7 @@ export default function ConferencePortal() {
                 <li className="flex gap-2.5 items-start">
                   <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
                   <p className="text-[10px] text-silver/60 uppercase tracking-wide leading-relaxed font-semibold">
-                    <strong className="text-white">Professional Dress:</strong> Friday Pink Out theme, Saturday formal attire, Sunday organizational gold & silver coordinates.
+                    <strong className="text-white">Professional Dress:</strong> Friday Pink Out theme, Saturday formal attire, Sunday organizational black & silver coordinates.
                   </p>
                 </li>
                 <li className="flex gap-2.5 items-start">
