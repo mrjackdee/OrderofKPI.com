@@ -448,10 +448,10 @@ export default function Constitution() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
             <div className="space-y-2.5 max-w-xl text-center md:text-left">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/15 border border-primary/30 text-[9px] font-black uppercase tracking-[0.2em] text-primary">
-                Revision Deadline Disclaimer
+                Revision Deadline
               </div>
               <p className="text-white text-xs md:text-[13px] leading-relaxed uppercase tracking-wider font-semibold">
-                All proposed changes to either document must be submitted by <span className="text-primary font-extrabold">12:00 p.m. ET on Friday, June 19, 2026</span>. No additional proposed changes will be accepted after that deadline.
+                Submit and track proposed constitutional modifications.
               </p>
             </div>
 
@@ -951,11 +951,12 @@ export default function Constitution() {
                       </label>
                       <textarea
                         required
-                        placeholder="Enter the proposed revised text or new language to be presented to the Directorate..."
+                        disabled={isDeadlinePassed}
+                        placeholder={isDeadlinePassed ? "Submission deadline has passed. Revisions are closed." : "Enter the proposed revised text or new language to be presented to the Directorate..."}
                         rows={6}
                         value={proposedText}
                         onChange={(e) => setProposedText(e.target.value)}
-                        className="w-full bg-pure-black border border-silver/20 focus:border-primary text-white rounded-xl px-4 py-3.5 text-xs focus:outline-none transition-colors leading-relaxed resize-y font-light shadow-inner"
+                        className="w-full bg-pure-black border border-silver/20 focus:border-primary text-white rounded-xl px-4 py-3.5 text-xs focus:outline-none transition-colors leading-relaxed resize-y font-light shadow-inner disabled:opacity-50 disabled:bg-silver/5 disabled:text-silver/40 disabled:border-silver/10 disabled:cursor-not-allowed"
                       />
                     </div>
 
@@ -967,10 +968,11 @@ export default function Constitution() {
                       <input
                         type="text"
                         required
-                        placeholder="e.g. Jason Purify"
+                        disabled={isDeadlinePassed}
+                        placeholder={isDeadlinePassed ? "Submissions closed" : "e.g. Jason Purify"}
                         value={submitterName}
                         onChange={(e) => setSubmitterName(e.target.value)}
-                        className="w-full bg-pure-black border border-silver/20 focus:border-primary/50 text-white rounded-xl px-3 py-3 text-xs focus:outline-none transition-colors font-semibold"
+                        className="w-full bg-pure-black border border-silver/20 focus:border-primary/50 text-white rounded-xl px-3 py-3 text-xs focus:outline-none transition-colors font-semibold disabled:opacity-50 disabled:bg-silver/5 disabled:text-silver/40 disabled:border-silver/10 disabled:cursor-not-allowed"
                       />
                     </div>
 
