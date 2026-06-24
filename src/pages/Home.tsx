@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Calendar, ArrowRight } from 'lucide-react';
@@ -7,36 +7,6 @@ import AddToCalendar from '../components/AddToCalendar';
 const MotionLink = motion(Link);
 
 export default function Home() {
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0
-  });
-
-  useEffect(() => {
-    const targetDate = new Date('2026-06-26T09:00:00-04:00').getTime();
-    const updateTimer = () => {
-      const now = new Date().getTime();
-      const distance = targetDate - now;
-      if (distance < 0) {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-        return;
-      }
-      setTimeLeft({
-        days: Math.floor(distance / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-        minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
-        seconds: Math.floor((distance % (1000 * 60)) / 1000)
-      });
-    };
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const formatNumber = (num: number) => num.toString().padStart(2, '0');
-
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -64,17 +34,8 @@ export default function Home() {
       className="w-full max-w-[1200px] flex flex-col items-center px-4 py-8 gap-12"
     >
       <motion.div variants={itemVariants} className="w-full relative rounded-xl overflow-hidden @container border border-primary">
-        <div className="bg-primary/20 backdrop-blur-md border-b border-primary/30 py-3.5 px-4 text-center z-20 relative flex items-center justify-center gap-2 flex-wrap">
-          <Calendar size={14} className="text-primary animate-pulse shrink-0" />
-          <span className="text-white text-[10px] md:text-xs font-bold uppercase tracking-[0.2em]">
-            Now Available —{' '}
-            <Link to="/agenda" className="text-primary hover:text-white underline transition-colors inline-flex items-center gap-1">
-              View Conference Details <ArrowRight size={12} />
-            </Link>
-          </span>
-        </div>
         <div 
-          className="flex min-h-[500px] md:min-h-[600px] flex-col gap-6 md:gap-8 bg-cover bg-center bg-no-repeat items-center justify-center p-6 md:p-8 relative grayscale" 
+          className="flex min-h-[420px] md:min-h-[500px] flex-col gap-6 md:gap-8 bg-cover bg-center bg-no-repeat items-center justify-center p-6 md:p-8 relative grayscale" 
           style={{ backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.95)), url("https://lh3.googleusercontent.com/aida-public/AB6AXuD0EqJVJjaJxQiZB7JHdhGwO_BkCcaTpRL3BDSKPcap-6dQNxCF_PtQEn3QO1E2YTwL-GlbgHjnYmHSWkZjdcXA7q6xgE3rWRJEX4XJgVE7Sj9nhglcFYLpxMsQ9t8EYJKf4fbXIYS3vQtSbzjvmPh-XUa4rrvAwvyH9obEXBj_1nv_HhGKpL5RKQyCEUKPqMVjNPj62YQlK1hywaehIrHO5dqFI8e17cVg-a9manE6DyHfsJCJph2lprdTLBTZp4GG0rauBDZi0N0Q")' }}
         >
           <motion.div 
@@ -115,46 +76,7 @@ export default function Home() {
               <AddToCalendar className="mt-6" />
             </motion.div>
           </div>
-          <div className="flex flex-col items-center gap-4 z-10">
-            <MotionLink
-              to="/registration"
-              variants={itemVariants}
-              animate={{ 
-                scale: [1, 1.03, 1],
-                opacity: 1,
-                y: 0,
-                boxShadow: [
-                  "0 0 15px rgba(192, 192, 192, 0.2)",
-                  "0 0 30px rgba(192, 192, 192, 0.5)",
-                  "0 0 15px rgba(192, 192, 192, 0.2)"
-                ]
-              }}
-              transition={{ 
-                duration: 3, 
-                repeat: Infinity, 
-                ease: "easeInOut" 
-              }}
-              className="mt-4 bg-silver/20 border-2 border-silver rounded-xl backdrop-blur-md px-10 py-5 group text-center transition-all hover:bg-silver/30"
-            >
-              <p className="text-pure-white text-base md:text-xl font-black tracking-[0.3em] uppercase group-hover:text-primary transition-colors drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">
-                Registration is NOW OPEN
-              </p>
-            </MotionLink>
-          </div>
         </div>
-      </motion.div>
-
-      <motion.div variants={itemVariants} className="w-full max-w-4xl grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 px-4">
-        {Object.entries(timeLeft).map(([label, value]) => (
-          <motion.div 
-            key={label}
-            whileHover={{ y: -5, borderColor: '#ffffff' }}
-            className="flex flex-col items-center gap-2 md:gap-4 border border-primary p-4 md:p-6 bg-black relative transition-colors group"
-          >
-            <p className="text-primary text-3xl md:text-5xl font-black tracking-tight font-outline text-outline group-hover:text-white transition-colors" style={{ transform: 'scaleY(1.1)', WebkitTextStroke: '1px md:1.5px rgb(192, 192, 192)' }}>{formatNumber(value as number)}</p>
-            <p className="text-primary text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] group-hover:text-white transition-colors">{label}</p>
-          </motion.div>
-        ))}
       </motion.div>
 
       <motion.section 

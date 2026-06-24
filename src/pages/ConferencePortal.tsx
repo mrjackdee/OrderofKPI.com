@@ -387,14 +387,14 @@ export default function ConferencePortal() {
         {/* Portal Header */}
         <header className="text-center mb-12 relative">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-black uppercase tracking-[0.25em] text-primary mb-4">
-            <Monitor size={11} className="text-primary" />
-            CONFERENCE PORTAL
+            <MapPin size={11} className="text-primary" />
+            CHARLOTTE, NC
           </div>
           <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-white uppercase font-display">
             The Biennial <span className="text-primary">Conference Portal</span>
           </h1>
           <p className="text-silver/60 text-xs md:text-sm tracking-widest uppercase font-medium mt-3 max-w-xl mx-auto">
-            Your centralized virtual access center, scheduling matrix, and digital materials vault for the 2026 Biennial.
+            The centralized access center, scheduling matrix, and digital artifact source for the Order of KPI for the 2026 Biennial Conference.
           </p>
         </header>
 
