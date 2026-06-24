@@ -17,6 +17,7 @@ import Elections from './pages/Elections';
 import VotingPortal from './pages/VotingPortal';
 import AdminDashboard from './pages/AdminDashboard';
 import Constitution from './pages/Constitution';
+import ConferencePortal from './pages/ConferencePortal';
 import ScrollToTop from './components/ScrollToTop';
 import LandingPage from './components/LandingPage';
 import { AnimatePresence } from 'motion/react';
@@ -60,6 +61,7 @@ export default function App() {
                 <Route path="voting-portal" element={<VotingPortal />} />
                 <Route path="admin-dashboard" element={<AdminDashboard />} />
                 <Route path="constitution" element={<Constitution />} />
+                <Route path="portal" element={<ConferencePortal />} />
               </Route>
             </Routes>
           </React.Fragment>

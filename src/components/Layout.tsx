@@ -23,8 +23,8 @@ export default function Layout() {
 
   const navItems = [
     { name: 'HOME', path: '/' },
+    { name: 'CONFERENCE PORTAL', path: '/portal', hasBadge: true },
     { name: 'REGISTRATION', path: '/registration' },
-    { name: 'CONFERENCE DETAILS', path: '/agenda' },
     { name: 'CONTACT US', path: 'mailto:conference@orderofkpi.com', isExternal: true },
   ];
 
@@ -65,7 +65,7 @@ export default function Layout() {
                   <MotionLink
                     key={item.name}
                     to={item.path}
-                    className={`relative transition-colors text-sm font-semibold uppercase tracking-[0.15em] group ${
+                    className={`relative transition-colors text-sm font-semibold uppercase tracking-[0.15em] group flex items-center gap-1.5 ${
                       item.name === 'REGISTRATION' 
                         ? 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' 
                         : 'text-primary hover:text-white'
@@ -84,7 +84,12 @@ export default function Layout() {
                       ease: "easeInOut" 
                     }}
                   >
-                    {item.name}
+                    <span>{item.name}</span>
+                    {item.hasBadge && (
+                      <span className="inline-flex items-center justify-center bg-primary text-black text-[8px] font-black tracking-widest px-1.5 py-0.5 rounded-md leading-none shadow-md shadow-primary/20 animate-pulse shrink-0">
+                        NEW
+                      </span>
+                    )}
                     <motion.span 
                       className="absolute -bottom-1 left-0 w-0 h-px bg-white transition-all group-hover:w-full"
                       initial={{ width: 0 }}
@@ -142,13 +147,18 @@ export default function Layout() {
                     key={item.name}
                     to={item.path}
                     onClick={() => setIsMenuOpen(false)}
-                    className={`text-xl md:text-2xl font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] transition-colors ${
+                    className={`text-xl md:text-2xl font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] transition-colors flex items-center justify-center gap-2 ${
                       item.name === 'REGISTRATION'
                         ? 'text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]'
                         : 'text-primary hover:text-white'
                     }`}
                   >
-                    {item.name}
+                    <span>{item.name}</span>
+                    {item.hasBadge && (
+                      <span className="inline-flex items-center justify-center bg-primary text-black text-[10px] font-black tracking-widest px-2 py-0.5 rounded-md leading-none animate-pulse shrink-0">
+                        NEW
+                      </span>
+                    )}
                   </Link>
                 )
               ))}
@@ -182,7 +192,14 @@ export default function Layout() {
               item.isExternal ? (
                 <a key={item.name} className="text-primary hover:text-white transition-colors text-xs font-bold uppercase tracking-[0.2em]" href={item.path}>{item.name}</a>
               ) : (
-                <Link key={item.name} className="text-primary hover:text-white transition-colors text-xs font-bold uppercase tracking-[0.2em]" to={item.path}>{item.name}</Link>
+                <Link key={item.name} className="text-primary hover:text-white transition-colors text-xs font-bold uppercase tracking-[0.2em] flex items-center gap-1.5" to={item.path}>
+                  <span>{item.name}</span>
+                  {item.hasBadge && (
+                    <span className="inline-flex items-center justify-center bg-primary text-black text-[8px] font-black tracking-widest px-1.5 py-0.5 rounded-md leading-none animate-pulse shrink-0">
+                      NEW
+                    </span>
+                  )}
+                </Link>
               )
             ))}
           </nav>
