@@ -356,7 +356,7 @@ export default function ConferencePortal() {
     }
   ];
 
-  const zoomRegisterLink = "https://us06web.zoom.us/j/83618798524?pwd=0AVyq61ziNMb3ui5lM2wfNMoIdrpnG.1";
+  const zoomRegisterLink = "http://orderofkpi.com/zoom";
 
   const activeDayData = agendaData[activeTab];
 
@@ -430,7 +430,7 @@ export default function ConferencePortal() {
                 <div className="p-3.5 bg-silver/5 border border-silver/10 rounded-2xl flex items-start gap-3">
                   <ShieldCheck size={16} className="text-primary shrink-0 mt-0.5" />
                   <p className="text-[10px] text-silver/60 uppercase tracking-wide leading-relaxed font-semibold">
-                    Once verified, Zoom will instantly transmit your personalized entrance link and custom calendar files directly to your registered inbox.
+                    Once you register, Zoom will send your custom link and calendar updates straight to your inbox.
                   </p>
                 </div>
               </div>

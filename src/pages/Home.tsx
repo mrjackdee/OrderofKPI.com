@@ -1,8 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Calendar, ArrowRight } from 'lucide-react';
-import AddToCalendar from '../components/AddToCalendar';
+import { Monitor, ArrowRight } from 'lucide-react';
 
 const MotionLink = motion(Link);
 
@@ -73,7 +72,17 @@ export default function Home() {
                 <span className="h-px w-10 md:w-16 bg-primary"></span>
               </div>
               <h2 className="text-primary text-sm md:text-lg font-medium tracking-widest uppercase">Charlotte, NC</h2>
-              <AddToCalendar className="mt-6" />
+              <motion.a
+                href="http://orderofkpi.com/zoom"
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="mt-6 flex items-center gap-2 px-6 py-3 bg-primary text-black font-bold uppercase tracking-widest rounded-full hover:bg-white transition-colors text-sm shadow-lg shadow-primary/20"
+              >
+                <Monitor size={18} />
+                Conference Portal
+              </motion.a>
             </motion.div>
           </div>
         </div>
