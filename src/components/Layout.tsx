@@ -21,7 +21,20 @@ export default function Layout() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const navItems = [
+  interface NavItem {
+    name: string;
+    path: string;
+    isExternal?: boolean;
+    hasBadge?: boolean;
+  }
+
+  const navItems: NavItem[] = [
+    { name: 'HOME', path: '/' },
+    { name: 'CONFERENCE PORTAL', path: '/portal', hasBadge: true },
+    { name: 'REGISTRATION', path: '/registration' },
+  ];
+
+  const footerNavItems: NavItem[] = [
     { name: 'HOME', path: '/' },
     { name: 'CONFERENCE PORTAL', path: '/portal', hasBadge: true },
     { name: 'REGISTRATION', path: '/registration' },
@@ -188,7 +201,7 @@ export default function Layout() {
 
         <footer className="w-full border-t border-primary py-12 px-6 md:px-10 bg-black text-center flex flex-col items-center gap-8">
           <nav className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
-            {navItems.map((item) => (
+            {footerNavItems.map((item) => (
               item.isExternal ? (
                 <a key={item.name} className="text-primary hover:text-white transition-colors text-xs font-bold uppercase tracking-[0.2em]" href={item.path}>{item.name}</a>
               ) : (

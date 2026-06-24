@@ -214,7 +214,8 @@ export default function Agenda() {
           icon: Utensils,
           type: "event" as const,
           startTime: "20260627T154500Z",
-          endTime: "20260627T170000Z"
+          endTime: "20260627T170000Z",
+          virtual: true
         },
         {
           title: "Community Service & Training",

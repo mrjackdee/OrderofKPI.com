@@ -246,7 +246,7 @@ export default function ConferencePortal() {
           type: "event" as const,
           startTime: "20260627T154500Z",
           endTime: "20260627T170000Z",
-          virtual: false
+          virtual: true
         },
         {
           title: "Community Service & Training",
