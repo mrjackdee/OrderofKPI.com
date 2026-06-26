@@ -410,20 +410,20 @@ export default function ConferencePortal() {
   };
 
   const attendees = [
-    "James Haywood",
-    "Edward Cook",
-    "Jack Dee",
+    "Anthony Jones",
     "Brandon Owens",
     "Brian Johnson",
-    "Deshaun Safford",
     "Darron Jenkins",
-    "Denzel Talley",
-    "Anthony Jones",
-    "Tobias Bordley",
-    "Keith Woods",
-    "Jason Pilar",
     "Demetrist Thomas",
-    "Ishmeal Allensworth"
+    "Denzel Talley",
+    "Deshaun Safford",
+    "Edward Cook",
+    "Ishmeal Allensworth",
+    "Jack Dee",
+    "James Haywood",
+    "Jason Pilar",
+    "Keith Woods",
+    "Tobias Bordley"
   ];
 
   if (!isAuthenticated) {
@@ -490,7 +490,15 @@ export default function ConferencePortal() {
       `}</style>
       
       {/* Welcome Banner Marquee */}
-      <div className="w-full bg-primary text-black py-3 overflow-hidden flex whitespace-nowrap relative z-20 mt-20 md:mt-24 shadow-[0_0_20px_rgba(212,175,55,0.15)] border-y border-primary/50">
+      <div className="relative z-20 mt-20 md:mt-24 text-center px-4 mb-4">
+        <h2 className="text-xl md:text-2xl font-display font-black text-white uppercase tracking-[0.15em]">
+          Welcome to the 2026 Biennial Conference
+        </h2>
+        <p className="text-primary text-sm font-bold uppercase tracking-widest mt-2">
+          We are honored to receive our registered members
+        </p>
+      </div>
+      <div className="w-full bg-primary text-black py-3 overflow-hidden flex whitespace-nowrap relative z-20 shadow-[0_0_20px_rgba(212,175,55,0.15)] border-y border-primary/50">
         <div className="animate-marquee flex items-center gap-8 min-w-max">
           <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em] flex items-center gap-8 mr-8">
             WELCOME REGISTERED ATTENDEES:
@@ -639,30 +647,6 @@ export default function ConferencePortal() {
                 <span>View Prototype</span>
                 <ExternalLink size={14} />
               </a>
-            </div>
-
-            {/* ATTENDEE LIST */}
-            <div className="bg-pure-black/95 border border-primary/25 rounded-3xl p-6 backdrop-blur-md relative overflow-hidden shadow-lg hover:border-primary/50 transition-all duration-300">
-              <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-                  <Users size={18} />
-                </div>
-                <div>
-                  <h2 className="text-white text-sm font-black uppercase tracking-wider">Attendee List</h2>
-                  <span className="text-[9px] text-primary/70 font-bold uppercase tracking-widest">Confirmed Registrations</span>
-                </div>
-              </div>
-              <p className="text-silver/60 text-[10px] leading-relaxed uppercase tracking-wide font-semibold mb-5">
-                View the verified list of members who have successfully registered.
-              </p>
-              <Link
-                to="/registration-list"
-                className="w-full py-3.5 px-6 bg-primary/5 hover:bg-primary border border-primary text-primary hover:text-black font-black uppercase tracking-[0.15em] rounded-2xl transition-all text-xs flex items-center justify-center gap-2.5 cursor-pointer"
-              >
-                <span>View Attendees</span>
-                <ChevronRight size={14} />
-              </Link>
             </div>
 
             {/* DETAILED AGENDA PORTAL CARD */}
