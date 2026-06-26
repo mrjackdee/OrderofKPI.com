@@ -73,7 +73,7 @@ export default function Home() {
               </div>
               <h2 className="text-primary text-sm md:text-lg font-medium tracking-widest uppercase">Charlotte, NC</h2>
               <motion.a
-                href="http://orderofkpi.com/zoom"
+                href="http://orderofkpi.com/boule"
                 target="_blank"
                 rel="noopener noreferrer"
                 whileHover={{ scale: 1.05 }}
@@ -104,9 +104,6 @@ export default function Home() {
         <div className="flex flex-col gap-6 max-w-4xl mt-2 md:mt-4">
           <p className="text-primary text-base md:text-lg font-light leading-relaxed">
             Headquartered in Atlanta, GA, <strong>The Order of KP, Inc.</strong> is a community non-profit organization. We are steadfast in our commitment to empowering communities, fostering leadership, and driving sustainable philanthropic impact. Through strategic networking, educational empowerment, and dedicated community service, we strive to set the standard for excellence and civic responsibility.
-          </p>
-          <p className="text-primary/80 text-sm md:text-base font-light leading-relaxed">
-            Join us in Charlotte for our biennial conference! Experience a weekend of excellence, service, and networking. This is a time to reflect on our achievements, forge new alliances, and set the standard for the years to come in an atmosphere of unparalleled sophistication.
           </p>
         </div>
       </motion.section>

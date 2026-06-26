@@ -23,7 +23,8 @@ import {
   Unlock,
   X,
   FileText,
-  ChevronRight
+  ChevronRight,
+  Monitor
 } from 'lucide-react';
 import { motion, AnimatePresence, useScroll, useSpring } from 'motion/react';
 import EventAddToCalendar from '../components/EventAddToCalendar';
@@ -81,24 +82,31 @@ export default function Agenda() {
           endTime: "20260626T223000Z"
         },
         {
-          time: "7:00 – 8:00 PM ET",
-          title: "Opening Ceremony: Are You Okay...Really?",
-          facilitator: "Brian Goings",
+          time: "6:30 – 7:30 PM ET",
+          title: "Technology Check",
+          icon: Monitor,
+          type: "event" as const,
+          startTime: "20260626T223000Z",
+          endTime: "20260626T233000Z"
+        },
+        {
+          time: "8:30 – 9:30 PM ET",
+          title: "Are You Really Okay?",
           virtual: true,
           icon: Mic,
           highlight: true,
           type: "event" as const,
-          startTime: "20260626T230000Z",
-          endTime: "20260627T000000Z"
+          startTime: "20260627T003000Z",
+          endTime: "20260627T013000Z"
         },
         {
-          time: "8:30 PM – Until ET",
-          title: "Game Night / Fellowship Activity",
+          time: "9:30 PM – Until ET",
+          title: "Game Night",
           description: "Pink Out",
           icon: Gamepad2,
           highlight: true,
           type: "event" as const,
-          startTime: "20260627T003000Z",
+          startTime: "20260627T013000Z",
           endTime: "20260627T033000Z"
         }
       ]
@@ -108,141 +116,145 @@ export default function Agenda() {
       date: "June 27",
       events: [
         {
-          title: "Morning Activities",
+          title: "Morning",
           type: "header" as const,
           icon: Sparkles,
         },
         {
-          time: "8:00 – 8:45 AM ET",
+          time: "7:00 – 8:00 AM ET",
           title: "Tobias Takes Us Through It",
-          facilitator: "Tobias Bordley",
           icon: Dumbbell,
           type: "event" as const,
-          startTime: "20260627T120000Z",
-          endTime: "20260627T124500Z"
+          startTime: "20260627T110000Z",
+          endTime: "20260627T120000Z"
         },
         {
-          time: "9:00 – 9:30 AM ET",
+          time: "8:00 – 8:30 AM ET",
           title: "Breakfast",
           icon: Utensils,
           type: "event" as const,
-          startTime: "20260627T130000Z",
+          startTime: "20260627T120000Z",
+          endTime: "20260627T123000Z"
+        },
+        {
+          time: "8:30 – 9:30 AM ET",
+          title: "Refresh & Travel Prep",
+          icon: Clock,
+          type: "event" as const,
+          startTime: "20260627T123000Z",
           endTime: "20260627T133000Z"
         },
         {
-          time: "9:30 – 9:40 AM ET",
-          title: "Opening Remarks & Business",
-          virtual: true,
-          subitems: [
-            "Welcome & Introductions",
-            "Acceptance of Agenda (Motion to Adopt)"
-          ],
-          icon: MessageSquare,
+          time: "9:30 – 9:45 AM ET",
+          title: "Travel to Conference Venue (15 min)",
+          icon: MapPin,
           type: "event" as const,
           startTime: "20260627T133000Z",
-          endTime: "20260627T134000Z"
+          endTime: "20260627T134500Z"
         },
         {
-          title: "Session 1: Our Organization in Action",
+          time: "9:45 – 10:00 AM ET",
+          title: "Arrival & Setup",
+          icon: MapPin,
+          type: "event" as const,
+          startTime: "20260627T134500Z",
+          endTime: "20260627T140000Z"
+        },
+        {
+          time: "10:00 – 10:10 AM ET",
+          title: "Opening Business",
+          icon: MessageSquare,
+          type: "event" as const,
+          startTime: "20260627T140000Z",
+          endTime: "20260627T141000Z"
+        },
+        {
+          title: "Session I: Our Organization in Action",
           type: "session" as const,
           virtual: true,
           icon: Compass,
         },
         {
-          time: "9:40 – 9:45 AM ET",
-          title: "State of the Organization",
-          facilitator: "Edward J. Cook",
+          time: "10:10 – 10:15 AM ET",
+          title: "Basileus Address",
           icon: Globe,
           type: "event" as const,
-          startTime: "20260627T134000Z",
-          endTime: "20260627T134500Z"
+          startTime: "20260627T141000Z",
+          endTime: "20260627T141500Z"
         },
         {
-          time: "9:45 – 9:50 AM ET",
+          time: "10:15 – 10:20 AM ET",
           title: "1st Anti Report",
-          facilitator: "Brian Goings",
           icon: User,
           type: "event" as const,
-          startTime: "20260627T134500Z",
-          endTime: "20260627T135000Z"
+          startTime: "20260627T141500Z",
+          endTime: "20260627T142000Z"
         },
         {
-          time: "9:50 – 10:00 AM ET",
-          title: "Treasurer’s Financial Report",
-          facilitator: "Ishmeal Allensworth",
+          time: "10:20 – 10:30 AM ET",
+          title: "Financial Report",
           icon: Award,
           type: "event" as const,
-          startTime: "20260627T135000Z",
-          endTime: "20260627T140000Z"
+          startTime: "20260627T142000Z",
+          endTime: "20260627T143000Z"
         },
         {
-          title: "Session 2: Vision, Community & Strategy",
+          title: "Session II: Vision, Climate & Strategy",
           type: "session" as const,
           virtual: true,
           icon: Globe,
         },
         {
-          time: "10:00 – 10:30 AM ET",
-          title: "Mental Health in the LGBT Community",
-          facilitator: "Social Worker / Mental Health Professional",
-          icon: Mic,
-          type: "event" as const,
-          startTime: "20260627T140000Z",
-          endTime: "20260627T143000Z"
-        },
-        {
           time: "10:30 – 11:00 AM ET",
-          title: "Our Family, Our Future: Building the Digital Legacy",
-          facilitator: "Jack Dee",
-          icon: Flame,
+          title: "Mental Health & LGBTQIA+",
+          icon: Mic,
           type: "event" as const,
           startTime: "20260627T143000Z",
           endTime: "20260627T150000Z"
         },
         {
-          time: "11:00 – 11:45 AM ET",
-          title: "Our Family, Our Programs: Planning with Purpose",
-          facilitator: "Anthony Jones",
-          icon: Compass,
+          time: "11:00 – 11:30 AM ET",
+          title: "Building the Digital Legacy",
+          icon: Flame,
           type: "event" as const,
           startTime: "20260627T150000Z",
-          endTime: "20260627T154500Z"
+          endTime: "20260627T153000Z"
         },
         {
-          time: "11:45 AM – 1:00 PM ET",
-          title: "Lunch / Amendments to the Constitution",
+          time: "11:30 AM – 12:15 PM ET",
+          title: "Planning with Purpose",
+          icon: Compass,
+          type: "event" as const,
+          startTime: "20260627T153000Z",
+          endTime: "20260627T161500Z"
+        },
+        {
+          time: "12:15 – 1:30 PM ET",
+          title: "Lunch & Constitution Review",
           icon: Utensils,
           type: "event" as const,
-          startTime: "20260627T154500Z",
-          endTime: "20260627T170000Z",
+          startTime: "20260627T161500Z",
+          endTime: "20260627T173000Z",
           virtual: true
         },
         {
-          title: "Community Service & Training",
-          type: "session" as const,
-          icon: Heart,
-        },
-        {
-          time: "1:00 – 2:30 PM ET",
-          title: "From Our Family to Yours: A Community Service Initiative",
-          virtual: true,
-          description: "Include virtual participation option for remote attendees",
+          time: "1:30 – 3:00 PM ET",
+          title: "Community Service Project",
           icon: Heart,
           highlight: true,
           type: "event" as const,
-          startTime: "20260627T170000Z",
-          endTime: "20260627T183000Z"
+          startTime: "20260627T173000Z",
+          endTime: "20260627T190000Z"
         },
         {
-          title: "Session 3: Certification & Directorate Transition",
+          title: "Session III: Reflection, Growth & Leadership",
           type: "session" as const,
           virtual: true,
           icon: Sparkles,
         },
         {
           time: "3:00 – 4:00 PM ET",
-          title: "Membership Certification Training",
-          facilitator: "James Hayward",
+          title: "MIP Certification",
           icon: Award,
           type: "event" as const,
           startTime: "20260627T190000Z",
@@ -250,7 +262,7 @@ export default function Agenda() {
         },
         {
           time: "4:00 – 4:45 PM ET",
-          title: "Directorate Installation Ceremony",
+          title: "Directorate Installation",
           icon: Award,
           type: "event" as const,
           startTime: "20260627T200000Z",
@@ -258,7 +270,7 @@ export default function Agenda() {
         },
         {
           time: "4:45 – 5:15 PM ET",
-          title: "New Directorate Call to Action, Immediate Past Basileus Final Remarks, Current Basileus Address",
+          title: "Call to Action",
           icon: MessageSquare,
           type: "event" as const,
           startTime: "20260627T204500Z",
@@ -266,7 +278,7 @@ export default function Agenda() {
         },
         {
           time: "7:00 – 9:00 PM ET",
-          title: "Organizational Dinner",
+          title: "Dinner",
           icon: Utensils,
           highlight: true,
           type: "event" as const,
@@ -275,7 +287,7 @@ export default function Agenda() {
         },
         {
           time: "11:00 PM – Until ET",
-          title: "Night on the Town / Social Event",
+          title: "Night on the Town",
           icon: Sparkles,
           highlight: true,
           type: "event" as const,
