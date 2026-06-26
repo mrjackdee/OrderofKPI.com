@@ -379,7 +379,7 @@ export default function ConferencePortal() {
     }
   ];
 
-  const zoomRegisterLink = "http://orderofkpi.com/boule";
+  const zoomRegisterLink = "https://us06web.zoom.us/j/83618798524?pwd=0AVyq61ziNMb3ui5lM2wfNMoIdrpnG.1";
 
   const activeDayData = agendaData[activeTab];
 
