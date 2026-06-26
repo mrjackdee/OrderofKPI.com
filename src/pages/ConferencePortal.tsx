@@ -67,6 +67,13 @@ export default function ConferencePortal() {
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState(false);
 
+  useEffect(() => {
+    const authStatus = localStorage.getItem('conference_portal_authenticated');
+    if (authStatus === 'true') {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
   // Countdown to Friday, June 26, 2026, 7:00 PM ET (Opening Ceremony)
   const targetDate = new Date(Date.UTC(2026, 5, 26, 23, 0, 0));
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: false });
@@ -405,6 +412,7 @@ export default function ConferencePortal() {
     if (password === '2012') {
       setIsAuthenticated(true);
       setAuthError(false);
+      localStorage.setItem('conference_portal_authenticated', 'true');
     } else {
       setAuthError(true);
       setPassword('');
@@ -494,17 +502,11 @@ export default function ConferencePortal() {
       {/* Welcome Banner Marquee */}
       <div className="relative z-20 mt-20 md:mt-24 text-center px-4 mb-4">
         <h2 className="text-xl md:text-2xl font-display font-black text-white uppercase tracking-[0.15em]">
-          Welcome to the 2026 Biennial Conference
+          Welcome to our registered members
         </h2>
-        <p className="text-primary text-sm font-bold uppercase tracking-widest mt-2">
-          We are honored to receive our registered members
-        </p>
       </div>
       <div className="w-full bg-primary text-black py-3 overflow-hidden flex whitespace-nowrap relative z-20 shadow-[0_0_20px_rgba(212,175,55,0.15)] border-y border-primary/50">
         <div className="animate-marquee flex items-center gap-8 min-w-max">
-          <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em] flex items-center gap-8 mr-8">
-            WELCOME REGISTERED ATTENDEES:
-          </span>
           {[...attendees, ...attendees, ...attendees, ...attendees].map((name, i) => (
             <span key={i} className="text-xs md:text-sm font-bold uppercase tracking-widest flex items-center gap-8">
               <span>{name}</span>
