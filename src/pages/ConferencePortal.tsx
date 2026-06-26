@@ -589,7 +589,7 @@ export default function ConferencePortal() {
                 Preview the upcoming KP Member Portal features and design.
               </p>
               <a
-                href="https://stitch.withgoogle.com/preview/5137630539613338453?node-id=279e48f3474342659d3a7000c1896cfa"
+                href="https://stitch.withgoogle.com/preview/5137630539613338453?node-id=279e48f3474342659d3a7000c1896cfa&raw=1"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full py-3.5 px-6 bg-primary/5 hover:bg-primary border border-primary text-primary hover:text-black font-black uppercase tracking-[0.15em] rounded-2xl transition-all text-xs flex items-center justify-center gap-2.5 cursor-pointer"
