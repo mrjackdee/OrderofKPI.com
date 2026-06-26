@@ -106,7 +106,8 @@ export default function ConferencePortal() {
           type: "event" as const,
           startTime: "20260626T203000Z",
           endTime: "20260626T223000Z",
-          virtual: false
+          virtual: false,
+          isPast: true
         },
         {
           time: "6:30 – 7:30 PM ET",
@@ -115,7 +116,8 @@ export default function ConferencePortal() {
           type: "event" as const,
           startTime: "20260626T223000Z",
           endTime: "20260626T233000Z",
-          virtual: true
+          virtual: true,
+          isPast: true
         },
         {
           time: "8:30 – 9:30 PM ET",
@@ -570,7 +572,7 @@ export default function ConferencePortal() {
                 href={zoomRegisterLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-4 px-6 bg-primary hover:bg-white text-black font-black uppercase tracking-[0.18em] rounded-2xl transition-all text-xs flex items-center justify-center gap-2.5 shadow-lg shadow-primary/10 cursor-pointer mb-5"
+                className="w-fit mx-auto py-4 px-6 bg-primary hover:bg-white text-black font-black uppercase tracking-[0.18em] rounded-2xl transition-all text-xs flex items-center justify-center gap-2.5 shadow-lg shadow-primary/10 cursor-pointer mb-5"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -642,7 +644,7 @@ export default function ConferencePortal() {
                 href="https://stitch.withgoogle.com/preview/5137630539613338453?node-id=279e48f3474342659d3a7000c1896cfa&raw=1"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-3.5 px-6 bg-primary/5 hover:bg-primary border border-primary text-primary hover:text-black font-black uppercase tracking-[0.15em] rounded-2xl transition-all text-xs flex items-center justify-center gap-2.5 cursor-pointer"
+                className="w-fit mx-auto py-3.5 px-6 bg-primary/5 hover:bg-primary border border-primary text-primary hover:text-black font-black uppercase tracking-[0.15em] rounded-2xl transition-all text-xs flex items-center justify-center gap-2.5 cursor-pointer"
               >
                 <span>View Prototype</span>
                 <ExternalLink size={14} />
@@ -666,7 +668,7 @@ export default function ConferencePortal() {
               </p>
               <Link
                 to="/agenda"
-                className="w-full py-3.5 px-6 bg-primary/5 hover:bg-primary border border-primary text-primary hover:text-black font-black uppercase tracking-[0.15em] rounded-2xl transition-all text-xs flex items-center justify-center gap-2.5 cursor-pointer"
+                className="w-fit mx-auto py-3.5 px-6 bg-primary/5 hover:bg-primary border border-primary text-primary hover:text-black font-black uppercase tracking-[0.15em] rounded-2xl transition-all text-xs flex items-center justify-center gap-2.5 cursor-pointer"
               >
                 <span>View Full Details & Guide</span>
                 <ChevronRight size={14} />
@@ -821,7 +823,7 @@ export default function ConferencePortal() {
                             event.highlight 
                               ? 'border-primary/30 shadow-[0_4px_15px_rgba(212,175,55,0.05)]' 
                               : 'border-silver/10'
-                          }`}
+                          } ${event.isPast ? 'opacity-40 grayscale' : ''}`}
                         >
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 relative z-10">
                             
