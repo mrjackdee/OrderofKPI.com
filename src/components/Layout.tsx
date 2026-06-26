@@ -36,7 +36,6 @@ export default function Layout() {
   const footerNavItems: NavItem[] = [
     { name: 'HOME', path: '/' },
     { name: 'CONFERENCE PORTAL', path: '/portal', hasBadge: true },
-    { name: 'CONTACT US', path: 'mailto:conference@orderofkpi.com', isExternal: true },
   ];
 
   return (
@@ -205,9 +204,6 @@ export default function Layout() {
               <span className="text-sm font-bold uppercase tracking-widest">The Order of KP, Inc.</span>
             </div>
             <div className="flex flex-col items-center gap-6 mt-2">
-              <a href="mailto:conference@orderofkpi.com" className="text-silver hover:text-white transition-colors text-sm font-medium tracking-widest">
-                conference@orderofkpi.com
-              </a>
               <motion.a 
                 href="http://www.instagram.com/orderofkpi" 
                 target="_blank" 
@@ -224,7 +220,7 @@ export default function Layout() {
           <div className="flex flex-col items-center gap-2">
             <p className="text-primary opacity-60 text-xs uppercase tracking-[0.2em]">© 2026 The Order of KP, Inc. All rights reserved.</p>
             <p className="text-primary opacity-60 text-xs uppercase tracking-[0.2em]">
-              Digital Creation By <a href="http://www.MrJackDee.com" target="_blank" rel="noopener noreferrer" className="font-bold text-silver hover:text-white transition-colors underline underline-offset-4">MrJackDee</a>™
+              <a href="http://www.MrJackDee.com" target="_blank" rel="noopener noreferrer" className="font-bold text-silver hover:text-white transition-colors underline underline-offset-4">MrJackDee</a>™ in partnership with <a href="http://www.donoraglobal.com" target="_blank" rel="noopener noreferrer" className="font-bold text-silver hover:text-white transition-colors underline underline-offset-4">DonOra Global</a>
             </p>
           </div>
         </footer>

@@ -225,7 +225,8 @@ export default function ConferencePortal() {
           type: "event" as const,
           startTime: "20260627T141000Z",
           endTime: "20260627T141500Z",
-          virtual: true
+          virtual: true,
+          documentLink: "https://docs.google.com/document/d/1g8UeMn7U-LPF7JzrNGNGhcmE5ESi3oq8/edit?usp=sharing&ouid=100818792712229507464&rtpof=true&sd=true"
         },
         {
           time: "10:15 – 10:20 AM ET",
@@ -489,32 +490,7 @@ export default function ConferencePortal() {
       {/* Decorative backdrop glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
 
-      <style>{`
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-marquee {
-          animation: marquee 40s linear infinite;
-        }
-      `}</style>
-      
-      {/* Welcome Banner Marquee */}
-      <div className="relative z-20 mt-20 md:mt-24 text-center px-4 mb-4">
-        <h2 className="text-xl md:text-2xl font-display font-black text-white uppercase tracking-[0.15em]">
-          Welcome to our registered members
-        </h2>
-      </div>
-      <div className="w-full bg-primary text-black py-3 overflow-hidden flex whitespace-nowrap relative z-20 shadow-[0_0_20px_rgba(212,175,55,0.15)] border-y border-primary/50">
-        <div className="animate-marquee flex items-center gap-8 min-w-max">
-          {[...attendees, ...attendees, ...attendees, ...attendees].map((name, i) => (
-            <span key={i} className="text-xs md:text-sm font-bold uppercase tracking-widest flex items-center gap-8">
-              <span>{name}</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-black/60 shrink-0" />
-            </span>
-          ))}
-        </div>
-      </div>
+
 
       <div className="relative max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12">
         
@@ -536,6 +512,35 @@ export default function ConferencePortal() {
           
           {/* LEFT PANEL: Zoom Registration & Timer Card (4cols) */}
           <div className="lg:col-span-5 space-y-6">
+
+            <style>{`
+              @keyframes marquee {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); }
+              }
+              .animate-marquee {
+                animation: marquee 40s linear infinite;
+              }
+            `}</style>
+            
+            {/* Welcome Banner Marquee */}
+            <div className="bg-pure-black/90 border border-primary/35 rounded-3xl pt-6 pb-0 overflow-hidden relative shadow-[0_10px_35px_rgba(212,175,55,0.08)]">
+              <div className="relative z-20 text-center px-4 mb-4">
+                <h2 className="text-sm md:text-base font-display font-black text-white uppercase tracking-[0.15em]">
+                  Welcome to our registered members
+                </h2>
+              </div>
+              <div className="w-full bg-primary text-black py-3 overflow-hidden flex whitespace-nowrap relative z-20 border-t border-primary/50">
+                <div className="animate-marquee flex items-center gap-8 min-w-max">
+                  {[...attendees, ...attendees, ...attendees, ...attendees].map((name, i) => (
+                    <span key={i} className="text-xs font-bold uppercase tracking-widest flex items-center gap-8">
+                      <span>{name}</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-black/60 shrink-0" />
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
             
             {/* ZOOM REGISTRATION MAIN CARD */}
             <div className="bg-pure-black/90 border border-primary/35 rounded-3xl p-6 md:p-8 backdrop-blur-md relative overflow-hidden shadow-[0_10px_35px_rgba(212,175,55,0.08)]">
@@ -860,6 +865,17 @@ export default function ConferencePortal() {
                                 <p className="text-[10px] text-silver/40 uppercase tracking-wide leading-relaxed font-semibold">
                                   {event.description}
                                 </p>
+                              )}
+
+                              {(event as any).documentLink && (
+                                <a
+                                  href={(event as any).documentLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 mt-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 hover:border-primary/50 text-[10px] font-black uppercase tracking-widest text-primary hover:text-white rounded-lg transition-all"
+                                >
+                                  <ExternalLink size={10} /> State of the Organization
+                                </a>
                               )}
 
                               {(event as any).subitems && (
