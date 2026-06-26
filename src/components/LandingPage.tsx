@@ -72,17 +72,22 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
             The Order of KP
           </motion.h2>
 
-          <motion.h1 
+          <motion.div 
             animate={{ 
               scale: phase === 'theme' ? 1 : phase === 'loading' ? 0.6 : 0.5,
               opacity: phase === 'theme' ? 1 : phase === 'loading' ? 0.5 : 1,
               filter: phase === 'theme' ? 'blur(0px)' : 'blur(0px)',
             }}
             transition={{ duration: 1.5, ease: "easeInOut" }}
-            className="text-3xl md:text-5xl lg:text-6xl font-display font-black text-primary uppercase tracking-[0.2em] drop-shadow-[0_0_30px_rgba(192,160,0,0.4)] px-4"
+            className="px-4 flex flex-col items-center justify-center text-center"
           >
-            Family Matters:<br/>Planted in Purpose.<br/>Climbing Together.
-          </motion.h1>
+            <h1 className="text-4xl md:text-6xl lg:text-8xl font-display font-black text-primary uppercase tracking-[0.2em] drop-shadow-[0_0_30px_rgba(192,160,0,0.4)] mb-4 md:mb-6">
+              FAMILY MATTERS
+            </h1>
+            <p className="text-sm md:text-xl lg:text-2xl font-display font-medium text-silver uppercase tracking-[0.15em]">
+              Planted in Purpose. Climbing Together.
+            </p>
+          </motion.div>
         </div>
 
         {/* Loading Bar - only visible in loading phase */}
