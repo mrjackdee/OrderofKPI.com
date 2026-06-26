@@ -437,6 +437,17 @@ export default function ConferencePortal() {
     "Tobias Bordley"
   ];
 
+  const incomingDirectorate = [
+    { position: "Basileus", name: "Brian Goings" },
+    { position: "1st Anti-Basileus", name: "Anthony Jones" },
+    { position: "2nd Anti-Basileus", name: "James “JR” Hayward" },
+    { position: "Grammateus", name: "Brian Johnson" },
+    { position: "Epistoleus", name: "Edward Cook" },
+    { position: "Historian", name: "Brandon Owens" },
+    { position: "Hodegos", name: "Darron Jenkins" },
+    { position: "Tamiouchos", name: "Ishmael Allensworth" }
+  ];
+
   if (!isAuthenticated) {
     return (
       <div className="relative min-h-screen w-full bg-[#030303] text-silver overflow-hidden flex flex-col items-center justify-center p-4">
@@ -680,6 +691,28 @@ export default function ConferencePortal() {
                 <span>View Full Details & Guide</span>
                 <ChevronRight size={14} />
               </Link>
+            </div>
+
+            {/* INCOMING DIRECTORATE CARD */}
+            <div className="bg-pure-black/95 border border-primary/25 rounded-3xl p-6 backdrop-blur-md relative overflow-hidden shadow-lg hover:border-primary/50 transition-all duration-300">
+              <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+              <div className="flex items-center gap-2.5 mb-5">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                  <Users size={18} />
+                </div>
+                <div>
+                  <h2 className="text-white text-sm font-black uppercase tracking-wider">Incoming Directorate</h2>
+                  <span className="text-[9px] text-primary/70 font-bold uppercase tracking-widest">2026-2028 Term</span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {incomingDirectorate.map((officer, i) => (
+                  <div key={i} className="flex justify-between items-center py-2.5 border-b border-white/5 last:border-0 last:pb-0">
+                    <span className="text-[10px] font-bold text-silver/70 uppercase tracking-widest">{officer.position}</span>
+                    <span className="text-[11px] font-black text-white text-right">{officer.name}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* QUICK INFORMATION & GENERAL POLICIES */}
