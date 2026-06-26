@@ -409,6 +409,23 @@ export default function ConferencePortal() {
     }
   };
 
+  const attendees = [
+    "James Haywood",
+    "Edward Cook",
+    "Jack Dee",
+    "Brandon Owens",
+    "Brian Johnson",
+    "Deshaun Safford",
+    "Darron Jenkins",
+    "Denzel Talley",
+    "Anthony Jones",
+    "Tobias Bordley",
+    "Keith Woods",
+    "Jason Pilar",
+    "Demetrist Thomas",
+    "Ishmeal Allensworth"
+  ];
+
   if (!isAuthenticated) {
     return (
       <div className="relative min-h-screen w-full bg-[#030303] text-silver overflow-hidden flex flex-col items-center justify-center p-4">
@@ -462,7 +479,32 @@ export default function ConferencePortal() {
       {/* Decorative backdrop glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
 
-      <div className="relative max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-16">
+      <style>{`
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+          animation: marquee 40s linear infinite;
+        }
+      `}</style>
+      
+      {/* Welcome Banner Marquee */}
+      <div className="w-full bg-primary text-black py-3 overflow-hidden flex whitespace-nowrap relative z-20 mt-20 md:mt-24 shadow-[0_0_20px_rgba(212,175,55,0.15)] border-y border-primary/50">
+        <div className="animate-marquee flex items-center gap-8 min-w-max">
+          <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em] flex items-center gap-8 mr-8">
+            WELCOME REGISTERED ATTENDEES:
+          </span>
+          {[...attendees, ...attendees, ...attendees, ...attendees].map((name, i) => (
+            <span key={i} className="text-xs md:text-sm font-bold uppercase tracking-widest flex items-center gap-8">
+              <span>{name}</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-black/60 shrink-0" />
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12">
         
         {/* Portal Header */}
         <header className="text-center mb-12 relative">
