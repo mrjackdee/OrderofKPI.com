@@ -10,6 +10,7 @@ import Home from './pages/Home';
 import SaveTheDate from './pages/SaveTheDate';
 import Agenda from './pages/Agenda';
 import Registration from './pages/Registration';
+import RegistrationList from './pages/RegistrationList';
 import Party from './pages/Party';
 import Success from './pages/Success';
 import Congratulations from './pages/Congratulations';
@@ -54,6 +55,7 @@ export default function App() {
                 <Route path="save-the-date" element={<SaveTheDate />} />
                 <Route path="agenda" element={<Agenda />} />
                 <Route path="registration" element={<Registration />} />
+                <Route path="registration-list" element={<RegistrationList />} />
                 <Route path="party" element={<Party />} />
                 <Route path="success" element={<Success />} />
                 <Route path="congratulations" element={<Congratulations />} />
