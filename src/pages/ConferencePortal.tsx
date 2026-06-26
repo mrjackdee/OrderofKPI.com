@@ -24,7 +24,9 @@ import {
   Monitor, 
   Users,
   ShieldCheck,
-  ChevronRight
+  ChevronRight,
+  Lock,
+  ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import EventAddToCalendar from '../components/EventAddToCalendar';
@@ -60,6 +62,10 @@ export default function ConferencePortal() {
   const [activeTab, setActiveTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [virtualOnly, setVirtualOnly] = useState(false);
+  
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState(false);
 
   // Countdown to Friday, June 26, 2026, 7:00 PM ET (Opening Ceremony)
   const targetDate = new Date(Date.UTC(2026, 5, 26, 23, 0, 0));
@@ -392,6 +398,63 @@ export default function ConferencePortal() {
     return matchesSearch && matchesVirtual;
   });
 
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === '2012') {
+      setIsAuthenticated(true);
+      setAuthError(false);
+    } else {
+      setAuthError(true);
+      setPassword('');
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="relative min-h-screen w-full bg-[#030303] text-silver overflow-hidden flex flex-col items-center justify-center p-4">
+        <FloatingParticles />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+        
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-pure-black/90 border border-primary/20 rounded-3xl p-8 md:p-12 max-w-md w-full backdrop-blur-md relative z-10 shadow-2xl"
+        >
+          <div className="flex flex-col items-center text-center mb-8">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6 border border-primary/30">
+              <Lock className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-display font-black text-white uppercase tracking-widest mb-2">Secure Portal</h1>
+            <p className="text-silver/60 text-sm font-light tracking-wider">Please enter the conference password to access the portal.</p>
+          </div>
+
+          <form onSubmit={handlePasswordSubmit} className="space-y-6">
+            <div>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setAuthError(false);
+                }}
+                placeholder="Enter password..."
+                className={`w-full bg-black/60 border ${authError ? 'border-red-500/50 focus:border-red-500' : 'border-silver/10 focus:border-primary/50'} text-white rounded-xl px-4 py-4 focus:outline-none transition-all text-center tracking-widest`}
+              />
+              {authError && <p className="text-red-400 text-xs text-center mt-2 tracking-wider">Incorrect password. Please try again.</p>}
+            </div>
+            
+            <button
+              type="submit"
+              className="w-full py-4 bg-primary hover:bg-white text-black font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              Enter Portal <ArrowRight className="w-4 h-4" />
+            </button>
+          </form>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen w-full bg-[#030303] text-silver overflow-hidden">
       <FloatingParticles />
@@ -508,6 +571,32 @@ export default function ConferencePortal() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* KP MEMBER PORTAL PROTOTYPE */}
+            <div className="bg-pure-black/95 border border-primary/25 rounded-3xl p-6 backdrop-blur-md relative overflow-hidden shadow-lg hover:border-primary/50 transition-all duration-300">
+              <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                  <ExternalLink size={18} />
+                </div>
+                <div>
+                  <h2 className="text-white text-sm font-black uppercase tracking-wider">KP Member Portal</h2>
+                  <span className="text-[9px] text-primary/70 font-bold uppercase tracking-widest">Prototype Access</span>
+                </div>
+              </div>
+              <p className="text-silver/60 text-[10px] leading-relaxed uppercase tracking-wide font-semibold mb-5">
+                Preview the upcoming KP Member Portal features and design.
+              </p>
+              <a
+                href="https://stitch.withgoogle.com/preview/5137630539613338453?node-id=279e48f3474342659d3a7000c1896cfa"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3.5 px-6 bg-primary/5 hover:bg-primary border border-primary text-primary hover:text-black font-black uppercase tracking-[0.15em] rounded-2xl transition-all text-xs flex items-center justify-center gap-2.5 cursor-pointer"
+              >
+                <span>View Prototype</span>
+                <ExternalLink size={14} />
+              </a>
             </div>
 
             {/* DETAILED AGENDA PORTAL CARD */}
