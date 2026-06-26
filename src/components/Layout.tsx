@@ -31,13 +31,11 @@ export default function Layout() {
   const navItems: NavItem[] = [
     { name: 'HOME', path: '/' },
     { name: 'CONFERENCE PORTAL', path: '/portal', hasBadge: true },
-    { name: 'REGISTRATION', path: '/registration' },
   ];
 
   const footerNavItems: NavItem[] = [
     { name: 'HOME', path: '/' },
     { name: 'CONFERENCE PORTAL', path: '/portal', hasBadge: true },
-    { name: 'REGISTRATION', path: '/registration' },
     { name: 'CONTACT US', path: 'mailto:conference@orderofkpi.com', isExternal: true },
   ];
 
@@ -78,24 +76,8 @@ export default function Layout() {
                   <MotionLink
                     key={item.name}
                     to={item.path}
-                    className={`relative transition-colors text-sm font-semibold uppercase tracking-[0.15em] group flex items-center gap-1.5 ${
-                      item.name === 'REGISTRATION' 
-                        ? 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' 
-                        : 'text-primary hover:text-white'
-                    }`}
+                    className="relative transition-colors text-sm font-semibold uppercase tracking-[0.15em] group flex items-center gap-1.5 text-primary hover:text-white"
                     whileHover={{ y: -2 }}
-                    animate={item.name === 'REGISTRATION' ? {
-                      textShadow: [
-                        "0 0 4px rgba(255,255,255,0.4)",
-                        "0 0 12px rgba(255,255,255,0.8)",
-                        "0 0 4px rgba(255,255,255,0.4)"
-                      ]
-                    } : {}}
-                    transition={{ 
-                      duration: 2, 
-                      repeat: Infinity, 
-                      ease: "easeInOut" 
-                    }}
                   >
                     <span>{item.name}</span>
                     {item.hasBadge && (
@@ -160,11 +142,7 @@ export default function Layout() {
                     key={item.name}
                     to={item.path}
                     onClick={() => setIsMenuOpen(false)}
-                    className={`text-xl md:text-2xl font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] transition-colors flex items-center justify-center gap-2 ${
-                      item.name === 'REGISTRATION'
-                        ? 'text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]'
-                        : 'text-primary hover:text-white'
-                    }`}
+                    className="text-xl md:text-2xl font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] transition-colors flex items-center justify-center gap-2 text-primary hover:text-white"
                   >
                     <span>{item.name}</span>
                     {item.hasBadge && (

@@ -145,10 +145,7 @@ export default function Home() {
               Attendance
             </h3>
             <p className="text-primary/80 font-light leading-relaxed">
-              There will be an in-person and virtual option for the conference. Please see the{' '}
-              <Link to="/registration" className="text-white hover:text-primary transition-colors underline font-medium">
-                conference registration page
-              </Link>.
+              There will be an in-person and virtual option for the conference.
             </p>
           </div>
           <div className="space-y-4 border border-primary/30 p-6 rounded-xl bg-black/40">
