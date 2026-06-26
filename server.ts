@@ -1,40 +1,26 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleAuth } from "google-auth-library";
-import { sheets } from "@googleapis/sheets";
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Initialize Google Auth
-  const auth = new GoogleAuth({
-    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
-  });
-  
-  const sheetsApi = sheets({ version: "v4", auth });
-
   app.get("/api/registrations", async (req, res) => {
     try {
-      const spreadsheetId = "1rPsW1nfG_p6jLQRZD_n4-Ee38-BGYtVoCaMm0Gu15f8";
+      const response = await fetch("https://docs.google.com/spreadsheets/d/1rPsW1nfG_p6jLQRZD_n4-Ee38-BGYtVoCaMm0Gu15f8/gviz/tq?tqx=out:csv");
+      const csvText = await response.text();
       
-      // Get the sheet metadata to find the name of the first sheet if Sheet1 fails
-      const metadataResponse = await sheetsApi.spreadsheets.get({
-        spreadsheetId,
+      const rows = csvText.split('\n').map(row => {
+        // Simple CSV parser for quoted fields
+        const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+        return matches.map(match => match.replace(/^"|"$/g, ''));
       });
-      const firstSheetName = metadataResponse.data.sheets?.[0]?.properties?.title || "Sheet1";
 
-      const response = await sheetsApi.spreadsheets.values.get({
-        spreadsheetId,
-        range: firstSheetName,
-      });
-      
-      const rows = response.data.values;
-      if (!rows || rows.length === 0) {
-        return res.json([]);
+      if (rows.length < 2) {
+         return res.json([]);
       }
-      
+
       const headers = rows[0];
       const data = rows.slice(1).map((row) => {
         let obj: Record<string, string> = {};

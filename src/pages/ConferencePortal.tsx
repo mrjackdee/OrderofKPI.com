@@ -666,12 +666,6 @@ export default function ConferencePortal() {
                     <strong className="text-white">Professional Dress:</strong> Friday Pink Out theme, Saturday formal attire, Sunday organizational black & silver coordinates.
                   </p>
                 </li>
-                <li className="flex gap-2.5 items-start">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-                  <p className="text-[10px] text-silver/60 uppercase tracking-wide leading-relaxed font-semibold">
-                    <strong className="text-white">Voting Access:</strong> Active members will access the voting portal during Saturday afternoon transition hours.
-                  </p>
-                </li>
               </ul>
             </div>
 

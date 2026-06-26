@@ -3,12 +3,8 @@ import { motion } from 'motion/react';
 import { Shield, CheckCircle, Search, Loader2 } from 'lucide-react';
 
 interface RegistrationData {
-  Timestamp: string;
-  'Email Address': string;
-  'What is your first name?': string;
-  'What is your last name? ': string;
-  'Member ID': string;
-  'Are you registering for another Brother?': string;
+  Name: string;
+  'Registration Type': string;
 }
 
 export default function RegistrationList() {
@@ -37,9 +33,9 @@ export default function RegistrationList() {
   }, []);
 
   const filteredRegistrations = registrations.filter(reg => {
-    const fullName = `${reg['What is your first name?']} ${reg['What is your last name? ']}`.toLowerCase();
+    const name = (reg.Name || '').toLowerCase();
     const search = searchTerm.toLowerCase();
-    return fullName.includes(search) || (reg['Member ID'] || '').toLowerCase().includes(search);
+    return name.includes(search);
   });
 
   return (
@@ -80,7 +76,7 @@ export default function RegistrationList() {
             </div>
             <input
               type="text"
-              placeholder="Search by name or Member ID..."
+              placeholder="Search by name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-12 pr-4 py-4 bg-black/30 border border-white/10 rounded-xl text-white placeholder-silver/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all font-light"
@@ -115,8 +111,7 @@ export default function RegistrationList() {
                     <tr className="border-b border-white/10">
                       <th className="py-4 px-4 text-xs font-semibold text-primary uppercase tracking-widest">Status</th>
                       <th className="py-4 px-4 text-xs font-semibold text-silver uppercase tracking-widest">Name</th>
-                      <th className="py-4 px-4 text-xs font-semibold text-silver uppercase tracking-widest hidden md:table-cell">Member ID</th>
-                      <th className="py-4 px-4 text-xs font-semibold text-silver uppercase tracking-widest hidden lg:table-cell">Registration Date</th>
+                      <th className="py-4 px-4 text-xs font-semibold text-silver uppercase tracking-widest">Registration Type</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -135,17 +130,10 @@ export default function RegistrationList() {
                           </div>
                         </td>
                         <td className="py-4 px-4 text-white font-medium">
-                          {reg['What is your first name?']} {reg['What is your last name? ']}
+                          {reg.Name}
                         </td>
-                        <td className="py-4 px-4 text-silver/80 font-mono text-sm hidden md:table-cell">
-                          {reg['Member ID'] || 'N/A'}
-                        </td>
-                        <td className="py-4 px-4 text-silver/60 text-sm hidden lg:table-cell">
-                          {new Date(reg.Timestamp).toLocaleDateString(undefined, { 
-                            year: 'numeric', 
-                            month: 'short', 
-                            day: 'numeric' 
-                          })}
+                        <td className="py-4 px-4 text-silver/80 font-mono text-sm">
+                          {reg['Registration Type']}
                         </td>
                       </motion.tr>
                     ))}
