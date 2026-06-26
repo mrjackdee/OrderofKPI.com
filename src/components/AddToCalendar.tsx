@@ -29,7 +29,7 @@ export default function AddToCalendar({ className = '', variant = 'gold' }: AddT
 
   const event = {
     title: 'The Order of KP Biennial Conference',
-    description: 'Join us for the Biennial Conference in Charlotte, NC. Family Matters!',
+    description: 'Join us for the Biennial Conference in Charlotte, NC. Family Matters: Planted in Purpose. Climbing Together.',
     location: 'Charlotte, NC',
     startTime: '20260626T090000',
     endTime: '20260628T120000',

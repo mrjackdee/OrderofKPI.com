@@ -79,9 +79,9 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
               filter: phase === 'theme' ? 'blur(0px)' : 'blur(0px)',
             }}
             transition={{ duration: 1.5, ease: "easeInOut" }}
-            className="text-5xl md:text-8xl lg:text-9xl font-display font-black text-primary uppercase tracking-[0.4em] drop-shadow-[0_0_30px_rgba(192,160,0,0.4)]"
+            className="text-3xl md:text-5xl lg:text-6xl font-display font-black text-primary uppercase tracking-[0.2em] drop-shadow-[0_0_30px_rgba(192,160,0,0.4)] px-4"
           >
-            FAMILY MATTERS
+            Family Matters:<br/>Planted in Purpose.<br/>Climbing Together.
           </motion.h1>
         </div>
 

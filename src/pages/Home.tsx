@@ -60,9 +60,9 @@ export default function Home() {
             </motion.h1>
             <motion.p 
               variants={itemVariants}
-              className="text-primary text-2xl md:text-5xl font-bold tracking-[0.3em] uppercase mt-2"
+              className="text-primary text-xl md:text-3xl font-bold tracking-[0.2em] uppercase mt-4"
             >
-              FAMILY MATTERS
+              FAMILY MATTERS: Planted in Purpose. Climbing Together.
             </motion.p>
             <motion.span variants={itemVariants} className="block text-primary text-lg md:text-3xl font-light tracking-[0.2em] md:tracking-[0.3em] mt-4 md:mt-8 uppercase">Biennial Conference</motion.span>
             <motion.div variants={itemVariants} className="flex flex-col items-center justify-center gap-1 md:gap-2 mt-4 md:mt-6">
