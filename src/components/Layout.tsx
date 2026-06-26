@@ -32,14 +32,12 @@ export default function Layout() {
     { name: 'HOME', path: '/' },
     { name: 'CONFERENCE PORTAL', path: '/portal', hasBadge: true },
     { name: 'REGISTRATION', path: '/registration' },
-    { name: 'ATTENDEE LIST', path: '/registration-list' },
   ];
 
   const footerNavItems: NavItem[] = [
     { name: 'HOME', path: '/' },
     { name: 'CONFERENCE PORTAL', path: '/portal', hasBadge: true },
     { name: 'REGISTRATION', path: '/registration' },
-    { name: 'ATTENDEE LIST', path: '/registration-list' },
     { name: 'CONTACT US', path: 'mailto:conference@orderofkpi.com', isExternal: true },
   ];
 

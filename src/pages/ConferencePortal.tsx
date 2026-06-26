@@ -599,6 +599,30 @@ export default function ConferencePortal() {
               </a>
             </div>
 
+            {/* ATTENDEE LIST */}
+            <div className="bg-pure-black/95 border border-primary/25 rounded-3xl p-6 backdrop-blur-md relative overflow-hidden shadow-lg hover:border-primary/50 transition-all duration-300">
+              <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                  <Users size={18} />
+                </div>
+                <div>
+                  <h2 className="text-white text-sm font-black uppercase tracking-wider">Attendee List</h2>
+                  <span className="text-[9px] text-primary/70 font-bold uppercase tracking-widest">Confirmed Registrations</span>
+                </div>
+              </div>
+              <p className="text-silver/60 text-[10px] leading-relaxed uppercase tracking-wide font-semibold mb-5">
+                View the verified list of members who have successfully registered.
+              </p>
+              <Link
+                to="/registration-list"
+                className="w-full py-3.5 px-6 bg-primary/5 hover:bg-primary border border-primary text-primary hover:text-black font-black uppercase tracking-[0.15em] rounded-2xl transition-all text-xs flex items-center justify-center gap-2.5 cursor-pointer"
+              >
+                <span>View Attendees</span>
+                <ChevronRight size={14} />
+              </Link>
+            </div>
+
             {/* DETAILED AGENDA PORTAL CARD */}
             <div className="bg-pure-black/95 border border-primary/25 rounded-3xl p-6 backdrop-blur-md relative overflow-hidden shadow-lg hover:border-primary/50 transition-all duration-300">
               <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
