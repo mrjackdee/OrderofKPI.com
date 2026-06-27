@@ -136,7 +136,7 @@ export default function Home() {
             <ul className="text-primary/80 font-light leading-relaxed list-disc pl-5 space-y-1">
               <li>Black Suit</li>
               <li>White Shirt</li>
-              <li>Conference Gift Tie</li>
+              <li>Conference Tie</li>
             </ul>
           </div>
           <div className="space-y-4 border border-primary/30 p-6 rounded-xl bg-black/40">

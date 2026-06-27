@@ -148,7 +148,8 @@ export default function ConferencePortal() {
           type: "event" as const,
           startTime: "20260627T013000Z",
           endTime: "20260627T033000Z",
-          virtual: false
+          virtual: false,
+          isPast: true
         }
       ]
     },
@@ -863,7 +864,7 @@ export default function ConferencePortal() {
                             event.highlight 
                               ? 'border-primary/30 shadow-[0_4px_15px_rgba(212,175,55,0.05)]' 
                               : 'border-silver/10'
-                          } ${event.isPast ? 'opacity-40 grayscale pointer-events-none' : ''}`}
+                          } ${event.isPast ? 'opacity-20 grayscale pointer-events-none italic' : ''}`}
                         >
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 relative z-10">
                             

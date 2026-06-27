@@ -110,7 +110,8 @@ export default function Agenda() {
           highlight: true,
           type: "event" as const,
           startTime: "20260627T013000Z",
-          endTime: "20260627T033000Z"
+          endTime: "20260627T033000Z",
+          isPast: true
         }
       ]
     },
@@ -525,7 +526,7 @@ export default function Agenda() {
                   event.highlight 
                     ? 'border-silver bg-silver/5 shadow-[0_0_20px_rgba(255,255,255,0.05)]' 
                     : 'border-silver/10 bg-pure-black hover:border-silver/30'
-                } ${event.isPast ? 'opacity-40 grayscale pointer-events-none' : ''}`}
+                } ${event.isPast ? 'opacity-20 grayscale pointer-events-none italic' : ''}`}
               >
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                   <div className="flex items-start gap-4">
