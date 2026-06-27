@@ -258,12 +258,19 @@ export default function ConferencePortal() {
         },
         {
           time: "10:30 – 11:00 AM ET",
-          title: "Mental Health & LGBTQIA+",
+          title: "LGBTQIA in Mental Health",
+          facilitator: "Kensley May",
           icon: Mic,
           type: "event" as const,
           startTime: "20260627T143000Z",
           endTime: "20260627T150000Z",
-          virtual: true
+          virtual: true,
+          links: [
+            { 
+              title: "Mental Health in the LGBTQIA+", 
+              url: "https://drive.google.com/file/d/1suHhM1DzxUmyr4NzjNA53vjX3Nzx7-hz/view?usp=sharing" 
+            }
+          ]
         },
         {
           time: "11:00 – 11:30 AM ET",
@@ -524,7 +531,7 @@ export default function ConferencePortal() {
         </header>
 
         {/* Resource Hub Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
           <a
             href={zoomRegisterLink}
             target="_blank"
@@ -552,6 +559,21 @@ export default function ConferencePortal() {
               <p className="text-silver/60 text-[9px] uppercase tracking-wider">Detailed Schedule</p>
             </div>
           </Link>
+
+          <a
+            href="https://docs.google.com/presentation/d/1uZbvkZfA-sLiVIMGdUmjSZi2uP5BImjp5HWlboOBqis/edit?usp=sharing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-pure-black/90 border border-primary/20 hover:border-primary/50 hover:bg-primary/5 rounded-2xl p-5 flex flex-col items-center text-center gap-3 transition-all duration-300 shadow-[0_10px_35px_rgba(212,175,55,0.08)] group"
+          >
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <Monitor size={20} className="text-primary" />
+            </div>
+            <div>
+              <h3 className="text-white text-[11px] font-black uppercase tracking-widest mb-1">Conference Deck</h3>
+              <p className="text-silver/60 text-[9px] uppercase tracking-wider">Biennial Presentation</p>
+            </div>
+          </a>
 
           <a
             href="https://docs.google.com/document/d/1g8UeMn7U-LPF7JzrNGNGhcmE5ESi3oq8/edit?usp=sharing&ouid=100818792712229507464&rtpof=true&sd=true"
@@ -910,6 +932,22 @@ export default function ConferencePortal() {
                                 >
                                   <ExternalLink size={10} /> State of the Organization
                                 </a>
+                              )}
+
+                              {(event as any).links && (
+                                <div className="flex flex-wrap gap-2 mt-3">
+                                  {(event as any).links.map((link: any, lIdx: number) => (
+                                    <a
+                                      key={lIdx}
+                                      href={link.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/5 hover:bg-primary/10 border border-primary/20 hover:border-primary/40 text-[9px] font-black uppercase tracking-widest text-primary hover:text-white rounded-lg transition-all shadow-sm"
+                                    >
+                                      <ExternalLink size={10} /> {link.title}
+                                    </a>
+                                  ))}
+                                </div>
                               )}
 
                               {(event as any).subitems && (

@@ -210,11 +210,18 @@ export default function Agenda() {
         },
         {
           time: "10:30 – 11:00 AM ET",
-          title: "Mental Health & LGBTQIA+",
+          title: "LGBTQIA in Mental Health",
+          facilitator: "Kensley May",
           icon: Mic,
           type: "event" as const,
           startTime: "20260627T143000Z",
-          endTime: "20260627T150000Z"
+          endTime: "20260627T150000Z",
+          links: [
+            { 
+              title: "Mental Health in the LGBTQIA+", 
+              url: "https://drive.google.com/file/d/1suHhM1DzxUmyr4NzjNA53vjX3Nzx7-hz/view?usp=sharing" 
+            }
+          ]
         },
         {
           time: "11:00 – 11:30 AM ET",
@@ -575,6 +582,23 @@ export default function Agenda() {
                             </li>
                           ))}
                         </ul>
+                      )}
+
+                      {(event as any).links && (
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {(event as any).links.map((link: any, lIdx: number) => (
+                            <a
+                              key={lIdx}
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-silver/10 hover:bg-silver/20 border border-silver/20 hover:border-silver/40 text-[10px] font-bold uppercase tracking-widest text-white rounded-lg transition-all"
+                            >
+                              <FileText size={12} className="text-primary" />
+                              {link.title}
+                            </a>
+                          ))}
+                        </div>
                       )}
                     </div>
                   </div>
