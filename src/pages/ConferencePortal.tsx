@@ -21,6 +21,8 @@ import {
   Search, 
   Download, 
   Info, 
+  FileText,
+  Laptop,
   Monitor, 
   Users,
   ShieldCheck,
@@ -519,6 +521,67 @@ export default function ConferencePortal() {
           </p>
         </header>
 
+        {/* Resource Hub Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <a
+            href={zoomRegisterLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-pure-black/90 border border-primary/20 hover:border-primary/50 hover:bg-primary/5 rounded-2xl p-5 flex flex-col items-center text-center gap-3 transition-all duration-300 shadow-[0_10px_35px_rgba(212,175,55,0.08)] group"
+          >
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <Video size={20} className="text-primary" />
+            </div>
+            <div>
+              <h3 className="text-white text-[11px] font-black uppercase tracking-widest mb-1">Zoom Access</h3>
+              <p className="text-silver/60 text-[9px] uppercase tracking-wider">Secure Registration</p>
+            </div>
+          </a>
+
+          <Link
+            to="/agenda"
+            className="bg-pure-black/90 border border-primary/20 hover:border-primary/50 hover:bg-primary/5 rounded-2xl p-5 flex flex-col items-center text-center gap-3 transition-all duration-300 shadow-[0_10px_35px_rgba(212,175,55,0.08)] group"
+          >
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <Calendar size={20} className="text-primary" />
+            </div>
+            <div>
+              <h3 className="text-white text-[11px] font-black uppercase tracking-widest mb-1">Full Agenda</h3>
+              <p className="text-silver/60 text-[9px] uppercase tracking-wider">Detailed Schedule</p>
+            </div>
+          </Link>
+
+          <a
+            href="https://docs.google.com/document/d/1g8UeMn7U-LPF7JzrNGNGhcmE5ESi3oq8/edit?usp=sharing&ouid=100818792712229507464&rtpof=true&sd=true"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-pure-black/90 border border-primary/20 hover:border-primary/50 hover:bg-primary/5 rounded-2xl p-5 flex flex-col items-center text-center gap-3 transition-all duration-300 shadow-[0_10px_35px_rgba(212,175,55,0.08)] group"
+          >
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <FileText size={20} className="text-primary" />
+            </div>
+            <div>
+              <h3 className="text-white text-[11px] font-black uppercase tracking-widest mb-1">State of Org</h3>
+              <p className="text-silver/60 text-[9px] uppercase tracking-wider">Official Document</p>
+            </div>
+          </a>
+
+          <a
+            href="https://stitch.withgoogle.com/preview/5137630539613338453?node-id=279e48f3474342659d3a7000c1896cfa&raw=1"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-pure-black/90 border border-primary/20 hover:border-primary/50 hover:bg-primary/5 rounded-2xl p-5 flex flex-col items-center text-center gap-3 transition-all duration-300 shadow-[0_10px_35px_rgba(212,175,55,0.08)] group"
+          >
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <Laptop size={20} className="text-primary" />
+            </div>
+            <div>
+              <h3 className="text-white text-[11px] font-black uppercase tracking-widest mb-1">App Prototype</h3>
+              <p className="text-silver/60 text-[9px] uppercase tracking-wider">Interactive Demo</p>
+            </div>
+          </a>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-16">
           
           {/* LEFT PANEL: Zoom Registration & Timer Card (4cols) */}
@@ -585,20 +648,6 @@ export default function ConferencePortal() {
                 </div>
               </div>
 
-              {/* Registration Action */}
-              <motion.a
-                href={zoomRegisterLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-fit mx-auto py-4 px-6 bg-primary hover:bg-white text-black font-black uppercase tracking-[0.18em] rounded-2xl transition-all text-xs flex items-center justify-center gap-2.5 shadow-lg shadow-primary/10 cursor-pointer mb-5"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Video size={15} />
-                <span>Register For Zoom</span>
-                <ExternalLink size={13} className="opacity-80" />
-              </motion.a>
-
               {/* Countdown or Status */}
               <div className="border-t border-silver/10 pt-5 text-center">
                 <span className="text-[9px] uppercase tracking-[0.2em] text-silver/40 font-bold block mb-3">
@@ -641,56 +690,6 @@ export default function ConferencePortal() {
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* KP MEMBER PORTAL PROTOTYPE */}
-            <div className="bg-pure-black/95 border border-primary/25 rounded-3xl p-6 backdrop-blur-md relative overflow-hidden shadow-lg hover:border-primary/50 transition-all duration-300">
-              <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-                  <ExternalLink size={18} />
-                </div>
-                <div>
-                  <h2 className="text-white text-sm font-black uppercase tracking-wider">KP Member Portal</h2>
-                  <span className="text-[9px] text-primary/70 font-bold uppercase tracking-widest">Prototype Access</span>
-                </div>
-              </div>
-              <p className="text-silver/60 text-[10px] leading-relaxed uppercase tracking-wide font-semibold mb-5">
-                Preview the upcoming KP Member Portal features and design.
-              </p>
-              <a
-                href="https://stitch.withgoogle.com/preview/5137630539613338453?node-id=279e48f3474342659d3a7000c1896cfa&raw=1"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-fit mx-auto py-3.5 px-6 bg-primary/5 hover:bg-primary border border-primary text-primary hover:text-black font-black uppercase tracking-[0.15em] rounded-2xl transition-all text-xs flex items-center justify-center gap-2.5 cursor-pointer"
-              >
-                <span>View Prototype</span>
-                <ExternalLink size={14} />
-              </a>
-            </div>
-
-            {/* DETAILED AGENDA PORTAL CARD */}
-            <div className="bg-pure-black/95 border border-primary/25 rounded-3xl p-6 backdrop-blur-md relative overflow-hidden shadow-lg hover:border-primary/50 transition-all duration-300">
-              <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-                  <Calendar size={18} />
-                </div>
-                <div>
-                  <h2 className="text-white text-sm font-black uppercase tracking-wider">Conference Details</h2>
-                  <span className="text-[9px] text-primary/70 font-bold uppercase tracking-widest">Full Interactive Agenda</span>
-                </div>
-              </div>
-              <p className="text-silver/60 text-[10px] leading-relaxed uppercase tracking-wide font-semibold mb-5">
-                Explore the session schedule and resources.
-              </p>
-              <Link
-                to="/agenda"
-                className="w-fit mx-auto py-3.5 px-6 bg-primary/5 hover:bg-primary border border-primary text-primary hover:text-black font-black uppercase tracking-[0.15em] rounded-2xl transition-all text-xs flex items-center justify-center gap-2.5 cursor-pointer"
-              >
-                <span>View Full Details & Guide</span>
-                <ChevronRight size={14} />
-              </Link>
             </div>
 
             {/* INCOMING DIRECTORATE CARD */}
