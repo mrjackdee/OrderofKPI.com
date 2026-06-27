@@ -25,7 +25,6 @@ import {
   Laptop,
   Monitor, 
   Users,
-  ShieldCheck,
   ChevronRight,
   Lock,
   ArrowRight
@@ -76,32 +75,6 @@ export default function ConferencePortal() {
     }
   }, []);
 
-  // Countdown to Friday, June 26, 2026, 7:00 PM ET (Opening Ceremony)
-  const targetDate = new Date(Date.UTC(2026, 5, 26, 23, 0, 0));
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: false });
-
-  useEffect(() => {
-    const calculateTimeLeft = () => {
-      const now = new Date();
-      const difference = targetDate.getTime() - now.getTime();
-      
-      if (difference <= 0) {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true });
-        return;
-      }
-
-      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-      const minutes = Math.floor((difference / (1000 * 60)) % 60);
-      const seconds = Math.floor((difference / 1000) % 60);
-
-      setTimeLeft({ days, hours, minutes, seconds, isExpired: false });
-    };
-
-    calculateTimeLeft();
-    const interval = setInterval(calculateTimeLeft, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const agendaData: any[] = [
     {
@@ -640,81 +613,6 @@ export default function ConferencePortal() {
               </div>
             </div>
             
-            {/* ZOOM REGISTRATION MAIN CARD */}
-            <div className="bg-pure-black/90 border border-primary/35 rounded-3xl p-6 md:p-8 backdrop-blur-md relative overflow-hidden shadow-[0_10px_35px_rgba(212,175,55,0.08)]">
-              <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-primary to-transparent" />
-              
-              <div className="flex items-center justify-between gap-3 mb-6">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center">
-                    <Video size={18} className="text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-white text-sm font-black uppercase tracking-wider">Virtual Presence</h2>
-                    <span className="text-[9px] text-primary font-bold uppercase tracking-widest">Zoom Access Hub</span>
-                  </div>
-                </div>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-[8px] font-black uppercase tracking-widest text-red-400 animate-pulse">
-                  Required
-                </span>
-              </div>
-
-              <div className="space-y-4 mb-6">
-                <p className="text-silver/80 text-[11px] leading-relaxed uppercase tracking-wider font-semibold text-center md:text-left">
-                  ALL virtual participants are strictly required to pre-register on Zoom to generate secure session access credentials.
-                </p>
-                
-                <div className="p-3.5 bg-silver/5 border border-silver/10 rounded-2xl flex items-start gap-3">
-                  <ShieldCheck size={16} className="text-primary shrink-0 mt-0.5" />
-                  <p className="text-[10px] text-silver/60 uppercase tracking-wide leading-relaxed font-semibold">
-                    Once you register, Zoom will send your custom link and calendar updates straight to your inbox.
-                  </p>
-                </div>
-              </div>
-
-              {/* Countdown or Status */}
-              <div className="border-t border-silver/10 pt-5 text-center">
-                <span className="text-[9px] uppercase tracking-[0.2em] text-silver/40 font-bold block mb-3">
-                  {timeLeft.isExpired ? "Conference Has Begun" : "Countdown to Opening Ceremony"}
-                </span>
-
-                {timeLeft.isExpired ? (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-bold uppercase tracking-wider text-primary">
-                    <Sparkles size={11} className="animate-spin" /> Live in Session
-                  </div>
-                ) : (
-                  <div className="flex justify-center items-center gap-3">
-                    <div className="text-center min-w-[40px]">
-                      <span className="font-mono text-xl font-extrabold text-white block">
-                        {String(timeLeft.days).padStart(2, '0')}
-                      </span>
-                      <span className="text-[7px] uppercase tracking-widest text-silver/40 font-black block mt-0.5">Days</span>
-                    </div>
-                    <div className="text-primary/30 font-mono text-md font-bold">:</div>
-                    <div className="text-center min-w-[40px]">
-                      <span className="font-mono text-xl font-extrabold text-white block">
-                        {String(timeLeft.hours).padStart(2, '0')}
-                      </span>
-                      <span className="text-[7px] uppercase tracking-widest text-silver/40 font-black block mt-0.5">Hrs</span>
-                    </div>
-                    <div className="text-primary/30 font-mono text-md font-bold">:</div>
-                    <div className="text-center min-w-[40px]">
-                      <span className="font-mono text-xl font-extrabold text-white block">
-                        {String(timeLeft.minutes).padStart(2, '0')}
-                      </span>
-                      <span className="text-[7px] uppercase tracking-widest text-silver/40 font-black block mt-0.5">Mins</span>
-                    </div>
-                    <div className="text-primary/30 font-mono text-md font-bold">:</div>
-                    <div className="text-center min-w-[40px]">
-                      <span className="font-mono text-xl font-extrabold text-white block">
-                        {String(timeLeft.seconds).padStart(2, '0')}
-                      </span>
-                      <span className="text-[7px] uppercase tracking-widest text-silver/40 font-black block mt-0.5">Secs</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
 
             {/* INCOMING DIRECTORATE CARD */}
             <div className="bg-pure-black/95 border border-primary/25 rounded-3xl p-6 backdrop-blur-md relative overflow-hidden shadow-lg hover:border-primary/50 transition-all duration-300">
