@@ -266,7 +266,7 @@ export default function Agenda() {
         },
         {
           time: "4:00 – 4:45 PM ET",
-          title: "Directorate Installation",
+          title: "2026-2028 Directorate Installation",
           icon: Award,
           type: "event" as const,
           startTime: "20260627T200000Z",
