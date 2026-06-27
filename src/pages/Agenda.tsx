@@ -79,7 +79,8 @@ export default function Agenda() {
           icon: CheckCircle2,
           type: "event" as const,
           startTime: "20260626T203000Z",
-          endTime: "20260626T223000Z"
+          endTime: "20260626T223000Z",
+          isPast: true
         },
         {
           time: "6:30 – 7:30 PM ET",
@@ -87,7 +88,8 @@ export default function Agenda() {
           icon: Monitor,
           type: "event" as const,
           startTime: "20260626T223000Z",
-          endTime: "20260626T233000Z"
+          endTime: "20260626T233000Z",
+          isPast: true
         },
         {
           time: "8:30 – 9:30 PM ET",
@@ -97,7 +99,8 @@ export default function Agenda() {
           highlight: true,
           type: "event" as const,
           startTime: "20260627T003000Z",
-          endTime: "20260627T013000Z"
+          endTime: "20260627T013000Z",
+          isPast: true
         },
         {
           time: "9:30 PM – Until ET",
@@ -522,7 +525,7 @@ export default function Agenda() {
                   event.highlight 
                     ? 'border-silver bg-silver/5 shadow-[0_0_20px_rgba(255,255,255,0.05)]' 
                     : 'border-silver/10 bg-pure-black hover:border-silver/30'
-                }`}
+                } ${event.isPast ? 'opacity-40 grayscale pointer-events-none' : ''}`}
               >
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                   <div className="flex items-start gap-4">

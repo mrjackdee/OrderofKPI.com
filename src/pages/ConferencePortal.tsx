@@ -136,7 +136,8 @@ export default function ConferencePortal() {
           highlight: true,
           type: "event" as const,
           startTime: "20260627T003000Z",
-          endTime: "20260627T013000Z"
+          endTime: "20260627T013000Z",
+          isPast: true
         },
         {
           time: "9:30 PM – Until ET",
@@ -576,7 +577,7 @@ export default function ConferencePortal() {
               <Laptop size={20} className="text-primary" />
             </div>
             <div>
-              <h3 className="text-white text-[11px] font-black uppercase tracking-widest mb-1">App Prototype</h3>
+              <h3 className="text-white text-[11px] font-black uppercase tracking-widest mb-1">KP Member Portal (Beta) Prototype</h3>
               <p className="text-silver/60 text-[9px] uppercase tracking-wider">Interactive Demo</p>
             </div>
           </a>
@@ -862,7 +863,7 @@ export default function ConferencePortal() {
                             event.highlight 
                               ? 'border-primary/30 shadow-[0_4px_15px_rgba(212,175,55,0.05)]' 
                               : 'border-silver/10'
-                          } ${event.isPast ? 'opacity-40 grayscale' : ''}`}
+                          } ${event.isPast ? 'opacity-40 grayscale pointer-events-none' : ''}`}
                         >
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 relative z-10">
                             
