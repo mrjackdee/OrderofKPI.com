@@ -53,24 +53,12 @@ export default function Home() {
           <div className="flex flex-col gap-3 md:gap-4 text-center max-w-4xl z-10">
             <motion.h1 
               variants={itemVariants}
-              className="font-outline text-outline text-4xl md:text-8xl leading-tight tracking-widest uppercase" 
+              className="font-outline text-outline text-4xl md:text-8xl leading-tight tracking-widest uppercase mb-4" 
               style={{ transform: 'scaleY(1.2)' }}
             >
               The Order of KP
             </motion.h1>
-            <motion.p 
-              variants={itemVariants}
-              className="text-primary text-3xl md:text-5xl lg:text-6xl font-bold tracking-[0.2em] uppercase mt-6 md:mt-8"
-            >
-              FAMILY MATTERS
-            </motion.p>
-            <motion.p 
-              variants={itemVariants}
-              className="text-silver text-sm md:text-lg lg:text-xl font-medium tracking-[0.15em] uppercase mt-2 md:mt-3"
-            >
-              Planted in Purpose. Climbing Together.
-            </motion.p>
-            <motion.span variants={itemVariants} className="block text-primary text-sm md:text-xl font-light tracking-[0.1em] md:tracking-[0.15em] mt-4 md:mt-8 uppercase max-w-2xl mx-auto leading-relaxed">
+            <motion.span variants={itemVariants} className="block text-primary text-sm md:text-xl font-light tracking-[0.1em] md:tracking-[0.15em] mt-2 md:mt-4 uppercase max-w-2xl mx-auto leading-relaxed">
               Congratulations for a successful biennial conference and installation of the new officers.
             </motion.span>
             <motion.div variants={itemVariants} className="flex flex-col items-center justify-center gap-1 md:gap-2 mt-4 md:mt-6">
