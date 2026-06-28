@@ -503,6 +503,21 @@ export default function ConferencePortal() {
           </p>
         </header>
 
+        {/* Conference Concluded Banner */}
+        <div className="bg-primary/5 border border-primary/20 rounded-3xl p-8 text-center mb-12 shadow-[0_10px_35px_rgba(212,175,55,0.05)] backdrop-blur-sm max-w-4xl mx-auto">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 border border-primary/20 text-primary mb-5">
+            <Sparkles size={24} />
+          </div>
+          <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-wider mb-3">The 2026 Biennial Conference Has Concluded</h2>
+          <p className="text-silver/80 text-sm md:text-base leading-relaxed max-w-2xl mx-auto mb-6 font-medium">
+            We sincerely thank all registered attendees for participating in this historic event.
+          </p>
+          <div className="inline-flex items-center justify-center bg-pure-black/60 border border-primary/10 rounded-xl px-5 py-3.5 text-xs text-silver/90 uppercase tracking-widest">
+            <Info size={14} className="text-primary mr-2" />
+            A recap and links to the conference materials will be made available on this site soon.
+          </div>
+        </div>
+
         {/* Resource Hub Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
           <a
