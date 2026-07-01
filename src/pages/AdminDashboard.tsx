@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
+import { useNavigate, Link } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import { db } from '../lib/firebase';
 import { 
@@ -17,48 +18,52 @@ import {
   AlertCircle,
   FileText,
   Download,
-  Trash2
+  Trash2,
+  Users,
+  CalendarDays,
+  UserPlus,
+  Key
 } from 'lucide-react';
 
 // --- Data ---
 export default function AdminDashboard() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState(false);
-  const [activeTab, setActiveTab] = useState<'revisions'>(() => {
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'revisions' | 'users'>(() => {
     try {
       const search = window.location.search;
       if (search) {
         const params = new URLSearchParams(search);
         const t = params.get('tab');
-        if (t === 'revisions') {
-          return t;
+        if (t === 'revisions' || t === 'users') {
+          return t as 'revisions' | 'users';
         }
       }
     } catch (e) {
       // Ignored
     }
-    return 'revisions';
+    return 'users';
   });
+  
+  const [users, setUsers] = useState([
+    { id: 1, name: 'Admin', email: 'admin@orderofkpi.org', role: 'admin' },
+    { id: 2, name: 'Deshaun Safford', email: 'd.safford@orderofkpi.org', role: 'member' },
+    { id: 3, name: 'Brian Johnson', email: 'b.johnson@orderofkpi.org', role: 'member' }
+  ]);
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserName, setNewUserName] = useState('');
   const [revisions, setRevisions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [revisionToDelete, setRevisionToDelete] = useState<any | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password.toUpperCase() === 'ATLANTA') {
-      setIsAuthenticated(true);
-      setLoginError(false);
-    } else {
-      setLoginError(true);
-    }
-  };
-
   useEffect(() => {
-    if (!isAuthenticated) return;
-    
+    const role = sessionStorage.getItem('userRole');
+    if (role !== 'admin') {
+      navigate('/login');
+      return;
+    }
+
     const qRevisions = query(collection(db, 'revisions'));
     const unsubRevisions = onSnapshot(qRevisions, (snap) => {
       setRevisions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -68,43 +73,7 @@ export default function AdminDashboard() {
     return () => {
       unsubRevisions();
     };
-  }, [isAuthenticated]);
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-pure-black flex items-center justify-center p-6">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-md w-full bg-white/5 border border-white/10 p-8 md:p-10 rounded-3xl text-center"
-        >
-          <ShieldCheck className="text-primary mx-auto mb-6" size={48} />
-          <h2 className="text-2xl font-display font-bold uppercase tracking-widest mb-2">Committee Access</h2>
-          <p className="text-silver/40 text-[10px] uppercase tracking-[0.2em] mb-8">Authorization Required</p>
-          
-          <form onSubmit={handleLogin} className="space-y-4">
-            <input 
-              type="password"
-              placeholder="Enter Administrative Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-center text-white focus:border-primary outline-none transition-all placeholder:text-[10px] placeholder:uppercase placeholder:tracking-widest"
-              autoFocus
-            />
-            {loginError && (
-              <p className="text-red-500 text-[10px] font-bold uppercase tracking-widest">Invalid credentials</p>
-            )}
-            <button 
-              type="submit"
-              className="w-full py-4 bg-primary text-black font-bold uppercase tracking-widest rounded-xl hover:bg-white transition-all shadow-xl shadow-primary/10"
-            >
-              Verify Identity
-            </button>
-          </form>
-        </motion.div>
-      </div>
-    );
-  }
+  }, []);
 
   const exportRevisionsToCSV = () => {
     if (revisions.length === 0) {
@@ -349,6 +318,15 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-pure-black text-white p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
+        <div className="flex gap-4 mb-8 pt-8">
+          <Link to="/intake-calendar" className="px-5 py-2 rounded-full border border-primary/20 text-silver/80 text-xs font-bold uppercase tracking-widest hover:bg-primary/10 transition-colors flex items-center gap-2">
+            <CalendarDays size={14} /> Intake Calendar
+          </Link>
+          <Link to="/financial-roster" className="px-5 py-2 rounded-full border border-primary/20 text-silver/80 text-xs font-bold uppercase tracking-widest hover:bg-primary/10 transition-colors flex items-center gap-2">
+            <Users size={14} /> Financial Roster
+          </Link>
+        </div>
+
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6 border-b border-white/5 pb-6">
           <div>
             <h1 className="text-4xl font-display font-bold uppercase tracking-widest flex items-center gap-3">
@@ -359,10 +337,22 @@ export default function AdminDashboard() {
           
           <div className="flex bg-white/5 border border-white/10 rounded-xl p-1">
             <button 
-              className="px-6 py-2 bg-primary text-black rounded-lg text-xs font-bold uppercase tracking-widest transition-all"
+              onClick={() => setActiveTab('revisions')}
+              className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
+                activeTab === 'revisions' ? 'bg-primary text-black' : 'text-silver/60 hover:text-white'
+              }`}
             >
               <FileText className="inline-block mr-2" size={14} />
               Bylaw Revisions
+            </button>
+            <button 
+              onClick={() => setActiveTab('users')}
+              className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
+                activeTab === 'users' ? 'bg-primary text-black' : 'text-silver/60 hover:text-white'
+              }`}
+            >
+              <Users className="inline-block mr-2" size={14} />
+              User Access
             </button>
           </div>
         </header>
@@ -463,6 +453,91 @@ export default function AdminDashboard() {
                   No constitution or bylaw revisions have been submitted yet.
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'users' && (
+          <div className="space-y-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold uppercase tracking-widest">User Management</h2>
+                <p className="text-silver/40 text-[10px] uppercase tracking-[0.2em] mt-1">Manage portal access for members</p>
+              </div>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
+                <UserPlus size={16} /> Add New User
+              </h3>
+              <div className="flex flex-col md:flex-row gap-4">
+                <input
+                  type="text"
+                  placeholder="Full Name"
+                  className="flex-1 bg-black border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-all placeholder:text-silver/30"
+                  value={newUserName}
+                  onChange={e => setNewUserName(e.target.value)}
+                />
+                <input
+                  type="email"
+                  placeholder="Email Address"
+                  className="flex-1 bg-black border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-all placeholder:text-silver/30"
+                  value={newUserEmail}
+                  onChange={e => setNewUserEmail(e.target.value)}
+                />
+                <button
+                  className="px-6 py-3 bg-primary text-black font-bold uppercase tracking-widest rounded-xl hover:bg-white transition-all text-xs flex items-center justify-center gap-2"
+                  onClick={() => {
+                    if(newUserName && newUserEmail) {
+                      setUsers([...users, { id: Date.now(), name: newUserName, email: newUserEmail, role: 'member' }]);
+                      setNewUserName('');
+                      setNewUserEmail('');
+                    }
+                  }}
+                >
+                  Create User
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {users.map(user => (
+                <motion.div 
+                  key={user.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-black border border-white/10 p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-full flex items-center justify-center">
+                      <Users size={20} className="text-primary/70" />
+                    </div>
+                    <div>
+                      <h4 className="text-white font-bold">{user.name}</h4>
+                      <p className="text-silver/60 text-xs">{user.email}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <span className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full border ${
+                      user.role === 'admin' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-white/5 text-silver border-white/10'
+                    }`}>
+                      {user.role}
+                    </span>
+                    <button className="p-2 bg-white/5 border border-white/10 text-silver/60 hover:text-white rounded-lg transition-colors title='Change Password'">
+                      <Key size={16} />
+                    </button>
+                    {user.role !== 'admin' && (
+                      <button 
+                        onClick={() => setUsers(users.filter(u => u.id !== user.id))}
+                        className="p-2 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 hover:text-red-300 rounded-lg transition-colors title='Remove User'"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </div>
         )}

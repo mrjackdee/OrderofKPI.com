@@ -31,11 +31,13 @@ export default function Layout() {
   const navItems: NavItem[] = [
     { name: 'HOME', path: '/' },
     { name: 'CONFERENCE PORTAL', path: '/portal' },
+    { name: 'MEMBER LOGIN', path: '/login' },
   ];
 
   const footerNavItems: NavItem[] = [
     { name: 'HOME', path: '/' },
     { name: 'CONFERENCE PORTAL', path: '/portal' },
+    { name: 'MEMBER LOGIN', path: '/login' },
   ];
 
   return (

@@ -95,6 +95,19 @@ export default function Home() {
           </p>
         </div>
       </motion.section>
+
+      {/* Button for Admin Dashboard */}
+      <motion.section 
+        variants={itemVariants}
+        className="w-full max-w-5xl flex justify-center py-8"
+      >
+        <MotionLink
+          to="/admin-dashboard"
+          className="px-6 py-3 border border-primary/50 text-primary hover:bg-primary/10 rounded-full font-bold uppercase tracking-widest text-sm transition-colors"
+        >
+          Admin Dashboard
+        </MotionLink>
+      </motion.section>
     </motion.div>
   );
 }
