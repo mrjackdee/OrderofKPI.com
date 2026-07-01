@@ -22,6 +22,7 @@ import ConferencePortal from './pages/ConferencePortal';
 import IntakeCalendar from './pages/IntakeCalendar';
 import Login from './pages/Login';
 import FinancialRoster from './pages/FinancialRoster';
+import GanttChart from './pages/GanttChart';
 import ScrollToTop from './components/ScrollToTop';
 import LandingPage from './components/LandingPage';
 import { AnimatePresence } from 'motion/react';
@@ -68,6 +69,7 @@ export default function App() {
                 <Route path="constitution" element={<Constitution />} />
                 <Route path="portal" element={<ConferencePortal />} />
                 <Route path="intake-calendar" element={<IntakeCalendar />} />
+                <Route path="gantt-chart" element={<GanttChart />} />
                 <Route path="login" element={<Login />} />
                 <Route path="financial-roster" element={<FinancialRoster />} />
               </Route>

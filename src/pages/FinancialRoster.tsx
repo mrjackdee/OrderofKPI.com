@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Users, Search, ShieldCheck, Mail, Phone, MapPin, CheckCircle2, CalendarDays } from 'lucide-react';
+import { Users, Search, ShieldCheck, Mail, Phone, MapPin, CheckCircle2, CalendarDays, LayoutList } from 'lucide-react';
 
 const rosterData = [
   { id: 1, name: "Deshaun Safford", chapter: "National", status: "Active", email: "deshaun.safford@orderofkpi.org", role: "Member", paymentDate: "6/22/2025" },
@@ -67,9 +67,12 @@ export default function FinancialRoster() {
         <Link to="/intake-calendar" className="px-5 py-2 rounded-full border border-[#B8860B]/30 text-[#1E3F20] text-xs font-bold uppercase tracking-widest hover:bg-[#B8860B]/10 transition-colors flex items-center gap-2">
           <CalendarDays size={14} /> Intake Calendar
         </Link>
-        <div className="px-5 py-2 rounded-full bg-[#1E3F20] text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+        <div className="px-5 py-2 rounded-full bg-[#1E3F20] text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-md">
           <Users size={14} /> Financial Roster
         </div>
+        <Link to="/gantt-chart" className="px-5 py-2 rounded-full border border-[#B8860B]/30 text-[#1E3F20] text-xs font-bold uppercase tracking-widest hover:bg-[#B8860B]/10 transition-colors flex items-center gap-2">
+          <LayoutList size={14} /> Intake Timeline
+        </Link>
       </div>
 
       {/* Header Section */}
