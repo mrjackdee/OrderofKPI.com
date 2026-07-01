@@ -181,6 +181,16 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Logging and custom header middleware
+  app.use((req, res, next) => {
+    console.log(`[API LOG] ${req.method} ${req.url}`);
+    res.setHeader("X-KPI-Portal", "Server-v2");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    next();
+  });
+
   // Authentication Endpoints
   app.post("/api/auth/login", (req, res) => {
     const { email, password } = req.body;

@@ -1,5 +1,6 @@
 {
   "name": "OrderOfKPI.com",
   "description": "OrderofKPI.org site",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
