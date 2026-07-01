@@ -6,6 +6,7 @@ import {
   ThumbsUp, Star, Hand, Wallet, Sparkles, Shield, UserCheck, 
   CalendarDays, Leaf, GraduationCap, Clock, LayoutList
 } from 'lucide-react';
+import MemberHeader from '../components/MemberHeader';
 
 const events = [
   { step: 1, title: 'Inquire Within', date: 'Jul 3, 2026', icon: Heart },
@@ -56,8 +57,12 @@ export default function IntakeCalendar() {
       </div>
 
       <div className="relative z-10">
+        <div className="pt-24">
+          <MemberHeader />
+        </div>
+
         {/* Member Navigation Tabs */}
-        <div className="pt-24 px-4 md:px-12 flex flex-wrap justify-center md:justify-start gap-3">
+        <div className="pt-8 px-4 md:px-12 flex flex-wrap justify-center md:justify-start gap-3">
         <div className="px-5 py-2 rounded-full bg-[#1E3F20] text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-md">
           <CalendarDays size={14} /> Intake Calendar
         </div>

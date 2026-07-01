@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CalendarDays, Users, LayoutList } from 'lucide-react';
+import MemberHeader from '../components/MemberHeader';
 
 const events = [
   { step: 1, title: 'Inquire Within', date: 'Jul 3, 2026', start: '2026-07-03', end: '2026-07-03' },
@@ -78,8 +79,12 @@ export default function GanttChart() {
       </div>
 
       <div className="relative z-10">
+        <div className="pt-24">
+          <MemberHeader />
+        </div>
+
         {/* Member Navigation Tabs */}
-        <div className="pt-24 px-4 md:px-12 flex flex-wrap justify-center md:justify-start gap-3">
+        <div className="pt-8 px-4 md:px-12 flex flex-wrap justify-center md:justify-start gap-3">
           <Link to="/intake-calendar" className="px-5 py-2 rounded-full border border-[#B8860B]/30 text-[#1E3F20] text-xs font-bold uppercase tracking-widest hover:bg-[#B8860B]/10 transition-colors flex items-center gap-2">
             <CalendarDays size={14} /> Intake Calendar
           </Link>

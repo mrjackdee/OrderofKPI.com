@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Lock, Mail, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,8 +21,10 @@ export default function Login() {
     }
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
     
     if (rememberMe) {
       localStorage.setItem('kpi_saved_email', email);
@@ -30,14 +34,29 @@ export default function Login() {
       localStorage.removeItem('kpi_saved_password');
     }
 
-    // Simulate login and redirect to the intake calendar / roster dashboard
-    // In a real application, Firebase Auth would be used here
-    if (email.toLowerCase() === 'admin@orderofkpi.org') {
-      sessionStorage.setItem('userRole', 'admin');
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Invalid email or password');
+      }
+
+      sessionStorage.setItem('userEmail', data.user.email);
+      sessionStorage.setItem('userName', data.user.name);
+      sessionStorage.setItem('userFirstName', data.user.firstName);
+      sessionStorage.setItem('userRole', data.user.role);
+      sessionStorage.setItem('isFirstLogin', data.user.isFirstLogin ? 'true' : 'false');
+
       navigate('/intake-calendar');
-    } else {
-      sessionStorage.setItem('userRole', 'member');
-      navigate('/intake-calendar');
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -65,10 +84,16 @@ export default function Login() {
             <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-widest mb-2">
               Member Portal
             </h1>
-            <p className="text-silver/60 text-xs uppercase tracking-wider font-semibold">
-              Secure Access for Financial Members
+            <p className="text-silver/60 text-xs uppercase tracking-wider font-semibold whitespace-pre-line">
+              Secure Access for Financial Members{"\n\n"}Access for Financial Members
             </p>
           </div>
+
+          {error && (
+            <div className="mb-5 p-3 bg-red-950/40 border border-red-500/30 rounded-xl text-xs text-red-200 font-medium">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-1.5">
@@ -84,6 +109,7 @@ export default function Login() {
                   className="w-full bg-white/5 border border-primary/20 rounded-xl py-3 pl-11 pr-4 text-white text-sm focus:outline-none focus:border-primary/60 focus:bg-white/10 transition-all placeholder:text-silver/30"
                   placeholder="member@orderofkpi.org"
                   required
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -91,9 +117,6 @@ export default function Login() {
             <div className="space-y-1.5">
               <div className="flex justify-between items-center ml-1">
                 <label className="text-[10px] text-silver/80 uppercase tracking-widest font-bold">Password</label>
-                <a href="#" className="text-[10px] text-primary hover:text-primary/80 transition-colors uppercase tracking-wider">
-                  Forgot?
-                </a>
               </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -106,6 +129,7 @@ export default function Login() {
                   className="w-full bg-white/5 border border-primary/20 rounded-xl py-3 pl-11 pr-4 text-white text-sm focus:outline-none focus:border-primary/60 focus:bg-white/10 transition-all placeholder:text-silver/30"
                   placeholder="••••••••"
                   required
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -117,6 +141,7 @@ export default function Login() {
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
                 className="w-3.5 h-3.5 rounded-sm border-primary/40 bg-white/5 text-primary focus:ring-primary/50 focus:ring-offset-0 cursor-pointer"
+                disabled={loading}
               />
               <label htmlFor="rememberMe" className="text-[10px] text-silver/80 uppercase tracking-widest font-bold cursor-pointer">
                 Remember Me
@@ -127,9 +152,18 @@ export default function Login() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-white text-black py-3.5 rounded-xl font-black uppercase tracking-widest text-xs transition-colors mt-2"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-white text-black py-3.5 rounded-xl font-black uppercase tracking-widest text-xs transition-colors mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Secure Login <ArrowRight size={16} />
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" /> Verifying...
+                </>
+              ) : (
+                <>
+                  Secure Login <ArrowRight size={16} />
+                </>
+              )}
             </motion.button>
           </form>
 
