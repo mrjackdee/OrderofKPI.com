@@ -3,6 +3,9 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import crypto from "crypto";
 import fs from "fs";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
 
 // Fallback JSON-based store or SQLite
 interface UserRecord {
