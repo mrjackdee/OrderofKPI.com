@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Outlet, Link } from 'react-router-dom';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, ChevronUp, Instagram } from 'lucide-react';
 
@@ -8,6 +8,9 @@ const MotionLink = motion(Link);
 export default function Layout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const location = useLocation();
+
+  const isCreamPage = ['/intake-calendar', '/gantt-chart', '/financial-roster'].includes(location.pathname);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -40,7 +43,7 @@ export default function Layout() {
   ];
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden bg-[#000000] text-primary font-display antialiased">
+    <div className={`relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden ${isCreamPage ? 'bg-[#FDFCF0]' : 'bg-[#000000]'} text-primary font-display antialiased transition-colors duration-300`}>
       <div className="layout-container flex h-full grow flex-col pt-[72px] md:pt-[88px]">
         <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-primary px-4 md:px-10 py-4 md:py-6 bg-black/95 backdrop-blur fixed top-0 left-0 right-0 z-50">
           <div className="flex items-center gap-2 md:gap-4 text-primary">
@@ -173,7 +176,7 @@ export default function Layout() {
           )}
         </AnimatePresence>
 
-        <main className="flex-1 flex flex-col items-center">
+        <main className="flex-1 flex flex-col items-center w-full">
           <Outlet />
         </main>
 

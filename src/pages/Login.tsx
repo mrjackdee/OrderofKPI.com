@@ -42,11 +42,17 @@ export default function Login() {
         throw new Error(result.message);
       }
 
-      sessionStorage.setItem('userEmail', result.user.email);
-      sessionStorage.setItem('userName', result.user.name);
-      sessionStorage.setItem('userFirstName', result.user.firstName);
-      sessionStorage.setItem('userRole', result.user.role);
-      sessionStorage.setItem('isFirstLogin', result.user.isFirstLogin ? 'true' : 'false');
+      const user = result.user as any;
+      sessionStorage.setItem('userEmail', user.email);
+      sessionStorage.setItem('userName', user.name);
+      sessionStorage.setItem('userFirstName', user.firstName);
+      sessionStorage.setItem('userRole', user.role);
+      if (user.title) {
+        sessionStorage.setItem('userTitle', user.title);
+      } else {
+        sessionStorage.removeItem('userTitle');
+      }
+      sessionStorage.setItem('isFirstLogin', user.isFirstLogin ? 'true' : 'false');
 
       navigate('/intake-calendar');
     } catch (err: any) {

@@ -1,38 +1,30 @@
 export interface MemberUser {
   name: string;
   email: string;
-  role: 'admin' | 'member';
+  role: 'admin' | 'member' | 'officer';
+  title?: string;
 }
 
 export const defaultMembers: MemberUser[] = [
-  { name: "Admin User", email: "admin@orderofkpi.org", role: "admin" },
-  { name: "Deshaun Safford", email: "deshaun.safford@orderofkpi.org", role: "member" },
-  { name: "Darius Scott", email: "darius.scott@orderofkpi.org", role: "member" },
-  { name: "Keiland Henderson", email: "keiland.henderson@orderofkpi.org", role: "member" },
-  { name: "Reginald Williams", email: "reginald.williams@orderofkpi.org", role: "member" },
-  { name: "Jelahn Cherry", email: "jelahn.cherry@orderofkpi.org", role: "member" },
-  { name: "Myric Crawford", email: "myric.crawford@orderofkpi.org", role: "member" },
-  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "member" },
-  { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "member" },
-  { name: "Edward Cook", email: "edward.cook@orderofkpi.org", role: "member" },
-  { name: "Darron Jenkins", email: "darron.jenkins@orderofkpi.org", role: "member" },
-  { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "member" },
+  { name: "Admin User", email: "admin@orderofkpi.org", role: "admin", title: "Administrator" },
+  { name: "Deshaun Stafford", email: "deshaun.stafford@orderofkpi.org", role: "member" },
+  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "officer", title: "Grammateus" },
+  { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos" },
+  { name: "Edward Cook", email: "edward.cook@orderofkpi.org", role: "officer", title: "Epistoleus" },
+  { name: "Darron Jenkins", email: "darron.jenkins@orderofkpi.org", role: "officer", title: "Hodegos" },
+  { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "officer", title: "2nd Anti-Basileus" },
   { name: "Dameone Ferguson", email: "dameone.ferguson@orderofkpi.org", role: "member" },
-  { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "member" },
+  { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus" },
   { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member" },
   { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member" },
   { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "member" },
-  { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "member" },
+  { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian" },
   { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "member" },
-  { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "member" },
+  { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus" },
   { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member" },
   { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member" },
   { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member" },
-  { name: "Denzel Talley", email: "denzel.talley@orderofkpi.org", role: "member" },
-  { name: "Marcus Thomas", email: "marcus.thomas@orderofkpi.org", role: "member" },
-  { name: "Demarion Smith", email: "demarion.smith@orderofkpi.org", role: "member" },
-  { name: "Elijah Carter", email: "elijah.carter@orderofkpi.org", role: "member" },
-  { name: "Devonte Jenkins", email: "devonte.jenkins@orderofkpi.org", role: "member" }
+  { name: "Denzel Talley", email: "denzel.talley@orderofkpi.org", role: "member" }
 ];
 
 /**
@@ -48,6 +40,7 @@ export async function performHybridLogin(email: string, pass: string): Promise<{
     name: string;
     firstName: string;
     role: string;
+    title?: string;
     isFirstLogin: boolean;
   };
 }> {
@@ -153,6 +146,7 @@ function performClientSideLogin(email: string, pass: string) {
       name: member.name,
       firstName,
       role: member.role,
+      title: member.title,
       isFirstLogin: !isChanged
     }
   };

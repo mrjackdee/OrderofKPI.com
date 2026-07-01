@@ -48,7 +48,7 @@ export default function IntakeCalendar() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFCF0] font-sans pb-20 relative overflow-hidden">
+    <div className="min-h-screen w-full bg-[#FDFCF0] font-sans pb-20 relative overflow-hidden">
       {/* Draft Watermark */}
       <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-0 opacity-10">
         <h1 className="text-[15rem] md:text-[25rem] font-black uppercase text-[#1E3F20] -rotate-45 select-none whitespace-nowrap">

@@ -12,33 +12,25 @@ interface UserRecord {
   password_hash: string;
   is_first_login: number;
   role: string;
+  title?: string;
 }
 
 const defaultUsers = [
-  { name: "Admin", email: "admin@orderofkpi.org", role: "admin" },
-  { name: "Deshaun Safford", email: "deshaun.safford@orderofkpi.org", role: "member" },
-  { name: "Darius Scott", email: "darius.scott@orderofkpi.org", role: "member" },
-  { name: "Keiland Henderson", email: "keiland.henderson@orderofkpi.org", role: "member" },
-  { name: "Reginald Williams", email: "reginald.williams@orderofkpi.org", role: "member" },
-  { name: "Jelahn Cherry", email: "jelahn.cherry@orderofkpi.org", role: "member" },
-  { name: "Myric Crawford", email: "myric.crawford@orderofkpi.org", role: "member" },
-  { name: "Marcus Thomas", email: "marcus.thomas@orderofkpi.org", role: "member" },
-  { name: "Demarion Smith", email: "demarion.smith@orderofkpi.org", role: "member" },
-  { name: "Elijah Carter", email: "elijah.carter@orderofkpi.org", role: "member" },
-  { name: "Devonte Jenkins", email: "devonte.jenkins@orderofkpi.org", role: "member" },
-  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "member" },
-  { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "member" },
-  { name: "Edward Cook", email: "edward.cook@orderofkpi.org", role: "member" },
-  { name: "Darron Jenkins", email: "darron.jenkins@orderofkpi.org", role: "member" },
-  { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "member" },
+  { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator" },
+  { name: "Deshaun Stafford", email: "deshaun.stafford@orderofkpi.org", role: "member" },
+  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "officer", title: "Grammateus" },
+  { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos" },
+  { name: "Edward Cook", email: "edward.cook@orderofkpi.org", role: "officer", title: "Epistoleus" },
+  { name: "Darron Jenkins", email: "darron.jenkins@orderofkpi.org", role: "officer", title: "Hodegos" },
+  { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "officer", title: "2nd Anti-Basileus" },
   { name: "Dameone Ferguson", email: "dameone.ferguson@orderofkpi.org", role: "member" },
-  { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "member" },
+  { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus" },
   { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member" },
   { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member" },
   { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "member" },
-  { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "member" },
+  { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian" },
   { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "member" },
-  { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "member" },
+  { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus" },
   { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member" },
   { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member" },
   { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member" },
@@ -54,6 +46,9 @@ function hashPassword(password: string): string {
 }
 
 async function initDb() {
+  const allowedEmails = new Set(defaultUsers.map(u => u.email.toLowerCase().trim()));
+  const defaultPasswordHash = hashPassword("2012");
+
   try {
     // Try importing better-sqlite3 dynamically
     const { default: Database } = await import("better-sqlite3");
@@ -67,48 +62,97 @@ async function initDb() {
         first_name TEXT,
         password_hash TEXT,
         is_first_login INTEGER DEFAULT 1,
-        role TEXT
+        role TEXT,
+        title TEXT
       )
     `);
-    
-    const countRes = sqliteDb.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
-    if (countRes.count === 0) {
-      const insert = sqliteDb.prepare(`
-        INSERT INTO users (email, name, first_name, password_hash, is_first_login, role)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
-      
-      const defaultPasswordHash = hashPassword("2012");
-      for (const u of defaultUsers) {
-        const firstName = u.name.split(" ")[0];
-        insert.run(u.email.toLowerCase().trim(), u.name, firstName, defaultPasswordHash, 1, u.role);
-      }
-      console.log("SQLite database initialized and seeded with password 2012.");
+
+    try {
+      sqliteDb.exec("ALTER TABLE users ADD COLUMN title TEXT");
+    } catch (e) {
+      // Column already exists
     }
+    
+    // SQLite Cleanup
+    const existingRows = sqliteDb.prepare("SELECT email FROM users").all() as { email: string }[];
+    for (const row of existingRows) {
+      const emailNorm = row.email.toLowerCase().trim();
+      if (!allowedEmails.has(emailNorm)) {
+        console.log(`[DB Cleanup] Deleting invalid/inactive user from SQLite: ${emailNorm}`);
+        sqliteDb.prepare("DELETE FROM users WHERE email = ?").run(row.email);
+      }
+    }
+
+    // Add or update users to align with latest roles and titles, preserving existing password hashes
+    for (const u of defaultUsers) {
+      const emailNorm = u.email.toLowerCase().trim();
+      const firstName = u.name.split(" ")[0];
+      const existingUser = sqliteDb.prepare("SELECT password_hash FROM users WHERE email = ?").get(emailNorm) as any;
+      if (existingUser) {
+        sqliteDb.prepare(`
+          UPDATE users 
+          SET name = ?, first_name = ?, role = ?, title = ? 
+          WHERE email = ?
+        `).run(u.name, firstName, u.role, u.title || "", emailNorm);
+      } else {
+        sqliteDb.prepare(`
+          INSERT INTO users (email, name, first_name, password_hash, is_first_login, role, title)
+          VALUES (?, ?, ?, ?, 1, ?, ?)
+        `).run(emailNorm, u.name, firstName, defaultPasswordHash, u.role, u.title || "");
+      }
+    }
+    console.log("SQLite database synchronized with official active roster.");
   } catch (err) {
     console.log("SQLite loading failed, falling back to JSON database file.");
     useSqlite = false;
   }
 
-  // Always ensure JSON database is seeded and available as a safe fallback/primary option
-  if (!useSqlite || !sqliteDb) {
-    if (!fs.existsSync(jsonDbPath)) {
-      const defaultPasswordHash = hashPassword("2012");
-      const initialData: Record<string, UserRecord> = {};
-      for (const u of defaultUsers) {
+  // Always ensure JSON database is seeded, synchronized, and available as a safe fallback/primary option
+  try {
+    let initialData: Record<string, UserRecord> = {};
+    if (fs.existsSync(jsonDbPath)) {
+      try {
+        initialData = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8")) as Record<string, UserRecord>;
+      } catch (e) {
+        console.error("Error reading JSON db, resetting to default roster", e);
+      }
+    }
+
+    // Filter out invalid users
+    const cleanData: Record<string, UserRecord> = {};
+    for (const [email, user] of Object.entries(initialData)) {
+      const emailNorm = email.toLowerCase().trim();
+      if (allowedEmails.has(emailNorm)) {
+        cleanData[emailNorm] = user;
+      } else {
+        console.log(`[DB Cleanup] Deleting invalid/inactive user from JSON DB: ${emailNorm}`);
+      }
+    }
+
+    // Add missing users or update roles/titles for existing ones
+    for (const u of defaultUsers) {
+      const emailNorm = u.email.toLowerCase().trim();
+      if (!cleanData[emailNorm]) {
         const firstName = u.name.split(" ")[0];
-        initialData[u.email.toLowerCase().trim()] = {
-          email: u.email.toLowerCase().trim(),
+        cleanData[emailNorm] = {
+          email: emailNorm,
           name: u.name,
           first_name: firstName,
           password_hash: defaultPasswordHash,
           is_first_login: 1,
-          role: u.role
+          role: u.role,
+          title: u.title || ""
         };
+      } else {
+        cleanData[emailNorm].role = u.role;
+        cleanData[emailNorm].title = u.title || "";
       }
-      fs.writeFileSync(jsonDbPath, JSON.stringify(initialData, null, 2));
-      console.log("JSON database initialized and seeded with password 2012.");
     }
+
+    fs.writeFileSync(jsonDbPath, JSON.stringify(cleanData, null, 2));
+    console.log("JSON database synchronized with official active roster.");
+  } catch (jsonErr) {
+    console.error("JSON database sync failed:", jsonErr);
   }
 }
 
@@ -125,7 +169,8 @@ function findUser(email: string): UserRecord | null {
           first_name: row.first_name,
           password_hash: row.password_hash,
           is_first_login: row.is_first_login,
-          role: row.role
+          role: row.role,
+          title: row.title
         };
       }
     } catch (e) {
@@ -213,6 +258,7 @@ async function startServer() {
           name: user.name,
           firstName: user.first_name,
           role: user.role,
+          title: user.title,
           isFirstLogin: user.is_first_login === 1
         }
       });

@@ -9,6 +9,9 @@ export default function MemberHeader() {
   const [email, setEmail] = useState('');
   const [isFirstLogin, setIsFirstLogin] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [role, setRole] = useState('member');
+  const [title, setTitle] = useState('');
+  const [fullName, setFullName] = useState('');
   
   // Change password states
   const [currentPassword, setCurrentPassword] = useState('');
@@ -24,6 +27,9 @@ export default function MemberHeader() {
     const savedFirstName = sessionStorage.getItem('userFirstName');
     const savedEmail = sessionStorage.getItem('userEmail');
     const savedFirstLogin = sessionStorage.getItem('isFirstLogin');
+    const savedRole = sessionStorage.getItem('userRole');
+    const savedTitle = sessionStorage.getItem('userTitle');
+    const savedName = sessionStorage.getItem('userName');
     
     if (savedFirstName) {
       setFirstName(savedFirstName);
@@ -34,6 +40,15 @@ export default function MemberHeader() {
     if (savedFirstLogin === 'true') {
       setIsFirstLogin(true);
       setShowModal(true); // Force show modal
+    }
+    if (savedRole) {
+      setRole(savedRole);
+    }
+    if (savedTitle) {
+      setTitle(savedTitle);
+    }
+    if (savedName) {
+      setFullName(savedName);
     }
   }, []);
 
@@ -99,17 +114,29 @@ export default function MemberHeader() {
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 md:px-12 pt-6">
-      <div className="bg-white/5 border border-primary/20 rounded-2xl p-4 md:p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-md backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black uppercase text-sm">
+      <div className="bg-[#122c14] border-2 border-[#D4AF37] rounded-2xl p-5 md:p-7 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 text-center md:text-left">
+          <div className="w-14 h-14 rounded-full bg-[#D4AF37]/25 border-2 border-[#D4AF37] flex items-center justify-center text-[#FFDF79] font-black uppercase text-lg shrink-0 shadow-inner animate-pulse">
             {firstName.substring(0, 2)}
           </div>
-          <div className="text-left">
-            <h3 className="text-white text-base md:text-lg font-bold uppercase tracking-wider">
-              Welcome, {firstName}
+          <div>
+            <h3 className="text-2xl md:text-3xl font-serif font-bold text-white tracking-wide">
+              Welcome, {fullName || firstName}
             </h3>
-            <p className="text-xs text-silver/60 uppercase font-medium tracking-widest">
-              KPI Active Financial Member Portal
+            
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5 mt-2">
+              <span className="px-3.5 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest bg-[#D4AF37] text-[#122c14] shadow-md">
+                {role === 'admin' ? 'Administrator' : role === 'officer' ? 'Chapter Officer' : 'Financial Member'}
+              </span>
+              {title && (
+                <span className="px-3.5 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest bg-white/10 text-[#FFDF79] border-2 border-[#D4AF37]/50 shadow-md">
+                  {title}
+                </span>
+              )}
+            </div>
+
+            <p className="text-[10px] md:text-xs text-white/80 uppercase font-bold tracking-[0.2em] mt-3">
+              Kappa Pi Active Financial Portal
             </p>
           </div>
         </div>
@@ -117,14 +144,14 @@ export default function MemberHeader() {
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => setShowModal(true)}
-            className="px-4 py-2 text-xs font-bold uppercase tracking-widest bg-transparent border border-primary/40 hover:border-primary text-primary hover:bg-primary/10 rounded-xl transition-all flex items-center gap-1.5"
+            className="px-4 py-2 text-xs font-bold uppercase tracking-widest bg-transparent border-2 border-[#B8860B]/40 hover:border-[#B8860B] text-white hover:bg-white/10 rounded-xl transition-all flex items-center gap-1.5"
           >
             <Key size={13} /> Change Password
           </button>
           
           <button
             onClick={handleLogout}
-            className="px-4 py-2 text-xs font-bold uppercase tracking-widest bg-red-950/20 hover:bg-red-950/40 border border-red-500/30 text-red-300 rounded-xl transition-all flex items-center gap-1.5"
+            className="px-4 py-2 text-xs font-bold uppercase tracking-widest bg-red-500/20 hover:bg-red-500/35 border-2 border-red-500/40 text-red-100 rounded-xl transition-all flex items-center gap-1.5"
           >
             <LogOut size={13} /> Log Out
           </button>
