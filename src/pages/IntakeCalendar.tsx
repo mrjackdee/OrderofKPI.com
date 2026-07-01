@@ -47,10 +47,17 @@ export default function IntakeCalendar() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFCF0] font-sans pb-20">
-      
-      {/* Member Navigation Tabs */}
-      <div className="pt-24 px-6 md:px-12 flex justify-center md:justify-start gap-4">
+    <div className="min-h-screen bg-[#FDFCF0] font-sans pb-20 relative overflow-hidden">
+      {/* Draft Watermark */}
+      <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-0 opacity-10">
+        <h1 className="text-[15rem] md:text-[25rem] font-black uppercase text-[#1E3F20] -rotate-45 select-none whitespace-nowrap">
+          Draft
+        </h1>
+      </div>
+
+      <div className="relative z-10">
+        {/* Member Navigation Tabs */}
+        <div className="pt-24 px-6 md:px-12 flex justify-center md:justify-start gap-4">
         <div className="px-5 py-2 rounded-full bg-[#1E3F20] text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2">
           <CalendarDays size={14} /> Intake Calendar
         </div>
@@ -132,6 +139,7 @@ export default function IntakeCalendar() {
       <div className="flex justify-between items-end mt-20 px-8 opacity-40 pointer-events-none">
         <Leaf size={64} className="text-[#1E3F20] transform -scale-x-100" />
         <Leaf size={64} className="text-[#1E3F20]" />
+      </div>
       </div>
     </div>
   );
