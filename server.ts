@@ -3,9 +3,6 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import crypto from "crypto";
 import fs from "fs";
-import { createRequire } from "module";
-
-const require = createRequire(import.meta.url);
 
 // Fallback JSON-based store or SQLite
 interface UserRecord {
@@ -56,60 +53,62 @@ function hashPassword(password: string): string {
   return crypto.createHash("sha256").update(password).digest("hex");
 }
 
-try {
-  // Try importing better-sqlite3
-  const Database = require("better-sqlite3");
-  const dbPath = path.join(process.cwd(), "kpi_members_v2.db");
-  sqliteDb = new Database(dbPath);
-  
-  sqliteDb.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      email TEXT PRIMARY KEY,
-      name TEXT,
-      first_name TEXT,
-      password_hash TEXT,
-      is_first_login INTEGER DEFAULT 1,
-      role TEXT
-    )
-  `);
-  
-  const countRes = sqliteDb.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
-  if (countRes.count === 0) {
-    const insert = sqliteDb.prepare(`
-      INSERT INTO users (email, name, first_name, password_hash, is_first_login, role)
-      VALUES (?, ?, ?, ?, ?, ?)
+async function initDb() {
+  try {
+    // Try importing better-sqlite3 dynamically
+    const { default: Database } = await import("better-sqlite3");
+    const dbPath = path.join(process.cwd(), "kpi_members_v2.db");
+    sqliteDb = new Database(dbPath);
+    
+    sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        email TEXT PRIMARY KEY,
+        name TEXT,
+        first_name TEXT,
+        password_hash TEXT,
+        is_first_login INTEGER DEFAULT 1,
+        role TEXT
+      )
     `);
     
-    const defaultPasswordHash = hashPassword("2012");
-    for (const u of defaultUsers) {
-      const firstName = u.name.split(" ")[0];
-      insert.run(u.email.toLowerCase().trim(), u.name, firstName, defaultPasswordHash, 1, u.role);
+    const countRes = sqliteDb.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
+    if (countRes.count === 0) {
+      const insert = sqliteDb.prepare(`
+        INSERT INTO users (email, name, first_name, password_hash, is_first_login, role)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      
+      const defaultPasswordHash = hashPassword("2012");
+      for (const u of defaultUsers) {
+        const firstName = u.name.split(" ")[0];
+        insert.run(u.email.toLowerCase().trim(), u.name, firstName, defaultPasswordHash, 1, u.role);
+      }
+      console.log("SQLite database initialized and seeded with password 2012.");
     }
-    console.log("SQLite database initialized and seeded with password 2012.");
+  } catch (err) {
+    console.log("SQLite loading failed, falling back to JSON database file.");
+    useSqlite = false;
   }
-} catch (err) {
-  console.log("SQLite loading failed, falling back to JSON database file.");
-  useSqlite = false;
-}
 
-// Always ensure JSON database is seeded and available as a safe fallback/primary option
-if (!useSqlite || !sqliteDb) {
-  if (!fs.existsSync(jsonDbPath)) {
-    const defaultPasswordHash = hashPassword("2012");
-    const initialData: Record<string, UserRecord> = {};
-    for (const u of defaultUsers) {
-      const firstName = u.name.split(" ")[0];
-      initialData[u.email.toLowerCase().trim()] = {
-        email: u.email.toLowerCase().trim(),
-        name: u.name,
-        first_name: firstName,
-        password_hash: defaultPasswordHash,
-        is_first_login: 1,
-        role: u.role
-      };
+  // Always ensure JSON database is seeded and available as a safe fallback/primary option
+  if (!useSqlite || !sqliteDb) {
+    if (!fs.existsSync(jsonDbPath)) {
+      const defaultPasswordHash = hashPassword("2012");
+      const initialData: Record<string, UserRecord> = {};
+      for (const u of defaultUsers) {
+        const firstName = u.name.split(" ")[0];
+        initialData[u.email.toLowerCase().trim()] = {
+          email: u.email.toLowerCase().trim(),
+          name: u.name,
+          first_name: firstName,
+          password_hash: defaultPasswordHash,
+          is_first_login: 1,
+          role: u.role
+        };
+      }
+      fs.writeFileSync(jsonDbPath, JSON.stringify(initialData, null, 2));
+      console.log("JSON database initialized and seeded with password 2012.");
     }
-    fs.writeFileSync(jsonDbPath, JSON.stringify(initialData, null, 2));
-    console.log("JSON database initialized and seeded with password 2012.");
   }
 }
 
@@ -176,6 +175,8 @@ function updateUserPassword(email: string, newHash: string): boolean {
 }
 
 async function startServer() {
+  await initDb();
+
   const app = express();
   const PORT = 3000;
 

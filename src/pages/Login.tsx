@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
+import { performHybridLogin } from '../lib/memberDb';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -35,26 +36,25 @@ export default function Login() {
     }
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await response.json();
+      const result = await performHybridLogin(email, password);
       
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Invalid email or password');
+      if (!result.success || !result.user) {
+        throw new Error(result.message);
       }
 
-      sessionStorage.setItem('userEmail', data.user.email);
-      sessionStorage.setItem('userName', data.user.name);
-      sessionStorage.setItem('userFirstName', data.user.firstName);
-      sessionStorage.setItem('userRole', data.user.role);
-      sessionStorage.setItem('isFirstLogin', data.user.isFirstLogin ? 'true' : 'false');
+      sessionStorage.setItem('userEmail', result.user.email);
+      sessionStorage.setItem('userName', result.user.name);
+      sessionStorage.setItem('userFirstName', result.user.firstName);
+      sessionStorage.setItem('userRole', result.user.role);
+      sessionStorage.setItem('isFirstLogin', result.user.isFirstLogin ? 'true' : 'false');
 
       navigate('/intake-calendar');
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please try again.');
+      const isTechnical = err.message.includes('JSON') || err.message.includes('token') || err.message.includes('fetch');
+      setError(isTechnical 
+        ? 'The authentication service is temporarily unavailable or undergoing maintenance. Please check your internet connection or try again later.'
+        : err.message || 'Login failed. Please verify your credentials and try again.'
+      );
     } finally {
       setLoading(false);
     }

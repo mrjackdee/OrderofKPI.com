@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Lock, Key, Check, AlertCircle, X, ShieldAlert, CheckCircle2, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { performHybridPasswordChange } from '../lib/memberDb';
 
 export default function MemberHeader() {
   const [firstName, setFirstName] = useState('Member');
@@ -61,26 +62,25 @@ export default function MemberHeader() {
     }
 
     try {
-      const response = await fetch('/api/auth/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          currentPassword: isFirstLogin ? '2012' : currentPassword,
-          newPassword
-        })
-      });
+      const result = await performHybridPasswordChange(
+        email,
+        isFirstLogin ? '2012' : currentPassword,
+        newPassword
+      );
 
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Failed to update password.');
+      if (!result.success) {
+        throw new Error(result.message);
       }
 
       setSuccess(true);
       sessionStorage.setItem('isFirstLogin', 'false');
       setIsFirstLogin(false);
     } catch (err: any) {
-      setError(err.message || 'An error occurred. Please try again.');
+      const isTechnical = err.message.includes('JSON') || err.message.includes('token') || err.message.includes('fetch');
+      setError(isTechnical
+        ? 'The update service is temporarily offline. Your password change was not saved. Please try again later.'
+        : err.message || 'Failed to update your password. Please verify your current password and try again.'
+      );
     } finally {
       setLoading(false);
     }
