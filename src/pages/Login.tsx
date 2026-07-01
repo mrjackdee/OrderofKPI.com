@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
@@ -6,10 +6,30 @@ import { Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('kpi_saved_email');
+    const savedPassword = localStorage.getItem('kpi_saved_password');
+    if (savedEmail && savedPassword) {
+      setEmail(savedEmail);
+      setPassword(savedPassword);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (rememberMe) {
+      localStorage.setItem('kpi_saved_email', email);
+      localStorage.setItem('kpi_saved_password', password);
+    } else {
+      localStorage.removeItem('kpi_saved_email');
+      localStorage.removeItem('kpi_saved_password');
+    }
+
     // Simulate login and redirect to the intake calendar / roster dashboard
     // In a real application, Firebase Auth would be used here
     if (email.toLowerCase() === 'admin@orderofkpi.org') {
@@ -88,6 +108,19 @@ export default function Login() {
                   required
                 />
               </div>
+            </div>
+
+            <div className="flex items-center gap-2 ml-1">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-3.5 h-3.5 rounded-sm border-primary/40 bg-white/5 text-primary focus:ring-primary/50 focus:ring-offset-0 cursor-pointer"
+              />
+              <label htmlFor="rememberMe" className="text-[10px] text-silver/80 uppercase tracking-widest font-bold cursor-pointer">
+                Remember Me
+              </label>
             </div>
 
             <motion.button

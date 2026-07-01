@@ -59,19 +59,8 @@ export default function Home() {
               The Order of KP
             </motion.h1>
             <motion.span variants={itemVariants} className="block text-primary text-sm md:text-xl font-light tracking-[0.1em] md:tracking-[0.15em] mt-2 md:mt-4 uppercase max-w-2xl mx-auto leading-relaxed">
-              Congratulations for a successful biennial conference and installation of the new officers.
+              Congratulations on a successful biennial conference and the installation of the new organization officers.
             </motion.span>
-            <motion.div variants={itemVariants} className="flex flex-col items-center justify-center gap-1 md:gap-2 mt-4 md:mt-6">
-              <MotionLink
-                to="/portal"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="mt-6 flex items-center gap-2 px-6 py-3 bg-primary text-black font-bold uppercase tracking-widest rounded-full hover:bg-white transition-colors text-sm shadow-lg shadow-primary/20"
-              >
-                <Monitor size={18} />
-                Conference Portal
-              </MotionLink>
-            </motion.div>
           </div>
         </div>
       </motion.div>
@@ -96,16 +85,19 @@ export default function Home() {
         </div>
       </motion.section>
 
-      {/* Button for Admin Dashboard */}
+      {/* Button for Member Portal */}
       <motion.section 
         variants={itemVariants}
         className="w-full max-w-5xl flex justify-center py-8"
       >
         <MotionLink
-          to="/admin-dashboard"
-          className="px-6 py-3 border border-primary/50 text-primary hover:bg-primary/10 rounded-full font-bold uppercase tracking-widest text-sm transition-colors"
+          to="/login"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="px-8 py-4 bg-primary text-black font-black uppercase tracking-[0.2em] rounded-full hover:bg-white transition-all text-sm shadow-lg shadow-primary/20 flex items-center gap-2"
         >
-          Admin Dashboard
+          <span>Enter Member Portal</span>
+          <ArrowRight size={16} />
         </MotionLink>
       </motion.section>
     </motion.div>

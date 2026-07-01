@@ -30,14 +30,13 @@ export default function Layout() {
 
   const navItems: NavItem[] = [
     { name: 'HOME', path: '/' },
-    { name: 'CONFERENCE PORTAL', path: '/portal' },
-    { name: 'MEMBER LOGIN', path: '/login' },
+    { name: 'MEMBER PORTAL', path: '/login' },
   ];
 
   const footerNavItems: NavItem[] = [
     { name: 'HOME', path: '/' },
-    { name: 'CONFERENCE PORTAL', path: '/portal' },
-    { name: 'MEMBER LOGIN', path: '/login' },
+    { name: 'MEMBER PORTAL', path: '/login' },
+    { name: 'ADMIN DASHBOARD', path: '/admin-dashboard' },
   ];
 
   return (

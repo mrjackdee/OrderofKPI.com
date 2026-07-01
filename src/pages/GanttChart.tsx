@@ -79,7 +79,7 @@ export default function GanttChart() {
 
       <div className="relative z-10">
         {/* Member Navigation Tabs */}
-        <div className="pt-24 px-6 md:px-12 flex justify-center md:justify-start gap-4">
+        <div className="pt-24 px-4 md:px-12 flex flex-wrap justify-center md:justify-start gap-3">
           <Link to="/intake-calendar" className="px-5 py-2 rounded-full border border-[#B8860B]/30 text-[#1E3F20] text-xs font-bold uppercase tracking-widest hover:bg-[#B8860B]/10 transition-colors flex items-center gap-2">
             <CalendarDays size={14} /> Intake Calendar
           </Link>
