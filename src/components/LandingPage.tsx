@@ -61,7 +61,7 @@ export default function LandingPage({ onEnter }: LandingPageProps) {
               transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
             />
             <span className="relative z-10 text-primary text-xl font-bold uppercase tracking-[0.4em] group-hover:text-white transition-colors">
-              Enter Site
+              Enter Member Portal
             </span>
           </motion.button>
         </motion.div>

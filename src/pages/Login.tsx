@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Lock, Mail, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
 import { performHybridLogin } from '../lib/memberDb';
 
@@ -11,6 +11,9 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = (location.state as any)?.from?.pathname || '/intake-calendar';
 
   useEffect(() => {
     const savedEmail = localStorage.getItem('kpi_saved_email');
@@ -54,7 +57,7 @@ export default function Login() {
       }
       sessionStorage.setItem('isFirstLogin', user.isFirstLogin ? 'true' : 'false');
 
-      navigate('/intake-calendar');
+      navigate(from, { replace: true });
     } catch (err: any) {
       const isTechnical = err.message.includes('JSON') || err.message.includes('token') || err.message.includes('fetch');
       setError(isTechnical 

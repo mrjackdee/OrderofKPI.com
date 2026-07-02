@@ -67,6 +67,17 @@ async function initDb() {
       )
     `);
 
+    sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS system_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+        email TEXT,
+        event_type TEXT,
+        message TEXT,
+        severity TEXT DEFAULT 'info'
+      )
+    `);
+
     try {
       sqliteDb.exec("ALTER TABLE users ADD COLUMN title TEXT");
     } catch (e) {
@@ -156,6 +167,30 @@ async function initDb() {
   }
 }
 
+// SSE Clients for real-time logs
+let sseClients: any[] = [];
+
+function logEvent(email: string, event_type: string, message: string, severity: string = "info") {
+  const timestamp = new Date().toISOString();
+  const logEntry = { timestamp, email, event_type, message, severity };
+
+  if (useSqlite && sqliteDb) {
+    try {
+      sqliteDb.prepare(`
+        INSERT INTO system_logs (timestamp, email, event_type, message, severity)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(timestamp, email, event_type, message, severity);
+    } catch (e) {
+      console.error("SQLite log write error", e);
+    }
+  }
+
+  // Broadcast to SSE clients
+  sseClients.forEach(client => {
+    client.res.write(`data: ${JSON.stringify(logEntry)}\n\n`);
+  });
+}
+
 // DB Helper functions
 function findUser(email: string): UserRecord | null {
   const normEmail = email.toLowerCase().trim();
@@ -238,6 +273,27 @@ async function startServer() {
   });
 
   // Authentication Endpoints
+  app.get("/api/admin/logs/stream", (req, res) => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
+    const clientId = Date.now();
+    const newClient = { id: clientId, res };
+    sseClients.push(newClient);
+
+    // Send history
+    if (useSqlite && sqliteDb) {
+      const history = sqliteDb.prepare("SELECT * FROM system_logs ORDER BY timestamp DESC LIMIT 50").all();
+      res.write(`data: ${JSON.stringify({ type: "history", data: history.reverse() })}\n\n`);
+    }
+
+    req.on("close", () => {
+      sseClients = sseClients.filter(c => c.id !== clientId);
+    });
+  });
+
   app.post("/api/auth/login", (req, res) => {
     const { email, password } = req.body;
     console.log(`[AUTH] Login attempt for: ${email}`);
@@ -249,12 +305,14 @@ async function startServer() {
     const user = findUser(email);
     if (!user) {
       console.log(`[AUTH] User not found: ${email}`);
+      logEvent(email, "LOGIN_FAILURE", "Login attempt with non-existent email", "warning");
       return res.status(401).json({ success: false, message: "Invalid email or password" });
     }
 
     const hashedInput = hashPassword(password);
     if (user.password_hash === hashedInput) {
       console.log(`[AUTH] Login successful: ${email} (FirstLogin: ${user.is_first_login === 1})`);
+      logEvent(email, "LOGIN_SUCCESS", `User logged in successfully${user.is_first_login === 1 ? ' (First Login)' : ''}`);
       return res.json({
         success: true,
         user: {
@@ -269,6 +327,7 @@ async function startServer() {
     }
 
     console.log(`[AUTH] Password mismatch for: ${email}`);
+    logEvent(email, "LOGIN_FAILURE", "Password mismatch on login attempt", "warning");
     return res.status(401).json({ success: false, message: "Invalid email or password" });
   });
 
@@ -309,10 +368,12 @@ async function startServer() {
     const updated = updateUserPassword(email, newHash);
     if (updated) {
       console.log(`[AUTH] Password updated successfully in database for: ${email}`);
+      logEvent(email, "PASSWORD_CHANGE", "User successfully updated their password");
       return res.json({ success: true, message: "Password updated successfully" });
     }
 
     console.error(`[AUTH] DATABASE UPDATE FAILED for: ${email}`);
+    logEvent(email, "PASSWORD_CHANGE_FAILURE", "Database error while updating password", "error");
     return res.status(500).json({ success: false, message: "Failed to update password in database" });
   });
 

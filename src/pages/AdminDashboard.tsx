@@ -22,20 +22,35 @@ import {
   Users,
   CalendarDays,
   UserPlus,
-  Key
+  Key,
+  Activity,
+  CheckCircle2,
+  XCircle,
+  ShieldAlert,
+  Clock
 } from 'lucide-react';
+
+// --- Types ---
+interface SystemLog {
+  id?: number;
+  timestamp: string;
+  email: string;
+  event_type: string;
+  message: string;
+  severity: 'info' | 'warning' | 'error';
+}
 
 // --- Data ---
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'revisions' | 'users'>(() => {
+  const [activeTab, setActiveTab] = useState<'revisions' | 'users' | 'logs'>(() => {
     try {
       const search = window.location.search;
       if (search) {
         const params = new URLSearchParams(search);
         const t = params.get('tab');
-        if (t === 'revisions' || t === 'users') {
-          return t as 'revisions' | 'users';
+        if (t === 'revisions' || t === 'users' || t === 'logs') {
+          return t as 'revisions' | 'users' | 'logs';
         }
       }
     } catch (e) {
@@ -52,6 +67,7 @@ export default function AdminDashboard() {
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserName, setNewUserName] = useState('');
   const [revisions, setRevisions] = useState<any[]>([]);
+  const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [revisionToDelete, setRevisionToDelete] = useState<any | null>(null);
@@ -70,8 +86,26 @@ export default function AdminDashboard() {
       setLoading(false);
     });
 
+    // Real-time Logs Stream
+    const eventSource = new EventSource('/api/admin/logs/stream');
+    
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'history') {
+        setSystemLogs(data.data);
+      } else {
+        setSystemLogs(prev => [data, ...prev].slice(0, 100)); // Keep last 100
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error("SSE Error:", err);
+      eventSource.close();
+    };
+
     return () => {
       unsubRevisions();
+      eventSource.close();
     };
   }, []);
 
@@ -354,6 +388,15 @@ export default function AdminDashboard() {
               <Users className="inline-block mr-2" size={14} />
               User Access
             </button>
+            <button 
+              onClick={() => setActiveTab('logs')}
+              className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
+                activeTab === 'logs' ? 'bg-primary text-black' : 'text-silver/60 hover:text-white'
+              }`}
+            >
+              <Activity className="inline-block mr-2" size={14} />
+              System Activity
+            </button>
           </div>
         </header>
 
@@ -538,6 +581,112 @@ export default function AdminDashboard() {
                   </div>
                 </motion.div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'logs' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold uppercase tracking-widest">System Activity Log</h2>
+                <p className="text-silver/40 text-[10px] uppercase tracking-[0.2em] mt-1">Real-time authentication and security events</p>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
+                <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div>
+                <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Live Stream Active</span>
+              </div>
+            </div>
+
+            <div className="bg-black/40 border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+              <div className="grid grid-cols-12 gap-4 p-4 border-b border-white/10 bg-white/5 text-[10px] font-bold uppercase tracking-widest text-silver/40">
+                <div className="col-span-3 flex items-center gap-2"><Clock size={12} /> Timestamp</div>
+                <div className="col-span-3 flex items-center gap-2"><Users size={12} /> Member</div>
+                <div className="col-span-2">Event</div>
+                <div className="col-span-4">Details</div>
+              </div>
+
+              <div className="max-h-[600px] overflow-y-auto divide-y divide-white/5 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                {systemLogs.length === 0 && (
+                  <div className="p-12 text-center text-silver/20 italic uppercase tracking-widest text-xs">
+                    No activity recorded in current session.
+                  </div>
+                )}
+                {systemLogs.map((log, idx) => {
+                  const date = new Date(log.timestamp);
+                  const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                  const dateStr = date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                  
+                  let Icon = Activity;
+                  let colorClass = 'text-primary';
+                  let bgClass = 'bg-primary/5';
+                  let borderClass = 'border-primary/10';
+
+                  if (log.severity === 'warning') {
+                    Icon = ShieldAlert;
+                    colorClass = 'text-orange-400';
+                    bgClass = 'bg-orange-400/5';
+                    borderClass = 'border-orange-400/20';
+                  } else if (log.severity === 'error') {
+                    Icon = XCircle;
+                    colorClass = 'text-red-500';
+                    bgClass = 'bg-red-500/5';
+                    borderClass = 'border-red-500/20';
+                  } else if (log.event_type.includes('SUCCESS')) {
+                    Icon = CheckCircle2;
+                    colorClass = 'text-emerald-400';
+                    bgClass = 'bg-emerald-400/5';
+                    borderClass = 'border-emerald-400/20';
+                  }
+
+                  return (
+                    <motion.div 
+                      key={log.id || idx}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-white/[0.02] transition-colors"
+                    >
+                      <div className="col-span-3 flex flex-col">
+                        <span className="text-white font-mono text-[11px]">{timeStr}</span>
+                        <span className="text-silver/30 text-[9px] uppercase tracking-wider">{dateStr}</span>
+                      </div>
+                      <div className="col-span-3 truncate">
+                        <span className="text-silver/80 text-xs font-medium">{log.email}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-tighter border ${bgClass} ${colorClass} ${borderClass}`}>
+                          {log.event_type.replace('_', ' ')}
+                        </span>
+                      </div>
+                      <div className="col-span-4 flex items-center gap-3">
+                        <div className={`p-1.5 rounded-lg ${bgClass} ${colorClass}`}>
+                          <Icon size={12} />
+                        </div>
+                        <span className="text-silver/60 text-xs leading-tight">{log.message}</span>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                <h4 className="text-[10px] font-bold uppercase tracking-widest text-silver/40 mb-2">Total Events</h4>
+                <div className="text-2xl font-display font-bold text-white">{systemLogs.length}</div>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                <h4 className="text-[10px] font-bold uppercase tracking-widest text-silver/40 mb-2">Successful Logins</h4>
+                <div className="text-2xl font-display font-bold text-emerald-400">
+                  {systemLogs.filter(l => l.event_type === 'LOGIN_SUCCESS').length}
+                </div>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                <h4 className="text-[10px] font-bold uppercase tracking-widest text-silver/40 mb-2">Failed Attempts</h4>
+                <div className="text-2xl font-display font-bold text-red-500">
+                  {systemLogs.filter(l => l.severity === 'warning' || l.severity === 'error').length}
+                </div>
+              </div>
             </div>
           </div>
         )}

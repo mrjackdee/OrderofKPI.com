@@ -25,6 +25,7 @@ import FinancialRoster from './pages/FinancialRoster';
 import GanttChart from './pages/GanttChart';
 import ScrollToTop from './components/ScrollToTop';
 import LandingPage from './components/LandingPage';
+import ProtectedRoute from './components/ProtectedRoute';
 import { AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -55,23 +56,23 @@ export default function App() {
           <React.Fragment key="app-content">
             <Routes>
               <Route path="/" element={<Layout />}>
-                <Route index element={<Home />} />
-                <Route path="save-the-date" element={<SaveTheDate />} />
-                <Route path="agenda" element={<Agenda />} />
-                <Route path="registration" element={<Registration />} />
-                <Route path="registration-list" element={<RegistrationList />} />
-                <Route path="party" element={<Party />} />
-                <Route path="success" element={<Success />} />
-                <Route path="congratulations" element={<Congratulations />} />
-                <Route path="elections" element={<Elections />} />
-                <Route path="voting-portal" element={<VotingPortal />} />
-                <Route path="admin-dashboard" element={<AdminDashboard />} />
-                <Route path="constitution" element={<Constitution />} />
-                <Route path="portal" element={<ConferencePortal />} />
-                <Route path="intake-calendar" element={<IntakeCalendar />} />
-                <Route path="gantt-chart" element={<GanttChart />} />
+                <Route index element={<ProtectedRoute><Home /></ProtectedRoute>} />
+                <Route path="save-the-date" element={<ProtectedRoute><SaveTheDate /></ProtectedRoute>} />
+                <Route path="agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
+                <Route path="registration" element={<ProtectedRoute><Registration /></ProtectedRoute>} />
+                <Route path="registration-list" element={<ProtectedRoute><RegistrationList /></ProtectedRoute>} />
+                <Route path="party" element={<ProtectedRoute><Party /></ProtectedRoute>} />
+                <Route path="success" element={<ProtectedRoute><Success /></ProtectedRoute>} />
+                <Route path="congratulations" element={<ProtectedRoute><Congratulations /></ProtectedRoute>} />
+                <Route path="elections" element={<ProtectedRoute><Elections /></ProtectedRoute>} />
+                <Route path="voting-portal" element={<ProtectedRoute><VotingPortal /></ProtectedRoute>} />
+                <Route path="admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+                <Route path="constitution" element={<ProtectedRoute><Constitution /></ProtectedRoute>} />
+                <Route path="portal" element={<ProtectedRoute><ConferencePortal /></ProtectedRoute>} />
+                <Route path="intake-calendar" element={<ProtectedRoute><IntakeCalendar /></ProtectedRoute>} />
+                <Route path="gantt-chart" element={<ProtectedRoute><GanttChart /></ProtectedRoute>} />
                 <Route path="login" element={<Login />} />
-                <Route path="financial-roster" element={<FinancialRoster />} />
+                <Route path="financial-roster" element={<ProtectedRoute><FinancialRoster /></ProtectedRoute>} />
               </Route>
             </Routes>
           </React.Fragment>
