@@ -5,24 +5,24 @@ import { Users, Search, ShieldCheck, Mail, Phone, MapPin, CheckCircle2, Calendar
 import MemberHeader from '../components/MemberHeader';
 
 const rosterData = [
-  { id: 1, name: "Deshaun Safford", chapter: "National", status: "Active", email: "deshaun.safford@orderofkpi.org", role: "Member", paymentDate: "6/22/2025" },
-  { id: 2, name: "Brian Johnson", chapter: "National", status: "Active", email: "brian.johnson@orderofkpi.org", role: "Member", paymentDate: "7/10/2025" },
-  { id: 3, name: "Ishmeal Allensworth", chapter: "National", status: "Active", email: "ishmeal.allensworth@orderofkpi.org", role: "Member", paymentDate: "7/29/2025" },
-  { id: 4, name: "Edward Cook", chapter: "National", status: "Active", email: "edward.cook@orderofkpi.org", role: "Member", paymentDate: "8/17/2025" },
-  { id: 5, name: "Darron Jenkins", chapter: "National", status: "Active", email: "darron.jenkins@orderofkpi.org", role: "Member", paymentDate: "8/17/2025" },
-  { id: 6, name: "James Haywood Jr", chapter: "National", status: "Active", email: "james.haywood@orderofkpi.org", role: "Member", paymentDate: "8/26/2025" },
-  { id: 7, name: "Dameone Ferguson", chapter: "National", status: "Active", email: "dameone.ferguson@orderofkpi.org", role: "Member", paymentDate: "8/27/2025" },
-  { id: 8, name: "Brian Goings", chapter: "National", status: "Active", email: "brian.goings@orderofkpi.org", role: "Member", paymentDate: "8/29/2025" },
-  { id: 9, name: "Keith Woods", chapter: "National", status: "Active", email: "keith.woods@orderofkpi.org", role: "Member", paymentDate: "8/31/2025" },
-  { id: 10, name: "Dominic Goodman", chapter: "National", status: "Active", email: "dominic.goodman@orderofkpi.org", role: "Member", paymentDate: "1/18/2026" },
-  { id: 11, name: "Jason Pilar", chapter: "National", status: "Active", email: "jason.pilar@orderofkpi.org", role: "Member", paymentDate: "1/21/2026" },
-  { id: 12, name: "Brandon Owens", chapter: "National", status: "Active", email: "brandon.owens@orderofkpi.org", role: "Member", paymentDate: "2/1/2026" },
-  { id: 13, name: "Jack Dee", chapter: "National", status: "Active", email: "jack.dee@orderofkpi.org", role: "Member", paymentDate: "2/1/2026" },
-  { id: 14, name: "Anthony Jones", chapter: "National", status: "Active", email: "anthony.jones@orderofkpi.org", role: "Member", paymentDate: "3/4/2026" },
-  { id: 15, name: "Donald Mitchell", chapter: "National", status: "Active", email: "donald.mitchell@orderofkpi.org", role: "Member", paymentDate: "3/15/2026" },
-  { id: 16, name: "Kameron Whitfield", chapter: "National", status: "Active", email: "kameron.whitfield@orderofkpi.org", role: "Member", paymentDate: "3/15/2026" },
-  { id: 17, name: "Tobias Bordley", chapter: "National", status: "Active", email: "tobias.bordley@orderofkpi.org", role: "Member", paymentDate: "3/27/2026" },
-  { id: 18, name: "Denzel Talley", chapter: "National", status: "Active", email: "denzel.talley@orderofkpi.org", role: "Member", paymentDate: "5/28/2026" },
+  { id: 1, name: "Deshaun Safford", affiliation: "National", status: "Active", email: "deshaun.safford@orderofkpi.org", role: "Member", paymentDate: "6/22/2025" },
+  { id: 2, name: "Brian Johnson", affiliation: "National", status: "Active", email: "brian.johnson@orderofkpi.org", role: "Member", paymentDate: "7/10/2025" },
+  { id: 3, name: "Ishmeal Allensworth", affiliation: "National", status: "Active", email: "ishmeal.allensworth@orderofkpi.org", role: "Member", paymentDate: "7/29/2025" },
+  { id: 4, name: "Edward Cook", affiliation: "National", status: "Active", email: "edward.cook@orderofkpi.org", role: "Member", paymentDate: "8/17/2025" },
+  { id: 5, name: "Darron Jenkins", affiliation: "National", status: "Active", email: "darron.jenkins@orderofkpi.org", role: "Member", paymentDate: "8/17/2025" },
+  { id: 6, name: "James Haywood Jr", affiliation: "National", status: "Active", email: "james.haywood@orderofkpi.org", role: "Member", paymentDate: "8/26/2025" },
+  { id: 7, name: "Dameone Ferguson", affiliation: "National", status: "Active", email: "dameone.ferguson@orderofkpi.org", role: "Member", paymentDate: "8/27/2025" },
+  { id: 8, name: "Brian Goings", affiliation: "National", status: "Active", email: "brian.goings@orderofkpi.org", role: "Member", paymentDate: "8/29/2025" },
+  { id: 9, name: "Keith Woods", affiliation: "National", status: "Active", email: "keith.woods@orderofkpi.org", role: "Member", paymentDate: "8/31/2025" },
+  { id: 10, name: "Dominic Goodman", affiliation: "National", status: "Active", email: "dominic.goodman@orderofkpi.org", role: "Member", paymentDate: "1/18/2026" },
+  { id: 11, name: "Jason Pilar", affiliation: "National", status: "Active", email: "jason.pilar@orderofkpi.org", role: "Member", paymentDate: "1/21/2026" },
+  { id: 12, name: "Brandon Owens", affiliation: "National", status: "Active", email: "brandon.opens@orderofkpi.org", role: "Member", paymentDate: "2/1/2026" },
+  { id: 13, name: "Jack Dee", affiliation: "National", status: "Active", email: "jack.dee@orderofkpi.org", role: "Member", paymentDate: "2/1/2026" },
+  { id: 14, name: "Anthony Jones", affiliation: "National", status: "Active", email: "anthony.jones@orderofkpi.org", role: "Member", paymentDate: "3/4/2026" },
+  { id: 15, name: "Donald Mitchell", affiliation: "National", status: "Active", email: "donald.mitchell@orderofkpi.org", role: "Member", paymentDate: "3/15/2026" },
+  { id: 16, name: "Kameron Whitfield", affiliation: "National", status: "Active", email: "kameron.whitfield@orderofkpi.org", role: "Member", paymentDate: "3/15/2026" },
+  { id: 17, name: "Tobias Bordley", affiliation: "National", status: "Active", email: "tobias.bordley@orderofkpi.org", role: "Member", paymentDate: "3/27/2026" },
+  { id: 18, name: "Denzel Talley", affiliation: "National", status: "Active", email: "denzel.talley@orderofkpi.org", role: "Member", paymentDate: "5/28/2026" },
 ];
 
 export default function FinancialRoster() {
@@ -39,7 +39,7 @@ export default function FinancialRoster() {
 
   const filteredRoster = rosterData.filter(member => 
     member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.chapter.toLowerCase().includes(searchTerm.toLowerCase())
+    member.affiliation.toLowerCase().includes(searchTerm.toLowerCase())
   ).sort((a, b) => {
     if (sortBy === 'lastName') {
       const lastA = a.name.split(' ').pop() || '';
@@ -76,7 +76,7 @@ export default function FinancialRoster() {
           <Users size={14} /> Financial Roster
         </div>
         <Link to="/gantt-chart" className="px-5 py-2 rounded-full border border-[#B8860B]/30 text-[#1E3F20] text-xs font-bold uppercase tracking-widest hover:bg-[#B8860B]/10 transition-colors flex items-center gap-2">
-          <LayoutList size={14} /> Intake Timeline
+          <LayoutList size={14} /> Intake Plan
         </Link>
       </div>
 
@@ -152,7 +152,7 @@ export default function FinancialRoster() {
 
               <h3 className="text-[#1E3F20] font-bold text-lg mb-1">{member.name}</h3>
               <div className="flex items-center gap-2 text-[#B8860B] text-[10px] font-black uppercase tracking-widest mb-4">
-                <span>{member.chapter} Chapter</span>
+                <span>{member.affiliation}</span>
                 <span className="w-1 h-1 rounded-full bg-[#B8860B]/50" />
                 <span>{member.role}</span>
               </div>

@@ -126,7 +126,7 @@ export default function MemberHeader() {
             
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5 mt-2">
               <span className="px-3.5 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest bg-[#D4AF37] text-[#122c14] shadow-md">
-                {role === 'admin' ? 'Administrator' : role === 'officer' ? 'Chapter Officer' : 'Financial Member'}
+                {role === 'admin' ? 'Administrator' : role === 'officer' ? 'Officer' : 'Financial Member'}
               </span>
               {title && (
                 <span className="px-3.5 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest bg-white/10 text-[#FFDF79] border-2 border-[#D4AF37]/50 shadow-md">

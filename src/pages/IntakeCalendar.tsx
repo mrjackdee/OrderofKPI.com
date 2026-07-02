@@ -70,7 +70,7 @@ export default function IntakeCalendar() {
           <Users size={14} /> Financial Roster
         </Link>
         <Link to="/gantt-chart" className="px-5 py-2 rounded-full border border-[#B8860B]/30 text-[#1E3F20] text-xs font-bold uppercase tracking-widest hover:bg-[#B8860B]/10 transition-colors flex items-center gap-2">
-          <LayoutList size={14} /> Intake Timeline
+          <LayoutList size={14} /> Intake Plan
         </Link>
       </div>
 

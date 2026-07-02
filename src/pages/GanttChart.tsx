@@ -24,281 +24,281 @@ import {
 } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 
-// Define the PMI Task structure
+// Define the Intake Task structure
 interface PMITask {
   wbs: string;
   title: string;
-  phase: 'Initiation' | 'Planning' | 'Execution' | 'Monitoring & Controlling' | 'Closing';
+  phase: 'Welcome & Outreach' | 'Application' | 'Interviews & Selection' | 'Education & Progress' | 'Celebration & Induction';
   offsetFromFinish: number; // Offset in days from the finish date (2027-01-15)
   duration: number; // in days
   owner: string;
   predecessor: string;
   status: 'Completed' | 'In Progress' | 'Not Started';
   progress: number; // 0 to 100
-  pmiRationale: string; // PMI methodology description
+  pmiRationale: string; // Task purpose and description
 }
 
 const initialPmiTasks: PMITask[] = [
-  // Phase 1: Initiation
+  // Phase 1: Welcome & Outreach
   { 
     wbs: '1.1', 
-    title: 'Inquire Within Campaign', 
-    phase: 'Initiation', 
+    title: 'Public Inquiry & Interest Form Launch', 
+    phase: 'Welcome & Outreach', 
     offsetFromFinish: -196, 
     duration: 1, 
     owner: 'Membership Chair', 
     predecessor: 'None', 
     status: 'Completed', 
     progress: 100,
-    pmiRationale: 'Initiation Phase: Identifies stakeholders and aligns expectations. The initial solicitation of interest gauges the general candidate pool capacity.'
+    pmiRationale: 'A welcoming call for interested members to connect and learn more about our values.'
   },
   { 
     wbs: '1.2', 
-    title: 'Interest Meeting (Public)', 
-    phase: 'Initiation', 
+    title: 'Public Information Session', 
+    phase: 'Welcome & Outreach', 
     offsetFromFinish: -180, 
     duration: 1, 
     owner: 'Basileus', 
     predecessor: '1.1', 
     status: 'Completed', 
     progress: 100,
-    pmiRationale: 'Initiation Phase: Formulates initial project scope with key external stakeholders, outlining basic requirements and mutual expectations.'
+    pmiRationale: 'Our first public gathering to present details on the intake process, timelines, and requirements.'
   },
   
-  // Phase 2: Planning
+  // Phase 2: Application
   { 
     wbs: '2.1', 
-    title: 'Tea Time Informational Period', 
-    phase: 'Planning', 
+    title: 'Candidate Informal Coffee/Tea Social', 
+    phase: 'Application', 
     offsetFromFinish: -173, 
     duration: 7, 
     owner: 'Membership Chair', 
     predecessor: '1.2', 
     status: 'Completed', 
     progress: 100,
-    pmiRationale: 'Planning Phase: Represents progressive elaboration. Detail-gathering sessions clarify objectives, timelines, and legal covenants.'
+    pmiRationale: 'An informal period for interested candidates to meet and converse with current members over tea.'
   },
   { 
     wbs: '2.2', 
-    title: 'Provide Application Materials', 
-    phase: 'Planning', 
+    title: 'Share Membership Application Forms', 
+    phase: 'Application', 
     offsetFromFinish: -166, 
     duration: 1, 
     owner: 'Grammateus', 
     predecessor: '2.1', 
     status: 'Completed', 
     progress: 100,
-    pmiRationale: 'Planning Phase: Finalizes formal procurement/submission documents. Establishes the structural evaluation framework.'
+    pmiRationale: 'Providing prospective candidates with application packages and details on next steps.'
   },
   { 
     wbs: '2.3', 
-    title: 'Formal Application Due Date', 
-    phase: 'Planning', 
+    title: 'Application Submission Deadline', 
+    phase: 'Application', 
     offsetFromFinish: -161, 
     duration: 1, 
     owner: 'Pecunious Grammateus', 
     predecessor: '2.2', 
     status: 'Completed', 
     progress: 100,
-    pmiRationale: 'Planning Phase: Key constraint milestone. Verifies compliance and financial eligibility gates before advancing to implementation.'
+    pmiRationale: 'The deadline for prospective candidates to submit their formal application and required documents.'
   },
   
-  // Phase 3: Execution
+  // Phase 3: Interviews & Selection
   { 
     wbs: '3.1', 
-    title: 'Send Interview Invitation Emails', 
-    phase: 'Execution', 
+    title: 'Invite Candidates to Interview', 
+    phase: 'Interviews & Selection', 
     offsetFromFinish: -159, 
     duration: 1, 
     owner: 'Epistoleus', 
     predecessor: '2.3', 
     status: 'Completed', 
     progress: 100,
-    pmiRationale: 'Execution Phase: Coordinates communication plan delivery, alerting candidates and scheduling panel evaluators.'
+    pmiRationale: 'Sending interview scheduling emails and details to all qualified applicants.'
   },
   { 
     wbs: '3.2', 
-    title: 'Conduct Candidate Interviews', 
-    phase: 'Execution', 
+    title: 'Hold Applicant Interviews', 
+    phase: 'Interviews & Selection', 
     offsetFromFinish: -156, 
     duration: 4, 
     owner: 'Membership Committee', 
     predecessor: '3.1', 
     status: 'Completed', 
     progress: 100,
-    pmiRationale: 'Execution Phase: Performs core stakeholder analysis. Gathers qualitative evaluations against standardized scoring metrics.'
+    pmiRationale: 'Conducting individual interviews with applicants to learn more about their background and interest.'
   },
   { 
     wbs: '3.3', 
-    title: 'Interview Video Reviews', 
-    phase: 'Execution', 
+    title: 'Review Interview Outcomes', 
+    phase: 'Interviews & Selection', 
     offsetFromFinish: -152, 
     duration: 5, 
     owner: 'Directorate', 
     predecessor: '3.2', 
     status: 'Completed', 
     progress: 100,
-    pmiRationale: 'Execution Phase: Collaborative review loop. Ensures alignment with high ethical, leadership, and professional benchmarks.'
+    pmiRationale: 'The Directorate reviews interview recordings and qualifications to ensure alignment.'
   },
   { 
     wbs: '3.4', 
-    title: 'Financial Chapter Voting', 
-    phase: 'Execution', 
+    title: 'Financial Members Voting & Approval', 
+    phase: 'Interviews & Selection', 
     offsetFromFinish: -147, 
     duration: 1, 
     owner: 'Tamiouchos', 
     predecessor: '3.3', 
     status: 'Completed', 
     progress: 100,
-    pmiRationale: 'Execution Phase: Formal stakeholder approval mechanism. Solidifies selected roster through corporate democratic consensus.'
+    pmiRationale: 'Our active financial members cast their votes on candidates.'
   },
   { 
     wbs: '3.5', 
-    title: 'Selection Notification Sent', 
-    phase: 'Execution', 
+    title: 'Send Acceptance & Selection Letters', 
+    phase: 'Interviews & Selection', 
     offsetFromFinish: -141, 
     duration: 1, 
     owner: 'Basileus', 
     predecessor: '3.4', 
     status: 'Completed', 
     progress: 100,
-    pmiRationale: 'Execution Phase: Communicates scope decisions to candidates, onboarding selected resources into the final phase.'
+    pmiRationale: 'Informing selected candidates of their invitation to join our intake program.'
   },
   { 
     wbs: '3.6', 
-    title: 'Start Intake Training Program', 
-    phase: 'Execution', 
+    title: 'Begin Intake Educational Sessions', 
+    phase: 'Interviews & Selection', 
     offsetFromFinish: -120, 
     duration: 1, 
     owner: 'Membership Chair', 
     predecessor: '3.5', 
     status: 'In Progress', 
     progress: 65,
-    pmiRationale: 'Execution Phase: Resource onboarding and capability training. Activates the core instructional path to final delivery.'
+    pmiRationale: 'The start of our structured educational and development program.'
   },
 
-  // Phase 4: Monitoring & Controlling
+  // Phase 4: Education & Progress
   { 
     wbs: '4.1', 
-    title: 'Initiate No Contact Period', 
-    phase: 'Monitoring & Controlling', 
+    title: 'Reflection and Quiet Period', 
+    phase: 'Education & Progress', 
     offsetFromFinish: -141, 
     duration: 21, 
     owner: 'Hodegos', 
     predecessor: '3.5', 
     status: 'Completed', 
     progress: 100,
-    pmiRationale: 'Monitoring & Controlling Phase: Risk mitigation strategy. Establishes a strict communication firewall to maintain integrity and prevent bias.'
+    pmiRationale: 'A quiet period of reflection during which candidates prepare for active participation.'
   },
   { 
     wbs: '4.2', 
-    title: 'First Chapter Payment Milestone', 
-    phase: 'Monitoring & Controlling', 
+    title: 'First Dues & Program Payment', 
+    phase: 'Education & Progress', 
     offsetFromFinish: -126, 
     duration: 1, 
     owner: 'Tamiouchos', 
     predecessor: '3.5', 
     status: 'Completed', 
     progress: 100,
-    pmiRationale: 'Monitoring & Controlling Phase: Financial performance check. Validates budget constraints and processes raw funding receipts.'
+    pmiRationale: 'First installment for program fees and organizational dues.'
   },
   { 
     wbs: '4.3', 
-    title: 'A Splendid Affair Event', 
-    phase: 'Monitoring & Controlling', 
+    title: 'Formal Community Acumen Presentation', 
+    phase: 'Education & Progress', 
     offsetFromFinish: -121, 
     duration: 1, 
     owner: 'Basileus', 
     predecessor: '4.2', 
     status: 'Completed', 
     progress: 100,
-    pmiRationale: 'Monitoring & Controlling Phase: Quality assurance milestone. Reviews candidates’ civic acumen and social synergy in structured groups.'
+    pmiRationale: 'A formal event showcasing candidate community involvement and team synergy.'
   },
   { 
     wbs: '4.4', 
-    title: 'Second Chapter Payment Milestone', 
-    phase: 'Monitoring & Controlling', 
+    title: 'Second Dues & Program Payment', 
+    phase: 'Education & Progress', 
     offsetFromFinish: -96, 
     duration: 1, 
     owner: 'Tamiouchos', 
     predecessor: '3.6', 
     status: 'In Progress', 
     progress: 45,
-    pmiRationale: 'Monitoring & Controlling Phase: Financial checkpoint. Assesses payment collection velocity to ensure overall project solvency.'
+    pmiRationale: 'Second installment for program fees and organizational dues.'
   },
   { 
     wbs: '4.5', 
-    title: 'Sisterhood Development Weekend I', 
-    phase: 'Monitoring & Controlling', 
+    title: 'Peer Bonding & Development Weekend I', 
+    phase: 'Education & Progress', 
     offsetFromFinish: -91, 
     duration: 3, 
     owner: 'Directorate', 
     predecessor: '4.4', 
     status: 'Not Started', 
     progress: 0,
-    pmiRationale: 'Monitoring & Controlling Phase: Team alignment and cohort cohesion quality audit. Reinforces structural culture guidelines.'
+    pmiRationale: 'First development weekend focused on building strong bonds and peer cooperation.'
   },
   { 
     wbs: '4.6', 
-    title: 'Third Chapter Payment Milestone', 
-    phase: 'Monitoring & Controlling', 
+    title: 'Third Dues & Program Payment', 
+    phase: 'Education & Progress', 
     offsetFromFinish: -65, 
     duration: 1, 
     owner: 'Tamiouchos', 
     predecessor: '4.4', 
     status: 'Not Started', 
     progress: 0,
-    pmiRationale: 'Monitoring & Controlling Phase: Periodic compliance control. Verifies intermediate capital collection against planned cash flow.'
+    pmiRationale: 'Third installment for program fees and organizational dues.'
   },
   { 
     wbs: '4.7', 
-    title: 'Ivy Heritage Weekend Celebration', 
-    phase: 'Monitoring & Controlling', 
+    title: 'Heritage Study & Academic Celebration', 
+    phase: 'Education & Progress', 
     offsetFromFinish: -63, 
     duration: 3, 
     owner: 'Membership Committee', 
     predecessor: '4.6', 
     status: 'Not Started', 
     progress: 0,
-    pmiRationale: 'Monitoring & Controlling Phase: Milestone audit. Evaluates candidate organizational heritage retention and academic mastery.'
+    pmiRationale: 'A weekend celebrating organizational heritage, learning, and academic excellence.'
   },
   { 
     wbs: '4.8', 
-    title: 'Fourth & Final Payment Milestone', 
-    phase: 'Monitoring & Controlling', 
+    title: 'Final Dues & Program Payment', 
+    phase: 'Education & Progress', 
     offsetFromFinish: -35, 
     duration: 1, 
     owner: 'Tamiouchos', 
     predecessor: '4.6', 
     status: 'Not Started', 
     progress: 0,
-    pmiRationale: 'Monitoring & Controlling Phase: Budget finalization. Confirms that all financial obligations are closed out and cleared.'
+    pmiRationale: 'Final payment milestone ensuring all program dues are settled.'
   },
   { 
     wbs: '4.9', 
-    title: 'Sisterhood Development Weekend II', 
-    phase: 'Monitoring & Controlling', 
+    title: 'Peer Bonding & Development Weekend II', 
+    phase: 'Education & Progress', 
     offsetFromFinish: -35, 
     duration: 3, 
     owner: 'Directorate', 
     predecessor: '4.8', 
     status: 'Not Started', 
     progress: 0,
-    pmiRationale: 'Monitoring & Controlling Phase: Pre-initiation safety and readiness evaluation. Confirms alignment with constitutional mandates.'
+    pmiRationale: 'Final preparation weekend focused on readiness and organizational guidelines.'
   },
 
-  // Phase 5: Closing
+  // Phase 5: Celebration & Induction
   { 
     wbs: '5.1', 
-    title: 'Chapter Initiation Weekend Ceremony', 
-    phase: 'Closing', 
+    title: 'Initiation and Welcome Ceremony', 
+    phase: 'Celebration & Induction', 
     offsetFromFinish: 0, 
     duration: 3, 
-    owner: 'Grand Chapter / Basileus', 
+    owner: 'Basileus', 
     predecessor: '4.9', 
     status: 'Not Started', 
     progress: 0,
-    pmiRationale: 'Closing Phase: Project handover and celebratory closure. Formally transitions qualified candidates into full chapter status.'
+    pmiRationale: 'The formal initiation ceremony welcoming qualified candidates into our active membership.'
   }
 ];
 
@@ -489,18 +489,18 @@ export default function GanttChart() {
     setSelectedTask(null);
   };
 
-  // Helper colors for PMI phases
+  // Helper colors for stages
   const getPhaseTheme = (phase: string) => {
     switch (phase) {
-      case 'Initiation': 
+      case 'Welcome & Outreach': 
         return { bg: 'bg-indigo-50 border-indigo-200 text-indigo-700', badge: 'bg-indigo-600', hoverBg: 'hover:bg-indigo-50/50' };
-      case 'Planning': 
+      case 'Application': 
         return { bg: 'bg-amber-50 border-amber-200 text-amber-700', badge: 'bg-amber-500', hoverBg: 'hover:bg-amber-50/50' };
-      case 'Execution': 
+      case 'Interviews & Selection': 
         return { bg: 'bg-emerald-50 border-emerald-200 text-emerald-700', badge: 'bg-[#1E3F20]', hoverBg: 'hover:bg-emerald-50/50' };
-      case 'Monitoring & Controlling': 
+      case 'Education & Progress': 
         return { bg: 'bg-teal-50 border-teal-200 text-teal-700', badge: 'bg-teal-600', hoverBg: 'hover:bg-teal-50/50' };
-      case 'Closing': 
+      case 'Celebration & Induction': 
         return { bg: 'bg-rose-50 border-rose-200 text-rose-700', badge: 'bg-[#D4AF37]', hoverBg: 'hover:bg-rose-50/50' };
       default: 
         return { bg: 'bg-gray-50 border-gray-200 text-gray-700', badge: 'bg-gray-600', hoverBg: 'hover:bg-gray-50/50' };
@@ -512,7 +512,7 @@ export default function GanttChart() {
       {/* Draft Background Watermark */}
       <div id="watermark-container" className="fixed inset-0 pointer-events-none flex items-center justify-center z-0 opacity-[0.07]">
         <h1 className="text-[15rem] md:text-[25rem] font-black uppercase text-[#1E3F20] -rotate-45 select-none whitespace-nowrap">
-          PMI Plan
+          Intake Plan
         </h1>
       </div>
 
@@ -530,7 +530,7 @@ export default function GanttChart() {
             <Users size={14} /> Financial Roster
           </Link>
           <div id="btn-nav-timeline" className="px-5 py-2.5 rounded-full bg-[#1E3F20] text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-md border-2 border-[#D4AF37]">
-            <LayoutList size={14} /> Project Plan & Workback
+            <LayoutList size={14} /> Intake Plan
           </div>
         </div>
 
@@ -550,26 +550,26 @@ export default function GanttChart() {
               <LayoutList className="text-[#1E3F20]" size={20} />
             </div>
             <h1 className="text-3xl md:text-5xl font-serif text-[#1E3F20] font-black tracking-wider uppercase">
-              PMI Intake Project Plan
+              Intake Plan
             </h1>
             <p className="text-xs md:text-sm text-[#B8860B] font-bold tracking-[0.25em] uppercase mt-2 max-w-2xl">
-              Dynamic Workback & Retrograde Schedule Modeler
+              Interactive Schedule & Workback Planner
             </p>
           </motion.div>
         </div>
 
-        {/* PMI Interactive Modeler Dashboard */}
+        {/* Schedule Control Panel */}
         <div id="pmi-dashboard" className="max-w-[1240px] mx-auto px-4 md:px-8 mt-6">
           <div className="bg-[#122c14] border-2 border-[#D4AF37] rounded-3xl p-6 shadow-2xl text-white">
             <h2 className="text-lg font-serif font-bold tracking-widest uppercase mb-4 text-[#FFDF79] flex items-center gap-2">
-              <SlidersHorizontal size={18} /> PMI Schedule Control Panel
+              <SlidersHorizontal size={18} /> Schedule Control Panel
             </h2>
             
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
               {/* Selector to set Workback target or baseline */}
               <div className="lg:col-span-4 bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col gap-3">
                 <label className="text-xs font-bold uppercase tracking-wider text-[#FFDF79] flex items-center gap-1.5">
-                  <Calculator size={14} /> Schedule Planning Mode
+                  <Calculator size={14} /> Planning Mode
                 </label>
                 <div className="grid grid-cols-2 gap-2 mt-1">
                   <button
@@ -580,7 +580,7 @@ export default function GanttChart() {
                         : 'bg-transparent border-white/20 text-white/70 hover:bg-white/5'
                     }`}
                   >
-                    Standard Base
+                    Standard Schedule
                   </button>
                   <button
                     onClick={() => setScheduleMode('workback')}
@@ -595,15 +595,15 @@ export default function GanttChart() {
                 </div>
                 <div className="text-[10px] text-white/60 leading-normal mt-1">
                   {scheduleMode === 'workback' 
-                    ? '✔ Backward schedule mode enabled: Changing the target completion date recalculates every predecessor milestone date retrogradely.' 
-                    : '✔ Standard forward baseline active: Anchored on the statutory Jan 15, 2027 initiation weekend.'}
+                    ? '✔ Backward planning: Changing the target initiation date automatically shifts all preceding milestones backward.' 
+                    : '✔ Standard baseline: Fixed around the traditional January 15, 2027 initiation weekend.'}
                 </div>
               </div>
 
               {/* Date Input for Retrograde Workback */}
               <div className="lg:col-span-4 bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col gap-2.5">
                 <label className="text-xs font-bold uppercase tracking-wider text-[#FFDF79] flex items-center gap-1.5">
-                  <Calendar size={14} /> Go-Live Target Date (Ceremony)
+                  <Calendar size={14} /> Target Initiation Date
                 </label>
                 <input
                   type="date"
@@ -636,11 +636,11 @@ export default function GanttChart() {
                 </div>
               </div>
 
-              {/* PMI Metrics/Stats summary row */}
+              {/* Metrics summary row */}
               <div className="lg:col-span-4 grid grid-cols-2 gap-3">
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-3 text-center">
                   <div className="text-[10px] font-bold uppercase tracking-widest text-[#FFDF79] flex items-center justify-center gap-1">
-                    <TrendingUp size={11} /> PMI Complete
+                    <TrendingUp size={11} /> Plan Completion
                   </div>
                   <div className="text-2xl font-serif font-black text-white mt-1">
                     {stats.avgProgress}%
@@ -651,7 +651,7 @@ export default function GanttChart() {
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-3 text-center">
                   <div className="text-[10px] font-bold uppercase tracking-widest text-[#FFDF79] flex items-center justify-center gap-1">
-                    <CheckCircle size={11} /> Milestone Status
+                    <CheckCircle size={11} /> Task Status
                   </div>
                   <div className="text-2xl font-serif font-black text-[#D4AF37] mt-1">
                     {stats.completed}/{stats.total}
@@ -665,14 +665,14 @@ export default function GanttChart() {
           </div>
         </div>
 
-        {/* Filters, search and layout switcher */}
+        {/* Filters and search */}
         <div id="controls-section" className="max-w-[1240px] mx-auto px-4 md:px-8 mt-6">
           <div className="bg-white border-2 border-[#B8860B]/30 rounded-2xl p-4 shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
             {/* Search */}
             <div className="w-full md:w-1/3 relative">
               <input
                 type="text"
-                placeholder="Search WBS deliverable, owner..."
+                placeholder="Search tasks, owners..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-[#FDFCF0] border border-[#B8860B]/30 rounded-xl py-2 pl-4 pr-10 text-xs font-semibold text-[#1E3F20] focus:border-[#B8860B] focus:outline-none"
@@ -682,9 +682,9 @@ export default function GanttChart() {
               </span>
             </div>
 
-            {/* PMI Process Group Filter Buttons */}
+            {/* Stage Filter Buttons */}
             <div className="flex flex-wrap gap-2 justify-center">
-              {['All', 'Initiation', 'Planning', 'Execution', 'Monitoring & Controlling', 'Closing'].map((phase) => (
+              {['All', 'Welcome & Outreach', 'Application', 'Interviews & Selection', 'Education & Progress', 'Celebration & Induction'].map((phase) => (
                 <button
                   key={phase}
                   onClick={() => setSelectedPhaseFilter(phase)}
@@ -694,27 +694,27 @@ export default function GanttChart() {
                       : 'bg-[#FDFCF0] border border-[#B8860B]/30 text-[#1E3F20] hover:bg-[#B8860B]/10'
                   }`}
                 >
-                  {phase === 'Monitoring & Controlling' ? 'Monitoring' : phase}
+                  {phase}
                 </button>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Gantt Interactive Chart Display */}
+        {/* Interactive Chart Display */}
         <div id="timeline-chart-section" className="max-w-[1240px] mx-auto px-4 md:px-8 mt-6">
           <div className="bg-white border-2 border-[#B8860B]/30 rounded-3xl shadow-xl overflow-hidden">
             <div className="bg-[#122c14] border-b-2 border-[#D4AF37] px-6 py-4 flex items-center justify-between">
               <div>
                 <h3 className="text-md md:text-lg font-serif font-bold text-[#FFDF79] uppercase tracking-widest flex items-center gap-2">
-                  <LayoutList size={16} /> Interactive Workback Timeline
+                  <LayoutList size={16} /> Interactive Intake Plan Timeline
                 </h3>
                 <p className="text-[10px] md:text-xs text-white/70">
-                  Select any WBS task block to modify progress, adjust duration, or view its detailed PMI rationale.
+                  Select any task block to update progress, adjust duration, or view its details.
                 </p>
               </div>
               <span className="text-[10px] font-mono bg-white/10 text-white font-black uppercase tracking-widest px-2.5 py-1 rounded-md border border-white/20">
-                {scheduleMode === 'workback' ? 'RECALCULATED RETROGRADE' : 'PLANNED STANDARD'}
+                {scheduleMode === 'workback' ? 'RECALCULATED WORKBACK' : 'PLANNED STANDARD'}
               </span>
             </div>
 
@@ -723,10 +723,10 @@ export default function GanttChart() {
               <div className="min-w-[900px] p-6">
                 <div className="relative border border-[#B8860B]/20 rounded-2xl overflow-hidden bg-[#FDFCF0]/50 shadow-inner">
                   
-                  {/* Gantt Header with Months & Grid Lines */}
+                  {/* Header with Months & Grid Lines */}
                   <div className="flex border-b border-[#B8860B]/20 bg-[#FDFCF0] h-11 relative">
                     <div className="w-64 shrink-0 border-r border-[#B8860B]/20 p-3 font-black text-[#1E3F20] uppercase tracking-widest text-[10px] flex items-center">
-                      WBS Deliverable
+                      Task
                     </div>
                     
                     <div className="flex-1 relative">
@@ -832,41 +832,41 @@ export default function GanttChart() {
           </div>
         </div>
 
-        {/* Detailed List of Deliverables & PMI PMBOK Rationale */}
+        {/* Detailed List of Tasks */}
         <div id="pmi-task-details-list" className="max-w-[1240px] mx-auto px-4 md:px-8 mt-8">
           <div className="bg-white border-2 border-[#B8860B]/30 rounded-3xl p-6 shadow-md">
             <h2 className="text-xl font-serif font-bold text-[#1E3F20] uppercase tracking-widest mb-6 flex items-center gap-2">
-              <Layers className="text-[#B8860B]" size={20} /> PMI Work Breakdown Structure (WBS) Directory
+              <Layers className="text-[#B8860B]" size={20} /> Intake Plan Directory
             </h2>
 
             <div className="space-y-6">
-              {['Initiation', 'Planning', 'Execution', 'Monitoring & Controlling', 'Closing'].map((phase) => {
+              {['Welcome & Outreach', 'Application', 'Interviews & Selection', 'Education & Progress', 'Celebration & Induction'].map((phase) => {
                 const phaseTasks = calculatedTasks.filter(t => t.phase === phase);
                 if (phaseTasks.length === 0) return null;
                 const theme = getPhaseTheme(phase);
 
                 return (
                   <div key={phase} className="border border-[#B8860B]/20 rounded-2xl overflow-hidden shadow-sm">
-                    {/* WBS Phase Header */}
+                    {/* Stage Header */}
                     <div className="bg-[#122c14]/5 border-b border-[#B8860B]/20 px-5 py-3.5 flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span className={`w-3 h-3 rounded-full ${theme.badge}`} />
                         <h3 className="text-xs md:text-sm font-black uppercase tracking-wider text-[#1E3F20]">
-                          PMBOK Phase {phase}
+                          {phase}
                         </h3>
                       </div>
                       <span className="text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-[#1E3F20] text-white">
-                        {phaseTasks.length} Deliverables
+                        {phaseTasks.length} {phaseTasks.length === 1 ? 'Task' : 'Tasks'}
                       </span>
                     </div>
 
-                    {/* WBS Task Rows inside phase */}
+                    {/* Task Rows inside stage */}
                     <div className="divide-y divide-gray-100">
                       {phaseTasks.map((task) => (
                         <div key={task.wbs} className="p-4 md:p-5 hover:bg-[#FDFCF0]/30 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs font-black text-[#B8860B]">{task.wbs}</span>
+                              <span className="font-mono text-xs font-black text-[#B8860B]">Task {task.wbs}</span>
                               <h4 className="font-bold text-[#1E3F20] text-xs md:text-sm">{task.title}</h4>
                               <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
                                 task.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
@@ -881,14 +881,14 @@ export default function GanttChart() {
                             </p>
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[10px] font-medium text-[#1E3F20]/60">
                               <span>👤 Owner: <strong className="text-[#1E3F20]">{task.owner}</strong></span>
-                              <span>🔗 Predecessor: <strong className="text-[#1E3F20]">{task.predecessor}</strong></span>
+                              <span>🔗 Depends On: <strong className="text-[#1E3F20]">{task.predecessor === 'None' ? 'Start' : `Task ${task.predecessor}`}</strong></span>
                               <span>⏱ Duration: <strong className="text-[#1E3F20]">{task.duration} {task.duration === 1 ? 'day' : 'days'}</strong></span>
                             </div>
                           </div>
 
                           <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-3 shrink-0">
                             <div className="text-right">
-                              <span className="text-[9px] font-black uppercase tracking-widest text-[#B8860B] block">Computed Window</span>
+                              <span className="text-[9px] font-black uppercase tracking-widest text-[#B8860B] block">Scheduled Dates</span>
                               <span className="text-xs font-mono font-bold text-[#1E3F20] block mt-0.5">
                                 {formatDate(task.calculatedStart)} - {formatDate(task.calculatedEnd)}
                               </span>
@@ -898,7 +898,7 @@ export default function GanttChart() {
                               onClick={() => openEditModal(task)}
                               className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest bg-transparent hover:bg-[#1E3F20] text-[#1E3F20] hover:text-white border border-[#1E3F20]/30 rounded-lg transition-all flex items-center gap-1"
                             >
-                              <Edit2 size={10} /> Edit / Model
+                              <Edit2 size={10} /> Edit Progress
                             </button>
                           </div>
                         </div>
@@ -913,7 +913,7 @@ export default function GanttChart() {
 
       </div>
 
-      {/* Interactive PMI Modeling Modal (Drawer style dialog) */}
+      {/* Interactive Intake Plan Editor */}
       <AnimatePresence>
         {isEditModalOpen && selectedTask && (
           <div id="pmi-modal-overlay" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -927,7 +927,7 @@ export default function GanttChart() {
               <div className="bg-[#122c14] text-white px-6 py-4 flex items-center justify-between border-b-2 border-[#D4AF37]">
                 <div>
                   <span className="font-mono text-xs font-black text-[#FFDF79] tracking-widest uppercase">
-                    WBS {selectedTask.wbs} • PMI Model Form
+                    Task {selectedTask.wbs} • Progress Editor
                   </span>
                   <h4 className="text-lg font-serif font-black uppercase tracking-wider mt-0.5">{selectedTask.title}</h4>
                 </div>
@@ -943,7 +943,7 @@ export default function GanttChart() {
               <div className="p-6 space-y-5">
                 {/* Rationale explanation */}
                 <div className="bg-[#122c14]/5 border-l-4 border-[#D4AF37] p-3 rounded-r-xl">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-[#B8860B] block">PMBOK PMI Methodology Rationale</span>
+                  <span className="text-[8px] font-black uppercase tracking-widest text-[#B8860B] block">Task Description & Purpose</span>
                   <p className="text-[11px] text-[#1E3F20] mt-1 leading-relaxed">
                     {selectedTask.pmiRationale}
                   </p>
@@ -953,7 +953,7 @@ export default function GanttChart() {
                   {/* Owner */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-black uppercase tracking-wider text-[#1E3F20] flex items-center gap-1">
-                      👤 Role / Deliverable Owner
+                      👤 Role / Owner
                     </label>
                     <select
                       value={editOwner}
@@ -969,7 +969,7 @@ export default function GanttChart() {
                       <option value="Epistoleus">Epistoleus</option>
                       <option value="Hodegos">Hodegos</option>
                       <option value="Directorate">The Directorate</option>
-                      <option value="Grand Chapter / Basileus">Grand Chapter / Basileus</option>
+                      <option value="Directorate / Basileus">Directorate / Basileus</option>
                     </select>
                   </div>
 
@@ -1037,7 +1037,7 @@ export default function GanttChart() {
                 {/* Computational preview block */}
                 <div className="bg-[#122c14] text-white p-4 rounded-2xl flex items-center justify-between shadow-inner">
                   <div>
-                    <span className="text-[8px] font-bold uppercase tracking-widest text-[#FFDF79] block">Recalculated Calendar window</span>
+                    <span className="text-[8px] font-bold uppercase tracking-widest text-[#FFDF79] block">Recalculated Dates</span>
                     <span className="text-sm font-mono font-bold mt-1 block">
                       {formatDate(new Date(new Date(targetFinishDate).setDate(new Date(targetFinishDate).getDate() + selectedTask.offsetFromFinish)))} - 
                       {formatDate(new Date(new Date(targetFinishDate).setDate(new Date(targetFinishDate).getDate() + selectedTask.offsetFromFinish + (editDuration - 1))))}
