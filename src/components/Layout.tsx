@@ -39,7 +39,8 @@ export default function Layout() {
   const footerNavItems: NavItem[] = [
     { name: 'HOME', path: '/' },
     { name: 'MEMBER PORTAL', path: '/login' },
-    { name: 'ADMIN DASHBOARD', path: '/admin-dashboard' },
+    { name: 'PRIVACY POLICY', path: '/privacy-policy' },
+    { name: 'TERMS OF SERVICE', path: '/terms-of-service' },
   ];
 
   return (

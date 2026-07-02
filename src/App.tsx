@@ -23,6 +23,8 @@ import IntakeCalendar from './pages/IntakeCalendar';
 import Login from './pages/Login';
 import FinancialRoster from './pages/FinancialRoster';
 import GanttChart from './pages/GanttChart';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 import ScrollToTop from './components/ScrollToTop';
 import LandingPage from './components/LandingPage';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -73,6 +75,8 @@ export default function App() {
                 <Route path="gantt-chart" element={<ProtectedRoute><GanttChart /></ProtectedRoute>} />
                 <Route path="login" element={<Login />} />
                 <Route path="financial-roster" element={<ProtectedRoute><FinancialRoster /></ProtectedRoute>} />
+                <Route path="privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="terms-of-service" element={<TermsOfService />} />
               </Route>
             </Routes>
           </React.Fragment>
