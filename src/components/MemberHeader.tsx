@@ -20,6 +20,7 @@ export default function MemberHeader() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const navigate = useNavigate();
 
@@ -88,6 +89,7 @@ export default function MemberHeader() {
       }
 
       setSuccess(true);
+      setSuccessMessage(result.message || 'Your password has been updated securely. You can now use your new password for future sessions.');
       sessionStorage.setItem('isFirstLogin', 'false');
       setIsFirstLogin(false);
     } catch (err: any) {
@@ -185,10 +187,10 @@ export default function MemberHeader() {
                     </div>
                   </div>
                   <h2 className="text-xl font-bold text-white uppercase tracking-wider mb-2">
-                    Password Changed Successfully
+                    Password Updated
                   </h2>
                   <p className="text-silver/60 text-xs uppercase tracking-widest leading-relaxed max-w-sm mx-auto mb-6">
-                    Your password has been updated securely. You can now use your new password for future sessions.
+                    {successMessage}
                   </p>
                   <button
                     onClick={closeChangePasswordModal}

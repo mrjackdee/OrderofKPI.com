@@ -71,12 +71,12 @@ export async function performHybridLogin(email: string, pass: string): Promise<{
     } else {
       // Server returned HTML (e.g. 404 fallback page on static hosting) or some other non-JSON response.
       // Trigger client-side fallback mode
-      console.warn('API returned non-JSON response. Gracefully falling back to secure Client-Side Member Directory mode.');
+      console.warn('[AUTH] API returned non-JSON response. Gracefully falling back to secure Client-Side Member Directory mode.');
       return performClientSideLogin(normalizedEmail, pass);
     }
   } catch (err) {
     // Connection refused / offline / server error. Trigger client-side fallback mode.
-    console.warn('Could not contact API. Gracefully falling back to secure Client-Side Member Directory mode:', err);
+    console.warn('[AUTH] Could not contact API. Gracefully falling back to secure Client-Side Member Directory mode:', err);
     return performClientSideLogin(normalizedEmail, pass);
   }
 }
@@ -107,11 +107,11 @@ export async function performHybridPasswordChange(
         return { success: false, message: data.message || 'Failed to update password' };
       }
     } else {
-      console.warn('API returned non-JSON response on password change. Falling back to secure Client-Side update.');
+      console.warn('[AUTH] API returned non-JSON response on password change. Falling back to secure Client-Side update.');
       return performClientSidePasswordChange(normalizedEmail, currentPass, newPass);
     }
   } catch (err) {
-    console.warn('Failed to contact password change API. Falling back to secure Client-Side update:', err);
+    console.warn('[AUTH] Failed to contact password change API. Falling back to secure Client-Side update:', err);
     return performClientSidePasswordChange(normalizedEmail, currentPass, newPass);
   }
 }

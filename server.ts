@@ -240,17 +240,21 @@ async function startServer() {
   // Authentication Endpoints
   app.post("/api/auth/login", (req, res) => {
     const { email, password } = req.body;
+    console.log(`[AUTH] Login attempt for: ${email}`);
+    
     if (!email || !password) {
       return res.status(400).json({ success: false, message: "Email and password are required" });
     }
 
     const user = findUser(email);
     if (!user) {
+      console.log(`[AUTH] User not found: ${email}`);
       return res.status(401).json({ success: false, message: "Invalid email or password" });
     }
 
     const hashedInput = hashPassword(password);
     if (user.password_hash === hashedInput) {
+      console.log(`[AUTH] Login successful: ${email} (FirstLogin: ${user.is_first_login === 1})`);
       return res.json({
         success: true,
         user: {
@@ -264,11 +268,14 @@ async function startServer() {
       });
     }
 
+    console.log(`[AUTH] Password mismatch for: ${email}`);
     return res.status(401).json({ success: false, message: "Invalid email or password" });
   });
 
   app.post("/api/auth/change-password", (req, res) => {
     const { email, currentPassword, newPassword } = req.body;
+    console.log(`[AUTH] Password change request for: ${email}`);
+    
     if (!email || !newPassword) {
       return res.status(400).json({ success: false, message: "Email and new password are required" });
     }
@@ -301,9 +308,11 @@ async function startServer() {
     const newHash = hashPassword(newPassword);
     const updated = updateUserPassword(email, newHash);
     if (updated) {
+      console.log(`[AUTH] Password updated successfully in database for: ${email}`);
       return res.json({ success: true, message: "Password updated successfully" });
     }
 
+    console.error(`[AUTH] DATABASE UPDATE FAILED for: ${email}`);
     return res.status(500).json({ success: false, message: "Failed to update password in database" });
   });
 
