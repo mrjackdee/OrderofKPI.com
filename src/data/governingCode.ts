@@ -109,7 +109,7 @@ export const CONSTITUTION_DATA: Article[] = [
       { id: "Section 7", text: "Social Affairs (Hospitality, Sisterly Relations, and Protocol): Manages all official social events, ensuring high-standard representation in the spirit of fun." },
       { id: "Section 8", text: "Membership: Focuses on recruitment, retention, reclaim, and reactive status. Chaired by the 2nd Anti-Basileus. Includes intake operations." },
       { id: "Section 9", text: "Budget, Finance and Fundraising: Prepares and reviews the annual budget, manages fundraising, audit control. Composed of Tamiouchos, 2nd Anti-Basileus and finance members." },
-      { id: "Section 10", text: "Community Service: Monthly planning of service activities aligned with national impact goals, including LGBTQ+ community service programs." },
+      { id: "Section 10", text: "Community Service: Monthly planning of service activities aligned with impact goals, including LGBTQ+ community service programs." },
       { id: "Section 11", text: "Scholarship: Oversees scholarship criteria, application reviews, selection, and delivery/monetary dispersals." }
     ]
   },
@@ -182,7 +182,7 @@ export const BYLAWS_DATA: Article[] = [
     id: "Article III",
     title: "Article III: Organizational Meetings",
     sections: [
-      { id: "Section 1", text: "National Bi-Annual Meeting: A bi-annual national meeting shall be held once every two years in the month of June for the purpose of electing directors and for the transaction of such other business as may properly come before the meeting. The bi-annual meeting shall be held at the time and place designated by the Board of Directors during the month of June." },
+      { id: "Section 1", text: "Bi-Annual Meeting: A bi-annual meeting shall be held once every two years in the month of June for the purpose of electing directors and for the transaction of such other business as may properly come before the meeting. The bi-annual meeting shall be held at the time and place designated by the Board of Directors during the month of June." },
       { id: "Section 2", text: "Localized Annual Meetings: Annual meeting shall be held once every year by the organization in the month of April or May for the purpose of electing officers during the appropriate year and for the transaction of such other business as may properly come before the meeting." },
       { id: "Section 3", text: "Board Financial Meetings: The Board of Directions shall have a financial meeting to review the financial state of the organization and handle tax affairs annually in the months of February to April." },
       { id: "Section 4", text: "Special Meetings: Special meetings may be requested by the President or the Board of Directors." },
@@ -191,7 +191,7 @@ export const BYLAWS_DATA: Article[] = [
       { id: "Section 7", text: "Remote Meetings: Participation by means of remote communication in any meeting shall be subject to such guidelines and procedures as the Board of Directors adopts." },
       { id: "Section 8", text: "General Member Attendance at Remote Meetings: General members participating in a regular or special meeting by means of remote communication shall be deemed present and may vote at such a meeting if the corporation has implemented reasonable measures." },
       { id: "Section 9", text: "Quorum: Board Quorum requires a majority of directors. Directorate Quorum requires a majority of officers. General Membership Quorum requires simple majority (51% or more) of active financial members." },
-      { id: "Section 10", text: "Elections and Voting: Details national elections procedure for Board of Directors, local elections procedure for Directorate, voting regarding membership retention & expansion, referenda and motions, and bylaws amendment rules (quorum requirements, notice period, and copies required)." },
+      { id: "Section 10", text: "Elections and Voting: Details elections procedure for Board of Directors, local elections procedure for Directorate, voting regarding membership retention & expansion, referenda and motions, and bylaws amendment rules (quorum requirements, notice period, and copies required)." },
       { id: "Section 11", text: "Amendments to Articles of Incorporation: Substantive changes require a simple majority of all Board of Director Members, following statutory rules (O.C.G.A. § 14-2-1002)." }
     ]
   },
@@ -201,10 +201,10 @@ export const BYLAWS_DATA: Article[] = [
     sections: [
       { id: "Section 1", text: "Classification: There is only one class of members in K.P. Inc., hereinafter referred to as the Organization." },
       { id: "Section 2", text: "Criteria: Candidates for membership shall meet the Bylaws's provisions and Membership Guidelines and Code of Conduct, demonstrating exemplary character as enunciated therein." },
-      { id: "Section 3", text: "Nondiscrimination: All candidates for membership shall be considered regardless of race, color, national origin, marital status, gender expression, disability, religion, military status, veteran status, or membership in other organizations." },
+      { id: "Section 3", text: "Nondiscrimination: All candidates for membership shall be considered regardless of race, color, marital status, gender expression, disability, religion, military status, veteran status, or membership in other organizations." },
       { id: "Section 4", text: "Resignation: A member shall be allowed to resign from the Organization providing all insignia are returned and provided no disciplinary action is pending against the member. No refund shall be made." },
-      { id: "Section 5", text: "Suspension and Expulsion: A member can be suspended or expelled for cause following a determination by the disciplinary board for any violations to the Membership Guidelines and Code of Conduct. The Directorate shall report its action and reasons therefor to the next National Meeting." },
-      { id: "Section 6", text: "Due Process: A member suspended or expelled may appeal the disciplinary board's decision and plead their case in appeal the case to the next National Meeting, and that member shall have the right to be heard by the general membership and to plead their own cause. The directorate shall render the final decision." }
+      { id: "Section 5", text: "Suspension and Expulsion: A member can be suspended or expelled for cause following a determination by the disciplinary board for any violations to the Membership Guidelines and Code of Conduct. The Directorate shall report its action and reasons therefor to the next Meeting." },
+      { id: "Section 6", text: "Due Process: A member suspended or expelled may appeal the disciplinary board's decision and plead their case in appeal the case to the next Meeting, and that member shall have the right to be heard by the general membership and to plead their own cause. The directorate shall render the final decision." }
     ]
   },
   {
