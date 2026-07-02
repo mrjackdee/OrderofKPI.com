@@ -65,26 +65,6 @@ export default function Home() {
         </div>
       </motion.div>
 
-      <motion.section 
-        variants={itemVariants}
-        className="w-full max-w-5xl flex flex-col items-start py-8 md:py-12 gap-6 md:gap-8 text-left border-t border-primary" 
-        id="about"
-      >
-        <h2 className="text-primary font-outline text-outline text-2xl md:text-4xl uppercase tracking-widest relative pb-4 text-left" style={{ transform: 'scaleY(1.1)' }}>
-          About The Order of KP, Inc.
-          <motion.span 
-            initial={{ width: 0 }}
-            whileInView={{ width: 48 }}
-            className="absolute bottom-0 left-0 h-1 bg-primary"
-          />
-        </h2>
-        <div className="flex flex-col gap-6 max-w-4xl mt-2 md:mt-4">
-          <p className="text-primary text-base md:text-lg font-light leading-relaxed">
-            Headquartered in Atlanta, GA, <strong>The Order of KP, Inc.</strong> is a community non-profit organization. We are steadfast in our commitment to empowering communities, fostering leadership, and driving sustainable philanthropic impact. Through strategic networking, educational empowerment, and dedicated community service, we strive to set the standard for excellence and civic responsibility.
-          </p>
-        </div>
-      </motion.section>
-
       {/* Button for Member Portal */}
       <motion.section 
         variants={itemVariants}
