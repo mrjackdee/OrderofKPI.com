@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import EventAddToCalendar from '../components/EventAddToCalendar';
+import GooglePickerButton from '../components/GooglePickerButton';
 
 const FloatingParticles = () => {
   return (
@@ -592,6 +593,19 @@ export default function ConferencePortal() {
               <p className="text-silver/60 text-[9px] uppercase tracking-wider">Interactive Demo</p>
             </div>
           </a>
+
+          <div className="bg-pure-black/90 border border-primary/20 hover:border-primary/50 hover:bg-primary/5 rounded-2xl p-5 flex flex-col items-center text-center gap-3 transition-all duration-300 shadow-[0_10px_35px_rgba(212,175,55,0.08)] group">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <GooglePickerButton 
+                className="bg-transparent border-0 p-0 text-primary hover:text-white"
+                onFileSelect={(file) => window.open(file.url, '_blank')}
+              />
+            </div>
+            <div>
+              <h3 className="text-white text-[11px] font-black uppercase tracking-widest mb-1">Drive Access</h3>
+              <p className="text-silver/60 text-[9px] uppercase tracking-wider">Browse Documents</p>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-16">
