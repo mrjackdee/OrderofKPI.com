@@ -56,7 +56,7 @@ export default function App() {
           <React.Fragment key="app-content">
             <Routes>
               <Route path="/" element={<Layout />}>
-                <Route index element={<ProtectedRoute><Home /></ProtectedRoute>} />
+                <Route index element={<Home />} />
                 <Route path="save-the-date" element={<ProtectedRoute><SaveTheDate /></ProtectedRoute>} />
                 <Route path="agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
                 <Route path="registration" element={<ProtectedRoute><Registration /></ProtectedRoute>} />

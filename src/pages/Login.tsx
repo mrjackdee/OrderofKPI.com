@@ -16,6 +16,13 @@ export default function Login() {
   const from = (location.state as any)?.from?.pathname || '/intake-calendar';
 
   useEffect(() => {
+    const isAuthenticated = !!sessionStorage.getItem('userEmail');
+    if (isAuthenticated) {
+      navigate(from, { replace: true });
+    }
+  }, [navigate, from]);
+
+  useEffect(() => {
     const savedEmail = localStorage.getItem('kpi_saved_email');
     const savedPassword = localStorage.getItem('kpi_saved_password');
     if (savedEmail && savedPassword) {
