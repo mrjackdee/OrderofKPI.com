@@ -31,7 +31,7 @@ import { AnimatePresence } from 'motion/react';
 export default function App() {
   const [hasEntered, setHasEntered] = useState(() => {
     try {
-      return localStorage.getItem('kpi_splash_entered') === 'true';
+      return sessionStorage.getItem('kpi_splash_entered') === 'true';
     } catch {
       return false;
     }
@@ -39,9 +39,9 @@ export default function App() {
 
   const handleEnter = () => {
     try {
-      localStorage.setItem('kpi_splash_entered', 'true');
+      sessionStorage.setItem('kpi_splash_entered', 'true');
     } catch (error) {
-      console.warn('Failed to set localStorage key:', error);
+      console.warn('Failed to set sessionStorage key:', error);
     }
     setHasEntered(true);
   };
