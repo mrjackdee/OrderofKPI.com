@@ -1,16 +1,24 @@
 import { useState, useEffect } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X, ChevronUp, Instagram } from 'lucide-react';
+import { Menu, X, ChevronUp, Instagram, LogOut } from 'lucide-react';
+import { logout as googleLogout } from '../lib/googleAuth';
 
 const MotionLink = motion(Link);
 
 export default function Layout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const isCreamPage = ['/intake-calendar', '/gantt-chart', '/financial-roster'].includes(location.pathname);
+
+  useEffect(() => {
+    const user = sessionStorage.getItem('userEmail');
+    setIsAuthenticated(!!user);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,6 +27,19 @@ export default function Layout() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await googleLogout();
+      sessionStorage.removeItem('userEmail');
+      sessionStorage.removeItem('kpi_splash_entered');
+      setIsAuthenticated(false);
+      navigate('/');
+      window.location.reload(); // Refresh to show splash if needed
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -97,6 +118,17 @@ export default function Layout() {
                   </MotionLink>
                 )
               ))}
+
+              {isAuthenticated && (
+                <motion.button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 text-primary hover:text-white transition-colors text-sm font-semibold uppercase tracking-[0.15em] group"
+                  whileHover={{ y: -2 }}
+                >
+                  <LogOut size={16} />
+                  <span>LOGOUT</span>
+                </motion.button>
+              )}
               <motion.a
                 href="http://www.instagram.com/orderofkpi"
                 target="_blank"
@@ -157,6 +189,16 @@ export default function Layout() {
                   </Link>
                 )
               ))}
+              
+              {isAuthenticated && (
+                <button
+                  onClick={handleLogout}
+                  className="mt-4 flex items-center gap-3 text-red-500 text-xl md:text-2xl font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] hover:text-white transition-colors"
+                >
+                  <LogOut size={24} />
+                  <span>LOGOUT</span>
+                </button>
+              )}
               <motion.a
                 href="http://www.instagram.com/orderofkpi"
                 target="_blank"
