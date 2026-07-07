@@ -42,9 +42,9 @@ const initialPmiTasks: PMITask[] = [
   // Phase 1: Welcome & Outreach
   { 
     wbs: '1.1', 
-    title: 'Public Inquiry & Interest Form Launch', 
+    title: 'Public Inquiry & Interest Form Launch (Inquire Within)', 
     phase: 'Welcome & Outreach', 
-    offsetFromFinish: -196, 
+    offsetFromFinish: -191, 
     duration: 1, 
     owner: 'Membership Chair', 
     predecessor: 'None', 
@@ -54,7 +54,7 @@ const initialPmiTasks: PMITask[] = [
   },
   { 
     wbs: '1.2', 
-    title: 'Public Information Session', 
+    title: 'Public Information Session (Interest Meeting)', 
     phase: 'Welcome & Outreach', 
     offsetFromFinish: -180, 
     duration: 1, 
@@ -68,57 +68,69 @@ const initialPmiTasks: PMITask[] = [
   // Phase 2: Application
   { 
     wbs: '2.1', 
-    title: 'Candidate Informal Coffee/Tea Social', 
-    phase: 'Application', 
-    offsetFromFinish: -173, 
-    duration: 7, 
-    owner: 'Membership Chair', 
-    predecessor: '1.2', 
-    status: 'Completed', 
-    progress: 100,
-    pmiRationale: 'An informal period for interested candidates to meet and converse with current members over tea.'
-  },
-  { 
-    wbs: '2.2', 
     title: 'Share Membership Application Forms', 
     phase: 'Application', 
-    offsetFromFinish: -166, 
+    offsetFromFinish: -180, 
     duration: 1, 
     owner: 'Grammateus', 
-    predecessor: '2.1', 
+    predecessor: '1.2', 
     status: 'Completed', 
     progress: 100,
     pmiRationale: 'Providing prospective candidates with application packages and details on next steps.'
   },
   { 
-    wbs: '2.3', 
-    title: 'Application Submission Deadline', 
+    wbs: '2.2', 
+    title: 'Application Submission Deadline (Application Due)', 
     phase: 'Application', 
-    offsetFromFinish: -161, 
+    offsetFromFinish: -178, 
     duration: 1, 
     owner: 'Pecunious Grammateus', 
-    predecessor: '2.2', 
+    predecessor: '2.1', 
     status: 'Completed', 
     progress: 100,
     pmiRationale: 'The deadline for prospective candidates to submit their formal application and required documents.'
+  },
+  { 
+    wbs: '2.3', 
+    title: 'Tea Time Invitations', 
+    phase: 'Application', 
+    offsetFromFinish: -176, 
+    duration: 1, 
+    owner: 'Epistoleus', 
+    predecessor: '2.2', 
+    status: 'Completed', 
+    progress: 100,
+    pmiRationale: 'Sending formal invitations to selected applicants for the Tea Time gathering.'
+  },
+  { 
+    wbs: '2.4', 
+    title: 'Candidate Informal Coffee/Tea Social (Tea Time)', 
+    phase: 'Application', 
+    offsetFromFinish: -173, 
+    duration: 7, 
+    owner: 'Membership Chair', 
+    predecessor: '2.3', 
+    status: 'Completed', 
+    progress: 100,
+    pmiRationale: 'An informal period for interested candidates to meet and converse with current members over tea.'
   },
   
   // Phase 3: Interviews & Selection
   { 
     wbs: '3.1', 
-    title: 'Invite Candidates to Interview', 
+    title: 'Invite Candidates to Interview (Emails Sent)', 
     phase: 'Interviews & Selection', 
     offsetFromFinish: -159, 
     duration: 1, 
     owner: 'Epistoleus', 
-    predecessor: '2.3', 
+    predecessor: '2.4', 
     status: 'Completed', 
     progress: 100,
     pmiRationale: 'Sending interview scheduling emails and details to all qualified applicants.'
   },
   { 
     wbs: '3.2', 
-    title: 'Hold Applicant Interviews', 
+    title: 'Hold Applicant Interviews (Interviews)', 
     phase: 'Interviews & Selection', 
     offsetFromFinish: -156, 
     duration: 4, 
@@ -130,7 +142,7 @@ const initialPmiTasks: PMITask[] = [
   },
   { 
     wbs: '3.3', 
-    title: 'Review Interview Outcomes', 
+    title: 'Review Interview Outcomes (Video Reviews)', 
     phase: 'Interviews & Selection', 
     offsetFromFinish: -152, 
     duration: 5, 
@@ -142,7 +154,7 @@ const initialPmiTasks: PMITask[] = [
   },
   { 
     wbs: '3.4', 
-    title: 'Financial Members Voting & Approval', 
+    title: 'Financial Members Voting & Approval (Voting)', 
     phase: 'Interviews & Selection', 
     offsetFromFinish: -147, 
     duration: 1, 
@@ -154,7 +166,7 @@ const initialPmiTasks: PMITask[] = [
   },
   { 
     wbs: '3.5', 
-    title: 'Send Acceptance & Selection Letters', 
+    title: 'Send Acceptance & Selection Letters (Selection Letters)', 
     phase: 'Interviews & Selection', 
     offsetFromFinish: -141, 
     duration: 1, 
@@ -166,7 +178,7 @@ const initialPmiTasks: PMITask[] = [
   },
   { 
     wbs: '3.6', 
-    title: 'Begin Intake Educational Sessions', 
+    title: 'Begin Intake Educational Sessions (Start Intake)', 
     phase: 'Interviews & Selection', 
     offsetFromFinish: -120, 
     duration: 1, 
@@ -180,7 +192,7 @@ const initialPmiTasks: PMITask[] = [
   // Phase 4: Education & Progress
   { 
     wbs: '4.1', 
-    title: 'Reflection and Quiet Period', 
+    title: 'Reflection and Quiet Period (No Contact Period)', 
     phase: 'Education & Progress', 
     offsetFromFinish: -141, 
     duration: 21, 
@@ -192,7 +204,7 @@ const initialPmiTasks: PMITask[] = [
   },
   { 
     wbs: '4.2', 
-    title: 'First Dues & Program Payment', 
+    title: 'First Dues & Program Payment (1st Payment)', 
     phase: 'Education & Progress', 
     offsetFromFinish: -126, 
     duration: 1, 
@@ -204,7 +216,7 @@ const initialPmiTasks: PMITask[] = [
   },
   { 
     wbs: '4.3', 
-    title: 'Formal Community Acumen Presentation', 
+    title: 'Formal Community Acumen Presentation (A Splendid Affair)', 
     phase: 'Education & Progress', 
     offsetFromFinish: -121, 
     duration: 1, 
@@ -216,7 +228,7 @@ const initialPmiTasks: PMITask[] = [
   },
   { 
     wbs: '4.4', 
-    title: 'Second Dues & Program Payment', 
+    title: 'Second Dues & Program Payment (2nd Payment)', 
     phase: 'Education & Progress', 
     offsetFromFinish: -96, 
     duration: 1, 
@@ -228,7 +240,7 @@ const initialPmiTasks: PMITask[] = [
   },
   { 
     wbs: '4.5', 
-    title: 'Peer Bonding & Development Weekend I', 
+    title: 'Peer Bonding & Development Weekend I (Sisterhood Weekend)', 
     phase: 'Education & Progress', 
     offsetFromFinish: -91, 
     duration: 3, 
@@ -240,7 +252,7 @@ const initialPmiTasks: PMITask[] = [
   },
   { 
     wbs: '4.6', 
-    title: 'Third Dues & Program Payment', 
+    title: 'Third Dues & Program Payment (3rd Payment)', 
     phase: 'Education & Progress', 
     offsetFromFinish: -65, 
     duration: 1, 
@@ -252,7 +264,7 @@ const initialPmiTasks: PMITask[] = [
   },
   { 
     wbs: '4.7', 
-    title: 'Heritage Study & Academic Celebration', 
+    title: 'Heritage Study & Academic Celebration (Ivy Weekend)', 
     phase: 'Education & Progress', 
     offsetFromFinish: -63, 
     duration: 3, 
@@ -264,7 +276,7 @@ const initialPmiTasks: PMITask[] = [
   },
   { 
     wbs: '4.8', 
-    title: 'Final Dues & Program Payment', 
+    title: 'Final Dues & Program Payment (4th Payment - Final)', 
     phase: 'Education & Progress', 
     offsetFromFinish: -35, 
     duration: 1, 
@@ -276,7 +288,7 @@ const initialPmiTasks: PMITask[] = [
   },
   { 
     wbs: '4.9', 
-    title: 'Peer Bonding & Development Weekend II', 
+    title: 'Peer Bonding & Development Weekend II (Sisterhood Weekend)', 
     phase: 'Education & Progress', 
     offsetFromFinish: -35, 
     duration: 3, 
@@ -290,7 +302,7 @@ const initialPmiTasks: PMITask[] = [
   // Phase 5: Celebration & Induction
   { 
     wbs: '5.1', 
-    title: 'Initiation and Welcome Ceremony', 
+    title: 'Initiation and Welcome Ceremony (Initiation Weekend)', 
     phase: 'Celebration & Induction', 
     offsetFromFinish: 0, 
     duration: 3, 
