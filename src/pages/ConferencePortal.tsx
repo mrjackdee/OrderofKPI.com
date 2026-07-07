@@ -33,30 +33,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import EventAddToCalendar from '../components/EventAddToCalendar';
-import GooglePickerButton from '../components/GooglePickerButton';
-import { createMeetSpace, createGoogleDoc, createGoogleSlide, createGoogleForm } from '../lib/googleWorkspace';
-
-interface WorkspaceActionCardProps {
-  icon: React.ElementType;
-  title: string;
-  subtitle: string;
-  onClick: () => void;
-}
-
-const WorkspaceActionCard = ({ icon: Icon, title, subtitle, onClick }: WorkspaceActionCardProps) => (
-  <button 
-    onClick={onClick}
-    className="w-full bg-pure-black/90 border border-primary/20 hover:border-primary/50 hover:bg-primary/5 rounded-2xl p-5 flex flex-col items-center text-center gap-3 transition-all duration-300 shadow-[0_10px_35px_rgba(212,175,55,0.08)] group"
-  >
-    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-      <Icon className="text-primary w-5 h-5" />
-    </div>
-    <div>
-      <h3 className="text-white text-[11px] font-black uppercase tracking-widest mb-1">{title}</h3>
-      <p className="text-silver/60 text-[9px] uppercase tracking-wider">{subtitle}</p>
-    </div>
-  </button>
-);
 
 const FloatingParticles = () => {
   return (
@@ -618,79 +594,6 @@ export default function ConferencePortal() {
               <p className="text-silver/60 text-[9px] uppercase tracking-wider">Interactive Demo</p>
             </div>
           </a>
-
-          <div className="bg-pure-black/90 border border-primary/20 hover:border-primary/50 hover:bg-primary/5 rounded-2xl p-5 flex flex-col items-center text-center gap-3 transition-all duration-300 shadow-[0_10px_35px_rgba(212,175,55,0.08)] group">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-              <GooglePickerButton 
-                className="bg-transparent border-0 p-0 text-primary hover:text-white"
-                onFileSelect={(file) => window.open(file.url, '_blank')}
-              />
-            </div>
-            <div>
-              <h3 className="text-white text-[11px] font-black uppercase tracking-widest mb-1">Drive</h3>
-              <p className="text-silver/60 text-[9px] uppercase tracking-wider">Browse Files</p>
-            </div>
-          </div>
-
-          <WorkspaceActionCard 
-            icon={Video}
-            title="Google Meet"
-            subtitle="Start Meeting"
-            onClick={async () => {
-              try {
-                const space = await createMeetSpace();
-                window.open(space.meetingUri || space.meetingCode, '_blank');
-              } catch (err) {
-                console.error(err);
-                alert('Sign in to Workspace to start a meeting');
-              }
-            }}
-          />
-
-          <WorkspaceActionCard 
-            icon={FileText}
-            title="Docs"
-            subtitle="Create Document"
-            onClick={async () => {
-              try {
-                const doc = await createGoogleDoc('New KPI Document');
-                window.open(`https://docs.google.com/document/d/${doc.documentId}/edit`, '_blank');
-              } catch (err) {
-                console.error(err);
-                alert('Sign in to Workspace to create a document');
-              }
-            }}
-          />
-
-          <WorkspaceActionCard 
-            icon={Presentation}
-            title="Slides"
-            subtitle="New Presentation"
-            onClick={async () => {
-              try {
-                const slide = await createGoogleSlide('New KPI Presentation');
-                window.open(`https://docs.google.com/presentation/d/${slide.presentationId}/edit`, '_blank');
-              } catch (err) {
-                console.error(err);
-                alert('Sign in to Workspace to create a presentation');
-              }
-            }}
-          />
-
-          <WorkspaceActionCard 
-            icon={ClipboardList}
-            title="Forms"
-            subtitle="Create Form"
-            onClick={async () => {
-              try {
-                const form = await createGoogleForm('New KPI Form');
-                window.open(form.responderUri, '_blank');
-              } catch (err) {
-                console.error(err);
-                alert('Sign in to Workspace to create a form');
-              }
-            }}
-          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-16">

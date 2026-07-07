@@ -9,15 +9,15 @@ import {
 import MemberHeader from '../components/MemberHeader';
 
 const events = [
-  { step: 1, title: 'Inquire Within', date: 'Jul 3, 2026', icon: Heart },
+  { step: 1, title: 'Inquire Within', date: 'Jul 8, 2026', icon: Heart },
   { step: 2, title: 'Interest Meeting', date: 'Jul 19, 2026', icon: Users },
-  { step: 3, title: 'Tea Time', date: 'Jul 26–Aug 1, 2026', icon: Coffee },
-  { step: 4, title: 'Provide the Application', date: 'Aug 2, 2026', icon: Edit3 },
-  { step: 5, title: 'Application Due', date: 'Aug 7, 2026', icon: ClipboardCheck },
+  { step: 3, title: 'Application Due', date: 'Jul 21, 2026', icon: ClipboardCheck },
+  { step: 4, title: 'Tea Time Invitations', date: 'Jul 23, 2026', icon: Mail },
+  { step: 5, title: 'Tea Time', date: 'Jul 26–Aug 1, 2026', icon: Coffee },
   { step: 6, title: 'Interview Emails Sent', date: 'Aug 9, 2026', icon: Mail },
-  { step: 7, title: 'Interviews', date: 'Aug 12, 14, 15, 2026', icon: Video },
+  { step: 7, title: 'Interviews', date: 'Aug 12, 14, 15, 2026', icon: Users },
   { step: 8, title: 'Video Reviews', date: 'Aug 16–20, 2026', icon: Video },
-  { step: 9, title: 'Financial Chapter Members Voting', date: 'Aug 21, 2026', icon: ThumbsUp },
+  { step: 9, title: 'Financial Chapter Members Voting', date: 'Aug 21, 2026', icon: UserCheck },
   { step: 10, title: 'Intake Notified of Selection', date: 'Aug 27, 2026', icon: Star },
   { step: 11, title: 'No Contact Period Starts', date: 'Aug 27, 2026', icon: Hand },
   { step: 12, title: '1st Payment', date: 'Sep 11, 2026', icon: Wallet },

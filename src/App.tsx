@@ -23,6 +23,7 @@ import IntakeCalendar from './pages/IntakeCalendar';
 import Login from './pages/Login';
 import FinancialRoster from './pages/FinancialRoster';
 import GanttChart from './pages/GanttChart';
+import MemberPortal from './pages/MemberPortal';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import ScrollToTop from './components/ScrollToTop';
@@ -59,6 +60,8 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Layout />}>
                 <Route index element={<Home />} />
+                <Route path="member-portal" element={<ProtectedRoute><MemberPortal /></ProtectedRoute>} />
+                <Route path="conference-portal" element={<ConferencePortal />} />
                 <Route path="save-the-date" element={<ProtectedRoute><SaveTheDate /></ProtectedRoute>} />
                 <Route path="agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
                 <Route path="registration" element={<ProtectedRoute><Registration /></ProtectedRoute>} />
@@ -70,7 +73,6 @@ export default function App() {
                 <Route path="voting-portal" element={<ProtectedRoute><VotingPortal /></ProtectedRoute>} />
                 <Route path="admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
                 <Route path="constitution" element={<ProtectedRoute><Constitution /></ProtectedRoute>} />
-                <Route path="portal" element={<ProtectedRoute><ConferencePortal /></ProtectedRoute>} />
                 <Route path="intake-calendar" element={<ProtectedRoute><IntakeCalendar /></ProtectedRoute>} />
                 <Route path="gantt-chart" element={<ProtectedRoute><GanttChart /></ProtectedRoute>} />
                 <Route path="login" element={<Login />} />

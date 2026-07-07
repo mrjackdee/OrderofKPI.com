@@ -71,7 +71,7 @@ export default function Home() {
         className="w-full max-w-5xl flex justify-center py-8"
       >
         <MotionLink
-          to="/login"
+          to="/member-portal"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           className="px-8 py-4 bg-primary text-black font-black uppercase tracking-[0.2em] rounded-full hover:bg-white transition-all text-sm shadow-lg shadow-primary/20 flex items-center gap-2"
