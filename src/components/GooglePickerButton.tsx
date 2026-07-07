@@ -19,16 +19,79 @@ export default function GooglePickerButton({ className, onFileSelect }: GooglePi
   const [isApiReady, setIsApiReady] = useState(false);
 
   useEffect(() => {
-    const checkGapi = () => {
+    let active = true;
+    
+    const loadGapiScript = () => {
       if (window.gapi) {
-        window.gapi.load('picker', {
-          callback: () => setIsApiReady(true)
-        });
-      } else {
-        setTimeout(checkGapi, 100);
+        try {
+          window.gapi.load('picker', {
+            callback: () => {
+              if (active) setIsApiReady(true);
+            }
+          });
+        } catch (err) {
+          console.warn('Error loading gapi picker:', err);
+        }
+        return;
+      }
+
+      // Check if script already exists
+      const existingScript = document.querySelector('script[src*="apis.google.com/js/api.js"]');
+      if (existingScript) {
+        const check = () => {
+          if (!active) return;
+          if (window.gapi) {
+            try {
+              window.gapi.load('picker', {
+                callback: () => {
+                  if (active) setIsApiReady(true);
+                }
+              });
+            } catch (err) {
+              console.warn('Error loading gapi picker:', err);
+            }
+          } else {
+            setTimeout(check, 100);
+          }
+        };
+        check();
+        return;
+      }
+
+      try {
+        const script = document.createElement('script');
+        script.src = 'https://apis.google.com/js/api.js';
+        script.async = true;
+        script.defer = true;
+        script.crossOrigin = 'anonymous';
+        script.onload = () => {
+          if (!active) return;
+          if (window.gapi) {
+            try {
+              window.gapi.load('picker', {
+                callback: () => {
+                  if (active) setIsApiReady(true);
+                }
+              });
+            } catch (err) {
+              console.warn('Error loading gapi picker:', err);
+            }
+          }
+        };
+        script.onerror = (e) => {
+          console.warn('Failed to load Google API script dynamically:', e);
+        };
+        document.body.appendChild(script);
+      } catch (err) {
+        console.error('Failed to append Google API script tag:', err);
       }
     };
-    checkGapi();
+
+    loadGapiScript();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleOpenPicker = async () => {

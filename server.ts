@@ -260,7 +260,8 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  app.use(express.json({ limit: "15mb" }));
+  app.use(express.urlencoded({ limit: "15mb", extended: true }));
 
   // Logging and custom header middleware
   app.use((req, res, next) => {
@@ -405,6 +406,35 @@ async function startServer() {
     } catch (error) {
       console.error("Error fetching sheet:", error);
       res.status(500).json({ error: "Failed to fetch registrations" });
+    }
+  });
+
+  // Upload or replace the official calendar flyer image
+  app.post("/api/calendar/upload", (req, res) => {
+    const { image, email } = req.body;
+    if (!image) {
+      return res.status(400).json({ success: false, message: "No image payload found" });
+    }
+
+    try {
+      // Strip base64 prefix
+      const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+      const buffer = Buffer.from(base64Data, "base64");
+
+      // Save to public and dist folders
+      const publicPath = path.join(process.cwd(), "public", "membership_intake_calendar.jpg");
+      fs.writeFileSync(publicPath, buffer);
+
+      const distPath = path.join(process.cwd(), "dist", "membership_intake_calendar.jpg");
+      if (fs.existsSync(path.join(process.cwd(), "dist"))) {
+        fs.writeFileSync(distPath, buffer);
+      }
+
+      logEvent(email || "system", "CALENDAR_FLYER_UPLOAD", "Uploaded and updated official membership intake calendar flyer image");
+      res.json({ success: true, message: "Official flyer updated successfully" });
+    } catch (err: any) {
+      console.error("Error saving calendar flyer:", err);
+      res.status(500).json({ success: false, message: err.message || "Failed to save image" });
     }
   });
 
