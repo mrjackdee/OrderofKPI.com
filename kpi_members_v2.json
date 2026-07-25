@@ -1,0 +1,182 @@
+{
+  "admin@orderofkpi.org": {
+    "email": "admin@orderofkpi.org",
+    "name": "Admin",
+    "first_name": "Admin",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "admin",
+    "title": "Administrator"
+  },
+  "deshaun.stafford@orderofkpi.org": {
+    "email": "deshaun.stafford@orderofkpi.org",
+    "name": "Deshaun Stafford",
+    "first_name": "Deshaun",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "member",
+    "title": ""
+  },
+  "brian.johnson@orderofkpi.org": {
+    "email": "brian.johnson@orderofkpi.org",
+    "name": "Brian Johnson",
+    "first_name": "Brian",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "officer",
+    "title": "Grammateus"
+  },
+  "ishmeal.allensworth@orderofkpi.org": {
+    "email": "ishmeal.allensworth@orderofkpi.org",
+    "name": "Ishmeal Allensworth",
+    "first_name": "Ishmeal",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "officer",
+    "title": "Tamiouchos"
+  },
+  "edward.cook@orderofkpi.org": {
+    "email": "edward.cook@orderofkpi.org",
+    "name": "Edward Cook",
+    "first_name": "Edward",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "officer",
+    "title": "Epistoleus"
+  },
+  "darron.jenkins@orderofkpi.org": {
+    "email": "darron.jenkins@orderofkpi.org",
+    "name": "Darron Jenkins",
+    "first_name": "Darron",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "officer",
+    "title": "Hodegos"
+  },
+  "james.haywood@orderofkpi.org": {
+    "email": "james.haywood@orderofkpi.org",
+    "name": "James Haywood Jr",
+    "first_name": "James",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "officer",
+    "title": "2nd Anti-Basileus"
+  },
+  "dameone.ferguson@orderofkpi.org": {
+    "email": "dameone.ferguson@orderofkpi.org",
+    "name": "Dameone Ferguson",
+    "first_name": "Dameone",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "member",
+    "title": ""
+  },
+  "brian.goings@orderofkpi.org": {
+    "email": "brian.goings@orderofkpi.org",
+    "name": "Brian Goings",
+    "first_name": "Brian",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "officer",
+    "title": "Basileus"
+  },
+  "keith.woods@orderofkpi.org": {
+    "email": "keith.woods@orderofkpi.org",
+    "name": "Keith Woods",
+    "first_name": "Keith",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "member",
+    "title": ""
+  },
+  "dominic.goodman@orderofkpi.org": {
+    "email": "dominic.goodman@orderofkpi.org",
+    "name": "Dominic Goodman",
+    "first_name": "Dominic",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "member",
+    "title": ""
+  },
+  "jason.pilar@orderofkpi.org": {
+    "email": "jason.pilar@orderofkpi.org",
+    "name": "Jason Pilar",
+    "first_name": "Jason",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "member",
+    "title": ""
+  },
+  "brandon.owens@orderofkpi.org": {
+    "email": "brandon.owens@orderofkpi.org",
+    "name": "Brandon Owens",
+    "first_name": "Brandon",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "officer",
+    "title": "Historian"
+  },
+  "jack.dee@orderofkpi.org": {
+    "email": "jack.dee@orderofkpi.org",
+    "name": "Jack Dee",
+    "first_name": "Jack",
+    "password_hash": "f6dcee407170f6a7ff4b541f6ff7838f00eb818281bfd853cf88d49e88f204d6",
+    "is_first_login": 0,
+    "role": "member",
+    "title": ""
+  },
+  "anthony.jones@orderofkpi.org": {
+    "email": "anthony.jones@orderofkpi.org",
+    "name": "Anthony Jones",
+    "first_name": "Anthony",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "officer",
+    "title": "1st Anti-Basileus"
+  },
+  "donald.mitchell@orderofkpi.org": {
+    "email": "donald.mitchell@orderofkpi.org",
+    "name": "Donald Mitchell",
+    "first_name": "Donald",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "member",
+    "title": ""
+  },
+  "kameron.whitfield@orderofkpi.org": {
+    "email": "kameron.whitfield@orderofkpi.org",
+    "name": "Kameron Whitfield",
+    "first_name": "Kameron",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "member",
+    "title": ""
+  },
+  "tobias.bordley@orderofkpi.org": {
+    "email": "tobias.bordley@orderofkpi.org",
+    "name": "Tobias Bordley",
+    "first_name": "Tobias",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "member",
+    "title": ""
+  },
+  "denzel.talley@orderofkpi.org": {
+    "email": "denzel.talley@orderofkpi.org",
+    "name": "Denzel Talley",
+    "first_name": "Denzel",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 1,
+    "role": "member",
+    "title": ""
+  },
+  "jack@orderofkpi.org": {
+    "email": "jack@orderofkpi.org",
+    "name": "Jack Dee",
+    "first_name": "Jack",
+    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
+    "is_first_login": 1,
+    "role": "member",
+    "title": ""
+  }
+}

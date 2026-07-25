@@ -80,7 +80,7 @@ export default function MemberHeader() {
     try {
       const result = await performHybridPasswordChange(
         email,
-        isFirstLogin ? '2012' : currentPassword,
+        isFirstLogin ? 'atlanta' : currentPassword,
         newPassword
       );
 

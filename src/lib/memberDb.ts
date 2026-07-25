@@ -7,6 +7,7 @@ export interface MemberUser {
 
 export const defaultMembers: MemberUser[] = [
   { name: "Admin User", email: "admin@orderofkpi.org", role: "admin", title: "Administrator" },
+  { name: "Jack Dee", email: "jack@orderofkpi.org", role: "member" },
   { name: "Deshaun Stafford", email: "deshaun.stafford@orderofkpi.org", role: "member" },
   { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "officer", title: "Grammateus" },
   { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos" },
@@ -126,8 +127,8 @@ function performClientSideLogin(email: string, pass: string) {
     };
   }
 
-  // Retrieve changed password from localStorage, defaulting to '2012'
-  const savedPass = localStorage.getItem(`kpi_client_password_${email}`) || '2012';
+  // Retrieve changed password from localStorage, defaulting to 'atlanta'
+  const savedPass = localStorage.getItem(`kpi_client_password_${email}`) || 'atlanta';
   if (savedPass !== pass) {
     return {
       success: false,
@@ -158,7 +159,7 @@ function performClientSidePasswordChange(email: string, currentPass: string, new
     return { success: false, message: 'Member account not found.' };
   }
 
-  const savedPass = localStorage.getItem(`kpi_client_password_${email}`) || '2012';
+  const savedPass = localStorage.getItem(`kpi_client_password_${email}`) || 'atlanta';
   const isChanged = localStorage.getItem(`kpi_password_changed_${email}`) === 'true';
 
   // If already changed, current password must be correct
