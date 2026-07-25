@@ -27,10 +27,17 @@ import {
   CheckCircle2,
   XCircle,
   ShieldAlert,
-  Clock
+  Clock,
+  History,
+  GraduationCap,
+  ChevronRight,
+  Database,
+  ArrowRight,
+  Settings,
+  Edit2
 } from 'lucide-react';
+import { Member } from '../types';
 
-// --- Types ---
 interface SystemLog {
   id?: number;
   timestamp: string;
@@ -40,38 +47,19 @@ interface SystemLog {
   severity: 'info' | 'warning' | 'error';
 }
 
-// --- Data ---
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'revisions' | 'users' | 'logs'>(() => {
-    try {
-      const search = window.location.search;
-      if (search) {
-        const params = new URLSearchParams(search);
-        const t = params.get('tab');
-        if (t === 'revisions' || t === 'users' || t === 'logs') {
-          return t as 'revisions' | 'users' | 'logs';
-        }
-      }
-    } catch (e) {
-      // Ignored
-    }
-    return 'users';
-  });
-  
-  const [users, setUsers] = useState([
-    { id: 1, name: 'Admin', email: 'admin@orderofkpi.org', role: 'admin' },
-    { id: 2, name: 'Deshaun Safford', email: 'd.safford@orderofkpi.org', role: 'member' },
-    { id: 3, name: 'Brian Johnson', email: 'b.johnson@orderofkpi.org', role: 'member' }
-  ]);
-  const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserName, setNewUserName] = useState('');
-  const [revisions, setRevisions] = useState<any[]>([]);
-  const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
+  const [activeTab, setActiveTab] = useState<'revisions' | 'users' | 'logs' | 'intake'>('users');
+  const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [revisionToDelete, setRevisionToDelete] = useState<any | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [revisions, setRevisions] = useState<any[]>([]);
+  const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
+  
+  // Member Edit Modal
+  const [showMemberModal, setShowMemberModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<Partial<Member> | null>(null);
+  const [isNewMember, setIsNewMember] = useState(false);
 
   useEffect(() => {
     const role = sessionStorage.getItem('userRole');
@@ -80,27 +68,23 @@ export default function AdminDashboard() {
       return;
     }
 
+    fetchMembers();
+    
+    // Bylaw Revisions
     const qRevisions = query(collection(db, 'revisions'));
     const unsubRevisions = onSnapshot(qRevisions, (snap) => {
       setRevisions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      setLoading(false);
     });
 
     // Real-time Logs Stream
     const eventSource = new EventSource('/api/admin/logs/stream');
-    
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.type === 'history') {
         setSystemLogs(data.data);
       } else {
-        setSystemLogs(prev => [data, ...prev].slice(0, 100)); // Keep last 100
+        setSystemLogs(prev => [data, ...prev].slice(0, 100));
       }
-    };
-
-    eventSource.onerror = (err) => {
-      console.error("SSE Error:", err);
-      eventSource.close();
     };
 
     return () => {
@@ -109,661 +93,436 @@ export default function AdminDashboard() {
     };
   }, []);
 
-  const exportRevisionsToCSV = () => {
-    if (revisions.length === 0) {
-      alert("No revisions available to export.");
-      return;
-    }
-    
-    // CSV headers
-    const headers = ["ID", "Document", "Article", "Section", "Original Text", "Proposed Text", "Submitter Name", "Submitted At"];
-    
-    const rows = revisions.map(r => {
-      let dateStr = "";
-      if (r.submittedAt) {
-        const dateObj = r.submittedAt.toDate ? r.submittedAt.toDate() : new Date(r.submittedAt);
-        dateStr = dateObj.toLocaleString();
-      }
-      let docName = r.documentType || "";
-      if (docName.toLowerCase().includes('constitution')) {
-        docName = "KP Constitution (2021)";
-      } else if (docName.toLowerCase().includes('by-laws') || docName.toLowerCase().includes('bylaws')) {
-        docName = "KP By-laws (2022)";
-      } else {
-        docName = "KP Constitution (2021)";
-      }
-
-      return [
-        r.id || "",
-        docName,
-        r.article || "",
-        r.section || "",
-        r.originalText || "",
-        r.proposedText || "",
-        r.submitterName || "",
-        dateStr
-      ];
-    });
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `kpi_constitution_revisions_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const exportRevisionsToPDF = () => {
-    if (revisions.length === 0) {
-      alert("No revisions available to export.");
-      return;
-    }
-
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
-    
-    // Page constraints
-    const pageWidth = 210;
-    const pageHeight = 297;
-    const margin = 15;
-    const contentWidth = pageWidth - (margin * 2);
-
-    let y = 15;
-
-    // Helper functions
-    const addHeader = (pdfDoc: typeof doc) => {
-      pdfDoc.setFont("helvetica", "bold");
-      pdfDoc.setFontSize(16);
-      pdfDoc.setTextColor(0, 0, 0);
-      pdfDoc.text("THE ORDER OF KP, INC.", margin, y);
-      y += 6;
-      pdfDoc.setFontSize(11);
-      pdfDoc.setFont("helvetica", "normal");
-      pdfDoc.setTextColor(100, 100, 100);
-      pdfDoc.text("Bylaws & Constitution Revisions - Member Submissions Log", margin, y);
-      
-      const dateStr = new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      pdfDoc.text(`Exported on: ${dateStr}`, margin, y + 5);
-      y += 12;
-
-      // Draw horizontal line
-      pdfDoc.setDrawColor(200, 200, 200);
-      pdfDoc.setLineWidth(0.5);
-      pdfDoc.line(margin, y, pageWidth - margin, y);
-      y += 10;
-    };
-
-    addHeader(doc);
-
-    revisions.forEach((rev, index) => {
-      // Check if we need a new page for the upcoming entry
-      if (y > 230) {
-        doc.addPage();
-        y = 15;
-        addHeader(doc);
-      }
-
-      // Entry Card Layout Calculation
-      const cardY = y;
-      const docType = rev.documentType || "KP Constitution (2021)";
-      const submitter = rev.submitterName || "Anonymous Member";
-      
-      let dateVal = "Pending";
-      if (rev.submittedAt) {
-        const dateObj = rev.submittedAt.toDate ? rev.submittedAt.toDate() : new Date(rev.submittedAt);
-        dateVal = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-      }
-
-      // We'll write to PDF but check height dynamically
-      // Header for this card
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      doc.text(`#${index + 1} - ${docType}`, margin + 4, y + 6);
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.setTextColor(110, 110, 110);
-      doc.text(`Submitted By: ${submitter} | Date: ${dateVal}`, margin + 4, y + 11);
-      
-      y += 15;
-
-      // Position info
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      doc.setTextColor(50, 50, 50);
-      doc.text(`Target Segment: ${rev.article} - ${rev.section}`, margin + 4, y);
-      y += 5;
-
-      // Original Text section
-      if (rev.originalText && rev.originalText.trim() !== "" && rev.originalText !== "(No original text specified)") {
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(120, 120, 120);
-        doc.text("Original Verbiage:", margin + 4, y);
-        y += 4;
-
-        doc.setFont("helvetica", "oblique");
-        doc.setFontSize(8);
-        doc.setTextColor(100, 100, 100);
-        const origLines = doc.splitTextToSize(`"${rev.originalText}"`, contentWidth - 10);
-        origLines.forEach((line: string) => {
-          if (y > 275) {
-            doc.addPage();
-            y = 15;
-            addHeader(doc);
-          }
-          doc.text(line, margin + 6, y);
-          y += 4;
-        });
-        y += 2;
-      }
-
-      // Proposed Text section
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8);
-      doc.setTextColor(30, 41, 59);
-      doc.text("Proposed Language Change:", margin + 4, y);
-      y += 4;
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8.5);
-      doc.setTextColor(0, 0, 0);
-      const proposedLines = doc.splitTextToSize(rev.proposedText || "(Empty)", contentWidth - 10);
-      proposedLines.forEach((line: string) => {
-        if (y > 275) {
-          doc.addPage();
-          y = 15;
-          addHeader(doc);
-        }
-        doc.text(line, margin + 6, y);
-        y += 4;
-      });
-
-      // Draw boundary box border
-      const cardHeight = y - cardY + 2;
-      doc.setDrawColor(220, 225, 230);
-      doc.setLineWidth(0.15);
-      doc.rect(margin, cardY, contentWidth, cardHeight);
-
-      y += 10; // margin separation
-    });
-
-    // Save output PDF
-    doc.save(`kpi_constitution_revisions_${new Date().toISOString().split('T')[0]}.pdf`);
-  };
-
-  const handleDeleteRevision = (rev: any) => {
-    setRevisionToDelete(rev);
-    setDeleteError(null);
-  };
-
-  const confirmDeleteAndArchive = async () => {
-    if (!revisionToDelete) return;
-    setActionLoading(true);
-    setDeleteError(null);
+  const fetchMembers = async () => {
     try {
-      // 1. Store/Archive submission first
-      const archiveData = {
-        originalId: revisionToDelete.id,
-        documentType: revisionToDelete.documentType || 'KP Constitution (2021)',
-        article: revisionToDelete.article || '',
-        section: revisionToDelete.section || '',
-        originalText: revisionToDelete.originalText || '',
-        proposedText: revisionToDelete.proposedText || '',
-        submitterName: revisionToDelete.submitterName || 'Anonymous KPI Member',
-        submittedAt: revisionToDelete.submittedAt || null,
-        archivedAt: serverTimestamp()
-      };
+      const response = await fetch('/api/members');
+      const data = await response.json();
+      if (data.success) {
+        setMembers(data.members);
+      }
+    } catch (error) {
+      console.error('Error fetching members:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // Create new archived document
-      await addDoc(collection(db, 'archived_revisions'), archiveData);
+  const handleSaveMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMember?.email || !editingMember?.name || !editingMember?.role) return;
 
-      // 2. Delete from active list
-      await deleteDoc(doc(db, 'revisions', revisionToDelete.id));
+    setActionLoading(true);
+    try {
+      const url = isNewMember ? '/api/members' : `/api/members/${editingMember.email}`;
+      const method = isNewMember ? 'POST' : 'PUT';
+      
+      const response = await fetch(url, {
+        method,
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-email': sessionStorage.getItem('userEmail') || 'admin'
+        },
+        body: JSON.stringify(editingMember),
+      });
 
-      // 3. Clear modal state
-      setRevisionToDelete(null);
-    } catch (err: any) {
-      console.error("Error archiving and deleting revision:", err);
-      setDeleteError(err.message || "Failed to archive and delete this submission. Please try again.");
+      if (response.ok) {
+        setShowMemberModal(false);
+        fetchMembers();
+      }
+    } catch (error) {
+      console.error('Error saving member:', error);
     } finally {
       setActionLoading(false);
     }
   };
 
+  const deleteMember = async (email: string) => {
+    if (!window.confirm(`Are you sure you want to remove ${email} from the directory?`)) return;
+    
+    try {
+      const response = await fetch(`/api/members/${email}`, {
+        method: 'DELETE',
+        headers: { 'x-user-email': sessionStorage.getItem('userEmail') || 'admin' }
+      });
+      if (response.ok) {
+        fetchMembers();
+      }
+    } catch (error) {
+      console.error('Error deleting member:', error);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-pure-black text-white p-4 md:p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex flex-wrap gap-3 mb-8 pt-8">
-          <Link to="/intake-calendar" className="px-5 py-2 rounded-full border border-primary/20 text-silver/80 text-xs font-bold uppercase tracking-widest hover:bg-primary/10 transition-colors flex items-center gap-2">
-            <CalendarDays size={14} /> Intake Calendar
-          </Link>
-          <Link to="/financial-roster" className="px-5 py-2 rounded-full border border-primary/20 text-silver/80 text-xs font-bold uppercase tracking-widest hover:bg-primary/10 transition-colors flex items-center gap-2">
-            <Users size={14} /> Financial Roster
-          </Link>
-        </div>
-
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6 border-b border-white/5 pb-6">
-          <div>
-            <h1 className="text-4xl font-display font-bold uppercase tracking-widest flex items-center gap-3">
-              <ShieldCheck className="text-primary" size={32} />
-              Admin Dashboard
-            </h1>
-          </div>
-          
-          <div className="flex flex-wrap gap-1 bg-white/5 border border-white/10 rounded-xl p-1">
-            <button 
-              onClick={() => setActiveTab('revisions')}
-              className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
-                activeTab === 'revisions' ? 'bg-primary text-black' : 'text-silver/60 hover:text-white'
-              }`}
-            >
-              <FileText className="inline-block mr-2" size={14} />
-              Bylaw Revisions
-            </button>
-            <button 
-              onClick={() => setActiveTab('users')}
-              className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
-                activeTab === 'users' ? 'bg-primary text-black' : 'text-silver/60 hover:text-white'
-              }`}
-            >
-              <Users className="inline-block mr-2" size={14} />
-              User Access
-            </button>
-            <button 
-              onClick={() => setActiveTab('logs')}
-              className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
-                activeTab === 'logs' ? 'bg-primary text-black' : 'text-silver/60 hover:text-white'
-              }`}
-            >
-              <Activity className="inline-block mr-2" size={14} />
-              System Activity
-            </button>
-          </div>
-        </header>
-
-        {activeTab === 'revisions' && (
-          <div className="space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-bold uppercase tracking-widest">Proposed Bylaw Revisions</h2>
-                <p className="text-silver/40 text-[10px] uppercase tracking-[0.2em] mt-1">Submitted by members of the organization</p>
+    <div className="min-h-screen bg-cream">
+      {/* Sidebar / Navigation */}
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* Left Sidebar */}
+          <div className="w-full md:w-64 shrink-0">
+            <div className="bg-white rounded-lg border border-gold/20 shadow-soft overflow-hidden sticky top-8">
+              <div className="p-6 bg-ivy">
+                <h1 className="text-xl font-display text-cream flex items-center gap-2">
+                  <ShieldCheck className="w-6 h-6" />
+                  Admin Console
+                </h1>
               </div>
-              <div className="flex flex-wrap gap-3">
-                <button 
-                  onClick={exportRevisionsToCSV}
-                  className="px-5 py-3 bg-white/5 border border-white/10 hover:border-white/20 text-white font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-white hover:text-black transition-all flex items-center justify-center gap-2"
-                >
-                  <Download size={14} />
-                  Export to CSV
-                </button>
-                <button 
-                  onClick={exportRevisionsToPDF}
-                  className="px-5 py-3 bg-primary text-black font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/10"
-                >
-                  <FileText size={14} />
-                  Download PDF
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {revisions.map((rev) => {
-                const dateVal = rev.submittedAt ? (rev.submittedAt.toDate ? rev.submittedAt.toDate().toLocaleString() : new Date(rev.submittedAt).toLocaleString()) : "Pending";
-                return (
-                  <motion.div 
-                    key={rev.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-black border border-white/10 p-6 rounded-2xl space-y-4"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-3">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest rounded border ${
-                          (rev.documentType || '').toLowerCase().includes('by-laws') || (rev.documentType || '').toLowerCase().includes('bylaws')
-                            ? 'bg-silver/5 text-silver border-silver/15'
-                            : 'bg-primary/5 text-primary border-primary/20'
-                        }`}>
-                          {rev.documentType || 'KP Constitution (2021)'}
-                        </span>
-                        <span className="px-2 py-0.5 bg-white/5 text-silver border border-white/5 text-[9px] font-bold uppercase tracking-widest rounded">
-                          {rev.article}
-                        </span>
-                        <span className="px-2 py-0.5 bg-white/5 text-silver border border-white/5 text-[9px] font-bold uppercase tracking-widest rounded">
-                          {rev.section}
-                        </span>
-                      </div>
-                      <div className="text-[10px] uppercase tracking-wider text-silver/40">
-                        Submitted: <span className="text-white font-mono">{dateVal}</span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-1.5">
-                        <h4 className="text-[10px] uppercase tracking-wider text-silver/40 font-bold">Original Verbiage:</h4>
-                        <div className="p-3 bg-white/5 rounded-xl text-xs text-silver/70 italic leading-relaxed">
-                          "{rev.originalText || '(No reference text)'}"
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <h4 className="text-[10px] uppercase tracking-wider text-primary font-bold">Proposed Language Change:</h4>
-                        <div className="p-3 bg-primary/5 border border-primary/10 rounded-xl text-xs text-white font-medium leading-relaxed">
-                          {rev.proposedText}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5">
-                      <div className="text-[10px] uppercase tracking-wider text-silver/40">
-                        Proposed By: <span className="text-primary font-bold">{rev.submitterName || "Anonymous KPI Member"}</span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-[9px] font-mono text-silver/20">{rev.id}</span>
-                        <button
-                          onClick={() => handleDeleteRevision(rev)}
-                          className="flex items-center gap-1.5 px-3 py-1 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/20 hover:border-red-500 text-[10px] font-bold uppercase tracking-widest rounded-lg cursor-pointer transition-all duration-200"
-                          title="Delete submission"
-                        >
-                          <Trash2 size={11} />
-                          <span>Delete</span>
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-
-              {revisions.length === 0 && (
-                <div className="border border-white/10 rounded-2xl bg-white/5 p-12 text-center text-silver/40 italic">
-                  No constitution or bylaw revisions have been submitted yet.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'users' && (
-          <div className="space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-bold uppercase tracking-widest">User Management</h2>
-                <p className="text-silver/40 text-[10px] uppercase tracking-[0.2em] mt-1">Manage portal access for members</p>
-              </div>
-            </div>
-
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
-                <UserPlus size={16} /> Add New User
-              </h3>
-              <div className="flex flex-col md:flex-row gap-4">
-                <input
-                  type="text"
-                  placeholder="Full Name"
-                  className="flex-1 bg-black border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-all placeholder:text-silver/30"
-                  value={newUserName}
-                  onChange={e => setNewUserName(e.target.value)}
-                />
-                <input
-                  type="email"
-                  placeholder="Email Address"
-                  className="flex-1 bg-black border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-all placeholder:text-silver/30"
-                  value={newUserEmail}
-                  onChange={e => setNewUserEmail(e.target.value)}
-                />
+              <div className="p-2 flex flex-col">
                 <button
-                  className="px-6 py-3 bg-primary text-black font-bold uppercase tracking-widest rounded-xl hover:bg-white transition-all text-xs flex items-center justify-center gap-2"
-                  onClick={() => {
-                    if(newUserName && newUserEmail) {
-                      setUsers([...users, { id: Date.now(), name: newUserName, email: newUserEmail, role: 'member' }]);
-                      setNewUserName('');
-                      setNewUserEmail('');
-                    }
-                  }}
+                  onClick={() => setActiveTab('users')}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-md text-sm font-bold uppercase tracking-widest transition-all ${
+                    activeTab === 'users' ? 'bg-ivy text-cream' : 'text-ivy/60 hover:bg-cream hover:text-ivy'
+                  }`}
                 >
-                  Create User
+                  <Users className="w-4 h-4" />
+                  Directory
+                </button>
+                <button
+                  onClick={() => setActiveTab('intake')}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-md text-sm font-bold uppercase tracking-widest transition-all ${
+                    activeTab === 'intake' ? 'bg-ivy text-cream' : 'text-ivy/60 hover:bg-cream hover:text-ivy'
+                  }`}
+                >
+                  <CalendarDays className="w-4 h-4" />
+                  Intake Ops
+                </button>
+                <button
+                  onClick={() => setActiveTab('revisions')}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-md text-sm font-bold uppercase tracking-widest transition-all ${
+                    activeTab === 'revisions' ? 'bg-ivy text-cream' : 'text-ivy/60 hover:bg-cream hover:text-ivy'
+                  }`}
+                >
+                  <FileText className="w-4 h-4" />
+                  Bylaw Revs
+                </button>
+                <button
+                  onClick={() => setActiveTab('logs')}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-md text-sm font-bold uppercase tracking-widest transition-all ${
+                    activeTab === 'logs' ? 'bg-ivy text-cream' : 'text-ivy/60 hover:bg-cream hover:text-ivy'
+                  }`}
+                >
+                  <Activity className="w-4 h-4" />
+                  System Logs
                 </button>
               </div>
             </div>
 
-            <div className="space-y-4">
-              {users.map(user => (
-                <motion.div 
-                  key={user.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-black border border-white/10 p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-full flex items-center justify-center">
-                      <Users size={20} className="text-primary/70" />
-                    </div>
-                    <div>
-                      <h4 className="text-white font-bold">{user.name}</h4>
-                      <p className="text-silver/60 text-xs">{user.email}</p>
-                    </div>
+            <div className="mt-6 space-y-3">
+              <Link to="/candidate-tracker" className="flex items-center justify-between p-4 bg-gold text-ivy rounded-lg font-bold uppercase tracking-widest text-[10px] hover:brightness-110 transition-all shadow-lg">
+                Candidate Tracker <ArrowRight className="w-3 h-3" />
+              </Link>
+              <Link to="/selection-voting" className="flex items-center justify-between p-4 bg-ivy text-cream rounded-lg font-bold uppercase tracking-widest text-[10px] hover:brightness-110 transition-all shadow-lg">
+                Selection Voting <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Main Content Area */}
+          <div className="flex-1">
+            {activeTab === 'users' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-display text-ivy">Member Directory Management</h2>
+                  <button
+                    onClick={() => {
+                      setIsNewMember(true);
+                      setEditingMember({ role: 'member', financial_status: 'inactive' });
+                      setShowMemberModal(true);
+                    }}
+                    className="bg-ivy text-cream px-6 py-2 rounded-md font-bold uppercase tracking-widest text-xs flex items-center gap-2 hover:brightness-110 transition-all"
+                  >
+                    <UserPlus className="w-4 h-4" /> Add Member
+                  </button>
+                </div>
+
+                <div className="bg-white rounded-lg border border-gold/20 shadow-soft overflow-hidden">
+                  <table className="w-full text-left">
+                    <thead className="bg-cream border-b border-gold/10">
+                      <tr>
+                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ivy/40">Member</th>
+                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ivy/40">Role/Title</th>
+                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ivy/40">Intake Class</th>
+                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ivy/40">Financial</th>
+                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-ivy/40">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-cream">
+                      {members.map(member => (
+                        <tr key={member.email} className="hover:bg-cream/30 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-ivy/5 flex items-center justify-center">
+                                <Users className="w-4 h-4 text-gold" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-ivy">{member.name}</p>
+                                <p className="text-[10px] text-ivy/40">{member.email}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-xs">
+                            <p className="font-bold text-gold uppercase tracking-widest">{member.role}</p>
+                            <p className="text-ivy/60">{member.title || '-'}</p>
+                          </td>
+                          <td className="px-6 py-4 text-xs font-medium text-ivy">
+                            {member.intake_class || '-'}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest ${
+                              member.financial_status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {member.financial_status || 'inactive'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  setIsNewMember(false);
+                                  setEditingMember(member);
+                                  setShowMemberModal(true);
+                                }}
+                                className="p-2 text-ivy/40 hover:text-ivy transition-colors"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => deleteMember(member.email)}
+                                className="p-2 text-ivy/40 hover:text-red-600 transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'intake' && (
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white p-8 rounded-lg border border-gold/20 shadow-soft">
+                    <History className="w-10 h-10 text-gold mb-6" />
+                    <h3 className="text-xl font-display text-ivy mb-2">Active Intake Pipeline</h3>
+                    <p className="text-sm text-ivy/60 mb-6">Monitor candidates from inquiry through intake in real-time.</p>
+                    <Link to="/candidate-tracker" className="inline-flex items-center gap-2 text-ivy font-bold uppercase tracking-widest text-xs hover:text-gold transition-colors">
+                      Go to Pipeline <ArrowRight className="w-4 h-4" />
+                    </Link>
                   </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <span className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full border ${
-                      user.role === 'admin' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-white/5 text-silver border-white/10'
-                    }`}>
-                      {user.role}
-                    </span>
-                    <button className="p-2 bg-white/5 border border-white/10 text-silver/60 hover:text-white rounded-lg transition-colors title='Change Password'">
-                      <Key size={16} />
+                  <div className="bg-white p-8 rounded-lg border border-gold/20 shadow-soft">
+                    <ShieldCheck className="w-10 h-10 text-gold mb-6" />
+                    <h3 className="text-xl font-display text-ivy mb-2">Selection Committee Portal</h3>
+                    <p className="text-sm text-ivy/60 mb-6">Secure portal for financial members to review dossiers and cast selection votes.</p>
+                    <Link to="/selection-voting" className="inline-flex items-center gap-2 text-ivy font-bold uppercase tracking-widest text-xs hover:text-gold transition-colors">
+                      Enter Voting Portal <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="bg-ivy p-8 rounded-lg shadow-xl relative overflow-hidden">
+                  <div className="relative z-10">
+                    <h3 className="text-2xl font-display text-cream mb-2">Financial Roster Sync</h3>
+                    <p className="text-cream/70 text-sm mb-6 max-w-lg">Automate member financial status updates by syncing with the official Google Sheets roster.</p>
+                    <button className="bg-gold text-ivy px-8 py-3 rounded-md font-bold uppercase tracking-widest text-xs hover:brightness-110 transition-all flex items-center gap-2">
+                      <RefreshCcw className="w-4 h-4" /> Sync Records Now
                     </button>
-                    {user.role !== 'admin' && (
-                      <button 
-                        onClick={() => setUsers(users.filter(u => u.id !== user.id))}
-                        className="p-2 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 hover:text-red-300 rounded-lg transition-colors title='Remove User'"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
                   </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'logs' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold uppercase tracking-widest">System Activity Log</h2>
-                <p className="text-silver/40 text-[10px] uppercase tracking-[0.2em] mt-1">Real-time authentication and security events</p>
+                  <Database className="absolute right-[-20px] bottom-[-20px] w-64 h-64 text-cream/5 rotate-12" />
+                </div>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
-                <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div>
-                <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Live Stream Active</span>
-              </div>
-            </div>
+            )}
 
-            <div className="bg-black/40 border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-              <div className="grid grid-cols-12 gap-4 p-4 border-b border-white/10 bg-white/5 text-[10px] font-bold uppercase tracking-widest text-silver/40">
-                <div className="col-span-3 flex items-center gap-2"><Clock size={12} /> Timestamp</div>
-                <div className="col-span-3 flex items-center gap-2"><Users size={12} /> Member</div>
-                <div className="col-span-2">Event</div>
-                <div className="col-span-4">Details</div>
-              </div>
-
-              <div className="max-h-[600px] overflow-y-auto divide-y divide-white/5 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                {systemLogs.length === 0 && (
-                  <div className="p-12 text-center text-silver/20 italic uppercase tracking-widest text-xs">
-                    No activity recorded in current session.
+            {activeTab === 'logs' && (
+              <div className="bg-white rounded-lg border border-gold/20 shadow-soft overflow-hidden">
+                <div className="p-4 bg-cream border-b border-gold/10 flex justify-between items-center">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-ivy">System Activity Logs</h3>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-[10px] font-bold text-ivy/40 uppercase tracking-widest">Live Stream</span>
                   </div>
-                )}
-                {systemLogs.map((log, idx) => {
-                  const date = new Date(log.timestamp);
-                  const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                  const dateStr = date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-                  
-                  let Icon = Activity;
-                  let colorClass = 'text-primary';
-                  let bgClass = 'bg-primary/5';
-                  let borderClass = 'border-primary/10';
-
-                  if (log.severity === 'warning') {
-                    Icon = ShieldAlert;
-                    colorClass = 'text-orange-400';
-                    bgClass = 'bg-orange-400/5';
-                    borderClass = 'border-orange-400/20';
-                  } else if (log.severity === 'error') {
-                    Icon = XCircle;
-                    colorClass = 'text-red-500';
-                    bgClass = 'bg-red-500/5';
-                    borderClass = 'border-red-500/20';
-                  } else if (log.event_type.includes('SUCCESS')) {
-                    Icon = CheckCircle2;
-                    colorClass = 'text-emerald-400';
-                    bgClass = 'bg-emerald-400/5';
-                    borderClass = 'border-emerald-400/20';
-                  }
-
-                  return (
-                    <motion.div 
-                      key={log.id || idx}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-white/[0.02] transition-colors"
-                    >
-                      <div className="col-span-3 flex flex-col">
-                        <span className="text-white font-mono text-[11px]">{timeStr}</span>
-                        <span className="text-silver/30 text-[9px] uppercase tracking-wider">{dateStr}</span>
+                </div>
+                <div className="max-h-[600px] overflow-y-auto divide-y divide-cream">
+                  {systemLogs.map((log, idx) => (
+                    <div key={idx} className="p-4 flex gap-4 items-start hover:bg-cream/30 transition-colors">
+                      <div className="shrink-0 w-24">
+                        <p className="text-[10px] font-mono text-ivy/40">{new Date(log.timestamp).toLocaleTimeString()}</p>
                       </div>
-                      <div className="col-span-3 truncate">
-                        <span className="text-silver/80 text-xs font-medium">{log.email}</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-tighter border ${bgClass} ${colorClass} ${borderClass}`}>
-                          {log.event_type.replace('_', ' ')}
-                        </span>
-                      </div>
-                      <div className="col-span-4 flex items-center gap-3">
-                        <div className={`p-1.5 rounded-lg ${bgClass} ${colorClass}`}>
-                          <Icon size={12} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-tighter ${
+                            log.severity === 'error' ? 'bg-red-100 text-red-700' : 
+                            log.severity === 'warning' ? 'bg-orange-100 text-orange-700' : 
+                            'bg-ivy/10 text-ivy'
+                          }`}>
+                            {log.event_type}
+                          </span>
+                          <span className="text-[10px] text-ivy/40">{log.email}</span>
                         </div>
-                        <span className="text-silver/60 text-xs leading-tight">{log.message}</span>
+                        <p className="text-xs text-ivy/80">{log.message}</p>
                       </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                <h4 className="text-[10px] font-bold uppercase tracking-widest text-silver/40 mb-2">Total Events</h4>
-                <div className="text-2xl font-display font-bold text-white">{systemLogs.length}</div>
-              </div>
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                <h4 className="text-[10px] font-bold uppercase tracking-widest text-silver/40 mb-2">Successful Logins</h4>
-                <div className="text-2xl font-display font-bold text-emerald-400">
-                  {systemLogs.filter(l => l.event_type === 'LOGIN_SUCCESS').length}
-                </div>
-              </div>
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                <h4 className="text-[10px] font-bold uppercase tracking-widest text-silver/40 mb-2">Failed Attempts</h4>
-                <div className="text-2xl font-display font-bold text-red-500">
-                  {systemLogs.filter(l => l.severity === 'warning' || l.severity === 'error').length}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Delete Confirmation Modal Overlay */}
-        {revisionToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-zinc-950 border border-white/10 max-w-xl w-full rounded-3xl p-8 shadow-2xl relative space-y-6"
-            >
-              <div className="flex items-center gap-3 text-red-500">
-                <AlertCircle size={28} />
-                <h3 className="text-xl font-display font-bold uppercase tracking-widest">Confirm Archiving</h3>
-              </div>
-              
-              <div className="space-y-4">
-                <p className="text-silver/70 text-sm leading-relaxed">
-                  Are you sure you want to remove and archive the revision submitted by <span className="text-white font-bold">{revisionToDelete.submitterName || 'Anonymous KPI Member'}</span>? 
-                  Once confirmed, this submission will be removed from the active revisions view and stored securely in the archive log.
-                </p>
-
-                <div className="border border-white/5 rounded-2xl p-4 bg-white/5 space-y-3 text-xs leading-relaxed">
-                  <div className="flex justify-between text-silver/40">
-                    <span className="uppercase tracking-wider">Document Segment</span>
-                    <span className="text-white font-mono uppercase">
-                      {revisionToDelete.documentType || 'KP Constitution'} {revisionToDelete.article} - {revisionToDelete.section}
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-silver/40 uppercase tracking-wider block">Proposed Language Change:</span>
-                    <div className="text-white p-2.5 bg-white/5 border border-white/5 rounded-xl font-medium max-h-[120px] overflow-y-auto">
-                      {revisionToDelete.proposedText}
                     </div>
-                  </div>
+                  ))}
                 </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-                {deleteError && (
-                  <p className="text-red-500 font-bold text-xs uppercase tracking-wide bg-red-500/10 p-3 rounded-lg border border-red-500/20">
-                    {deleteError}
-                  </p>
-                )}
+      {/* Member Modal */}
+      {showMemberModal && (
+        <div className="fixed inset-0 bg-ivy/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white w-full max-w-2xl rounded-lg shadow-2xl border-gold/30 border overflow-hidden"
+          >
+            <div className="p-6 bg-ivy flex justify-between items-center">
+              <h2 className="text-2xl font-display text-cream">{isNewMember ? 'Add Member' : 'Edit Member'}</h2>
+              <button onClick={() => setShowMemberModal(false)} className="text-cream/60 hover:text-cream">
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSaveMember} className="p-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/40 mb-2">Full Name</label>
+                  <input
+                    required
+                    type="text"
+                    value={editingMember?.name || ''}
+                    onChange={e => setEditingMember({...editingMember!, name: e.target.value})}
+                    className="w-full px-4 py-2 border border-gold/20 rounded-md focus:ring-2 focus:ring-gold/20 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/40 mb-2">Email Address</label>
+                  <input
+                    required
+                    disabled={!isNewMember}
+                    type="email"
+                    value={editingMember?.email || ''}
+                    onChange={e => setEditingMember({...editingMember!, email: e.target.value})}
+                    className="w-full px-4 py-2 border border-gold/20 rounded-md focus:ring-2 focus:ring-gold/20 outline-none disabled:bg-cream"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/40 mb-2">Role</label>
+                  <select
+                    value={editingMember?.role || 'member'}
+                    onChange={e => setEditingMember({...editingMember!, role: e.target.value as any})}
+                    className="w-full px-4 py-2 border border-gold/20 rounded-md focus:ring-2 focus:ring-gold/20 outline-none bg-white"
+                  >
+                    <option value="member">Member</option>
+                    <option value="officer">Officer</option>
+                    <option value="admin">Administrator</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/40 mb-2">Official Title</label>
+                  <input
+                    type="text"
+                    value={editingMember?.title || ''}
+                    onChange={e => setEditingMember({...editingMember!, title: e.target.value})}
+                    className="w-full px-4 py-2 border border-gold/20 rounded-md focus:ring-2 focus:ring-gold/20 outline-none"
+                    placeholder="e.g. Grammateus"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/40 mb-2">Intake Class</label>
+                  <input
+                    type="text"
+                    value={editingMember?.intake_class || ''}
+                    onChange={e => setEditingMember({...editingMember!, intake_class: e.target.value})}
+                    className="w-full px-4 py-2 border border-gold/20 rounded-md focus:ring-2 focus:ring-gold/20 outline-none"
+                    placeholder="e.g. Fall '24"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/40 mb-2">Financial Status</label>
+                  <select
+                    value={editingMember?.financial_status || 'inactive'}
+                    onChange={e => setEditingMember({...editingMember!, financial_status: e.target.value as any})}
+                    className="w-full px-4 py-2 border border-gold/20 rounded-md focus:ring-2 focus:ring-gold/20 outline-none bg-white"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/40 mb-2">Big Brother</label>
+                  <input
+                    type="text"
+                    value={editingMember?.big_brother || ''}
+                    onChange={e => setEditingMember({...editingMember!, big_brother: e.target.value})}
+                    className="w-full px-4 py-2 border border-gold/20 rounded-md focus:ring-2 focus:ring-gold/20 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/40 mb-2">Little Brother</label>
+                  <input
+                    type="text"
+                    value={editingMember?.little_brother || ''}
+                    onChange={e => setEditingMember({...editingMember!, little_brother: e.target.value})}
+                    className="w-full px-4 py-2 border border-gold/20 rounded-md focus:ring-2 focus:ring-gold/20 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/40 mb-2">Industry</label>
+                  <input
+                    type="text"
+                    value={editingMember?.industry || ''}
+                    onChange={e => setEditingMember({...editingMember!, industry: e.target.value})}
+                    className="w-full px-4 py-2 border border-gold/20 rounded-md focus:ring-2 focus:ring-gold/20 outline-none"
+                    placeholder="e.g. Technology"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/40 mb-2">Graduation Year</label>
+                  <input
+                    type="text"
+                    value={editingMember?.grad_year || ''}
+                    onChange={e => setEditingMember({...editingMember!, grad_year: e.target.value})}
+                    className="w-full px-4 py-2 border border-gold/20 rounded-md focus:ring-2 focus:ring-gold/20 outline-none"
+                    placeholder="e.g. 2024"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/40 mb-2">Profile Photo URL</label>
+                  <input
+                    type="text"
+                    value={editingMember?.profile_photo || ''}
+                    onChange={e => setEditingMember({...editingMember!, profile_photo: e.target.value})}
+                    className="w-full px-4 py-2 border border-gold/20 rounded-md focus:ring-2 focus:ring-gold/20 outline-none"
+                    placeholder="https://example.com/photo.jpg"
+                  />
+                </div>
               </div>
 
-              <div className="flex items-center justify-end gap-4 border-t border-white/5 pt-6">
+              <div className="flex gap-4">
                 <button
                   type="button"
-                  onClick={() => setRevisionToDelete(null)}
-                  disabled={actionLoading}
-                  className="px-5 py-3 rounded-xl border border-white/10 hover:border-white/20 text-silver/60 hover:text-white uppercase font-bold text-xs tracking-widest cursor-pointer transition-all disabled:opacity-50"
+                  onClick={() => setShowMemberModal(false)}
+                  className="flex-1 px-8 py-3 border border-gold/20 rounded-md font-bold uppercase tracking-widest text-xs hover:bg-cream transition-all"
                 >
                   Cancel
                 </button>
                 <button
-                  type="button"
-                  onClick={confirmDeleteAndArchive}
+                  type="submit"
                   disabled={actionLoading}
-                  className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-red-500/10 disabled:opacity-50"
+                  className="flex-1 px-8 py-3 bg-ivy text-cream rounded-md font-bold uppercase tracking-widest text-xs hover:brightness-110 transition-all shadow-lg disabled:opacity-50"
                 >
-                  {actionLoading ? (
-                    <>
-                      <RefreshCcw size={14} className="animate-spin" />
-                      <span>Processing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 size={14} />
-                      <span>Confirm & Archive</span>
-                    </>
-                  )}
+                  {actionLoading ? 'Saving...' : 'Save Member Record'}
                 </button>
               </div>
-            </motion.div>
-          </div>
-        )}
-      </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

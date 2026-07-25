@@ -13,7 +13,16 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const isCreamPage = ['/intake-calendar', '/gantt-chart', '/financial-roster'].includes(location.pathname);
+  const isCreamPage = [
+    '/intake-calendar', 
+    '/gantt-chart', 
+    '/financial-roster', 
+    '/member-directory',
+    '/member-portal',
+    '/candidate-tracker',
+    '/selection-voting',
+    '/admin-dashboard'
+  ].includes(location.pathname);
 
   useEffect(() => {
     const user = sessionStorage.getItem('userEmail');

@@ -24,6 +24,10 @@ import Login from './pages/Login';
 import FinancialRoster from './pages/FinancialRoster';
 import GanttChart from './pages/GanttChart';
 import MemberPortal from './pages/MemberPortal';
+import MemberDirectory from './pages/MemberDirectory';
+import CandidateTracker from './pages/CandidateTracker';
+import MeetingMinutes from './pages/MeetingMinutes';
+import SelectionVoting from './pages/SelectionVoting';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import ScrollToTop from './components/ScrollToTop';
@@ -72,11 +76,15 @@ export default function App() {
                 <Route path="elections" element={<ProtectedRoute><Elections /></ProtectedRoute>} />
                 <Route path="voting-portal" element={<ProtectedRoute><VotingPortal /></ProtectedRoute>} />
                 <Route path="admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+                <Route path="candidate-tracker" element={<ProtectedRoute><CandidateTracker /></ProtectedRoute>} />
+                <Route path="selection-voting" element={<ProtectedRoute><SelectionVoting /></ProtectedRoute>} />
                 <Route path="constitution" element={<ProtectedRoute><Constitution /></ProtectedRoute>} />
                 <Route path="intake-calendar" element={<ProtectedRoute><IntakeCalendar /></ProtectedRoute>} />
                 <Route path="gantt-chart" element={<ProtectedRoute><GanttChart /></ProtectedRoute>} />
                 <Route path="login" element={<Login />} />
                 <Route path="financial-roster" element={<ProtectedRoute><FinancialRoster /></ProtectedRoute>} />
+                <Route path="member-directory" element={<ProtectedRoute><MemberDirectory /></ProtectedRoute>} />
+                <Route path="meeting-minutes" element={<ProtectedRoute><MeetingMinutes /></ProtectedRoute>} />
                 <Route path="privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="terms-of-service" element={<TermsOfService />} />
               </Route>

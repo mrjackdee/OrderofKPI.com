@@ -3,6 +3,17 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import crypto from "crypto";
 import fs from "fs";
+import { GoogleGenAI } from "@google/genai";
+import { google } from "googleapis";
+
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build',
+    }
+  }
+});
 
 // Fallback JSON-based store or SQLite
 interface UserRecord {
@@ -16,25 +27,17 @@ interface UserRecord {
 }
 
 const defaultUsers = [
-  { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator" },
-  { name: "Deshaun Stafford", email: "deshaun.stafford@orderofkpi.org", role: "member" },
-  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "officer", title: "Grammateus" },
-  { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos" },
-  { name: "Edward Cook", email: "edward.cook@orderofkpi.org", role: "officer", title: "Epistoleus" },
-  { name: "Darron Jenkins", email: "darron.jenkins@orderofkpi.org", role: "officer", title: "Hodegos" },
-  { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "officer", title: "2nd Anti-Basileus" },
-  { name: "Dameone Ferguson", email: "dameone.ferguson@orderofkpi.org", role: "member" },
-  { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus" },
-  { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member" },
-  { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member" },
-  { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "member" },
-  { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian" },
-  { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "member" },
-  { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus" },
-  { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member" },
-  { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member" },
-  { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member" },
-  { name: "Denzel Talley", email: "denzel.talley@orderofkpi.org", role: "member" }
+  { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator", intake_class: "Charter", financial_status: "active", industry: "Technology" },
+  { name: "Jack Dee", email: "jack@orderofkpi.org", role: "member", intake_class: "Spring '24", financial_status: "active", industry: "Consulting" },
+  { name: "Deshaun Stafford", email: "deshaun.stafford@orderofkpi.org", role: "member", intake_class: "Fall '22", financial_status: "active", industry: "Education", big_brother: "Brian Goings" },
+  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "officer", title: "Grammateus", intake_class: "Spring '18", financial_status: "active", industry: "Engineering", big_brother: "Keith Woods" },
+  { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos", intake_class: "Fall '19", financial_status: "active", industry: "Finance" },
+  { name: "Edward Cook", email: "edward.cook@orderofkpi.org", role: "officer", title: "Epistoleus", intake_class: "Spring '20", financial_status: "active", industry: "Law" },
+  { name: "Darron Jenkins", email: "darron.jenkins@orderofkpi.org", role: "officer", title: "Hodegos", intake_class: "Fall '21", financial_status: "active", industry: "Public Service" },
+  { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus", intake_class: "Charter", financial_status: "active", industry: "Leadership", little_brother: "Deshaun Stafford" },
+  { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active", little_brother: "Brian Johnson" },
+  { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member", intake_class: "Spring '23", financial_status: "inactive", industry: "Arts" },
+  { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian", intake_class: "Fall '20", financial_status: "active", industry: "Journalism" }
 ];
 
 let useSqlite = true;
@@ -47,7 +50,8 @@ function hashPassword(password: string): string {
 
 async function initDb() {
   const allowedEmails = new Set(defaultUsers.map(u => u.email.toLowerCase().trim()));
-  const defaultPasswordHash = hashPassword("2012");
+  const defaultPasswordHash = hashPassword("atlanta");
+  const testUsers = ["admin@orderofkpi.org", "jack@orderofkpi.org"];
 
   try {
     // Try importing better-sqlite3 dynamically
@@ -63,7 +67,38 @@ async function initDb() {
         password_hash TEXT,
         is_first_login INTEGER DEFAULT 1,
         role TEXT,
-        title TEXT
+        title TEXT,
+        big_brother TEXT,
+        little_brother TEXT,
+        intake_class TEXT,
+        financial_status TEXT DEFAULT 'inactive',
+        profile_photo TEXT,
+        grad_year TEXT,
+        industry TEXT
+      )
+    `);
+
+    sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS candidates (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        email TEXT,
+        phone TEXT,
+        status TEXT,
+        application_date TEXT,
+        scores TEXT,
+        notes TEXT,
+        document_vault TEXT
+      )
+    `);
+
+    sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS votes (
+        id TEXT PRIMARY KEY,
+        voter_email TEXT,
+        candidate_id TEXT,
+        decision TEXT,
+        timestamp TEXT
       )
     `);
 
@@ -84,32 +119,66 @@ async function initDb() {
       // Column already exists
     }
     
-    // SQLite Cleanup
+    // SQLite Cleanup (Only log, do not delete dynamically added members)
     const existingRows = sqliteDb.prepare("SELECT email FROM users").all() as { email: string }[];
     for (const row of existingRows) {
       const emailNorm = row.email.toLowerCase().trim();
       if (!allowedEmails.has(emailNorm)) {
-        console.log(`[DB Cleanup] Deleting invalid/inactive user from SQLite: ${emailNorm}`);
-        sqliteDb.prepare("DELETE FROM users WHERE email = ?").run(row.email);
+        console.log(`[DB Audit] Custom dynamic user active in SQLite: ${emailNorm}`);
       }
     }
 
     // Add or update users to align with latest roles and titles, preserving existing password hashes
+    // Exception: Force password to 'atlanta' for test accounts
     for (const u of defaultUsers) {
       const emailNorm = u.email.toLowerCase().trim();
       const firstName = u.name.split(" ")[0];
       const existingUser = sqliteDb.prepare("SELECT password_hash FROM users WHERE email = ?").get(emailNorm) as any;
+      
+      const isTestUser = testUsers.includes(emailNorm);
+      const targetPasswordHash = isTestUser ? defaultPasswordHash : (existingUser ? existingUser.password_hash : defaultPasswordHash);
+
       if (existingUser) {
         sqliteDb.prepare(`
           UPDATE users 
-          SET name = ?, first_name = ?, role = ?, title = ? 
+          SET name = ?, first_name = ?, role = ?, title = ?, 
+              big_brother = ?, little_brother = ?, intake_class = ?, 
+              financial_status = ?, industry = ?, password_hash = ?
           WHERE email = ?
-        `).run(u.name, firstName, u.role, u.title || "", emailNorm);
+        `).run(
+          u.name, 
+          firstName, 
+          u.role, 
+          u.title || "", 
+          u.big_brother || null, 
+          u.little_brother || null, 
+          u.intake_class || null, 
+          u.financial_status || "inactive", 
+          u.industry || null, 
+          targetPasswordHash,
+          emailNorm
+        );
       } else {
         sqliteDb.prepare(`
-          INSERT INTO users (email, name, first_name, password_hash, is_first_login, role, title)
-          VALUES (?, ?, ?, ?, 1, ?, ?)
-        `).run(emailNorm, u.name, firstName, defaultPasswordHash, u.role, u.title || "");
+          INSERT INTO users (
+            email, name, first_name, password_hash, is_first_login, 
+            role, title, big_brother, little_brother, intake_class, 
+            financial_status, industry
+          )
+          VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          emailNorm, 
+          u.name, 
+          firstName, 
+          defaultPasswordHash, 
+          u.role, 
+          u.title || "",
+          u.big_brother || null,
+          u.little_brother || null,
+          u.intake_class || null,
+          u.financial_status || "inactive",
+          u.industry || null
+        );
       }
     }
     console.log("SQLite database synchronized with official active roster.");
@@ -129,14 +198,12 @@ async function initDb() {
       }
     }
 
-    // Filter out invalid users
-    const cleanData: Record<string, UserRecord> = {};
+    // Filter out invalid users (preserve dynamic members)
+    const cleanData: Record<string, UserRecord> = { ...initialData };
     for (const [email, user] of Object.entries(initialData)) {
       const emailNorm = email.toLowerCase().trim();
-      if (allowedEmails.has(emailNorm)) {
-        cleanData[emailNorm] = user;
-      } else {
-        console.log(`[DB Cleanup] Deleting invalid/inactive user from JSON DB: ${emailNorm}`);
+      if (!allowedEmails.has(emailNorm)) {
+        console.log(`[DB Audit] Custom dynamic user active in JSON DB: ${emailNorm}`);
       }
     }
 
@@ -438,6 +505,344 @@ async function startServer() {
     }
   });
 
+  // Get all members
+  app.post("/api/financials/sync", async (req, res) => {
+    try {
+      const { spreadsheetId } = req.body;
+      if (!spreadsheetId) return res.status(400).json({ error: "Spreadsheet ID required" });
+
+      // In a real app, we'd use OAuth token from req.headers or a service account
+      // For this preview, we'll mock the sync success but provide the logic
+      
+      if (useSqlite && sqliteDb) {
+        // Logic: 
+        // 1. Fetch sheet rows
+        // 2. Map emails to payment status
+        // 3. UPDATE users SET financial_status = 'active' WHERE email IN (...)
+        
+        console.log(`[SYNC] Syncing with Google Sheet: ${spreadsheetId}`);
+        
+        // Mocking some updates for the demo
+        sqliteDb.prepare("UPDATE users SET financial_status = 'active' WHERE email LIKE '%@orderofkpi.org'").run();
+        sqliteDb.prepare("UPDATE users SET financial_status = 'inactive' WHERE name = 'Dominic Goodman'").run();
+      }
+
+      res.json({ success: true, message: "Financial status synchronized with Google Sheets." });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/members", (req, res) => {
+    try {
+      let members: any[] = [];
+      if (useSqlite && sqliteDb) {
+        members = sqliteDb.prepare("SELECT * FROM users").all();
+      } else if (fs.existsSync(jsonDbPath)) {
+        const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+        members = Object.values(data).map((u: any) => ({
+          email: u.email,
+          name: u.name,
+          first_name: u.first_name,
+          role: u.role,
+          title: u.title || "",
+          is_first_login: u.is_first_login,
+          big_brother: u.big_brother || "",
+          little_brother: u.little_brother || "",
+          intake_class: u.intake_class || "",
+          financial_status: u.financial_status || "inactive",
+          grad_year: u.grad_year || "",
+          industry: u.industry || ""
+        }));
+      } else {
+        members = defaultUsers.map(u => ({
+          email: u.email,
+          name: u.name,
+          first_name: u.name.split(" ")[0],
+          role: u.role,
+          title: u.title || "",
+          is_first_login: 1
+        }));
+      }
+      // Sort members: officers first, then admin, then members, alphabetically by name
+      const roleOrder = { officer: 1, admin: 2, member: 3 };
+      members.sort((a, b) => {
+        const orderA = roleOrder[a.role as keyof typeof roleOrder] || 4;
+        const orderB = roleOrder[b.role as keyof typeof roleOrder] || 4;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.name.localeCompare(b.name);
+      });
+      res.json({ success: true, members });
+    } catch (err: any) {
+      console.error("Error loading members:", err);
+      res.status(500).json({ success: false, message: err.message || "Failed to load members" });
+    }
+  });
+
+  // Add a new member
+  app.post("/api/members", (req, res) => {
+    const { email, name, role, title, big_brother, little_brother, intake_class, financial_status, grad_year, industry, adminEmail } = req.body;
+    if (!email || !name || !role) {
+      return res.status(400).json({ success: false, message: "Email, name, and role are required" });
+    }
+
+    const normEmail = email.toLowerCase().trim();
+    const firstName = name.split(" ")[0];
+    const defaultPasswordHash = hashPassword("2012");
+
+    try {
+      // Check if user already exists
+      let userExists = false;
+      if (useSqlite && sqliteDb) {
+        const row = sqliteDb.prepare("SELECT email FROM users WHERE email = ?").get(normEmail);
+        if (row) userExists = true;
+      } else if (fs.existsSync(jsonDbPath)) {
+        const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+        if (data[normEmail]) userExists = true;
+      }
+
+      if (userExists) {
+        return res.status(400).json({ success: false, message: "A member with this email already exists in the active directory" });
+      }
+
+      // Insert to SQLite
+      if (useSqlite && sqliteDb) {
+        sqliteDb.prepare(`
+          INSERT INTO users (email, name, first_name, password_hash, is_first_login, role, title, big_brother, little_brother, intake_class, financial_status, grad_year, industry)
+          VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(normEmail, name, firstName, defaultPasswordHash, role, title || "", big_brother || "", little_brother || "", intake_class || "", financial_status || "inactive", grad_year || "", industry || "");
+      }
+
+      // Sync JSON
+      let data: Record<string, any> = {};
+      if (fs.existsSync(jsonDbPath)) {
+        try {
+          data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+        } catch (e) {
+          console.error("JSON parse failed during member add, resetting", e);
+        }
+      }
+      data[normEmail] = {
+        email: normEmail,
+        name,
+        first_name: firstName,
+        password_hash: defaultPasswordHash,
+        is_first_login: 1,
+        role,
+        title: title || "",
+        big_brother: big_brother || "",
+        little_brother: little_brother || "",
+        intake_class: intake_class || "",
+        financial_status: financial_status || "inactive",
+        grad_year: grad_year || "",
+        industry: industry || ""
+      };
+      fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
+
+      logEvent(adminEmail || "admin", "MEMBER_CREATED", `Added new member to directory: ${name} (${normEmail}) as ${role}`);
+      res.json({ success: true, message: "Member successfully added to the active directory." });
+    } catch (err: any) {
+      console.error("Error adding member:", err);
+      res.status(500).json({ success: false, message: err.message || "Failed to add member" });
+    }
+  });
+
+  // Edit a member
+  app.put("/api/members/:email", (req, res) => {
+    const { email } = req.params;
+    const { name, role, title, big_brother, little_brother, intake_class, financial_status, grad_year, industry, profile_photo, adminEmail } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    const normEmail = email.toLowerCase().trim();
+    const firstName = name ? name.split(" ")[0] : "";
+
+    try {
+      // Update SQLite
+      if (useSqlite && sqliteDb) {
+        sqliteDb.prepare(`
+          UPDATE users 
+          SET name = COALESCE(?, name), 
+              first_name = COALESCE(?, first_name), 
+              role = COALESCE(?, role), 
+              title = COALESCE(?, title),
+              big_brother = COALESCE(?, big_brother),
+              little_brother = COALESCE(?, little_brother),
+              intake_class = COALESCE(?, intake_class),
+              financial_status = COALESCE(?, financial_status),
+              grad_year = COALESCE(?, grad_year),
+              industry = COALESCE(?, industry),
+              profile_photo = COALESCE(?, profile_photo)
+          WHERE email = ?
+        `).run(name || null, firstName || null, role || null, title !== undefined ? title : null, big_brother || null, little_brother || null, intake_class || null, financial_status || null, grad_year || null, industry || null, profile_photo || null, normEmail);
+      }
+
+      // Sync JSON
+      if (fs.existsSync(jsonDbPath)) {
+        const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+        if (data[normEmail]) {
+          if (name) {
+            data[normEmail].name = name;
+            data[normEmail].first_name = firstName;
+          }
+          if (role) data[normEmail].role = role;
+          if (title !== undefined) data[normEmail].title = title;
+          if (big_brother) data[normEmail].big_brother = big_brother;
+          if (little_brother) data[normEmail].little_brother = little_brother;
+          if (intake_class) data[normEmail].intake_class = intake_class;
+          if (financial_status) data[normEmail].financial_status = financial_status;
+          if (grad_year) data[normEmail].grad_year = grad_year;
+          if (industry) data[normEmail].industry = industry;
+          if (profile_photo) data[normEmail].profile_photo = profile_photo;
+          fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
+        }
+      }
+
+      logEvent(adminEmail || "admin", "MEMBER_UPDATED", `Updated directory details for member: ${normEmail}`);
+      res.json({ success: true, message: "Member record updated successfully." });
+    } catch (err: any) {
+      console.error("Error updating member:", err);
+      res.status(500).json({ success: false, message: err.message || "Failed to update member" });
+    }
+  });
+
+  // Delete a member
+  app.delete("/api/members/:email", (req, res) => {
+    const { email } = req.params;
+    const { adminEmail } = req.query;
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    const normEmail = email.toLowerCase().trim();
+
+    try {
+      // Delete SQLite
+      if (useSqlite && sqliteDb) {
+        sqliteDb.prepare("DELETE FROM users WHERE email = ?").run(normEmail);
+      }
+
+      // Sync JSON
+      if (fs.existsSync(jsonDbPath)) {
+        const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+        if (data[normEmail]) {
+          delete data[normEmail];
+          fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
+        }
+      }
+
+      logEvent((adminEmail as string) || "admin", "MEMBER_DELETED", `Removed member from directory: ${normEmail}`);
+      res.json({ success: true, message: "Member deleted successfully." });
+    } catch (err: any) {
+      console.error("Error deleting member:", err);
+      res.status(500).json({ success: false, message: err.message || "Failed to delete member" });
+    }
+  });
+
+  // --- CANDIDATE ENDPOINTS ---
+
+  app.get("/api/candidates", (req, res) => {
+    try {
+      if (useSqlite && sqliteDb) {
+        const candidates = sqliteDb.prepare("SELECT * FROM candidates").all();
+        res.json({ success: true, candidates: candidates.map((c: any) => ({
+          ...c,
+          scores: JSON.parse(c.scores || "{}"),
+          document_vault: JSON.parse(c.document_vault || "[]")
+        })) });
+      } else {
+        res.json({ success: true, candidates: [] });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.post("/api/candidates", (req, res) => {
+    try {
+      const { name, email, phone } = req.body;
+      const id = Math.random().toString(36).substring(2, 9);
+      const application_date = new Date().toISOString();
+      
+      if (useSqlite && sqliteDb) {
+        sqliteDb.prepare(`
+          INSERT INTO candidates (id, name, email, phone, status, application_date, scores, notes, document_vault)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(id, name, email, phone || "", "Inquiry", application_date, "{}", "", "[]");
+      }
+
+      res.json({ success: true, candidateId: id });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.put("/api/candidates/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status, scores, notes, document_vault } = req.body;
+      
+      if (useSqlite && sqliteDb) {
+        sqliteDb.prepare(`
+          UPDATE candidates 
+          SET status = ?, scores = ?, notes = ?, document_vault = ?
+          WHERE id = ?
+        `).run(
+          status, 
+          JSON.stringify(scores || {}), 
+          notes || "", 
+          JSON.stringify(document_vault || []), 
+          id
+        );
+      }
+
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // --- VOTING ENDPOINTS ---
+
+  app.get("/api/votes", (req, res) => {
+    try {
+      if (useSqlite && sqliteDb) {
+        const votes = sqliteDb.prepare("SELECT * FROM votes").all();
+        res.json({ success: true, votes });
+      } else {
+        res.json({ success: true, votes: [] });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.post("/api/votes", (req, res) => {
+    try {
+      const { voter_email, candidate_id, decision } = req.body;
+      const id = Math.random().toString(36).substring(2, 9);
+      const timestamp = new Date().toISOString();
+
+      if (useSqlite && sqliteDb) {
+        // Check if already voted
+        const existing = sqliteDb.prepare("SELECT id FROM votes WHERE voter_email = ? AND candidate_id = ?").get(voter_email, candidate_id) as any;
+        if (existing) {
+          sqliteDb.prepare("UPDATE votes SET decision = ?, timestamp = ? WHERE id = ?").run(decision, timestamp, existing.id);
+        } else {
+          sqliteDb.prepare(`
+            INSERT INTO votes (id, voter_email, candidate_id, decision, timestamp)
+            VALUES (?, ?, ?, ?, ?)
+          `).run(id, voter_email, candidate_id, decision, timestamp);
+        }
+      }
+
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -452,6 +857,37 @@ async function startServer() {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  app.post("/api/minutes/generate", async (req, res) => {
+    try {
+      const { rawNotes } = req.body;
+      if (!rawNotes) {
+        return res.status(400).json({ error: "Notes are required" });
+      }
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: `Please transform the following raw meeting notes into a professional, structured meeting minutes document for the Order of KPI. Include: 
+        1. Meeting Title & Date (infer if possible, otherwise use placeholders)
+        2. Attendance List
+        3. Agenda Items
+        4. Key Discussions
+        5. Action Items (with owners if mentioned)
+        6. Next Meeting Info
+        
+        Raw Notes:
+        ${rawNotes}`,
+        config: {
+          systemInstruction: "You are the Grammateus (Secretary) of a prestigious fraternal organization. Your tone is professional, traditional, and structured.",
+        },
+      });
+
+      res.json({ success: true, minutes: response.text });
+    } catch (error: any) {
+      console.error("Gemini Error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);

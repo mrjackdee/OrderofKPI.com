@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Anton&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Anton&family=Playfair+Display:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 @import "tailwindcss";
 
@@ -7,10 +7,17 @@
   --color-silver: #c0c0c0;
   --color-pure-black: #000000;
   --color-pure-white: #FFFFFF;
+  
+  --color-ivy: #1E3F20;
+  --color-gold: #B8860B;
+  --color-cream: #FDFCF0;
 
   --font-display: "Manrope", sans-serif;
   --font-outline: "Anton", sans-serif;
   --font-body: "Manrope", sans-serif;
+  
+  --font-fraternal-display: "Playfair Display", serif;
+  --font-fraternal-body: "Plus Jakarta Sans", sans-serif;
 }
 
 @layer base {
@@ -53,6 +60,23 @@
 
   .btn-silver:hover {
     @apply brightness-110 shadow-[0_0_15px_rgba(192,192,192,0.5)];
+  }
+
+  /* Portal Utilities */
+  .border-gold {
+    border: 1px solid var(--color-gold);
+  }
+
+  .shadow-soft {
+    box-shadow: 0 4px 20px rgba(30, 63, 32, 0.08);
+  }
+
+  .btn-ivy {
+    @apply bg-ivy text-cream font-bold uppercase tracking-widest px-8 py-3 transition-all duration-300 hover:brightness-110;
+  }
+
+  .btn-outline-ivy {
+    @apply border-2 border-ivy text-ivy font-bold uppercase tracking-widest px-8 py-3 transition-all duration-300 hover:bg-ivy hover:text-cream;
   }
 }
 

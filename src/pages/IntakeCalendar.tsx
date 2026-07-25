@@ -170,6 +170,9 @@ export default function IntakeCalendar() {
           <Link to="/gantt-chart" className="px-5 py-2 rounded-full border border-[#B8860B]/30 text-[#1E3F20] text-xs font-bold uppercase tracking-widest hover:bg-[#B8860B]/10 transition-colors flex items-center gap-2">
             <LayoutList size={14} /> Intake Plan
           </Link>
+          <Link to="/member-directory" className="px-5 py-2 rounded-full border border-[#B8860B]/30 text-[#1E3F20] text-xs font-bold uppercase tracking-widest hover:bg-[#B8860B]/10 transition-colors flex items-center gap-2">
+            <Users size={14} /> Member Directory
+          </Link>
         </div>
 
         {/* Header Section */}
