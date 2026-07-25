@@ -183,7 +183,7 @@ async function initDb() {
     }
     console.log("SQLite database synchronized with official active roster.");
   } catch (err) {
-    console.log("SQLite loading failed, falling back to JSON database file.");
+    console.log("SQLite loading failed, falling back to JSON database file.", err);
     useSqlite = false;
   }
 
