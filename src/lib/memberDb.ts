@@ -1,7 +1,7 @@
 export interface MemberUser {
   name: string;
   email: string;
-  role: 'admin' | 'member' | 'officer';
+  role: 'admin' | 'member' | 'officer' | 'prospective';
   title?: string;
 }
 
@@ -21,10 +21,12 @@ export const defaultMembers: MemberUser[] = [
   { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "member" },
   { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian" },
   { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus" },
-  { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member" },
-  { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member" },
-  { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member" },
-  { name: "Denzel Talley", email: "denzel.talley@orderofkpi.org", role: "member" }
+  { name: "Denzel Talley", email: "denzel.talley@orderofkpi.org", role: "member" },
+  { name: "Applicant Test", email: "applicant@orderofkpi.org", role: "member" }
+];
+
+export const prospectiveMembers: MemberUser[] = [
+  { name: "Intake Candidate", email: "candidate@orderofkpi.org", role: "prospective" }
 ];
 
 /**
@@ -118,7 +120,8 @@ export async function performHybridPasswordChange(
 
 // Client-Side Authentication Fallbacks
 function performClientSideLogin(email: string, pass: string) {
-  const member = defaultMembers.find(m => m.email.toLowerCase() === email);
+  const member = defaultMembers.find(m => m.email.toLowerCase() === email) || 
+                 prospectiveMembers.find(m => m.email.toLowerCase() === email);
   if (!member) {
     return {
       success: false,
@@ -174,4 +177,38 @@ function performClientSidePasswordChange(email: string, currentPass: string, new
     success: true,
     message: 'Your portal password was updated successfully in your browser storage.'
   };
+}
+
+export async function saveApplication(email: string, data: any, status: 'draft' | 'submitted') {
+  try {
+    const response = await fetch('/api/applications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, data, status }),
+    });
+    return await response.json();
+  } catch (err) {
+    console.error('Failed to save application:', err);
+    return { success: false, message: 'Connection error' };
+  }
+}
+
+export async function fetchApplication(email: string) {
+  try {
+    const response = await fetch(`/api/applications/${email}`);
+    return await response.json();
+  } catch (err) {
+    console.error('Failed to fetch application:', err);
+    return { success: false, message: 'Connection error' };
+  }
+}
+
+export async function fetchAllApplications() {
+  try {
+    const response = await fetch('/api/applications');
+    return await response.json();
+  } catch (err) {
+    console.error('Failed to fetch all applications:', err);
+    return { success: false, message: 'Connection error' };
+  }
 }

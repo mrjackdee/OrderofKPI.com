@@ -37,6 +37,7 @@ const defaultUsers = [
   { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus", intake_class: "Charter", financial_status: "active", industry: "Leadership", little_brother: "Deshaun Stafford" },
   { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active", little_brother: "Brian Johnson" },
   { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member", intake_class: "Spring '23", financial_status: "inactive", industry: "Arts" },
+  { name: "Intake Candidate", email: "candidate@orderofkpi.org", role: "prospective", intake_class: "FY27", financial_status: "inactive" },
   { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian", intake_class: "Fall '20", financial_status: "active", industry: "Journalism" }
 ];
 
@@ -99,6 +100,17 @@ async function initDb() {
         candidate_id TEXT,
         decision TEXT,
         timestamp TEXT
+      )
+    `);
+
+    sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS membership_applications (
+        id TEXT PRIMARY KEY,
+        email TEXT UNIQUE,
+        data TEXT,
+        status TEXT DEFAULT 'draft',
+        last_saved_at TEXT,
+        submitted_at TEXT
       )
     `);
 
@@ -747,6 +759,89 @@ async function startServer() {
   });
 
   // --- CANDIDATE ENDPOINTS ---
+
+  // --- CANDIDATE ENDPOINTS ---
+
+  app.get("/api/applications", (req, res) => {
+    try {
+      if (useSqlite && sqliteDb) {
+        const applications = sqliteDb.prepare("SELECT * FROM membership_applications").all();
+        res.json({ 
+          success: true, 
+          applications: applications.map((a: any) => ({
+            ...a,
+            data: JSON.parse(a.data || "{}")
+          })) 
+        });
+      } else {
+        res.json({ success: true, applications: [] });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.get("/api/applications/:email", (req, res) => {
+    try {
+      const { email } = req.params;
+      if (useSqlite && sqliteDb) {
+        const app = sqliteDb.prepare("SELECT * FROM membership_applications WHERE email = ?").get(email) as any;
+        if (app) {
+          return res.json({ 
+            success: true, 
+            application: {
+              ...app,
+              data: JSON.parse(app.data || "{}")
+            }
+          });
+        }
+      }
+      res.json({ success: true, application: null });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.post("/api/applications", (req, res) => {
+    try {
+      const { email, data, status } = req.body;
+      const timestamp = new Date().toISOString();
+      const id = Math.random().toString(36).substring(2, 9);
+      
+      if (useSqlite && sqliteDb) {
+        const existing = sqliteDb.prepare("SELECT id FROM membership_applications WHERE email = ?").get(email) as any;
+        if (existing) {
+          sqliteDb.prepare(`
+            UPDATE membership_applications 
+            SET data = ?, status = ?, last_saved_at = ?, submitted_at = ?
+            WHERE email = ?
+          `).run(
+            JSON.stringify(data), 
+            status, 
+            timestamp, 
+            status === 'submitted' ? timestamp : null,
+            email
+          );
+        } else {
+          sqliteDb.prepare(`
+            INSERT INTO membership_applications (id, email, data, status, last_saved_at, submitted_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `).run(
+            id, 
+            email, 
+            JSON.stringify(data), 
+            status, 
+            timestamp, 
+            status === 'submitted' ? timestamp : null
+          );
+        }
+      }
+
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
 
   app.get("/api/candidates", (req, res) => {
     try {

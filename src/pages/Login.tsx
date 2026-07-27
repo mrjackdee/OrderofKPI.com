@@ -98,10 +98,10 @@ export default function Login() {
 
           <div className="text-center mb-8">
             <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-widest mb-2">
-              Member Portal
+              KPI Portal
             </h1>
             <p className="text-silver/60 text-xs uppercase tracking-wider font-semibold whitespace-pre-line">
-              Secure Access for Financial Members{"\n\n"}Access for Financial Members
+              Secure Access for Members & Candidates
             </p>
           </div>
 

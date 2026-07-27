@@ -52,9 +52,49 @@
         "submitterName": { "type": "string" }
       },
       "required": ["article", "section", "originalText", "proposedText", "submittedAt"]
+    },
+    "membership_application": {
+      "title": "Membership Application",
+      "description": "New member application data.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "firstName": { "type": "string" },
+        "middleName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "dateOfBirth": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "employment": { "type": "string" },
+        "position": { "type": "string" },
+        "degrees": { "type": "string" },
+        "honors": { "type": "string" },
+        "organizations": { "type": "string" },
+        "priorKnowledge": { "type": "string" },
+        "essay1": { "type": "string" },
+        "essay2": { "type": "string" },
+        "essay3": { "type": "string" },
+        "essay4": { "type": "string" },
+        "essay5": { "type": "string" },
+        "isFraternityMember": { "type": "boolean" },
+        "fraternityDetails": { "type": "string" },
+        "hasAkaFamily": { "type": "boolean" },
+        "akaFamilyDetails": { "type": "string" },
+        "previousApplied": { "type": "boolean" },
+        "previousAppliedDetails": { "type": "string" },
+        "socialUrls": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "submitted"] },
+        "lastSavedAt": { "type": "string", "format": "date-time" },
+        "submittedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "firstName", "lastName", "status"]
     }
   },
   "firestore": {
+    "applications/{applicationId}": {
+      "schema": "membership_application",
+      "description": "Member applications."
+    },
     "ballots/{ballotId}": {
       "schema": "ballot",
       "description": "Authorized ballot numbers."

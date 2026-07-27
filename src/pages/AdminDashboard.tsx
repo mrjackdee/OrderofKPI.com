@@ -206,14 +206,17 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="mt-6 space-y-3">
-              <Link to="/candidate-tracker" className="flex items-center justify-between p-4 bg-gold text-ivy rounded-lg font-bold uppercase tracking-widest text-[10px] hover:brightness-110 transition-all shadow-lg">
-                Candidate Tracker <ArrowRight className="w-3 h-3" />
-              </Link>
-              <Link to="/selection-voting" className="flex items-center justify-between p-4 bg-ivy text-cream rounded-lg font-bold uppercase tracking-widest text-[10px] hover:brightness-110 transition-all shadow-lg">
-                Selection Voting <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
+              <div className="mt-6 space-y-3">
+                <Link to="/candidate-tracker" className="flex items-center justify-between p-4 bg-gold text-ivy rounded-lg font-bold uppercase tracking-widest text-[10px] hover:brightness-110 transition-all shadow-lg">
+                  Candidate Tracker <ArrowRight className="w-3 h-3" />
+                </Link>
+                <Link to="/review-applications" className="flex items-center justify-between p-4 bg-ivy text-cream border border-gold/30 rounded-lg font-bold uppercase tracking-widest text-[10px] hover:brightness-110 transition-all shadow-lg">
+                  Member Applications <ArrowRight className="w-3 h-3" />
+                </Link>
+                <Link to="/selection-voting" className="flex items-center justify-between p-4 bg-ivy text-cream rounded-lg font-bold uppercase tracking-widest text-[10px] hover:brightness-110 transition-all shadow-lg">
+                  Selection Voting <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
           </div>
 
           {/* Main Content Area */}
