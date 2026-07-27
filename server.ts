@@ -210,6 +210,8 @@ async function initDb() {
     // Add missing users or update roles/titles for existing ones
     for (const u of defaultUsers) {
       const emailNorm = u.email.toLowerCase().trim();
+      const isTestUser = testUsers.includes(emailNorm);
+
       if (!cleanData[emailNorm]) {
         const firstName = u.name.split(" ")[0];
         cleanData[emailNorm] = {
@@ -224,6 +226,10 @@ async function initDb() {
       } else {
         cleanData[emailNorm].role = u.role;
         cleanData[emailNorm].title = u.title || "";
+        // Force test user password to match the requested 'atlanta'
+        if (isTestUser) {
+          cleanData[emailNorm].password_hash = defaultPasswordHash;
+        }
       }
     }
 
@@ -588,7 +594,7 @@ async function startServer() {
 
     const normEmail = email.toLowerCase().trim();
     const firstName = name.split(" ")[0];
-    const defaultPasswordHash = hashPassword("2012");
+    const defaultPasswordHash = hashPassword("atlanta");
 
     try {
       // Check if user already exists

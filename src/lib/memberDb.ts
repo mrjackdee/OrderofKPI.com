@@ -20,7 +20,6 @@ export const defaultMembers: MemberUser[] = [
   { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member" },
   { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "member" },
   { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian" },
-  { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "member" },
   { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus" },
   { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member" },
   { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member" },
