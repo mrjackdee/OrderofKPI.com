@@ -1,6 +1,6 @@
 {
   "name": "OrderOfKPI.com",
-  "description": "National portal for Kappa Pi Fraternity, Incorporated, featuring member directories, intake application management, and organizational governance tools.",
+  "description": "National portal for Kappa Pi, featuring member directories, intake application management, and organizational governance tools.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -29,13 +29,13 @@ interface UserRecord {
 const defaultUsers = [
   { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator", intake_class: "Charter", financial_status: "active", industry: "Technology" },
   { name: "Jack Dee", email: "jack@orderofkpi.org", role: "member", intake_class: "Spring '24", financial_status: "active", industry: "Consulting" },
-  { name: "Deshaun Stafford", email: "deshaun.stafford@orderofkpi.org", role: "member", intake_class: "Fall '22", financial_status: "active", industry: "Education", big_brother: "Brian Goings" },
-  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "officer", title: "Grammateus", intake_class: "Spring '18", financial_status: "active", industry: "Engineering", big_brother: "Keith Woods" },
+  { name: "Deshaun Stafford", email: "deshaun.stafford@orderofkpi.org", role: "member", intake_class: "Fall '22", financial_status: "active", industry: "Education", big_member: "Brian Goings" },
+  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "officer", title: "Grammateus", intake_class: "Spring '18", financial_status: "active", industry: "Engineering", big_member: "Keith Woods" },
   { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos", intake_class: "Fall '19", financial_status: "active", industry: "Finance" },
   { name: "Edward Cook", email: "edward.cook@orderofkpi.org", role: "officer", title: "Epistoleus", intake_class: "Spring '20", financial_status: "active", industry: "Law" },
   { name: "Darron Jenkins", email: "darron.jenkins@orderofkpi.org", role: "officer", title: "Hodegos", intake_class: "Fall '21", financial_status: "active", industry: "Public Service" },
-  { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus", intake_class: "Charter", financial_status: "active", industry: "Leadership", little_brother: "Deshaun Stafford" },
-  { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active", little_brother: "Brian Johnson" },
+  { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus", intake_class: "Charter", financial_status: "active", industry: "Leadership", little_member: "Deshaun Stafford" },
+  { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active", little_member: "Brian Johnson" },
   { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member", intake_class: "Spring '23", financial_status: "inactive", industry: "Arts" },
   { name: "Intake Candidate", email: "candidate@orderofkpi.org", role: "prospective", intake_class: "FY27", financial_status: "inactive" },
   { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian", intake_class: "Fall '20", financial_status: "active", industry: "Journalism" }
@@ -69,8 +69,8 @@ async function initDb() {
         is_first_login INTEGER DEFAULT 1,
         role TEXT,
         title TEXT,
-        big_brother TEXT,
-        little_brother TEXT,
+        big_member TEXT,
+        little_member TEXT,
         intake_class TEXT,
         financial_status TEXT DEFAULT 'inactive',
         profile_photo TEXT,
@@ -154,7 +154,7 @@ async function initDb() {
         sqliteDb.prepare(`
           UPDATE users 
           SET name = ?, first_name = ?, role = ?, title = ?, 
-              big_brother = ?, little_brother = ?, intake_class = ?, 
+              big_member = ?, little_member = ?, intake_class = ?, 
               financial_status = ?, industry = ?, password_hash = ?
           WHERE email = ?
         `).run(
@@ -162,8 +162,8 @@ async function initDb() {
           firstName, 
           u.role, 
           u.title || "", 
-          u.big_brother || null, 
-          u.little_brother || null, 
+          u.big_member || null, 
+          u.little_member || null, 
           u.intake_class || null, 
           u.financial_status || "inactive", 
           u.industry || null, 
@@ -174,7 +174,7 @@ async function initDb() {
         sqliteDb.prepare(`
           INSERT INTO users (
             email, name, first_name, password_hash, is_first_login, 
-            role, title, big_brother, little_brother, intake_class, 
+            role, title, big_member, little_member, intake_class, 
             financial_status, industry
           )
           VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
@@ -185,8 +185,8 @@ async function initDb() {
           defaultPasswordHash, 
           u.role, 
           u.title || "",
-          u.big_brother || null,
-          u.little_brother || null,
+          u.big_member || null,
+          u.little_member || null,
           u.intake_class || null,
           u.financial_status || "inactive",
           u.industry || null
@@ -565,8 +565,8 @@ async function startServer() {
           role: u.role,
           title: u.title || "",
           is_first_login: u.is_first_login,
-          big_brother: u.big_brother || "",
-          little_brother: u.little_brother || "",
+          big_member: u.big_member || "",
+          little_member: u.little_member || "",
           intake_class: u.intake_class || "",
           financial_status: u.financial_status || "inactive",
           grad_year: u.grad_year || "",
@@ -599,7 +599,7 @@ async function startServer() {
 
   // Add a new member
   app.post("/api/members", (req, res) => {
-    const { email, name, role, title, big_brother, little_brother, intake_class, financial_status, grad_year, industry, adminEmail } = req.body;
+    const { email, name, role, title, big_member, little_member, intake_class, financial_status, grad_year, industry, adminEmail } = req.body;
     if (!email || !name || !role) {
       return res.status(400).json({ success: false, message: "Email, name, and role are required" });
     }
@@ -626,9 +626,9 @@ async function startServer() {
       // Insert to SQLite
       if (useSqlite && sqliteDb) {
         sqliteDb.prepare(`
-          INSERT INTO users (email, name, first_name, password_hash, is_first_login, role, title, big_brother, little_brother, intake_class, financial_status, grad_year, industry)
+          INSERT INTO users (email, name, first_name, password_hash, is_first_login, role, title, big_member, little_member, intake_class, financial_status, grad_year, industry)
           VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(normEmail, name, firstName, defaultPasswordHash, role, title || "", big_brother || "", little_brother || "", intake_class || "", financial_status || "inactive", grad_year || "", industry || "");
+        `).run(normEmail, name, firstName, defaultPasswordHash, role, title || "", big_member || "", little_member || "", intake_class || "", financial_status || "inactive", grad_year || "", industry || "");
       }
 
       // Sync JSON
@@ -648,8 +648,8 @@ async function startServer() {
         is_first_login: 1,
         role,
         title: title || "",
-        big_brother: big_brother || "",
-        little_brother: little_brother || "",
+        big_member: big_member || "",
+        little_member: little_member || "",
         intake_class: intake_class || "",
         financial_status: financial_status || "inactive",
         grad_year: grad_year || "",
@@ -668,7 +668,7 @@ async function startServer() {
   // Edit a member
   app.put("/api/members/:email", (req, res) => {
     const { email } = req.params;
-    const { name, role, title, big_brother, little_brother, intake_class, financial_status, grad_year, industry, profile_photo, adminEmail } = req.body;
+    const { name, role, title, big_member, little_member, intake_class, financial_status, grad_year, industry, profile_photo, adminEmail } = req.body;
     if (!email) {
       return res.status(400).json({ success: false, message: "Email is required" });
     }
@@ -685,15 +685,15 @@ async function startServer() {
               first_name = COALESCE(?, first_name), 
               role = COALESCE(?, role), 
               title = COALESCE(?, title),
-              big_brother = COALESCE(?, big_brother),
-              little_brother = COALESCE(?, little_brother),
+              big_member = COALESCE(?, big_member),
+              little_member = COALESCE(?, little_member),
               intake_class = COALESCE(?, intake_class),
               financial_status = COALESCE(?, financial_status),
               grad_year = COALESCE(?, grad_year),
               industry = COALESCE(?, industry),
               profile_photo = COALESCE(?, profile_photo)
           WHERE email = ?
-        `).run(name || null, firstName || null, role || null, title !== undefined ? title : null, big_brother || null, little_brother || null, intake_class || null, financial_status || null, grad_year || null, industry || null, profile_photo || null, normEmail);
+        `).run(name || null, firstName || null, role || null, title !== undefined ? title : null, big_member || null, little_member || null, intake_class || null, financial_status || null, grad_year || null, industry || null, profile_photo || null, normEmail);
       }
 
       // Sync JSON
@@ -706,8 +706,8 @@ async function startServer() {
           }
           if (role) data[normEmail].role = role;
           if (title !== undefined) data[normEmail].title = title;
-          if (big_brother) data[normEmail].big_brother = big_brother;
-          if (little_brother) data[normEmail].little_brother = little_brother;
+          if (big_member) data[normEmail].big_member = big_member;
+          if (little_member) data[normEmail].little_member = little_member;
           if (intake_class) data[normEmail].intake_class = intake_class;
           if (financial_status) data[normEmail].financial_status = financial_status;
           if (grad_year) data[normEmail].grad_year = grad_year;

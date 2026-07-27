@@ -80,7 +80,7 @@ export default function MemberPortal() {
           <p className="text-ivy/60 text-lg md:text-xl font-body max-w-2xl mx-auto leading-relaxed">
             {isProspective 
               ? 'Complete your application, track your progress, and stay updated on the intake process.'
-              : 'Welcome back. Access organizational tools, collaborate with brothers, and manage administrative workflows.'
+              : 'Welcome back. Access organizational tools, collaborate with members, and manage administrative workflows.'
             }
           </p>
         </motion.div>
@@ -217,7 +217,7 @@ export default function MemberPortal() {
                 <Users size={28} />
               </div>
               <div>
-                <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Brotherhood Roster</h4>
+                <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Membership Roster</h4>
                 <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Member Directory</p>
               </div>
             </Link>

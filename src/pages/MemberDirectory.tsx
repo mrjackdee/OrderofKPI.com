@@ -79,7 +79,7 @@ export default function MemberDirectory() {
             transition={{ delay: 0.1 }}
             className="text-cream/80 max-w-2xl mx-auto font-body"
           >
-            Connecting the legacy of Order of KPI through our brotherhood.
+            Connecting the legacy of Order of KPI through our membership.
           </motion.p>
         </div>
       </div>
@@ -186,19 +186,19 @@ export default function MemberDirectory() {
                   <div>
                     <p className="text-[10px] uppercase tracking-widest text-ivy/40 font-bold mb-1">Lineage (Big)</p>
                     <button 
-                      onClick={() => setSearchQuery(member.big_brother || '')}
+                      onClick={() => setSearchQuery(member.big_member || '')}
                       className="text-sm text-ivy truncate hover:text-gold transition-colors text-left w-full"
                     >
-                      {member.big_brother || 'None'}
+                      {member.big_member || 'None'}
                     </button>
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-widest text-ivy/40 font-bold mb-1">Lineage (Little)</p>
                     <button 
-                      onClick={() => setSearchQuery(member.little_brother || '')}
+                      onClick={() => setSearchQuery(member.little_member || '')}
                       className="text-sm text-ivy truncate hover:text-gold transition-colors text-left w-full"
                     >
-                      {member.little_brother || 'None'}
+                      {member.little_member || 'None'}
                     </button>
                   </div>
                 </div>

@@ -8,8 +8,8 @@ export interface Member {
   role: UserRole;
   title?: string;
   is_first_login: boolean;
-  big_brother?: string;
-  little_brother?: string;
+  big_member?: string;
+  little_member?: string;
   intake_class?: string;
   financial_status?: 'active' | 'inactive';
   profile_photo?: string;

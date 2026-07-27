@@ -304,7 +304,7 @@ export default function MembershipApplication() {
           New Member <span className="text-primary">Application</span>
         </h1>
         <p className="text-silver/40 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
-          Kappa Pi Fraternity, Incorporated — National Membership Portal
+          Kappa Pi — National Membership Portal
         </p>
       </div>
 

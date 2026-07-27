@@ -28,7 +28,7 @@ export const CONSTITUTION_DATA: Article[] = [
     id: "Article III",
     title: "Article III: Mission",
     sections: [
-      { id: "General", text: "Kappa Pi realizes the importance of an organization to improve the general welfare of our community. As a group of individuals, we will strive to provide a challenge to self and others, to maintain a partnership between academic excellence and high ethical standards, as well as remain actively involved in the advancement of our community. Through unity and cultural diversity, we seek to strengthen the bond of friendship and servanthood. The mission of Kappa Pi is to inspire a brotherhood/sisterhood for men, based on the precepts of “The Mother”, that: demands excellence, enriches lives, and encourages an elegant upward strive for the ideals of knowledge, love, loyalty, and truth." }
+      { id: "General", text: "Kappa Pi realizes the importance of an organization to improve the general welfare of our community. As a group of individuals, we will strive to provide a challenge to self and others, to maintain a partnership between academic excellence and high ethical standards, as well as remain actively involved in the advancement of our community. Through unity and cultural diversity, we seek to strengthen the bond of friendship and servanthood. The mission of Kappa Pi is to inspire a fellowship for men, based on the precepts of “The Mother”, that: demands excellence, enriches lives, and encourages an elegant upward strive for the ideals of knowledge, love, loyalty, and truth." }
     ]
   },
   {
