@@ -235,15 +235,11 @@ export async function firebaseLoginApplicant(email: string, pass: string) {
       }
     }
 
-    if (err.code === 'auth/operation-not-allowed') {
-      throw new Error('Account email not found in candidate roster or password invalid.');
+    if (err.code === 'auth/operation-not-allowed' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+      throw new Error('Invalid email address or password. Please verify your candidate credentials.');
     }
 
-    if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-      throw new Error('Invalid email or password. Please verify your candidate credentials.');
-    }
-
-    throw new Error(err.message || 'Authentication failed.');
+    throw new Error('Invalid email address or password. Please verify your candidate credentials.');
   }
 }
 

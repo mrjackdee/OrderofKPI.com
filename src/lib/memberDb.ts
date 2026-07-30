@@ -34,8 +34,39 @@ export const defaultMembers: MemberUser[] = [
 ];
 
 export const prospectiveMembers: MemberUser[] = [
-  { name: "Intake Candidate", email: "candidate@orderofkpi.org", role: "prospective" }
+  { name: "Intake Candidate", email: "candidate@orderofkpi.org", role: "prospective" },
+  { name: "Avery Torrence", email: "averyt16@gmail.com", role: "prospective" },
+  { name: "Charles Edward Miller Jr", email: "hupirate90@me.com", role: "prospective" },
+  { name: "Dennis Mills", email: "demills_10@yahoo.com", role: "prospective" },
+  { name: "Dr. Quincy Dinnerson", email: "quincyld86@gmail.com", role: "prospective" },
+  { name: "Jabari Smith Perry", email: "jabari.smithperry@gmail.com", role: "prospective" },
+  { name: "Lee Sennet", email: "l.a.sennet@gmail.com", role: "prospective" },
+  { name: "Malinski Russell", email: "malineskidrussell@gmail.com", role: "prospective" },
+  { name: "Michael L Coleman", email: "mabmykie1914@gmail.com", role: "prospective" },
+  { name: "Ronald Oliver", email: "roliver449@gmail.com", role: "prospective" },
+  { name: "Steven Burnette", email: "burnettesteven3@gmail.com", role: "prospective" },
+  { name: "Tashaun Najee Benton", email: "tashaunbenton233@gmail.com", role: "prospective" },
+  { name: "Titus Oliver", email: "o_titus@yahoo.com", role: "prospective" },
+  { name: "Zion Gates-Norris", email: "zgatesnorris@gmail.com", role: "prospective" },
+  { name: "John Candidate", email: "candidate@gmail.com", role: "prospective" }
 ];
+
+const INITIAL_CANDIDATES_PASSWORDS: Record<string, string> = {
+  'averyt16@gmail.com': '0784',
+  'hupirate90@me.com': '9348',
+  'demills_10@yahoo.com': '0844',
+  'quincyld86@gmail.com': '1326',
+  'jabari.smithperry@gmail.com': '7008',
+  'l.a.sennet@gmail.com': '1774',
+  'malineskidrussell@gmail.com': '0011',
+  'mabmykie1914@gmail.com': '7119',
+  'roliver449@gmail.com': '6846',
+  'burnettesteven3@gmail.com': '2275',
+  'tashaunbenton233@gmail.com': '1821',
+  'o_titus@yahoo.com': '7713',
+  'zgatesnorris@gmail.com': '4876',
+  'candidate@gmail.com': '2012'
+};
 
 /**
  * Perform a hybrid login. 
@@ -183,23 +214,29 @@ export async function performApplicantLogin(email: string, pass: string): Promis
 }> {
   const normalizedEmail = email.toLowerCase().trim();
 
-  // Try Firebase Auth login first
+  // 1. Try Firebase Auth / Firestore login
   try {
     const fbRes = await firebaseLoginApplicant(normalizedEmail, pass);
-    return fbRes;
+    if (fbRes && fbRes.success) return fbRes;
   } catch (fbErr: any) {
-    console.warn('Firebase login attempt failed:', fbErr.message);
-
-    // Try server hybrid login fallback
-    try {
-      const serverRes = await performHybridLogin(normalizedEmail, pass);
-      if (serverRes.success) return serverRes;
-    } catch (e) {
-      console.warn('Server login fallback failed:', e);
-    }
-
-    throw fbErr;
+    console.warn('Firebase applicant login notice:', fbErr?.message);
   }
+
+  // 2. Try server hybrid API login fallback
+  try {
+    const serverRes = await performHybridLogin(normalizedEmail, pass);
+    if (serverRes && serverRes.success) return serverRes;
+  } catch (e) {
+    console.warn('Server applicant login notice:', e);
+  }
+
+  // 3. Fallback to client-side candidate directory validation
+  const clientRes = performClientSideLogin(normalizedEmail, pass);
+  if (clientRes.success) {
+    return clientRes;
+  }
+
+  throw new Error('Invalid candidate email address or password. Please check your credentials.');
 }
 
 /**
@@ -249,30 +286,32 @@ export async function performHybridPasswordChange(
 
 // Client-Side Authentication Fallbacks
 function performClientSideLogin(email: string, pass: string) {
-  const member = defaultMembers.find(m => m.email.toLowerCase() === email) || 
-                 prospectiveMembers.find(m => m.email.toLowerCase() === email);
+  const normEmail = email.toLowerCase().trim();
+  const member = defaultMembers.find(m => m.email.toLowerCase() === normEmail) || 
+                 prospectiveMembers.find(m => m.email.toLowerCase() === normEmail);
   if (!member) {
     return {
       success: false,
-      message: 'This email address is not registered on the KPI Active Financial Member Directory.'
+      message: 'This email address is not registered on the portal candidate directory.'
     };
   }
 
-  // Retrieve changed password from localStorage, defaulting to 'atlanta'
-  const savedPass = localStorage.getItem(`kpi_client_password_${email}`) || 'atlanta';
+  // Retrieve changed password from localStorage, defaulting to candidate initial password or 'atlanta'
+  const initialPass = INITIAL_CANDIDATES_PASSWORDS[normEmail] || 'atlanta';
+  const savedPass = localStorage.getItem(`kpi_client_password_${normEmail}`) || initialPass;
   if (savedPass !== pass) {
     return {
       success: false,
-      message: 'Incorrect password. If you have not changed your initial password, please use the default value.'
+      message: 'Incorrect password. Please verify your password or use the reset password feature.'
     };
   }
 
-  const isChanged = localStorage.getItem(`kpi_password_changed_${email}`) === 'true';
+  const isChanged = localStorage.getItem(`kpi_password_changed_${normEmail}`) === 'true';
   const firstName = member.name.split(' ')[0];
 
   return {
     success: true,
-    message: 'Login successful via Client-Side Member Directory',
+    message: 'Login successful via Candidate Directory',
     user: {
       email: member.email,
       name: member.name,
