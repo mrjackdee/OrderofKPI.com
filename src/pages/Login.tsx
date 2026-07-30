@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Lock, Mail, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
 import { performHybridLogin } from '../lib/memberDb';
 
@@ -96,13 +96,26 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-widest mb-2">
-              KPI Portal
+              Financial Member <span className="text-primary">Portal</span>
             </h1>
-            <p className="text-silver/60 text-xs uppercase tracking-wider font-semibold whitespace-pre-line">
-              Secure Access for Members & Candidates
+            <p className="text-silver/60 text-xs uppercase tracking-wider font-semibold">
+              Secure Access for Active Members & Officers
             </p>
+          </div>
+
+          {/* Prospective Applicant Switch Banner */}
+          <div className="mb-6 p-4 rounded-2xl bg-primary/10 border border-primary/30 text-center space-y-2">
+            <p className="text-[10px] text-primary font-black uppercase tracking-widest">
+              Prospective Candidate Applying for Membership?
+            </p>
+            <Link 
+              to="/applicant-login" 
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-black text-xs font-black uppercase tracking-wider rounded-xl hover:bg-white transition-all shadow-md"
+            >
+              Access Applicant Login & Application Portal
+            </Link>
           </div>
 
           {error && (

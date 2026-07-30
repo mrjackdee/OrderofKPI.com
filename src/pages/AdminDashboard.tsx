@@ -457,24 +457,6 @@ export default function AdminDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/40 mb-2">Big Member</label>
-                  <input
-                    type="text"
-                    value={editingMember?.big_member || ''}
-                    onChange={e => setEditingMember({...editingMember!, big_member: e.target.value})}
-                    className="w-full px-4 py-2 border border-gold/20 rounded-md focus:ring-2 focus:ring-gold/20 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/40 mb-2">Little Member</label>
-                  <input
-                    type="text"
-                    value={editingMember?.little_member || ''}
-                    onChange={e => setEditingMember({...editingMember!, little_member: e.target.value})}
-                    className="w-full px-4 py-2 border border-gold/20 rounded-md focus:ring-2 focus:ring-gold/20 outline-none"
-                  />
-                </div>
-                <div>
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/40 mb-2">Industry</label>
                   <input
                     type="text"

@@ -22,7 +22,11 @@ export default function Layout() {
     '/member-portal',
     '/candidate-tracker',
     '/selection-voting',
-    '/admin-dashboard'
+    '/admin-dashboard',
+    '/applicant-login',
+    '/applicant-portal',
+    '/membership-application',
+    '/review-applications'
   ].includes(location.pathname);
 
   useEffect(() => {
@@ -85,6 +89,12 @@ export default function Layout() {
             <ShieldCheck size={14} className="animate-pulse" />
             <span>Administrative Session Active — Full System Access Enabled</span>
             <ShieldCheck size={14} className="animate-pulse" />
+          </div>
+        ) : userRole === 'prospective' ? (
+          <div className="bg-gold text-ivy text-[9px] font-bold uppercase tracking-[0.2em] py-1.5 px-4 flex items-center justify-center gap-3 fixed top-0 left-0 right-0 z-[60] border-b border-ivy/10">
+            <div className="w-1.5 h-1.5 rounded-full bg-ivy animate-pulse" />
+            <span>Prospective Applicant Session Active — FY27 Membership Application Space</span>
+            <div className="w-1.5 h-1.5 rounded-full bg-ivy animate-pulse" />
           </div>
         ) : (
           <div className="bg-primary/90 backdrop-blur text-black text-[9px] font-black uppercase tracking-[0.2em] py-1.5 px-4 flex items-center justify-center gap-3 fixed top-0 left-0 right-0 z-[60] border-b border-black/10">

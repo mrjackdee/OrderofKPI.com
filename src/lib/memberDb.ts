@@ -84,6 +84,79 @@ export async function performHybridLogin(email: string, pass: string): Promise<{
 }
 
 /**
+ * Register a new prospective applicant account.
+ */
+export async function performApplicantRegister(name: string, email: string, pass: string): Promise<{
+  success: boolean;
+  message: string;
+  user?: {
+    email: string;
+    name: string;
+    firstName: string;
+    role: string;
+    isFirstLogin: boolean;
+  };
+}> {
+  const normalizedEmail = email.toLowerCase().trim();
+
+  try {
+    const response = await fetch('/api/auth/applicant-register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email: normalizedEmail, password: pass }),
+    });
+
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const data = await response.json();
+      if (response.ok && data.success) {
+        return {
+          success: true,
+          message: 'Applicant registered successfully',
+          user: data.user
+        };
+      } else {
+        return {
+          success: false,
+          message: data.message || 'Registration failed'
+        };
+      }
+    } else {
+      // Client-side fallback registration
+      const firstName = name.split(' ')[0];
+      localStorage.setItem(`kpi_client_password_${normalizedEmail}`, pass);
+      localStorage.setItem(`kpi_password_changed_${normalizedEmail}`, 'true');
+      return {
+        success: true,
+        message: 'Applicant account created',
+        user: {
+          email: normalizedEmail,
+          name,
+          firstName,
+          role: 'prospective',
+          isFirstLogin: false
+        }
+      };
+    }
+  } catch (err) {
+    const firstName = name.split(' ')[0];
+    localStorage.setItem(`kpi_client_password_${normalizedEmail}`, pass);
+    localStorage.setItem(`kpi_password_changed_${normalizedEmail}`, 'true');
+    return {
+      success: true,
+      message: 'Applicant account created',
+      user: {
+        email: normalizedEmail,
+        name,
+        firstName,
+        role: 'prospective',
+        isFirstLogin: false
+      }
+    };
+  }
+}
+
+/**
  * Handle password changes locally if server is unreachable.
  */
 export async function performHybridPasswordChange(

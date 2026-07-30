@@ -182,33 +182,10 @@ export default function MemberDirectory() {
                   </div>
                 </div>
 
-                    <div className="mt-4 grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-[10px] uppercase tracking-widest text-ivy/40 font-bold mb-1">Lineage (Big)</p>
-                    <button 
-                      onClick={() => setSearchQuery(member.big_member || '')}
-                      className="text-sm text-ivy truncate hover:text-gold transition-colors text-left w-full"
-                    >
-                      {member.big_member || 'None'}
-                    </button>
-                  </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-widest text-ivy/40 font-bold mb-1">Lineage (Little)</p>
-                    <button 
-                      onClick={() => setSearchQuery(member.little_member || '')}
-                      className="text-sm text-ivy truncate hover:text-gold transition-colors text-left w-full"
-                    >
-                      {member.little_member || 'None'}
-                    </button>
-                  </div>
-                </div>
-
-                {(member.industry || member.grad_year) && (
-                  <div className="mt-4 pt-4 border-t border-cream flex items-center gap-2">
+                    <div className="mt-4 pt-4 border-t border-cream flex items-center gap-2">
                     <GraduationCap className="w-4 h-4 text-gold" />
                     <span className="text-xs text-ivy/70">{member.industry || 'Graduate'} {member.grad_year ? `('${member.grad_year})` : ''}</span>
                   </div>
-                )}
               </div>
             </motion.div>
           ))}

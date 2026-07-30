@@ -21,6 +21,8 @@ import Constitution from './pages/Constitution';
 import ConferencePortal from './pages/ConferencePortal';
 import IntakeCalendar from './pages/IntakeCalendar';
 import Login from './pages/Login';
+import ApplicantLogin from './pages/ApplicantLogin';
+import ApplicantPortal from './pages/ApplicantPortal';
 import FinancialRoster from './pages/FinancialRoster';
 import GanttChart from './pages/GanttChart';
 import MemberPortal from './pages/MemberPortal';
@@ -84,6 +86,8 @@ export default function App() {
                 <Route path="intake-calendar" element={<ProtectedRoute><IntakeCalendar /></ProtectedRoute>} />
                 <Route path="gantt-chart" element={<ProtectedRoute><GanttChart /></ProtectedRoute>} />
                 <Route path="login" element={<Login />} />
+                <Route path="applicant-login" element={<ApplicantLogin />} />
+                <Route path="applicant-portal" element={<ProtectedRoute><ApplicantPortal /></ProtectedRoute>} />
                 <Route path="financial-roster" element={<ProtectedRoute><FinancialRoster /></ProtectedRoute>} />
                 <Route path="member-directory" element={<ProtectedRoute><MemberDirectory /></ProtectedRoute>} />
                 <Route path="meeting-minutes" element={<ProtectedRoute><MeetingMinutes /></ProtectedRoute>} />

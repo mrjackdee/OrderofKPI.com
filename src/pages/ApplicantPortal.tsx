@@ -1,0 +1,270 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate, Link } from 'react-router-dom';
+import { 
+  FileText, 
+  CheckCircle, 
+  Clock, 
+  CalendarDays, 
+  ShieldCheck, 
+  LogOut, 
+  ArrowRight, 
+  Info, 
+  User, 
+  HelpCircle,
+  Sparkles,
+  ChevronRight,
+  ClipboardList
+} from 'lucide-react';
+import { fetchApplication } from '../lib/memberDb';
+import Application from './Application';
+
+export default function ApplicantPortal() {
+  const [activeTab, setActiveTab] = useState<'application' | 'timeline' | 'instructions'>('application');
+  const [appStatus, setAppStatus] = useState<'not_started' | 'draft' | 'submitted'>('not_started');
+  const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  const userEmail = sessionStorage.getItem('userEmail') || '';
+  const userName = sessionStorage.getItem('userName') || 'Applicant';
+  const userFirstName = sessionStorage.getItem('userFirstName') || userName.split(' ')[0];
+
+  useEffect(() => {
+    async function loadData() {
+      if (!userEmail) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetchApplication(userEmail);
+        if (res && res.application) {
+          setAppStatus(res.application.status || 'draft');
+          setLastSaved(res.application.submitted_at || res.application.last_saved_at || null);
+        }
+      } catch (err) {
+        console.error('Failed to load application status:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, [userEmail]);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('userEmail');
+    sessionStorage.removeItem('userName');
+    sessionStorage.removeItem('userFirstName');
+    sessionStorage.removeItem('userRole');
+    navigate('/applicant-login');
+  };
+
+  return (
+    <div className="min-h-screen bg-[#FAF9F5] w-full text-ivy font-display">
+      <div className="max-w-7xl mx-auto px-6 py-10 md:py-16 space-y-12">
+        {/* Top Applicant Header Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-8 border-b border-gold/20">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-gold/10 border border-gold/20 rounded-full">
+              <ShieldCheck size={12} className="text-gold" />
+              <span className="text-[9px] font-bold text-ivy uppercase tracking-[0.2em]">FY27 Prospective Candidate Portal</span>
+            </div>
+            <h1 className="text-3xl md:text-5xl font-bold uppercase tracking-tight text-ivy">
+              Welcome, <span className="text-gold">{userFirstName}</span>
+            </h1>
+            <p className="text-ivy/60 text-xs md:text-sm font-body">
+              Signed in as <span className="font-bold text-ivy">{userEmail}</span>
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gold/30 bg-white text-ivy text-xs font-bold uppercase tracking-widest hover:bg-gold/10 transition-all shadow-soft"
+            >
+              <LogOut size={14} className="text-gold" />
+              Log Out
+            </button>
+          </div>
+        </div>
+
+        {/* Application Status Dashboard Card */}
+        <div className="bg-white border border-gold/30 rounded-[32px] p-8 md:p-10 shadow-soft relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none">
+            <ClipboardList size={180} className="text-ivy" />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center relative z-10">
+            <div className="lg:col-span-2 space-y-4">
+              <div className="flex items-center gap-3">
+                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 ${
+                  appStatus === 'submitted'
+                    ? 'bg-green-100 text-green-800 border border-green-300'
+                    : 'bg-gold/15 text-ivy border border-gold/30'
+                }`}>
+                  {appStatus === 'submitted' ? (
+                    <>
+                      <CheckCircle size={12} className="text-green-600" />
+                      Submitted & Under Review
+                    </>
+                  ) : (
+                    <>
+                      <Clock size={12} className="text-gold" />
+                      Draft Application in Progress
+                    </>
+                  )}
+                </span>
+                {lastSaved && (
+                  <span className="text-[10px] text-ivy/50 uppercase tracking-widest font-body">
+                    Updated: {new Date(lastSaved).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+
+              <h2 className="text-2xl md:text-3xl font-bold text-ivy uppercase tracking-tight">
+                New Member Application Space
+              </h2>
+              <p className="text-ivy/70 text-sm font-body leading-relaxed max-w-xl">
+                Fill out each required section of your application below. You may save your draft and return at any time. Once submitted, your application is automatically transmitted to the Membership Committee for formal administrative review.
+              </p>
+            </div>
+
+            <div className="bg-cream/60 border border-gold/20 rounded-2xl p-6 text-center space-y-4">
+              <div className="w-12 h-12 bg-ivy text-cream rounded-2xl flex items-center justify-center mx-auto shadow-md">
+                <FileText size={24} className="text-gold" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-ivy uppercase tracking-wider">Committee Availability</p>
+                <p className="text-[11px] text-ivy/60 font-body mt-1">
+                  Submitted applications are immediately reviewed by committee members.
+                </p>
+              </div>
+              <button
+                onClick={() => setActiveTab('application')}
+                className="w-full py-3 bg-gold text-ivy rounded-xl font-bold uppercase tracking-widest text-xs hover:brightness-105 transition-all shadow-md"
+              >
+                {appStatus === 'submitted' ? 'View Submitted Application' : 'Continue Application'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Tabs for Space */}
+        <div className="flex flex-wrap gap-3 border-b border-gold/20 pb-4">
+          <button
+            onClick={() => setActiveTab('application')}
+            className={`px-6 py-3 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${
+              activeTab === 'application'
+                ? 'bg-ivy text-cream shadow-md'
+                : 'bg-white border border-gold/20 text-ivy hover:bg-gold/10'
+            }`}
+          >
+            <FileText size={16} className={activeTab === 'application' ? 'text-gold' : 'text-ivy/60'} />
+            Application Form Space
+          </button>
+
+          <button
+            onClick={() => setActiveTab('timeline')}
+            className={`px-6 py-3 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${
+              activeTab === 'timeline'
+                ? 'bg-ivy text-cream shadow-md'
+                : 'bg-white border border-gold/20 text-ivy hover:bg-gold/10'
+            }`}
+          >
+            <CalendarDays size={16} className={activeTab === 'timeline' ? 'text-gold' : 'text-ivy/60'} />
+            Intake Timeline & Process
+          </button>
+
+          <button
+            onClick={() => setActiveTab('instructions')}
+            className={`px-6 py-3 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${
+              activeTab === 'instructions'
+                ? 'bg-ivy text-cream shadow-md'
+                : 'bg-white border border-gold/20 text-ivy hover:bg-gold/10'
+            }`}
+          >
+            <HelpCircle size={16} className={activeTab === 'instructions' ? 'text-gold' : 'text-ivy/60'} />
+            Applicant Guidelines & FAQs
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'application' && (
+          <div className="bg-white border border-gold/20 rounded-[32px] p-4 md:p-8 shadow-soft">
+            <Application />
+          </div>
+        )}
+
+        {activeTab === 'timeline' && (
+          <div className="bg-white border border-gold/20 rounded-[32px] p-8 md:p-12 space-y-8 shadow-soft">
+            <div className="space-y-3">
+              <h3 className="text-2xl font-bold uppercase tracking-tight text-ivy">
+                FY27 Intake Class Schedule & Milestones
+              </h3>
+              <p className="text-ivy/60 text-sm font-body leading-relaxed max-w-2xl">
+                Please review the key dates and milestones below regarding the Kappa Pi Membership Intake Process.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { step: "Phase 1", title: "Application Submission", date: "Active Open Period", status: "In Progress", desc: "Complete all sections of the official online application." },
+                { step: "Phase 2", title: "Committee Review", date: "Following Submission", status: "Upcoming", desc: "The Membership Committee reviews qualifications and documentation." },
+                { step: "Phase 3", title: "Candidate Interview", date: "By Notification", status: "Upcoming", desc: "Invited candidates participate in formal interview panels." }
+              ].map((phase, idx) => (
+                <div key={idx} className="bg-cream/40 border border-gold/20 rounded-2xl p-6 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-gold">{phase.step}</span>
+                    <span className="text-[9px] font-semibold uppercase tracking-wider px-2.5 py-1 bg-ivy text-cream rounded-full">
+                      {phase.status}
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-lg text-ivy">{phase.title}</h4>
+                  <p className="text-xs font-body text-ivy/70 leading-relaxed">{phase.desc}</p>
+                  <p className="text-[11px] font-bold text-gold uppercase tracking-wider">{phase.date}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'instructions' && (
+          <div className="bg-white border border-gold/20 rounded-[32px] p-8 md:p-12 space-y-8 shadow-soft">
+            <div className="space-y-3">
+              <h3 className="text-2xl font-bold uppercase tracking-tight text-ivy">
+                Applicant Guidelines & Frequently Asked Questions
+              </h3>
+              <p className="text-ivy/60 text-sm font-body leading-relaxed">
+                Important details for prospective candidates completing their applications.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <div className="p-6 bg-cream/30 rounded-2xl border border-gold/20 space-y-2">
+                <h4 className="font-bold text-ivy text-base">How do I save my progress?</h4>
+                <p className="text-ivy/70 text-sm font-body leading-relaxed">
+                  Click the "Save Draft" button at the bottom of the application space at any time. Your responses will be saved to your candidate account.
+                </p>
+              </div>
+
+              <div className="p-6 bg-cream/30 rounded-2xl border border-gold/20 space-y-2">
+                <h4 className="font-bold text-ivy text-base">Who reviews my application once submitted?</h4>
+                <p className="text-ivy/70 text-sm font-body leading-relaxed">
+                  Upon submission, your application is securely vaulted and made available to the official Members of the Kappa Pi Membership Committee for formal evaluation.
+                </p>
+              </div>
+
+              <div className="p-6 bg-cream/30 rounded-2xl border border-gold/20 space-y-2">
+                <h4 className="font-bold text-ivy text-base">Can I edit my application after submitting?</h4>
+                <p className="text-ivy/70 text-sm font-body leading-relaxed">
+                  Once an application is submitted, it enters the official review stage. If you need to update critical contact information, please reach out to the Membership Committee.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
