@@ -14,6 +14,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { fetchAllApplications } from '../lib/memberDb';
+import { generateApplicationPDF } from '../utils/pdfGenerator';
 
 interface Application {
   id: string;
@@ -200,6 +201,12 @@ export default function ReviewApplications() {
                   <div className="flex items-center gap-3">
                     <button className="px-6 py-3 bg-white border border-gold/20 rounded-xl text-ivy font-bold uppercase tracking-widest text-[10px] hover:bg-gold/5 transition-all flex items-center gap-2">
                       <Mail size={14} /> Send Message
+                    </button>
+                    <button 
+                      onClick={() => generateApplicationPDF(selectedApp.data, selectedApp.email)}
+                      className="px-6 py-3 bg-gold text-ivy font-bold uppercase tracking-widest text-[10px] hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2"
+                    >
+                      <FileText size={14} /> Download PDF
                     </button>
                     <button className="px-6 py-3 bg-ivy text-cream font-bold uppercase tracking-widest text-[10px] hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2">
                       <ExternalLink size={14} /> Official Review

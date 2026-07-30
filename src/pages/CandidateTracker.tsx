@@ -16,14 +16,21 @@ import {
   Clock,
   AlertCircle,
   Plus,
-  Send
+  Send,
+  X,
+  ShieldCheck,
+  CheckCircle
 } from 'lucide-react';
 import { Candidate } from '../types';
+import { fetchAllApplications } from '../lib/memberDb';
+import { generateApplicationPDF } from '../utils/pdfGenerator';
 
 const STAGES: Candidate['status'][] = ['Inquiry', 'Applied', 'Tea Time', 'Interview', 'Selection', 'Intake'];
 
 export default function CandidateTracker() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [applications, setApplications] = useState<any[]>([]);
+  const [selectedApplicationForView, setSelectedApplicationForView] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -31,7 +38,19 @@ export default function CandidateTracker() {
 
   useEffect(() => {
     fetchCandidates();
+    fetchApplications();
   }, []);
+
+  const fetchApplications = async () => {
+    try {
+      const res = await fetchAllApplications();
+      if (res.success) {
+        setApplications(res.applications);
+      }
+    } catch (error) {
+      console.error('Error fetching applications:', error);
+    }
+  };
 
   const fetchCandidates = async () => {
     try {
@@ -146,68 +165,100 @@ export default function CandidateTracker() {
               </div>
 
               <div className="flex flex-col gap-4 min-h-[400px]">
-                {filteredCandidates.filter(c => c.status === stage).map(candidate => (
-                  <motion.div
-                    key={candidate.id}
-                    layoutId={candidate.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-white p-5 rounded-lg border border-gold/20 shadow-soft hover:border-gold transition-all group"
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <h3 className="font-display text-lg text-ivy">{candidate.name}</h3>
-                      <div className="relative group/menu">
-                        <button className="text-ivy/20 hover:text-ivy transition-colors p-1">
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                        <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gold/20 rounded-md shadow-lg opacity-0 group-hover/menu:opacity-100 transition-opacity z-10 hidden group-hover/menu:block">
-                          {STAGES.filter(s => s !== stage).map(s => (
-                            <button
-                              key={s}
-                              onClick={() => updateCandidateStatus(candidate.id, s)}
-                              className="w-full text-left px-4 py-2 text-xs text-ivy hover:bg-cream transition-colors first:rounded-t-md last:rounded-b-md"
-                            >
-                              Move to {s}
-                            </button>
-                          ))}
-                          <button
-                            onClick={() => updateCandidateStatus(candidate.id, 'Rejected')}
-                            className="w-full text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
-                          >
-                            Reject Candidate
+                {filteredCandidates.filter(c => c.status === stage).map(candidate => {
+                  const matchingApp = applications.find(a => a.email.toLowerCase() === candidate.email.toLowerCase());
+                  const isSubmitted = matchingApp && matchingApp.status === 'submitted';
+                  const isDraft = matchingApp && matchingApp.status === 'draft';
+
+                  return (
+                    <motion.div
+                      key={candidate.id}
+                      layoutId={candidate.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-white p-5 rounded-lg border border-gold/20 shadow-soft hover:border-gold transition-all group"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="font-display text-lg text-ivy">{candidate.name}</h3>
+                        <div className="relative group/menu">
+                          <button className="text-ivy/20 hover:text-ivy transition-colors p-1">
+                            <MoreVertical className="w-4 h-4" />
                           </button>
+                          <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gold/20 rounded-md shadow-lg opacity-0 group-hover/menu:opacity-100 transition-opacity z-10 hidden group-hover/menu:block">
+                            {STAGES.filter(s => s !== stage).map(s => (
+                              <button
+                                key={s}
+                                onClick={() => updateCandidateStatus(candidate.id, s)}
+                                className="w-full text-left px-4 py-2 text-xs text-ivy hover:bg-cream transition-colors first:rounded-t-md last:rounded-b-md"
+                              >
+                                Move to {s}
+                              </button>
+                            ))}
+                            <button
+                              onClick={() => updateCandidateStatus(candidate.id, 'Rejected')}
+                              className="w-full text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
+                            >
+                              Reject Candidate
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center gap-2 text-ivy/60 text-xs">
-                        <Mail className="w-3 h-3" />
-                        <span>{candidate.email}</span>
+                      {/* Application Status Badge */}
+                      <div className="mb-3">
+                        {isSubmitted ? (
+                          <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 border border-green-200/50 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                            <CheckCircle2 className="w-3 h-3 text-green-600" /> Submitted
+                          </span>
+                        ) : isDraft ? (
+                          <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200/50 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                            <Clock className="w-3 h-3 text-amber-500" /> Draft
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 bg-gray-50 text-gray-500 border border-gray-200/50 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                            <AlertCircle className="w-3 h-3 text-gray-400" /> Not Started
+                          </span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2 text-ivy/60 text-xs">
-                        <Phone className="w-3 h-3" />
-                        <span>{candidate.phone || 'No phone'}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-ivy/60 text-xs">
-                        <Calendar className="w-3 h-3" />
-                        <span>Applied: {new Date(candidate.application_date).toLocaleDateString()}</span>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-cream">
-                      <div className="flex -space-x-2">
-                        {/* Placeholder for reviewer avatars */}
-                        <div className="w-6 h-6 rounded-full bg-ivy border-2 border-white flex items-center justify-center text-[10px] text-cream font-bold">JD</div>
-                        <div className="w-6 h-6 rounded-full bg-gold border-2 border-white flex items-center justify-center text-[10px] text-ivy font-bold">BS</div>
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center gap-2 text-ivy/60 text-xs">
+                          <Mail className="w-3 h-3" />
+                          <span>{candidate.email}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-ivy/60 text-xs">
+                          <Phone className="w-3 h-3" />
+                          <span>{candidate.phone || 'No phone'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-ivy/60 text-xs">
+                          <Calendar className="w-3 h-3" />
+                          <span>Applied: {new Date(candidate.application_date).toLocaleDateString()}</span>
+                        </div>
                       </div>
-                      <button className="text-xs font-bold text-ivy hover:text-gold transition-colors flex items-center gap-1">
-                        View Dossier
-                        <ChevronRight className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
+
+                      <div className="flex items-center justify-between pt-4 border-t border-cream">
+                        <div className="flex -space-x-2">
+                          {/* Placeholder for reviewer avatars */}
+                          <div className="w-6 h-6 rounded-full bg-ivy border-2 border-white flex items-center justify-center text-[10px] text-cream font-bold">JD</div>
+                          <div className="w-6 h-6 rounded-full bg-gold border-2 border-white flex items-center justify-center text-[10px] text-ivy font-bold">BS</div>
+                        </div>
+                        {matchingApp ? (
+                          <button 
+                            onClick={() => setSelectedApplicationForView(matchingApp)}
+                            className="text-[10px] font-bold text-ivy hover:text-gold transition-colors flex items-center gap-1 bg-gold/10 hover:bg-gold/20 px-2.5 py-1.5 rounded-lg border border-gold/20"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-gold" />
+                            View Application
+                          </button>
+                        ) : (
+                          <button className="text-[10px] font-bold text-ivy/30 cursor-not-allowed flex items-center gap-1" disabled>
+                            No Application
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
                 
                 {filteredCandidates.filter(c => c.status === stage).length === 0 && (
                   <div className="border-2 border-dashed border-ivy/5 rounded-lg h-32 flex items-center justify-center">
@@ -278,6 +329,215 @@ export default function CandidateTracker() {
                 </button>
               </div>
             </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* View Application Modal */}
+      {selectedApplicationForView && (
+        <div className="fixed inset-0 bg-ivy/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-cream w-full max-w-5xl rounded-2xl shadow-2xl border-gold/30 border overflow-hidden my-8 max-h-[90vh] flex flex-col"
+          >
+            {/* Header */}
+            <div className="bg-ivy p-6 md:p-8 flex justify-between items-center border-b border-gold/30">
+              <div className="space-y-1.5">
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 bg-gold/15 border border-gold/30 rounded-full">
+                  <ShieldCheck size={11} className="text-gold" />
+                  <span className="text-[9px] font-bold text-cream uppercase tracking-widest">Membership Candidate Review</span>
+                </div>
+                <h2 className="text-2xl md:text-3xl font-display text-cream">
+                  {selectedApplicationForView.data.firstName} <span className="text-gold">{selectedApplicationForView.data.lastName}</span>
+                </h2>
+                <p className="text-cream/60 text-xs font-body">Submitted: {selectedApplicationForView.submitted_at ? new Date(selectedApplicationForView.submitted_at).toLocaleDateString() : 'N/A'}</p>
+              </div>
+              <button 
+                onClick={() => setSelectedApplicationForView(null)}
+                className="text-cream/60 hover:text-cream transition-colors p-2 hover:bg-white/5 rounded-full"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Quick Actions Panel */}
+            <div className="bg-white px-8 py-4 border-b border-gold/10 flex flex-wrap gap-4 items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-ivy/60 uppercase tracking-wider">
+                Status: 
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] ${
+                  selectedApplicationForView.status === 'submitted' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                }`}>
+                  {selectedApplicationForView.status}
+                </span>
+              </div>
+              <button
+                onClick={() => generateApplicationPDF(selectedApplicationForView.data, selectedApplicationForView.email)}
+                className="flex items-center gap-2 bg-gold text-ivy px-5 py-2.5 rounded-xl font-bold uppercase tracking-wider text-[10px] hover:brightness-110 active:scale-95 transition-all shadow cursor-pointer"
+              >
+                <FileText size={14} />
+                Download Application PDF
+              </button>
+            </div>
+
+            {/* Content Body (Scrollable) */}
+            <div className="p-8 space-y-8 overflow-y-auto font-body text-sm text-ivy/80">
+              {/* Profile Overview Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Personal & Employment Info */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-ivy pb-2 border-b border-gold/20">Candidate Profile</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-ivy/40 block">First Name</span>
+                      <span className="font-semibold text-ivy">{selectedApplicationForView.data.firstName}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-ivy/40 block">Last Name</span>
+                      <span className="font-semibold text-ivy">{selectedApplicationForView.data.lastName}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-ivy/40 block">Date of Birth</span>
+                      <span className="font-semibold text-ivy">{selectedApplicationForView.data.dateOfBirth}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-ivy/40 block">Phone Number</span>
+                      <span className="font-semibold text-ivy">{selectedApplicationForView.data.phone}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-[10px] uppercase font-bold text-ivy/40 block">Email Address</span>
+                      <span className="font-semibold text-ivy break-all">{selectedApplicationForView.email}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-[10px] uppercase font-bold text-ivy/40 block">Address</span>
+                      <span className="font-semibold text-ivy">{selectedApplicationForView.data.address}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Professional & Academic Info */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-ivy pb-2 border-b border-gold/20">Professional & Academic</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-ivy/40 block">Place of Employment</span>
+                      <span className="font-semibold text-ivy">{selectedApplicationForView.data.employment || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-ivy/40 block">Title / Position</span>
+                      <span className="font-semibold text-ivy">{selectedApplicationForView.data.position || 'N/A'}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-[10px] uppercase font-bold text-ivy/40 block">Degree(s) Conferred</span>
+                      <span className="font-semibold text-ivy whitespace-pre-wrap">{selectedApplicationForView.data.degrees || 'N/A'}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-[10px] uppercase font-bold text-ivy/40 block">Honors & Achievements</span>
+                      <span className="font-semibold text-ivy whitespace-pre-wrap">{selectedApplicationForView.data.honors || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Involvements & Disclosures */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gold/10">
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-ivy pb-2 border-b border-gold/20">Community Involvement</h3>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-ivy/40 block">Organization Involvement</span>
+                    <span className="text-ivy whitespace-pre-wrap">{selectedApplicationForView.data.organizations || 'None'}</span>
+                  </div>
+                  <div className="pt-2">
+                    <span className="text-[10px] uppercase font-bold text-ivy/40 block">Prior Knowledge of Kappa Pi</span>
+                    <span className="text-ivy whitespace-pre-wrap">{selectedApplicationForView.data.priorKnowledge || 'None'}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-ivy pb-2 border-b border-gold/20">Disclosures</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-ivy/40 block">Fraternity Member?</span>
+                      <span className="font-semibold text-ivy capitalize">{selectedApplicationForView.data.isFraternityMember}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-ivy/40 block">Sorority AKA Family?</span>
+                      <span className="font-semibold text-ivy capitalize">{selectedApplicationForView.data.hasAkaFamily}</span>
+                    </div>
+                    {selectedApplicationForView.data.isFraternityMember === 'yes' && (
+                      <div className="col-span-2">
+                        <span className="text-[10px] uppercase font-bold text-ivy/40 block">Fraternity Details</span>
+                        <span className="text-ivy">{selectedApplicationForView.data.fraternityDetails}</span>
+                      </div>
+                    )}
+                    {selectedApplicationForView.data.hasAkaFamily === 'yes' && (
+                      <div className="col-span-2">
+                        <span className="text-[10px] uppercase font-bold text-ivy/40 block">AKA Sorority Details</span>
+                        <span className="text-ivy">{selectedApplicationForView.data.akaFamilyDetails}</span>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-ivy/40 block">Previously Applied?</span>
+                      <span className="font-semibold text-ivy capitalize">{selectedApplicationForView.data.previousApplied}</span>
+                    </div>
+                    {selectedApplicationForView.data.previousApplied === 'yes' && (
+                      <div className="col-span-2">
+                        <span className="text-[10px] uppercase font-bold text-ivy/40 block">Previous Application Details</span>
+                        <span className="text-ivy">{selectedApplicationForView.data.previousAppliedDetails}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Social Media */}
+              <div className="pt-4 border-t border-gold/10">
+                <span className="text-[10px] uppercase font-bold text-ivy/40 block">Social Media & Websites</span>
+                <span className="text-ivy whitespace-pre-wrap">{selectedApplicationForView.data.socialUrls || 'None'}</span>
+              </div>
+
+              {/* Essay Questions Responses */}
+              <div className="space-y-6 pt-6 border-t border-gold/10">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-ivy pb-2 border-b border-gold/20">Written Essay Answers</h3>
+                
+                <div className="space-y-4">
+                  <div className="p-5 rounded-xl bg-white border border-gold/10 space-y-2">
+                    <p className="text-xs font-bold text-ivy/70">Question 1: Purpose of Kappa Pi</p>
+                    <p className="text-ivy leading-relaxed whitespace-pre-wrap">{selectedApplicationForView.data.essay1 || 'Not provided'}</p>
+                  </div>
+                  
+                  <div className="p-5 rounded-xl bg-white border border-gold/10 space-y-2">
+                    <p className="text-xs font-bold text-ivy/70">Question 2: Community Role Model</p>
+                    <p className="text-ivy leading-relaxed whitespace-pre-wrap">{selectedApplicationForView.data.essay2 || 'Not provided'}</p>
+                  </div>
+
+                  <div className="p-5 rounded-xl bg-white border border-gold/10 space-y-2">
+                    <p className="text-xs font-bold text-ivy/70">Question 3: Service Projects</p>
+                    <p className="text-ivy leading-relaxed whitespace-pre-wrap">{selectedApplicationForView.data.essay3 || 'Not provided'}</p>
+                  </div>
+
+                  <div className="p-5 rounded-xl bg-white border border-gold/10 space-y-2">
+                    <p className="text-xs font-bold text-ivy/70">Question 4: Encouraging Self-Esteem & Involvement for Queer/Trans*</p>
+                    <p className="text-ivy leading-relaxed whitespace-pre-wrap">{selectedApplicationForView.data.essay4 || 'Not provided'}</p>
+                  </div>
+
+                  <div className="p-5 rounded-xl bg-white border border-gold/10 space-y-2">
+                    <p className="text-xs font-bold text-ivy/70">Question 5: Talent Contributions</p>
+                    <p className="text-ivy leading-relaxed whitespace-pre-wrap">{selectedApplicationForView.data.essay5 || 'Not provided'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Footer buttons */}
+            <div className="bg-white p-6 border-t border-gold/20 flex justify-end gap-3">
+              <button 
+                onClick={() => setSelectedApplicationForView(null)}
+                className="px-6 py-2.5 border border-ivy/20 rounded-xl font-semibold uppercase tracking-wider text-[11px] text-ivy hover:bg-cream transition-colors cursor-pointer"
+              >
+                Close Review
+              </button>
+            </div>
           </motion.div>
         </div>
       )}

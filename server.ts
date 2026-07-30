@@ -233,14 +233,18 @@ async function initDb() {
       }
 
       // Also seed into candidates tracking table
-      const existingCand = sqliteDb.prepare("SELECT id FROM candidates WHERE email = ?").get(emailNorm) as any;
+      const existingCand = sqliteDb.prepare("SELECT id, status FROM candidates WHERE email = ?").get(emailNorm) as any;
       if (!existingCand) {
         sqliteDb.prepare(`
-          INSERT INTO candidates (id, name, email, phone, status, application_date)
-          VALUES (?, ?, ?, ?, 'Under Review', ?)
+          INSERT INTO candidates (id, name, email, phone, status, application_date, scores, notes, document_vault)
+          VALUES (?, ?, ?, ?, 'Inquiry', ?, '{}', '', '[]')
         `).run('cand_' + emailNorm.replace(/[^a-z0-9]/g, '_'), c.name, emailNorm, c.phone, new Date().toISOString().split('T')[0]);
+      } else if (existingCand.status === 'Under Review') {
+        sqliteDb.prepare("UPDATE candidates SET status = 'Inquiry' WHERE id = ?").run(existingCand.id);
       }
     }
+
+    sqliteDb.prepare("UPDATE candidates SET status = 'Inquiry' WHERE status = 'Under Review'").run();
 
     console.log("SQLite database synchronized with official active roster and candidates.");
   } catch (err) {
@@ -952,6 +956,27 @@ async function startServer() {
             timestamp, 
             status === 'submitted' ? timestamp : null
           );
+        }
+
+        // Auto-update candidates tracker table status to 'Applied' on submission
+        if (status === 'submitted') {
+          const existingCand = sqliteDb.prepare("SELECT id FROM candidates WHERE email = ?").get(email) as any;
+          const todayDate = timestamp.split('T')[0];
+          if (existingCand) {
+            sqliteDb.prepare(`
+              UPDATE candidates 
+              SET status = 'Applied', application_date = ?
+              WHERE email = ?
+            `).run(todayDate, email);
+          } else {
+            // Find applicant's name from users directory
+            const userRow = sqliteDb.prepare("SELECT name FROM users WHERE email = ?").get(email) as any;
+            const candName = userRow ? userRow.name : email.split('@')[0];
+            sqliteDb.prepare(`
+              INSERT INTO candidates (id, name, email, phone, status, application_date, scores, notes, document_vault)
+              VALUES (?, ?, ?, ?, 'Applied', ?, '{}', '', '[]')
+            `).run('cand_' + email.replace(/[^a-z0-9]/g, '_'), candName, email, "", todayDate);
+          }
         }
       }
 
