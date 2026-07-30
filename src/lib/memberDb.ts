@@ -370,24 +370,40 @@ export async function saveApplication(email: string, data: any, status: 'draft' 
 }
 
 export async function fetchApplication(email: string) {
+  let application = null;
+  let candidateStatus = null;
+
   // Try Firebase Firestore first
   try {
     const fbResult = await firebaseFetchApplication(email);
     if (fbResult && fbResult.success && fbResult.application) {
-      return fbResult;
+      application = fbResult.application;
     }
   } catch (err) {
     console.warn('Firebase fetchApplication warning:', err);
   }
 
-  // Fallback to server API
+  // Fetch from server API to get candidateStatus and server application data fallback
   try {
     const response = await fetch(`/api/applications/${email}`);
-    return await response.json();
+    const serverResult = await response.json();
+    if (serverResult && serverResult.success) {
+      if (!application && serverResult.application) {
+        application = serverResult.application;
+      }
+      if (serverResult.candidateStatus) {
+        candidateStatus = serverResult.candidateStatus;
+      }
+    }
   } catch (err) {
-    console.error('Failed to fetch application:', err);
-    return { success: false, message: 'Connection error' };
+    console.error('Failed to fetch application from server:', err);
   }
+
+  return {
+    success: !!application || !!candidateStatus,
+    application,
+    candidateStatus
+  };
 }
 
 export async function fetchAllApplications() {

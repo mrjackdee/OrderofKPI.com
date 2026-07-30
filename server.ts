@@ -907,18 +907,20 @@ async function startServer() {
     try {
       const { email } = req.params;
       if (useSqlite && sqliteDb) {
-        const app = sqliteDb.prepare("SELECT * FROM membership_applications WHERE email = ?").get(email) as any;
-        if (app) {
-          return res.json({ 
-            success: true, 
-            application: {
-              ...app,
-              data: JSON.parse(app.data || "{}")
-            }
-          });
-        }
+        const appRow = sqliteDb.prepare("SELECT * FROM membership_applications WHERE email = ?").get(email) as any;
+        const candRow = sqliteDb.prepare("SELECT status FROM candidates WHERE email = ?").get(email) as any;
+        const candidateStatus = candRow ? candRow.status : null;
+
+        return res.json({ 
+          success: true, 
+          application: appRow ? {
+            ...appRow,
+            data: JSON.parse(appRow.data || "{}")
+          } : null,
+          candidateStatus: candidateStatus
+        });
       }
-      res.json({ success: true, application: null });
+      res.json({ success: true, application: null, candidateStatus: null });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }

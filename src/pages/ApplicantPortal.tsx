@@ -22,6 +22,7 @@ import Application from './Application';
 export default function ApplicantPortal() {
   const [activeTab, setActiveTab] = useState<'application' | 'timeline' | 'instructions'>('application');
   const [appStatus, setAppStatus] = useState<'not_started' | 'draft' | 'submitted'>('not_started');
+  const [candidateStatus, setCandidateStatus] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -39,9 +40,14 @@ export default function ApplicantPortal() {
 
       try {
         const res = await fetchApplication(userEmail);
-        if (res && res.application) {
-          setAppStatus(res.application.status || 'draft');
-          setLastSaved(res.application.submitted_at || res.application.last_saved_at || null);
+        if (res) {
+          if (res.application) {
+            setAppStatus(res.application.status || 'draft');
+            setLastSaved(res.application.submitted_at || res.application.last_saved_at || null);
+          }
+          if (res.candidateStatus) {
+            setCandidateStatus(res.candidateStatus);
+          }
         }
       } catch (err) {
         console.error('Failed to load application status:', err);
@@ -111,17 +117,24 @@ export default function ApplicantPortal() {
                 <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 ${
                   appStatus === 'submitted'
                     ? 'bg-green-100 text-green-800 border border-green-300'
-                    : 'bg-gold/15 text-ivy border border-gold/30'
+                    : appStatus === 'draft'
+                      ? 'bg-amber-500/10 text-amber-800 border border-amber-300/50 bg-amber-50'
+                      : 'bg-gold/15 text-ivy border border-gold/30'
                 }`}>
                   {appStatus === 'submitted' ? (
                     <>
                       <CheckCircle size={12} className="text-green-600" />
-                      Submitted & Under Review
+                      {candidateStatus && !['Inquiry', 'Applied'].includes(candidateStatus) ? `Under Review (${candidateStatus})` : 'Submitted & Under Review'}
+                    </>
+                  ) : appStatus === 'draft' ? (
+                    <>
+                      <Clock size={12} className="text-amber-600" />
+                      Draft - In Progress
                     </>
                   ) : (
                     <>
                       <Clock size={12} className="text-gold" />
-                      Draft Application in Progress
+                      Not Started
                     </>
                   )}
                 </span>
@@ -146,15 +159,139 @@ export default function ApplicantPortal() {
               </div>
               <button
                 onClick={handleContinueApplication}
-                className="w-full py-3 bg-gold text-ivy rounded-xl font-bold uppercase tracking-widest text-xs hover:brightness-105 transition-all shadow-md"
+                className="w-full py-3 bg-gold text-ivy rounded-xl font-bold uppercase tracking-widest text-xs hover:brightness-105 transition-all shadow-md cursor-pointer"
               >
                 {appStatus === 'submitted' ? 'View Submitted Application' : 'Continue Application'}
               </button>
             </div>
           </div>
+
+          {/* Progress Bar Section */}
+          {(() => {
+            const steps = [
+              { 
+                label: 'Not Started', 
+                desc: 'Form is ready',
+                icon: Clock,
+              },
+              { 
+                label: 'In Progress', 
+                desc: 'Saved as draft',
+                icon: FileText,
+              },
+              { 
+                label: 'Submitted', 
+                desc: 'Transmitted successfully',
+                icon: CheckCircle,
+              },
+              { 
+                label: 'Under Review', 
+                desc: 'Committee evaluating',
+                icon: ShieldCheck,
+              }
+            ];
+
+            let currentStepIndex = 0;
+            if (appStatus === 'draft') {
+              currentStepIndex = 1;
+            } else if (appStatus === 'submitted') {
+              currentStepIndex = 2;
+              if (candidateStatus && !['Inquiry', 'Applied'].includes(candidateStatus)) {
+                currentStepIndex = 3;
+              }
+            }
+
+            return (
+              <div className="mt-10 pt-8 border-t border-gold/20 relative z-10">
+                <div className="hidden md:flex items-center justify-between relative">
+                  {/* Connecting Line Background */}
+                  <div className="absolute left-[12.5%] top-[22px] right-[12.5%] h-0.5 bg-cream border border-gold/10 -z-10" />
+                  {/* Connecting Line Active */}
+                  <div 
+                    className="absolute left-[12.5%] top-[22px] h-0.5 bg-ivy -z-10 transition-all duration-500" 
+                    style={{ width: `${(currentStepIndex / (steps.length - 1)) * 75}%` }}
+                  />
+
+                  {steps.map((step, idx) => {
+                    const Icon = step.icon;
+                    const isCompleted = idx < currentStepIndex;
+                    const isActive = idx === currentStepIndex;
+
+                    return (
+                      <div key={idx} className="flex flex-col items-center flex-1 text-center relative px-2">
+                        {/* Circle Indicator */}
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                          isCompleted 
+                            ? 'bg-ivy border-ivy text-gold shadow-md'
+                            : isActive
+                              ? 'bg-gold border-gold text-ivy ring-4 ring-gold/15 shadow-lg'
+                              : 'bg-white border-gold/20 text-ivy/30'
+                        }`}>
+                          <Icon size={18} className={isActive ? 'text-ivy' : isCompleted ? 'text-gold' : 'text-ivy/40'} />
+                        </div>
+
+                        {/* Labels */}
+                        <div className="mt-4 space-y-1">
+                          <p className={`text-[10px] font-bold uppercase tracking-widest ${
+                            isActive ? 'text-ivy font-extrabold' : isCompleted ? 'text-ivy/80' : 'text-ivy/40'
+                          }`}>
+                            {step.label}
+                          </p>
+                          <p className="text-[9px] font-body text-ivy/50 max-w-[140px] mx-auto leading-tight">
+                            {step.desc}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Mobile Vertical Layout */}
+                <div className="md:hidden space-y-6">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-gold mb-2">
+                    Application Journey
+                  </div>
+                  <div className="relative pl-6 border-l-2 border-gold/20 ml-3 space-y-6">
+                    {steps.map((step, idx) => {
+                      const Icon = step.icon;
+                      const isCompleted = idx < currentStepIndex;
+                      const isActive = idx === currentStepIndex;
+
+                      return (
+                        <div key={idx} className="relative flex gap-4 items-start">
+                          {/* Circle Indicator on Left Margin */}
+                          <div className={`absolute -left-[31px] top-0 w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                            isCompleted 
+                              ? 'bg-ivy border-ivy text-gold shadow-md'
+                              : isActive
+                                ? 'bg-gold border-gold text-ivy ring-4 ring-gold/15 shadow-lg'
+                                : 'bg-white border-gold/20 text-ivy/30'
+                          }`}>
+                            <Icon size={14} className={isActive ? 'text-ivy' : isCompleted ? 'text-gold' : 'text-ivy/40'} />
+                          </div>
+
+                          {/* Labels */}
+                          <div className="space-y-0.5">
+                            <p className={`text-[10px] font-bold uppercase tracking-wider ${
+                              isActive ? 'text-ivy font-extrabold' : isCompleted ? 'text-ivy/80' : 'text-ivy/40'
+                            }`}>
+                              {step.label}
+                            </p>
+                            <p className="text-[9px] font-body text-ivy/50 leading-tight">
+                              {step.desc}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
-        {/* Navigation Tabs for Space */}
+        {/* Navigation Tabs */}
         <div className="flex flex-wrap gap-3 border-b border-gold/20 pb-4">
           <button
             onClick={() => setActiveTab('application')}
@@ -165,7 +302,7 @@ export default function ApplicantPortal() {
             }`}
           >
             <FileText size={16} className={activeTab === 'application' ? 'text-gold' : 'text-ivy/60'} />
-            Application Form Space
+            Application Form
           </button>
 
           <button
@@ -202,20 +339,29 @@ export default function ApplicantPortal() {
 
         {activeTab === 'timeline' && (
           <div className="bg-white border border-gold/20 rounded-[32px] p-8 md:p-12 space-y-8 shadow-soft">
-            <div className="space-y-3">
-              <h3 className="text-2xl font-bold uppercase tracking-tight text-ivy">
-                FY27 Intake Class Schedule & Milestones
-              </h3>
-              <p className="text-ivy/60 text-sm font-body leading-relaxed max-w-2xl">
-                Please review the key dates and milestones below regarding the Kappa Pi Membership Intake Process.
-              </p>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
-                { step: "Phase 1", title: "Application Submission", date: "Active Open Period", status: "In Progress", desc: "Complete all sections of the official online application." },
-                { step: "Phase 2", title: "Committee Review", date: "Following Submission", status: "Upcoming", desc: "The Membership Committee reviews qualifications and documentation." },
-                { step: "Phase 3", title: "Candidate Interview", date: "By Notification", status: "Upcoming", desc: "Invited candidates participate in formal interview panels." }
+                { 
+                  step: "Phase 1", 
+                  title: "Application Submission", 
+                  date: "Active Open Period", 
+                  status: "In Progress", 
+                  desc: "Complete all sections of the official online application." 
+                },
+                { 
+                  step: "Phase 2", 
+                  title: "Committee Review and Application Scoring", 
+                  date: "Following Submission", 
+                  status: "Upcoming", 
+                  desc: "Applicants who meet the targeted score will advance to Phase 3." 
+                },
+                { 
+                  step: "Phase 3", 
+                  title: "Candidate Interview", 
+                  date: "By Invitation Only", 
+                  status: "Upcoming", 
+                  desc: "Invited candidates participate in formal interview panels." 
+                }
               ].map((phase, idx) => (
                 <div key={idx} className="bg-cream/40 border border-gold/20 rounded-2xl p-6 space-y-4">
                   <div className="flex justify-between items-center">
