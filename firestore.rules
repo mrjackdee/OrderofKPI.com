@@ -99,5 +99,13 @@ service cloud.firestore {
       allow create: if isValidId(archiveId);
       allow delete: if isValidId(archiveId);
     }
+
+    match /applications/{applicationId} {
+      allow get, list, create, update: if true;
+    }
+
+    match /candidate_accounts/{accountId} {
+      allow get, list, create, update: if true;
+    }
   }
 }

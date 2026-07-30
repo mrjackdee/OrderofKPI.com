@@ -88,12 +88,29 @@
         "submittedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["email", "firstName", "lastName", "status"]
+    },
+    "candidate_account": {
+      "title": "Candidate Account",
+      "description": "Prospective candidate account credentials and details stored in Firebase.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "name", "role"]
     }
   },
   "firestore": {
     "applications/{applicationId}": {
       "schema": "membership_application",
       "description": "Member applications."
+    },
+    "candidate_accounts/{accountId}": {
+      "schema": "candidate_account",
+      "description": "Candidate accounts and credential metadata."
     },
     "ballots/{ballotId}": {
       "schema": "ballot",

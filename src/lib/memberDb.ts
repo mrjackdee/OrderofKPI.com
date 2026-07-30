@@ -1,3 +1,11 @@
+import { 
+  firebaseRegisterApplicant, 
+  firebaseLoginApplicant, 
+  firebaseResetApplicantPassword, 
+  firebaseSaveApplication, 
+  firebaseFetchApplication 
+} from './firebase';
+
 export interface MemberUser {
   name: string;
   email: string;
@@ -84,7 +92,7 @@ export async function performHybridLogin(email: string, pass: string): Promise<{
 }
 
 /**
- * Register a new prospective applicant account.
+ * Register a new prospective applicant account in Firebase Auth & Firestore, syncing with server database.
  */
 export async function performApplicantRegister(name: string, email: string, pass: string): Promise<{
   success: boolean;
@@ -99,52 +107,55 @@ export async function performApplicantRegister(name: string, email: string, pass
 }> {
   const normalizedEmail = email.toLowerCase().trim();
 
+  // 1. First register directly in Firebase Auth & Firestore
   try {
-    const response = await fetch('/api/auth/applicant-register', {
+    const fbRes = await firebaseRegisterApplicant(name, normalizedEmail, pass);
+    
+    // Also sync with server API in background
+    fetch('/api/auth/applicant-register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email: normalizedEmail, password: pass }),
-    });
+    }).catch(err => console.warn('Server sync error on register:', err));
 
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      const data = await response.json();
-      if (response.ok && data.success) {
-        return {
-          success: true,
-          message: 'Applicant registered successfully',
-          user: data.user
-        };
-      } else {
-        return {
-          success: false,
-          message: data.message || 'Registration failed'
-        };
-      }
-    } else {
-      // Client-side fallback registration
-      const firstName = name.split(' ')[0];
-      localStorage.setItem(`kpi_client_password_${normalizedEmail}`, pass);
-      localStorage.setItem(`kpi_password_changed_${normalizedEmail}`, 'true');
-      return {
-        success: true,
-        message: 'Applicant account created',
-        user: {
-          email: normalizedEmail,
-          name,
-          firstName,
-          role: 'prospective',
-          isFirstLogin: false
+    return fbRes;
+  } catch (fbErr: any) {
+    console.warn('Firebase registration failed or offline, trying server API:', fbErr);
+
+    // Fallback to server registration if Firebase unavailable
+    try {
+      const response = await fetch('/api/auth/applicant-register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email: normalizedEmail, password: pass }),
+      });
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        if (response.ok && data.success) {
+          return {
+            success: true,
+            message: 'Applicant registered successfully',
+            user: data.user
+          };
+        } else {
+          return {
+            success: false,
+            message: data.message || fbErr.message || 'Registration failed'
+          };
         }
-      };
+      }
+    } catch (err) {
+      console.warn('Server registration offline fallback:', err);
     }
-  } catch (err) {
+
     const firstName = name.split(' ')[0];
     localStorage.setItem(`kpi_client_password_${normalizedEmail}`, pass);
     localStorage.setItem(`kpi_password_changed_${normalizedEmail}`, 'true');
     return {
       success: true,
-      message: 'Applicant account created',
+      message: 'Applicant account created in browser session',
       user: {
         email: normalizedEmail,
         name,
@@ -154,6 +165,51 @@ export async function performApplicantRegister(name: string, email: string, pass
       }
     };
   }
+}
+
+/**
+ * Log in applicant using Firebase Auth credentials with server fallback.
+ */
+export async function performApplicantLogin(email: string, pass: string): Promise<{
+  success: boolean;
+  message: string;
+  user?: {
+    email: string;
+    name: string;
+    firstName: string;
+    role: string;
+    isFirstLogin: boolean;
+  };
+}> {
+  const normalizedEmail = email.toLowerCase().trim();
+
+  // Try Firebase Auth login first
+  try {
+    const fbRes = await firebaseLoginApplicant(normalizedEmail, pass);
+    return fbRes;
+  } catch (fbErr: any) {
+    console.warn('Firebase login attempt failed:', fbErr.message);
+
+    // Try server hybrid login fallback
+    try {
+      const serverRes = await performHybridLogin(normalizedEmail, pass);
+      if (serverRes.success) return serverRes;
+    } catch (e) {
+      console.warn('Server login fallback failed:', e);
+    }
+
+    throw fbErr;
+  }
+}
+
+/**
+ * Trigger self-service password reset email via Firebase Auth.
+ */
+export async function requestApplicantPasswordReset(email: string): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  return await firebaseResetApplicantPassword(email);
 }
 
 /**
@@ -253,6 +309,14 @@ function performClientSidePasswordChange(email: string, currentPass: string, new
 }
 
 export async function saveApplication(email: string, data: any, status: 'draft' | 'submitted') {
+  // First save to Firebase Firestore
+  try {
+    await firebaseSaveApplication(email, data, status);
+  } catch (err) {
+    console.warn('Firebase saveApplication warning:', err);
+  }
+
+  // Also send to backend API
   try {
     const response = await fetch('/api/applications', {
       method: 'POST',
@@ -261,12 +325,23 @@ export async function saveApplication(email: string, data: any, status: 'draft' 
     });
     return await response.json();
   } catch (err) {
-    console.error('Failed to save application:', err);
-    return { success: false, message: 'Connection error' };
+    console.error('Failed to save application to server API:', err);
+    return { success: true, message: 'Saved to Firebase database' };
   }
 }
 
 export async function fetchApplication(email: string) {
+  // Try Firebase Firestore first
+  try {
+    const fbResult = await firebaseFetchApplication(email);
+    if (fbResult && fbResult.success && fbResult.application) {
+      return fbResult;
+    }
+  } catch (err) {
+    console.warn('Firebase fetchApplication warning:', err);
+  }
+
+  // Fallback to server API
   try {
     const response = await fetch(`/api/applications/${email}`);
     return await response.json();

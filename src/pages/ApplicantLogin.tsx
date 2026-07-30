@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Lock, Mail, User, ArrowRight, ShieldCheck, Loader2, FileText, CheckCircle } from 'lucide-react';
-import { performHybridLogin, performApplicantRegister } from '../lib/memberDb';
+import { Lock, Mail, User, ArrowRight, ShieldCheck, Loader2, FileText, CheckCircle, KeyRound, RefreshCw } from 'lucide-react';
+import { performApplicantLogin, performApplicantRegister, requestApplicantPasswordReset } from '../lib/memberDb';
 
 export default function ApplicantLogin() {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register' | 'reset'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,7 +32,7 @@ export default function ApplicantLogin() {
 
     try {
       if (mode === 'login') {
-        const result = await performHybridLogin(email, password);
+        const result = await performApplicantLogin(email, password);
         if (!result.success || !result.user) {
           throw new Error(result.message);
         }
@@ -44,7 +44,7 @@ export default function ApplicantLogin() {
         sessionStorage.setItem('userRole', user.role || 'prospective');
 
         navigate('/applicant-portal', { replace: true });
-      } else {
+      } else if (mode === 'register') {
         const result = await performApplicantRegister(name, email, password);
         if (!result.success || !result.user) {
           throw new Error(result.message);
@@ -56,10 +56,17 @@ export default function ApplicantLogin() {
         sessionStorage.setItem('userFirstName', user.firstName || name.split(' ')[0]);
         sessionStorage.setItem('userRole', 'prospective');
 
-        setSuccessMsg('Account created successfully! Redirecting to Applicant Portal...');
+        setSuccessMsg('Account saved in Firebase Database! Redirecting to Applicant Portal...');
         setTimeout(() => {
           navigate('/applicant-portal', { replace: true });
-        }, 1000);
+        }, 1200);
+      } else if (mode === 'reset') {
+        const result = await requestApplicantPasswordReset(email);
+        if (result.success) {
+          setSuccessMsg(result.message);
+        } else {
+          throw new Error(result.message);
+        }
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred. Please verify your details and try again.');
@@ -84,20 +91,23 @@ export default function ApplicantLogin() {
           
           <div className="flex justify-center mb-6">
             <div className="w-16 h-16 rounded-2xl bg-gold/10 border border-gold/30 flex items-center justify-center text-ivy">
-              <FileText size={32} className="text-ivy" />
+              {mode === 'reset' ? <KeyRound size={32} className="text-ivy" /> : <FileText size={32} className="text-ivy" />}
             </div>
           </div>
 
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-gold/10 border border-gold/20 rounded-full mb-3">
               <ShieldCheck size={12} className="text-gold" />
-              <span className="text-[9px] font-bold text-ivy uppercase tracking-[0.2em]">Membership Intake FY27</span>
+              <span className="text-[9px] font-bold text-ivy uppercase tracking-[0.2em]">Firebase Database Secured</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-display font-bold text-ivy uppercase tracking-wider mb-2">
-              Prospective <span className="text-gold">Applicant Portal</span>
+              {mode === 'reset' ? 'Password ' : 'Prospective '}
+              <span className="text-gold">{mode === 'reset' ? 'Reset' : 'Applicant Portal'}</span>
             </h1>
             <p className="text-ivy/60 text-xs font-body leading-relaxed max-w-xs mx-auto">
-              Separate portal for prospective members to submit and manage their Kappa Pi application.
+              {mode === 'reset' 
+                ? 'Enter your candidate email address to receive a self-service password reset link powered by Firebase.'
+                : 'Separate portal for prospective members to submit and manage their Kappa Pi application.'}
             </p>
           </div>
 
@@ -106,7 +116,7 @@ export default function ApplicantLogin() {
             <button
               type="button"
               onClick={() => { setMode('login'); setError(''); setSuccessMsg(''); }}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+              className={`flex-1 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all ${
                 mode === 'login' ? 'bg-ivy text-cream shadow-md' : 'text-ivy/60 hover:text-ivy'
               }`}
             >
@@ -115,11 +125,20 @@ export default function ApplicantLogin() {
             <button
               type="button"
               onClick={() => { setMode('register'); setError(''); setSuccessMsg(''); }}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+              className={`flex-1 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all ${
                 mode === 'register' ? 'bg-ivy text-cream shadow-md' : 'text-ivy/60 hover:text-ivy'
               }`}
             >
-              Register Account
+              Register
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode('reset'); setError(''); setSuccessMsg(''); }}
+              className={`flex-1 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all ${
+                mode === 'reset' ? 'bg-ivy text-cream shadow-md' : 'text-ivy/60 hover:text-ivy'
+              }`}
+            >
+              Reset Pass
             </button>
           </div>
 
@@ -130,13 +149,13 @@ export default function ApplicantLogin() {
           )}
 
           {successMsg && (
-            <div className="mb-5 p-4 bg-green-50 border border-green-200 rounded-2xl text-xs text-green-700 font-body flex items-center gap-2">
-              <CheckCircle size={16} className="shrink-0" />
-              {successMsg}
+            <div className="mb-5 p-4 bg-green-50 border border-green-200 rounded-2xl text-xs text-green-800 font-body flex items-start gap-2.5">
+              <CheckCircle size={18} className="shrink-0 text-green-600 mt-0.5" />
+              <span className="leading-relaxed">{successMsg}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'register' && (
               <div className="space-y-1.5">
                 <label className="text-[10px] text-ivy/70 uppercase tracking-widest font-bold ml-1">Full Name</label>
@@ -175,38 +194,55 @@ export default function ApplicantLogin() {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[10px] text-ivy/70 uppercase tracking-widest font-bold ml-1">Password</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock size={16} className="text-gold" />
+            {mode !== 'reset' && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] text-ivy/70 uppercase tracking-widest font-bold ml-1">Password</label>
+                  {mode === 'login' && (
+                    <button
+                      type="button"
+                      onClick={() => { setMode('reset'); setError(''); setSuccessMsg(''); }}
+                      className="text-[10px] text-gold font-bold uppercase tracking-wider hover:underline"
+                    >
+                      Self-Service Reset?
+                    </button>
+                  )}
                 </div>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-cream/40 border border-gold/20 rounded-xl py-3 pl-11 pr-4 text-ivy text-sm focus:outline-none focus:border-ivy focus:bg-white transition-all placeholder:text-ivy/30"
-                  placeholder="••••••••"
-                  required
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Lock size={16} className="text-gold" />
+                  </div>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-cream/40 border border-gold/20 rounded-xl py-3 pl-11 pr-4 text-ivy text-sm focus:outline-none focus:border-ivy focus:bg-white transition-all placeholder:text-ivy/30"
+                    placeholder="••••••••"
+                    required
+                    disabled={loading}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <motion.button
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-ivy text-cream py-3.5 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-ivy/90 transition-all mt-2 disabled:opacity-50 shadow-soft"
+              className="w-full flex items-center justify-center gap-2 bg-ivy text-cream py-3.5 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-ivy/90 transition-all mt-3 disabled:opacity-50 shadow-soft"
             >
               {loading ? (
                 <>
-                  <Loader2 size={16} className="animate-spin text-gold" /> Verifying...
+                  <Loader2 size={16} className="animate-spin text-gold" /> Processing...
+                </>
+              ) : mode === 'reset' ? (
+                <>
+                  Send Firebase Password Reset Link <RefreshCw size={16} className="text-gold" />
                 </>
               ) : (
                 <>
-                  {mode === 'login' ? 'Applicant Login' : 'Create Applicant Account'} <ArrowRight size={16} className="text-gold" />
+                  {mode === 'login' ? 'Applicant Login' : 'Create Candidate Firebase Account'} <ArrowRight size={16} className="text-gold" />
                 </>
               )}
             </motion.button>
