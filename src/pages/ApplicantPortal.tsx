@@ -52,6 +52,16 @@ export default function ApplicantPortal() {
     loadData();
   }, [userEmail]);
 
+  const handleContinueApplication = () => {
+    setActiveTab('application');
+    setTimeout(() => {
+      const element = document.getElementById('application-form-section');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 80);
+  };
+
   const handleLogout = () => {
     sessionStorage.removeItem('userEmail');
     sessionStorage.removeItem('userName');
@@ -134,14 +144,8 @@ export default function ApplicantPortal() {
               <div className="w-12 h-12 bg-ivy text-cream rounded-2xl flex items-center justify-center mx-auto shadow-md">
                 <FileText size={24} className="text-gold" />
               </div>
-              <div>
-                <p className="text-xs font-bold text-ivy uppercase tracking-wider">Committee Availability</p>
-                <p className="text-[11px] text-ivy/60 font-body mt-1">
-                  Submitted applications are immediately reviewed by committee members.
-                </p>
-              </div>
               <button
-                onClick={() => setActiveTab('application')}
+                onClick={handleContinueApplication}
                 className="w-full py-3 bg-gold text-ivy rounded-xl font-bold uppercase tracking-widest text-xs hover:brightness-105 transition-all shadow-md"
               >
                 {appStatus === 'submitted' ? 'View Submitted Application' : 'Continue Application'}
@@ -191,7 +195,7 @@ export default function ApplicantPortal() {
 
         {/* Tab Content */}
         {activeTab === 'application' && (
-          <div className="bg-white border border-gold/20 rounded-[32px] p-4 md:p-8 shadow-soft">
+          <div id="application-form-section" className="bg-white border border-gold/20 rounded-[32px] p-4 md:p-8 shadow-soft">
             <Application />
           </div>
         )}
