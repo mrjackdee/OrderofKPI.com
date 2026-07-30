@@ -76,7 +76,6 @@ export default function Layout() {
   const footerNavItems: NavItem[] = [
     { name: 'HOME', path: '/' },
     { name: 'MEMBER PORTAL', path: '/member-portal' },
-    { name: 'MEMBER DIRECTORY', path: 'https://kpi2012.com', isExternal: true },
     { name: 'PRIVACY POLICY', path: '/privacy-policy' },
     { name: 'TERMS OF SERVICE', path: '/terms-of-service' },
   ];

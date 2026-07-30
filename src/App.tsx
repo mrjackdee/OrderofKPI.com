@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -35,71 +35,44 @@ import ReviewApplications from './pages/ReviewApplications';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import ScrollToTop from './components/ScrollToTop';
-import LandingPage from './components/LandingPage';
 import ProtectedRoute from './components/ProtectedRoute';
-import { AnimatePresence } from 'motion/react';
 
 export default function App() {
-  const [hasEntered, setHasEntered] = useState(() => {
-    try {
-      return sessionStorage.getItem('kpi_splash_entered') === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  const handleEnter = () => {
-    try {
-      sessionStorage.setItem('kpi_splash_entered', 'true');
-    } catch (error) {
-      console.warn('Failed to set sessionStorage key:', error);
-    }
-    setHasEntered(true);
-  };
-
   return (
     <Router>
       <ScrollToTop />
-      <AnimatePresence mode="wait">
-        {!hasEntered ? (
-          <LandingPage onEnter={handleEnter} />
-        ) : (
-          <React.Fragment key="app-content">
-            <Routes>
-              <Route path="/" element={<Layout />}>
-                <Route index element={<Home />} />
-                <Route path="member-portal" element={<ProtectedRoute><MemberPortal /></ProtectedRoute>} />
-                <Route path="conference-portal" element={<ConferencePortal />} />
-                <Route path="save-the-date" element={<ProtectedRoute><SaveTheDate /></ProtectedRoute>} />
-                <Route path="agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
-                <Route path="registration" element={<ProtectedRoute><Registration /></ProtectedRoute>} />
-                <Route path="registration-list" element={<ProtectedRoute><RegistrationList /></ProtectedRoute>} />
-                <Route path="party" element={<ProtectedRoute><Party /></ProtectedRoute>} />
-                <Route path="success" element={<ProtectedRoute><Success /></ProtectedRoute>} />
-                <Route path="congratulations" element={<ProtectedRoute><Congratulations /></ProtectedRoute>} />
-                <Route path="elections" element={<ProtectedRoute><Elections /></ProtectedRoute>} />
-                <Route path="voting-portal" element={<ProtectedRoute><VotingPortal /></ProtectedRoute>} />
-                <Route path="admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-                <Route path="candidate-tracker" element={<ProtectedRoute><CandidateTracker /></ProtectedRoute>} />
-                <Route path="selection-voting" element={<ProtectedRoute><SelectionVoting /></ProtectedRoute>} />
-                <Route path="constitution" element={<ProtectedRoute><Constitution /></ProtectedRoute>} />
-                <Route path="intake-calendar" element={<ProtectedRoute><IntakeCalendar /></ProtectedRoute>} />
-                <Route path="gantt-chart" element={<ProtectedRoute><GanttChart /></ProtectedRoute>} />
-                <Route path="login" element={<Login />} />
-                <Route path="applicant-login" element={<ApplicantLogin />} />
-                <Route path="applicant-portal" element={<ProtectedRoute><ApplicantPortal /></ProtectedRoute>} />
-                <Route path="financial-roster" element={<ProtectedRoute><FinancialRoster /></ProtectedRoute>} />
-                <Route path="member-directory" element={<ProtectedRoute><MemberDirectory /></ProtectedRoute>} />
-                <Route path="meeting-minutes" element={<ProtectedRoute><MeetingMinutes /></ProtectedRoute>} />
-                <Route path="membership-application" element={<ProtectedRoute><Application /></ProtectedRoute>} />
-                <Route path="review-applications" element={<ProtectedRoute><ReviewApplications /></ProtectedRoute>} />
-                <Route path="privacy-policy" element={<PrivacyPolicy />} />
-                <Route path="terms-of-service" element={<TermsOfService />} />
-              </Route>
-            </Routes>
-          </React.Fragment>
-        )}
-      </AnimatePresence>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Home />} />
+          <Route path="member-portal" element={<ProtectedRoute><MemberPortal /></ProtectedRoute>} />
+          <Route path="conference-portal" element={<ConferencePortal />} />
+          <Route path="save-the-date" element={<ProtectedRoute><SaveTheDate /></ProtectedRoute>} />
+          <Route path="agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
+          <Route path="registration" element={<ProtectedRoute><Registration /></ProtectedRoute>} />
+          <Route path="registration-list" element={<ProtectedRoute><RegistrationList /></ProtectedRoute>} />
+          <Route path="party" element={<ProtectedRoute><Party /></ProtectedRoute>} />
+          <Route path="success" element={<ProtectedRoute><Success /></ProtectedRoute>} />
+          <Route path="congratulations" element={<ProtectedRoute><Congratulations /></ProtectedRoute>} />
+          <Route path="elections" element={<ProtectedRoute><Elections /></ProtectedRoute>} />
+          <Route path="voting-portal" element={<ProtectedRoute><VotingPortal /></ProtectedRoute>} />
+          <Route path="admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+          <Route path="candidate-tracker" element={<ProtectedRoute><CandidateTracker /></ProtectedRoute>} />
+          <Route path="selection-voting" element={<ProtectedRoute><SelectionVoting /></ProtectedRoute>} />
+          <Route path="constitution" element={<ProtectedRoute><Constitution /></ProtectedRoute>} />
+          <Route path="intake-calendar" element={<ProtectedRoute><IntakeCalendar /></ProtectedRoute>} />
+          <Route path="gantt-chart" element={<ProtectedRoute><GanttChart /></ProtectedRoute>} />
+          <Route path="login" element={<Login />} />
+          <Route path="applicant-login" element={<ApplicantLogin />} />
+          <Route path="applicant-portal" element={<ProtectedRoute><ApplicantPortal /></ProtectedRoute>} />
+          <Route path="financial-roster" element={<ProtectedRoute><FinancialRoster /></ProtectedRoute>} />
+          <Route path="member-directory" element={<ProtectedRoute><MemberDirectory /></ProtectedRoute>} />
+          <Route path="meeting-minutes" element={<ProtectedRoute><MeetingMinutes /></ProtectedRoute>} />
+          <Route path="membership-application" element={<ProtectedRoute><Application /></ProtectedRoute>} />
+          <Route path="review-applications" element={<ProtectedRoute><ReviewApplications /></ProtectedRoute>} />
+          <Route path="privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="terms-of-service" element={<TermsOfService />} />
+        </Route>
+      </Routes>
     </Router>
   );
 }
