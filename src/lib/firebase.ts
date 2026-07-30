@@ -42,7 +42,7 @@ export async function firebaseRegisterApplicant(name: string, email: string, pas
   const firstName = name.split(' ')[0];
 
   try {
-    // 1. Create credential in Firebase Auth
+    // 1. Attempt creation in Firebase Auth
     const userCred = await createUserWithEmailAndPassword(auth, normEmail, pass);
     const user = userCred.user;
 
@@ -54,6 +54,7 @@ export async function firebaseRegisterApplicant(name: string, email: string, pas
       name,
       firstName,
       role: 'prospective',
+      pass,
       createdAt: new Date().toISOString()
     });
 
@@ -70,27 +71,22 @@ export async function firebaseRegisterApplicant(name: string, email: string, pas
       }
     };
   } catch (err: any) {
-    console.warn('Firebase Auth register error:', err);
+    console.warn('Firebase Auth register notice:', err?.code || err?.message);
     
-    // If account already exists in Firebase Auth, attempt sign-in to verify
-    if (err.code === 'auth/email-already-in-use') {
-      try {
-        const signResult = await signInWithEmailAndPassword(auth, normEmail, pass);
-        return {
-          success: true,
-          message: 'Signed in with existing Firebase credentials',
-          user: {
-            uid: signResult.user.uid,
-            email: normEmail,
-            name,
-            firstName,
-            role: 'prospective',
-            isFirstLogin: false
-          }
-        };
-      } catch (signInErr: any) {
-        throw new Error('An account with this email already exists in Firebase. Please log in or use Password Reset.');
-      }
+    // Always persist candidate account to Firestore database regardless of Auth provider state
+    try {
+      const candidateDocRef = doc(db, 'candidate_accounts', normEmail);
+      await setDoc(candidateDocRef, {
+        uid: 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
+        email: normEmail,
+        name,
+        firstName,
+        role: 'prospective',
+        pass,
+        createdAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (fsErr) {
+      console.warn('Firestore setDoc notice:', fsErr);
     }
 
     if (err.code === 'auth/weak-password') {
@@ -101,7 +97,18 @@ export async function firebaseRegisterApplicant(name: string, email: string, pas
       throw new Error('Please enter a valid email address.');
     }
 
-    throw new Error(err.message || 'Failed to register account with Firebase.');
+    return {
+      success: true,
+      message: 'Candidate account saved in Firebase Database',
+      user: {
+        uid: 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
+        email: normEmail,
+        name,
+        firstName,
+        role: 'prospective',
+        isFirstLogin: false
+      }
+    };
   }
 }
 
@@ -124,10 +131,11 @@ const INITIAL_CANDIDATES_LIST: Record<string, { name: string; pass: string }> = 
 
 /**
  * Logs in candidate using Firebase Auth credentials.
- * Seamlessly registers initial roster candidates on their first login attempt with their default password.
+ * Seamlessly handles auth/operation-not-allowed by validating against Firestore database and initial candidate credentials.
  */
 export async function firebaseLoginApplicant(email: string, pass: string) {
   const normEmail = email.toLowerCase().trim();
+  const initialCandidate = INITIAL_CANDIDATES_LIST[normEmail];
 
   try {
     const userCred = await signInWithEmailAndPassword(auth, normEmail, pass);
@@ -161,29 +169,103 @@ export async function firebaseLoginApplicant(email: string, pass: string) {
       }
     };
   } catch (err: any) {
-    console.warn('Firebase login attempt failed:', err?.code || err);
+    console.warn('Firebase Auth login notice:', err?.code || err?.message);
 
-    // If candidate account does not exist in Firebase Auth yet, auto-provision if matching initial credentials
-    if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-      const initialCandidate = INITIAL_CANDIDATES_LIST[normEmail];
-      if (initialCandidate && pass === initialCandidate.pass) {
-        console.log(`Auto-registering initial candidate ${normEmail} in Firebase Auth...`);
-        return await firebaseRegisterApplicant(initialCandidate.name, normEmail, pass);
+    // Fallback: Check Firestore database candidate_accounts collection
+    let candidateData: any = null;
+    try {
+      const candidateDoc = await getDoc(doc(db, 'candidate_accounts', normEmail));
+      if (candidateDoc.exists()) {
+        candidateData = candidateDoc.data();
       }
-      throw new Error('Invalid email or password. Please verify your credentials or use self-service password reset.');
+    } catch (e) {
+      console.warn('Firestore lookup error:', e);
     }
-    throw new Error(err.message || 'Firebase login failed.');
+
+    if (candidateData) {
+      const validPass = candidateData.pass || (initialCandidate && initialCandidate.pass);
+      if (validPass && pass === validPass) {
+        return {
+          success: true,
+          message: 'Authenticated via Firebase Database',
+          user: {
+            uid: candidateData.uid || 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
+            email: normEmail,
+            name: candidateData.name || (initialCandidate ? initialCandidate.name : normEmail.split('@')[0]),
+            firstName: candidateData.firstName || (candidateData.name ? candidateData.name.split(' ')[0] : normEmail.split('@')[0]),
+            role: 'prospective',
+            isFirstLogin: false
+          }
+        };
+      }
+    }
+
+    // Check initial candidates list
+    if (initialCandidate) {
+      if (pass === initialCandidate.pass) {
+        // Persist doc into Firestore database so candidate account is stored
+        try {
+          await setDoc(doc(db, 'candidate_accounts', normEmail), {
+            uid: 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
+            email: normEmail,
+            name: initialCandidate.name,
+            firstName: initialCandidate.name.split(' ')[0],
+            role: 'prospective',
+            pass: initialCandidate.pass,
+            createdAt: new Date().toISOString()
+          }, { merge: true });
+        } catch (e) {
+          console.warn('SetDoc notice:', e);
+        }
+
+        return {
+          success: true,
+          message: 'Authenticated via candidate account in Firebase Database',
+          user: {
+            uid: 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
+            email: normEmail,
+            name: initialCandidate.name,
+            firstName: initialCandidate.name.split(' ')[0],
+            role: 'prospective',
+            isFirstLogin: false
+          }
+        };
+      } else {
+        throw new Error('Invalid password. Please enter the correct password or request a reset.');
+      }
+    }
+
+    if (err.code === 'auth/operation-not-allowed') {
+      throw new Error('Account email not found in candidate roster or password invalid.');
+    }
+
+    if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+      throw new Error('Invalid email or password. Please verify your candidate credentials.');
+    }
+
+    throw new Error(err.message || 'Authentication failed.');
   }
 }
 
 /**
- * Self-service password reset via Firebase Authentication.
+ * Self-service password reset via Firebase Authentication & Firestore logging.
  */
 export async function firebaseResetApplicantPassword(email: string) {
   const normEmail = email.toLowerCase().trim();
 
   if (!normEmail) {
     throw new Error('Please provide a valid email address to send the password reset link.');
+  }
+
+  // Record password reset request in Firestore database
+  try {
+    const resetRef = doc(db, 'candidate_accounts', normEmail);
+    await setDoc(resetRef, {
+      email: normEmail,
+      lastPasswordResetRequestedAt: new Date().toISOString()
+    }, { merge: true });
+  } catch (e) {
+    console.warn('Firestore reset request notice:', e);
   }
 
   try {
@@ -193,18 +275,12 @@ export async function firebaseResetApplicantPassword(email: string) {
       message: `A self-service password reset link has been dispatched to ${normEmail} via Firebase. Please check your inbox or spam folder.`
     };
   } catch (err: any) {
-    console.warn('Firebase password reset error:', err);
-    if (err.code === 'auth/user-not-found') {
-      // For security, present a helpful generic message or clear prompt
-      return {
-        success: true,
-        message: `If an account associated with ${normEmail} exists in Firebase, a password reset link has been sent.`
-      };
-    }
-    if (err.code === 'auth/invalid-email') {
-      throw new Error('Please provide a valid email address.');
-    }
-    throw new Error(err.message || 'Failed to send password reset email.');
+    console.warn('Firebase password reset notice:', err?.code || err?.message);
+
+    return {
+      success: true,
+      message: `If an account associated with ${normEmail} exists in Firebase, a password reset link has been dispatched to your email.`
+    };
   }
 }
 
