@@ -41,6 +41,23 @@ const defaultUsers = [
   { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian", intake_class: "Fall '20", financial_status: "active", industry: "Journalism" }
 ];
 
+const initialCandidates = [
+  { name: "Avery Torrence", email: "averyt16@gmail.com", phone: "770-873-0784", pass: "0784" },
+  { name: "Charles Edward Miller Jr", email: "hupirate90@me.com", phone: "301-602-9348", pass: "9348" },
+  { name: "Dennis Mills", email: "demills_10@yahoo.com", phone: "252-883-0844", pass: "0844" },
+  { name: "Dr. Quincy Dinnerson", email: "quincyld86@gmail.com", phone: "336-420-1326", pass: "1326" },
+  { name: "Jabari Smith Perry", email: "jabari.smithperry@gmail.com", phone: "404-784-7008", pass: "7008" },
+  { name: "Lee Sennet", email: "l.a.sennet@gmail.com", phone: "281-740-1774", pass: "1774" },
+  { name: "Malinski Russell", email: "malineskidrussell@gmail.com", phone: "731-273-0011", pass: "0011" },
+  { name: "Michael L Coleman", email: "mabmykie1914@gmail.com", phone: "917-283-7119", pass: "7119" },
+  { name: "Ronald Oliver", email: "roliver449@gmail.com", phone: "773-842-6846", pass: "6846" },
+  { name: "Steven Burnette", email: "burnettesteven3@gmail.com", phone: "336-437-2275", pass: "2275" },
+  { name: "Tashaun Najee Benton", email: "tashaunbenton233@gmail.com", phone: "973-592-1821", pass: "1821" },
+  { name: "Titus Oliver", email: "o_titus@yahoo.com", phone: "662-654-7713", pass: "7713" },
+  { name: "Zion Gates-Norris", email: "zgatesnorris@gmail.com", phone: "954-234-4876", pass: "4876" },
+  { name: "John Candidate", email: "candidate@gmail.com", phone: "2012", pass: "2012" }
+];
+
 let useSqlite = true;
 let sqliteDb: any = null;
 const jsonDbPath = path.join(process.cwd(), "kpi_members_v2.json");
@@ -50,7 +67,10 @@ function hashPassword(password: string): string {
 }
 
 async function initDb() {
-  const allowedEmails = new Set(defaultUsers.map(u => u.email.toLowerCase().trim()));
+  const allowedEmails = new Set([
+    ...defaultUsers.map(u => u.email.toLowerCase().trim()),
+    ...initialCandidates.map(c => c.email.toLowerCase().trim())
+  ]);
   const defaultPasswordHash = hashPassword("atlanta");
   const testUsers = ["admin@orderofkpi.org", "jack@orderofkpi.org"];
 
@@ -189,7 +209,40 @@ async function initDb() {
         );
       }
     }
-    console.log("SQLite database synchronized with official active roster.");
+
+    // Seed official initial candidates
+    for (const c of initialCandidates) {
+      const emailNorm = c.email.toLowerCase().trim();
+      const firstName = c.name.split(" ")[0];
+      const passHash = hashPassword(c.pass);
+
+      const existingUser = sqliteDb.prepare("SELECT password_hash FROM users WHERE email = ?").get(emailNorm) as any;
+      if (!existingUser) {
+        sqliteDb.prepare(`
+          INSERT INTO users (
+            email, name, first_name, password_hash, is_first_login, 
+            role, title, intake_class, 
+            financial_status
+          )
+          VALUES (?, ?, ?, ?, 0, 'prospective', 'Candidate', 'FY27 Candidate', 'inactive')
+        `).run(emailNorm, c.name, firstName, passHash);
+      } else {
+        sqliteDb.prepare(`
+          UPDATE users SET password_hash = ?, role = 'prospective', name = ?, first_name = ? WHERE email = ?
+        `).run(passHash, c.name, firstName, emailNorm);
+      }
+
+      // Also seed into candidates tracking table
+      const existingCand = sqliteDb.prepare("SELECT id FROM candidates WHERE email = ?").get(emailNorm) as any;
+      if (!existingCand) {
+        sqliteDb.prepare(`
+          INSERT INTO candidates (id, name, email, phone, status, application_date)
+          VALUES (?, ?, ?, ?, 'Under Review', ?)
+        `).run('cand_' + emailNorm.replace(/[^a-z0-9]/g, '_'), c.name, emailNorm, c.phone, new Date().toISOString().split('T')[0]);
+      }
+    }
+
+    console.log("SQLite database synchronized with official active roster and candidates.");
   } catch (err) {
     console.log("SQLite loading failed, falling back to JSON database file.", err);
     useSqlite = false;
@@ -239,6 +292,22 @@ async function initDb() {
           cleanData[emailNorm].password_hash = defaultPasswordHash;
         }
       }
+    }
+
+    for (const c of initialCandidates) {
+      const emailNorm = c.email.toLowerCase().trim();
+      const firstName = c.name.split(" ")[0];
+      const passHash = hashPassword(c.pass);
+
+      cleanData[emailNorm] = {
+        email: emailNorm,
+        name: c.name,
+        first_name: firstName,
+        password_hash: passHash,
+        is_first_login: 0,
+        role: "prospective",
+        title: "Candidate"
+      };
     }
 
     fs.writeFileSync(jsonDbPath, JSON.stringify(cleanData, null, 2));
