@@ -105,8 +105,26 @@ export async function firebaseRegisterApplicant(name: string, email: string, pas
   }
 }
 
+const INITIAL_CANDIDATES_LIST: Record<string, { name: string; pass: string }> = {
+  'averyt16@gmail.com': { name: 'Avery Torrence', pass: '0784' },
+  'hupirate90@me.com': { name: 'Charles Edward Miller Jr', pass: '9348' },
+  'demills_10@yahoo.com': { name: 'Dennis Mills', pass: '0844' },
+  'quincyld86@gmail.com': { name: 'Dr. Quincy Dinnerson', pass: '1326' },
+  'jabari.smithperry@gmail.com': { name: 'Jabari Smith Perry', pass: '7008' },
+  'l.a.sennet@gmail.com': { name: 'Lee Sennet', pass: '1774' },
+  'malineskidrussell@gmail.com': { name: 'Malinski Russell', pass: '0011' },
+  'mabmykie1914@gmail.com': { name: 'Michael L Coleman', pass: '7119' },
+  'roliver449@gmail.com': { name: 'Ronald Oliver', pass: '6846' },
+  'burnettesteven3@gmail.com': { name: 'Steven Burnette', pass: '2275' },
+  'tashaunbenton233@gmail.com': { name: 'Tashaun Najee Benton', pass: '1821' },
+  'o_titus@yahoo.com': { name: 'Titus Oliver', pass: '7713' },
+  'zgatesnorris@gmail.com': { name: 'Zion Gates-Norris', pass: '4876' },
+  'candidate@gmail.com': { name: 'John Candidate', pass: '2012' }
+};
+
 /**
  * Logs in candidate using Firebase Auth credentials.
+ * Seamlessly registers initial roster candidates on their first login attempt with their default password.
  */
 export async function firebaseLoginApplicant(email: string, pass: string) {
   const normEmail = email.toLowerCase().trim();
@@ -143,8 +161,15 @@ export async function firebaseLoginApplicant(email: string, pass: string) {
       }
     };
   } catch (err: any) {
-    console.warn('Firebase login error:', err);
+    console.warn('Firebase login attempt failed:', err?.code || err);
+
+    // If candidate account does not exist in Firebase Auth yet, auto-provision if matching initial credentials
     if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+      const initialCandidate = INITIAL_CANDIDATES_LIST[normEmail];
+      if (initialCandidate && pass === initialCandidate.pass) {
+        console.log(`Auto-registering initial candidate ${normEmail} in Firebase Auth...`);
+        return await firebaseRegisterApplicant(initialCandidate.name, normEmail, pass);
+      }
       throw new Error('Invalid email or password. Please verify your credentials or use self-service password reset.');
     }
     throw new Error(err.message || 'Firebase login failed.');
