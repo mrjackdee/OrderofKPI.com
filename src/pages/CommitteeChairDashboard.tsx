@@ -21,6 +21,7 @@ import {
   Award
 } from 'lucide-react';
 import { Candidate, Member } from '../types';
+import { prospectiveMembers } from '../lib/memberDb';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 
 interface AuditLog {
@@ -45,6 +46,13 @@ export default function CommitteeChairDashboard() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [candidateSearch, setCandidateSearch] = useState('');
   const [stageFilter, setStageFilter] = useState('all');
+  const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
+  const [newCandidate, setNewCandidate] = useState<{ name: string; email: string; phone: string; status: Candidate['status'] }>({
+    name: '',
+    email: '',
+    phone: '',
+    status: 'Inquiry'
+  });
 
   // Committee roster state
   const [committeeMembers, setCommitteeMembers] = useState<Member[]>([]);
@@ -88,11 +96,28 @@ export default function CommitteeChairDashboard() {
     try {
       const res = await fetch('/api/candidates');
       const data = await res.json();
-      if (data.success) {
-        setCandidates(data.candidates || []);
+      if (data.success && data.candidates && data.candidates.length > 0) {
+        setCandidates(data.candidates);
+      } else {
+        const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
+          id: 'cand_' + m.email.replace(/[^a-z0-9]/g, '_'),
+          name: m.name,
+          email: m.email,
+          status: 'Inquiry',
+          application_date: ''
+        }));
+        setCandidates(fallbacks);
       }
     } catch (err) {
       console.error('Failed to fetch candidates:', err);
+      const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
+        id: 'cand_' + m.email.replace(/[^a-z0-9]/g, '_'),
+        name: m.name,
+        email: m.email,
+        status: 'Inquiry',
+        application_date: ''
+      }));
+      setCandidates(fallbacks);
     }
   };
 
@@ -144,6 +169,38 @@ export default function CommitteeChairDashboard() {
       }
     } catch (err) {
       showNotification('error', 'Failed to update candidate status');
+    }
+  };
+
+  // Add Candidate
+  const handleAddCandidate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCandidate.name || !newCandidate.email) {
+      showNotification('error', 'Candidate name and email are required.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/candidates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newCandidate,
+          adminEmail: currentUserEmail
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotification('success', `Candidate ${newCandidate.name} was successfully added.`);
+        setShowAddCandidateModal(false);
+        setNewCandidate({ name: '', email: '', phone: '', status: 'Inquiry' });
+        fetchCandidates();
+        fetchAuditLogs();
+      } else {
+        showNotification('error', data.message || 'Failed to add candidate');
+      }
+    } catch (err) {
+      showNotification('error', 'Error adding candidate');
     }
   };
 
@@ -470,6 +527,13 @@ export default function CommitteeChairDashboard() {
                 <option value="Intake">Intake</option>
                 <option value="Rejected">Rejected</option>
               </select>
+
+              <button
+                onClick={() => setShowAddCandidateModal(true)}
+                className="flex items-center gap-2 bg-gold text-ivy px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider hover:brightness-110 transition-all shadow-sm"
+              >
+                <UserPlus size={16} /> Add Candidate
+              </button>
             </div>
           </div>
 
@@ -630,6 +694,102 @@ export default function CommitteeChairDashboard() {
           </div>
         </div>
       )}
+
+      {/* ADD CANDIDATE MODAL */}
+      <AnimatePresence>
+        {showAddCandidateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl border border-gold/30 p-8 max-w-lg w-full shadow-2xl space-y-6"
+            >
+              <div className="flex justify-between items-center pb-4 border-b border-gold/10">
+                <h3 className="text-xl font-display font-bold text-ivy flex items-center gap-2">
+                  <UserPlus className="text-gold" size={20} />
+                  Add New Candidate
+                </h3>
+                <button
+                  onClick={() => setShowAddCandidateModal(false)}
+                  className="text-ivy/40 hover:text-ivy text-xl font-bold"
+                >
+                  &times;
+                </button>
+              </div>
+
+              <form onSubmit={handleAddCandidate} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-ivy mb-1">Candidate Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newCandidate.name}
+                    onChange={(e) => setNewCandidate({ ...newCandidate, name: e.target.value })}
+                    placeholder="Full Legal Name"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gold/20 text-sm text-ivy focus:outline-none focus:border-gold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-ivy mb-1">Email Address *</label>
+                  <input
+                    type="email"
+                    required
+                    value={newCandidate.email}
+                    onChange={(e) => setNewCandidate({ ...newCandidate, email: e.target.value })}
+                    placeholder="candidate@example.com"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gold/20 text-sm text-ivy focus:outline-none focus:border-gold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-ivy mb-1">Phone Number</label>
+                  <input
+                    type="tel"
+                    value={newCandidate.phone}
+                    onChange={(e) => setNewCandidate({ ...newCandidate, phone: e.target.value })}
+                    placeholder="(404) 555-0199"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gold/20 text-sm text-ivy focus:outline-none focus:border-gold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-ivy mb-1">Initial Stage</label>
+                  <select
+                    value={newCandidate.status}
+                    onChange={(e) => setNewCandidate({ ...newCandidate, status: e.target.value as Candidate['status'] })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gold/20 text-sm text-ivy focus:outline-none focus:border-gold cursor-pointer"
+                  >
+                    <option value="Inquiry">Inquiry</option>
+                    <option value="Applied">Applied</option>
+                    <option value="Tea Time">Tea Time</option>
+                    <option value="Interview">Interview</option>
+                    <option value="Selection">Selection</option>
+                    <option value="Intake">Intake</option>
+                  </select>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-gold/10">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCandidateModal(false)}
+                    className="px-5 py-2.5 rounded-xl border border-gold/30 text-ivy font-bold text-xs uppercase tracking-wider hover:bg-cream/50 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-gold text-ivy font-bold text-xs uppercase tracking-wider hover:brightness-110 transition-all shadow-md"
+                  >
+                    Add Candidate Record
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

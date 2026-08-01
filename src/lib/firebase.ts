@@ -338,6 +338,19 @@ export async function firebaseSaveApplication(email: string, data: any, status: 
       payload.appliedDate = now;
       payload.dateApplied = now;
       payload.applicationDate = now;
+
+      try {
+        const candRef = doc(db, 'candidates', normEmail);
+        await setDoc(candRef, {
+          email: normEmail,
+          status: 'Applied',
+          applicationDate: now,
+          appliedDate: now,
+          submittedAt: now
+        }, { merge: true });
+      } catch (cErr) {
+        console.warn('Could not sync candidate doc in Firestore:', cErr);
+      }
     }
 
     await setDoc(appRef, payload, { merge: true });

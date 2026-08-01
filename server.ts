@@ -269,8 +269,11 @@ async function initDb() {
           INSERT INTO candidates (id, name, email, phone, status, application_date, scores, notes, document_vault)
           VALUES (?, ?, ?, ?, 'Inquiry', NULL, '{}', '', '[]')
         `).run('cand_' + emailNorm.replace(/[^a-z0-9]/g, '_'), c.name, emailNorm, c.phone);
-      } else if (existingCand.status === 'Under Review') {
-        sqliteDb.prepare("UPDATE candidates SET status = 'Inquiry' WHERE id = ?").run(existingCand.id);
+      } else {
+        sqliteDb.prepare("UPDATE candidates SET name = ?, phone = ? WHERE id = ?").run(c.name, c.phone, existingCand.id);
+        if (existingCand.status === 'Under Review') {
+          sqliteDb.prepare("UPDATE candidates SET status = 'Inquiry' WHERE id = ?").run(existingCand.id);
+        }
       }
     }
 

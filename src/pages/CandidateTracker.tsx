@@ -22,7 +22,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { Candidate } from '../types';
-import { fetchAllApplications } from '../lib/memberDb';
+import { fetchAllApplications, prospectiveMembers } from '../lib/memberDb';
 import { generateApplicationPDF } from '../utils/pdfGenerator';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 
@@ -58,11 +58,28 @@ export default function CandidateTracker() {
     try {
       const response = await fetch('/api/candidates');
       const data = await response.json();
-      if (data.success) {
+      if (data.success && data.candidates && data.candidates.length > 0) {
         setCandidates(data.candidates);
+      } else {
+        const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
+          id: 'cand_' + m.email.replace(/[^a-z0-9]/g, '_'),
+          name: m.name,
+          email: m.email,
+          status: 'Inquiry',
+          application_date: ''
+        }));
+        setCandidates(fallbacks);
       }
     } catch (error) {
       console.error('Error fetching candidates:', error);
+      const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
+        id: 'cand_' + m.email.replace(/[^a-z0-9]/g, '_'),
+        name: m.name,
+        email: m.email,
+        status: 'Inquiry',
+        application_date: ''
+      }));
+      setCandidates(fallbacks);
     } finally {
       setLoading(false);
     }
@@ -127,15 +144,67 @@ export default function CandidateTracker() {
     c.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getStatusColor = (status: string) => {
+  const getStatusBadgeConfig = (status: string) => {
     switch (status) {
-      case 'Inquiry': return 'bg-blue-100 text-blue-800';
-      case 'Applied': return 'bg-yellow-100 text-yellow-800';
-      case 'Tea Time': return 'bg-purple-100 text-purple-800';
-      case 'Interview': return 'bg-orange-100 text-orange-800';
-      case 'Selection': return 'bg-green-100 text-green-800';
-      case 'Intake': return 'bg-ivy text-cream';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'Inquiry':
+        return {
+          bg: 'bg-blue-50 text-blue-800 border-blue-200',
+          dot: 'bg-blue-500',
+          label: 'Inquiry',
+          icon: Users
+        };
+      case 'Applied':
+      case 'Review':
+      case 'Under Review':
+        return {
+          bg: 'bg-amber-50 text-amber-800 border-amber-300',
+          dot: 'bg-amber-500',
+          label: status === 'Applied' ? 'Applied' : status,
+          icon: FileText
+        };
+      case 'Tea Time':
+        return {
+          bg: 'bg-purple-50 text-purple-800 border-purple-200',
+          dot: 'bg-purple-500',
+          label: 'Tea Time',
+          icon: Clock
+        };
+      case 'Interview':
+        return {
+          bg: 'bg-cyan-50 text-cyan-900 border-cyan-300',
+          dot: 'bg-cyan-500',
+          label: 'Interview',
+          icon: Users
+        };
+      case 'Selection':
+        return {
+          bg: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+          dot: 'bg-indigo-500',
+          label: 'Selection',
+          icon: CheckCircle2
+        };
+      case 'Intake':
+      case 'Approved':
+        return {
+          bg: 'bg-emerald-50 text-emerald-800 border-emerald-300',
+          dot: 'bg-emerald-500',
+          label: status === 'Approved' ? 'Approved' : 'Intake',
+          icon: ShieldCheck
+        };
+      case 'Rejected':
+        return {
+          bg: 'bg-red-50 text-red-800 border-red-200',
+          dot: 'bg-red-500',
+          label: 'Rejected',
+          icon: AlertCircle
+        };
+      default:
+        return {
+          bg: 'bg-slate-50 text-slate-800 border-slate-200',
+          dot: 'bg-slate-400',
+          label: status || 'Inquiry',
+          icon: Users
+        };
     }
   };
 
@@ -158,102 +227,136 @@ export default function CandidateTracker() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4">
+        {/* Stage Summary / Color-Coded Status Legend */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-6">
+          {STAGES.map(stage => {
+            const cfg = getStatusBadgeConfig(stage);
+            const count = candidates.filter(c => c.status === stage).length;
+            return (
+              <div 
+                key={stage} 
+                className={`p-3 rounded-xl border flex flex-col justify-between bg-white shadow-xs transition-all ${cfg.bg}`}
+              >
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-90">{stage}</span>
+                  <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
+                </div>
+                <span className="text-xl font-display font-bold">{count}</span>
+              </div>
+            );
+          })}
+        </div>
+
         {/* Search Bar */}
         <div className="mb-8 relative max-w-xl">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ivy/40 w-5 h-5" />
           <input
             type="text"
-            placeholder="Search candidates..."
+            placeholder="Search candidates by name or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-white border border-ivy/10 rounded-lg shadow-soft focus:ring-2 focus:ring-ivy/20 focus:border-ivy outline-none transition-all"
+            className="w-full pl-10 pr-4 py-3 bg-white border border-ivy/10 rounded-lg shadow-soft focus:ring-2 focus:ring-ivy/20 focus:border-ivy outline-none transition-all text-sm"
           />
         </div>
 
         {/* Kanban Board */}
         <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide">
-          {STAGES.map(stage => (
-            <div key={stage} className="min-w-[320px] flex-1 flex flex-col gap-4">
-              <div className="flex items-center justify-between px-2">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-bold uppercase tracking-widest text-ivy">{stage}</h2>
-                  <span className="bg-ivy/10 text-ivy px-2 py-0.5 rounded-full text-xs font-bold">
-                    {filteredCandidates.filter(c => c.status === stage).length}
-                  </span>
+          {STAGES.map(stage => {
+            const stageCfg = getStatusBadgeConfig(stage);
+            return (
+              <div key={stage} className="min-w-[320px] flex-1 flex flex-col gap-4">
+                <div className="flex items-center justify-between px-2 py-1.5 bg-white/60 backdrop-blur-xs rounded-xl border border-gold/10">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${stageCfg.dot}`} />
+                    <h2 className="text-sm font-bold uppercase tracking-widest text-ivy">{stage}</h2>
+                    <span className="bg-ivy/10 text-ivy px-2 py-0.5 rounded-full text-xs font-bold">
+                      {filteredCandidates.filter(c => c.status === stage).length}
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex flex-col gap-4 min-h-[400px]">
-                {filteredCandidates.filter(c => c.status === stage).map(candidate => {
-                  const matchingApp = applications.find(a => a.email.toLowerCase() === candidate.email.toLowerCase());
-                  const isSubmitted = matchingApp && matchingApp.status === 'submitted';
-                  const isDraft = matchingApp && matchingApp.status === 'draft';
+                <div className="flex flex-col gap-4 min-h-[400px]">
+                  {filteredCandidates.filter(c => c.status === stage).map(candidate => {
+                    const matchingApp = applications.find(a => a.email.toLowerCase() === candidate.email.toLowerCase());
+                    const isSubmitted = matchingApp && matchingApp.status === 'submitted';
+                    const isDraft = matchingApp && matchingApp.status === 'draft';
+                    const statusCfg = getStatusBadgeConfig(candidate.status || 'Inquiry');
+                    const StatusIcon = statusCfg.icon;
 
-                  return (
-                    <motion.div
-                      key={candidate.id}
-                      layoutId={candidate.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-white p-5 rounded-lg border border-gold/20 shadow-soft hover:border-gold transition-all group"
-                    >
-                      <div className="flex justify-between items-start mb-3">
-                        {isSubmitted ? (
-                          <button
-                            onClick={() => setSelectedApplicationForView(matchingApp)}
-                            className="font-display text-lg text-gold hover:text-ivy underline text-left cursor-pointer transition-colors"
-                          >
-                            {candidate.name}
-                          </button>
-                        ) : (
-                          <h3 className="font-display text-lg text-ivy">{candidate.name}</h3>
-                        )}
-                        <div className="relative group/menu">
-                          <button className="text-ivy/20 hover:text-ivy transition-colors p-1">
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-                          <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gold/20 rounded-md shadow-lg opacity-0 group-hover/menu:opacity-100 transition-opacity z-10 hidden group-hover/menu:block">
-                            {STAGES.filter(s => s !== stage).map(s => (
+                    return (
+                      <motion.div
+                        key={candidate.id}
+                        layoutId={candidate.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white p-5 rounded-xl border border-gold/20 shadow-soft hover:border-gold hover:shadow-md transition-all group"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          {isSubmitted ? (
+                            <button
+                              onClick={() => setSelectedApplicationForView(matchingApp)}
+                              className="font-display text-lg text-gold hover:text-ivy underline text-left cursor-pointer transition-colors"
+                            >
+                              {candidate.name}
+                            </button>
+                          ) : (
+                            <h3 className="font-display text-lg text-ivy">{candidate.name}</h3>
+                          )}
+                          <div className="relative group/menu">
+                            <button className="text-ivy/20 hover:text-ivy transition-colors p-1">
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                            <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gold/20 rounded-md shadow-lg opacity-0 group-hover/menu:opacity-100 transition-opacity z-10 hidden group-hover/menu:block">
+                              {STAGES.filter(s => s !== stage).map(s => (
+                                <button
+                                  key={s}
+                                  onClick={() => updateCandidateStatus(candidate.id, s)}
+                                  className="w-full text-left px-4 py-2 text-xs text-ivy hover:bg-cream transition-colors first:rounded-t-md last:rounded-b-md flex items-center gap-2"
+                                >
+                                  <span className={`w-2 h-2 rounded-full ${getStatusBadgeConfig(s).dot}`} />
+                                  Move to {s}
+                                </button>
+                              ))}
                               <button
-                                key={s}
-                                onClick={() => updateCandidateStatus(candidate.id, s)}
-                                className="w-full text-left px-4 py-2 text-xs text-ivy hover:bg-cream transition-colors first:rounded-t-md last:rounded-b-md"
+                                onClick={() => updateCandidateStatus(candidate.id, 'Rejected')}
+                                className="w-full text-left px-4 py-2 text-xs text-amber-700 hover:bg-amber-50 transition-colors flex items-center gap-2"
                               >
-                                Move to {s}
+                                <span className="w-2 h-2 rounded-full bg-red-500" />
+                                Mark as Rejected
                               </button>
-                            ))}
-                            <button
-                              onClick={() => updateCandidateStatus(candidate.id, 'Rejected')}
-                              className="w-full text-left px-4 py-2 text-xs text-amber-700 hover:bg-amber-50 transition-colors"
-                            >
-                              Mark as Rejected
-                            </button>
-                            <button
-                              onClick={() => handleRemoveCandidate(candidate.id, candidate.name)}
-                              className="w-full text-left px-4 py-2 text-xs text-red-700 hover:bg-red-50 font-bold transition-colors border-t border-gold/10 flex items-center gap-1"
-                            >
-                              <Trash2 className="w-3 h-3" /> Remove Candidate
-                            </button>
+                              <button
+                                onClick={() => handleRemoveCandidate(candidate.id, candidate.name)}
+                                className="w-full text-left px-4 py-2 text-xs text-red-700 hover:bg-red-50 font-bold transition-colors border-t border-gold/10 flex items-center gap-1"
+                              >
+                                <Trash2 className="w-3 h-3" /> Remove Candidate
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Application Status Badge */}
-                      <div className="mb-3">
-                        {isSubmitted ? (
-                          <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 border border-green-200/50 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
-                            <CheckCircle2 className="w-3 h-3 text-green-600" /> Submitted
+                        {/* Color-Coded Status Badges */}
+                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                          {/* Candidate Pipeline Stage Badge */}
+                          <span className={`inline-flex items-center gap-1.5 border rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${statusCfg.bg}`}>
+                            <StatusIcon className="w-3 h-3" />
+                            {statusCfg.label}
                           </span>
-                        ) : isDraft ? (
-                          <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200/50 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
-                            <Clock className="w-3 h-3 text-amber-500" /> Draft
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 bg-gray-50 text-gray-500 border border-gray-200/50 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
-                            <AlertCircle className="w-3 h-3 text-gray-400" /> Not Started
-                          </span>
-                        )}
-                      </div>
+
+                          {/* Application Submission Status Badge */}
+                          {isSubmitted ? (
+                            <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 border border-green-200/60 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                              <CheckCircle2 className="w-3 h-3 text-green-600" /> Submitted
+                            </span>
+                          ) : isDraft ? (
+                            <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200/60 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                              <Clock className="w-3 h-3 text-amber-500" /> Draft
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 bg-gray-50 text-gray-500 border border-gray-200/60 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                              <AlertCircle className="w-3 h-3 text-gray-400" /> Not Started
+                            </span>
+                          )}
+                        </div>
 
                       <div className="space-y-2 mb-4">
                         <div className="flex items-center gap-2 text-ivy/60 text-xs">
@@ -309,7 +412,8 @@ export default function CandidateTracker() {
                 )}
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
       </div>
 
