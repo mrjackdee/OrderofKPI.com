@@ -40,7 +40,8 @@ export default function ApplicantLogin() {
         sessionStorage.setItem('userEmail', user.email);
         sessionStorage.setItem('userName', user.name);
         sessionStorage.setItem('userFirstName', user.firstName || user.name.split(' ')[0]);
-        sessionStorage.setItem('userRole', user.role || 'prospective');
+        sessionStorage.setItem('userRole', user.role || 'applicant');
+        sessionStorage.setItem('userIsFirstLogin', user.isFirstLogin ? 'true' : 'false');
 
         navigate('/applicant-portal', { replace: true });
       } else if (mode === 'reset') {

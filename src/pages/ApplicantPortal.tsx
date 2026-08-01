@@ -14,9 +14,12 @@ import {
   HelpCircle,
   Sparkles,
   ChevronRight,
-  ClipboardList
+  ClipboardList,
+  Lock,
+  KeyRound,
+  Loader2
 } from 'lucide-react';
-import { fetchApplication } from '../lib/memberDb';
+import { fetchApplication, performHybridPasswordChange } from '../lib/memberDb';
 import Application from './Application';
 
 export default function ApplicantPortal() {
@@ -34,6 +37,58 @@ export default function ApplicantPortal() {
   const userEmail = sessionStorage.getItem('userEmail') || '';
   const userName = sessionStorage.getItem('userName') || 'Applicant';
   const userFirstName = sessionStorage.getItem('userFirstName') || userName.split(' ')[0];
+
+  const [showFirstLoginModal, setShowFirstLoginModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwdError, setPwdError] = useState('');
+  const [pwdSuccess, setPwdSuccess] = useState('');
+  const [pwdLoading, setPwdLoading] = useState(false);
+
+  useEffect(() => {
+    // Check if user is logging in for the first time
+    const isFirst = sessionStorage.getItem('userIsFirstLogin') === 'true';
+    const pwdChangedLocally = localStorage.getItem(`kpi_password_changed_${userEmail}`) === 'true';
+    if (userEmail && (isFirst || !pwdChangedLocally)) {
+      setShowFirstLoginModal(true);
+    }
+  }, [userEmail]);
+
+  const handlePasswordChangeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwdError('');
+    setPwdSuccess('');
+
+    if (!newPassword || newPassword.length < 6) {
+      setPwdError('New password must be at least 6 characters long.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPwdError('New passwords do not match. Please re-enter.');
+      return;
+    }
+
+    setPwdLoading(true);
+    try {
+      const res = await performHybridPasswordChange(userEmail, currentPassword, newPassword);
+      if (res.success) {
+        setPwdSuccess('Your password has been updated successfully.');
+        sessionStorage.setItem('userIsFirstLogin', 'false');
+        localStorage.setItem(`kpi_password_changed_${userEmail}`, 'true');
+        setTimeout(() => {
+          setShowFirstLoginModal(false);
+        }, 1200);
+      } else {
+        setPwdError(res.message || 'Failed to update password.');
+      }
+    } catch (err: any) {
+      setPwdError(err.message || 'An error occurred updating password.');
+    } finally {
+      setPwdLoading(false);
+    }
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -513,6 +568,116 @@ export default function ApplicantPortal() {
                   Cancel / Keep Editing
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showFirstLoginModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-ivy/80 backdrop-blur-md"
+            />
+            
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white border border-gold/40 rounded-[28px] p-6 md:p-8 max-w-md w-full relative z-10 shadow-2xl space-y-6"
+            >
+              <div className="text-center space-y-2">
+                <div className="w-12 h-12 bg-gold/15 text-ivy rounded-2xl flex items-center justify-center mx-auto border border-gold/30 font-display">
+                  <KeyRound size={22} className="text-gold" />
+                </div>
+                <h3 className="text-2xl font-bold uppercase tracking-tight text-ivy font-display">
+                  First-Time Security Setup
+                </h3>
+                <p className="text-ivy/70 text-xs font-body leading-relaxed">
+                  Welcome to the Candidate Application Portal! Please update your initial password to set up your account credentials.
+                </p>
+              </div>
+
+              {pwdError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-body">
+                  {pwdError}
+                </div>
+              )}
+
+              {pwdSuccess && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800 font-body flex items-center gap-2">
+                  <CheckCircle size={16} className="text-green-600 shrink-0" />
+                  <span>{pwdSuccess}</span>
+                </div>
+              )}
+
+              <form onSubmit={handlePasswordChangeSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-ivy/70 uppercase tracking-widest font-bold ml-1">Current Password (Initial Pass)</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <Lock size={14} className="text-gold" />
+                    </div>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="w-full bg-cream/40 border border-gold/20 rounded-xl py-2.5 pl-10 pr-4 text-ivy text-xs focus:outline-none focus:border-ivy focus:bg-white transition-all"
+                      placeholder="e.g. last 4 digits of phone"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-ivy/70 uppercase tracking-widest font-bold ml-1">New Password</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <Lock size={14} className="text-gold" />
+                    </div>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full bg-cream/40 border border-gold/20 rounded-xl py-2.5 pl-10 pr-4 text-ivy text-xs focus:outline-none focus:border-ivy focus:bg-white transition-all"
+                      placeholder="At least 6 characters"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-ivy/70 uppercase tracking-widest font-bold ml-1">Confirm New Password</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <Lock size={14} className="text-gold" />
+                    </div>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full bg-cream/40 border border-gold/20 rounded-xl py-2.5 pl-10 pr-4 text-ivy text-xs focus:outline-none focus:border-ivy focus:bg-white transition-all"
+                      placeholder="Re-enter new password"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={pwdLoading}
+                  className="w-full py-3.5 bg-ivy text-cream rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-ivy/90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {pwdLoading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin text-gold" /> Updating Password...
+                    </>
+                  ) : (
+                    'Set Password & Enter Portal'
+                  )}
+                </button>
+              </form>
             </motion.div>
           </div>
         )}

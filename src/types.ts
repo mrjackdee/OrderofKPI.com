@@ -1,5 +1,5 @@
 
-export type UserRole = 'admin' | 'officer' | 'member' | 'Membership Committee' | 'Membership Committee Chair';
+export type UserRole = 'admin' | 'officer' | 'member' | 'Membership Committee' | 'Membership Committee Chair' | 'prospective' | 'applicant';
 
 export interface Member {
   email: string;

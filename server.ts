@@ -32,7 +32,6 @@ const defaultUsers = [
   { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "Membership Committee", intake_class: "Spring '24", financial_status: "active", industry: "Consulting" },
   { name: "Jack Dee", email: "jack@orderofkpi.org", role: "Membership Committee", intake_class: "Spring '24", financial_status: "active", industry: "Consulting" },
   { name: "Deshaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee", intake_class: "Fall '22", financial_status: "active", industry: "Education" },
-  { name: "Deshaun Stafford", email: "deshaun.stafford@orderofkpi.org", role: "Membership Committee", intake_class: "Fall '22", financial_status: "active", industry: "Education" },
   { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member", intake_class: "Spring '18", financial_status: "active", industry: "Engineering" },
   { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "Membership Committee", intake_class: "Fall '21", financial_status: "active", industry: "Management" },
   { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos", intake_class: "Fall '19", financial_status: "active", industry: "Finance" },
@@ -41,16 +40,15 @@ const defaultUsers = [
   { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus", intake_class: "Charter", financial_status: "active", industry: "Leadership" },
   { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active" },
   { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member", intake_class: "Spring '23", financial_status: "inactive", industry: "Arts" },
-  { name: "Intake Candidate", email: "candidate@orderofkpi.org", role: "prospective", intake_class: "FY27", financial_status: "inactive" },
   { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian", intake_class: "Fall '20", financial_status: "active", industry: "Journalism" }
 ];
 
 const initialCandidates = [
   { name: "Avery Torrence", email: "averyt16@gmail.com", phone: "770-873-0784", pass: "0784" },
-  { name: "Charles Edward Miller Jr", email: "hupirate90@me.com", phone: "301-602-9348", pass: "9348" },
+  { name: "Charles Miller", email: "hupirate90@me.com", phone: "301-602-9348", pass: "9348" },
   { name: "Dennis Mills", email: "demills_10@yahoo.com", phone: "252-883-0844", pass: "0844" },
-  { name: "Dr. Quincy Dinnerson", email: "quincyld86@gmail.com", phone: "336-420-1326", pass: "1326" },
-  { name: "Jabari Smith Perry", email: "jabari.smithperry@gmail.com", phone: "404-784-7008", pass: "7008" },
+  { name: "Quincy Dinnerson", email: "quincyld86@gmail.com", phone: "336-420-1326", pass: "1326" },
+  { name: "Jabari Smith-Perry", email: "jabari.smithperry@gmail.com", phone: "404-784-7008", pass: "7008" },
   { name: "Lee Sennet", email: "l.a.sennet@gmail.com", phone: "281-740-1774", pass: "1774" },
   { name: "Malinski Russell", email: "malineskidrussell@gmail.com", phone: "731-273-0011", pass: "0011" },
   { name: "Michael L Coleman", email: "mabmykie1914@gmail.com", phone: "917-283-7119", pass: "7119" },
@@ -59,6 +57,7 @@ const initialCandidates = [
   { name: "Tashaun Najee Benton", email: "tashaunbenton233@gmail.com", phone: "973-592-1821", pass: "1821" },
   { name: "Titus Oliver", email: "o_titus@yahoo.com", phone: "662-654-7713", pass: "7713" },
   { name: "Zion Gates-Norris", email: "zgatesnorris@gmail.com", phone: "954-234-4876", pass: "4876" },
+  { name: "Jamar Amber", email: "jaabn2@gmail.com", phone: "410-443-3795", pass: "3795" },
   { name: "John Candidate", email: "candidate@gmail.com", phone: "2012", pass: "2012" }
 ];
 
@@ -165,6 +164,15 @@ async function initDb() {
       // Column already exists
     }
     
+    // Ensure legacy deshaun.stafford@orderofkpi.org and candidate@orderofkpi.org accounts are purged
+    try {
+      sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'deshaun.stafford@orderofkpi.org'").run();
+      sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'candidate@orderofkpi.org'").run();
+      sqliteDb.prepare("DELETE FROM candidates WHERE LOWER(email) = 'candidate@orderofkpi.org'").run();
+    } catch (e) {
+      // Ignore
+    }
+
     // SQLite Cleanup (Only log, do not delete dynamically added members)
     const existingRows = sqliteDb.prepare("SELECT email FROM users").all() as { email: string }[];
     for (const row of existingRows) {

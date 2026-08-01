@@ -9,7 +9,7 @@ import {
 export interface MemberUser {
   name: string;
   email: string;
-  role: 'admin' | 'member' | 'officer' | 'prospective' | 'Membership Committee' | 'Membership Committee Chair';
+  role: 'admin' | 'member' | 'officer' | 'prospective' | 'applicant' | 'Membership Committee' | 'Membership Committee Chair';
   title?: string;
 }
 
@@ -18,7 +18,6 @@ export const defaultMembers: MemberUser[] = [
   { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "Membership Committee" },
   { name: "Jack Dee", email: "jack@orderofkpi.org", role: "Membership Committee" },
   { name: "Deshaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee" },
-  { name: "Deshaun Stafford", email: "deshaun.stafford@orderofkpi.org", role: "Membership Committee" },
   { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member" },
   { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "Membership Committee" },
   { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos" },
@@ -36,21 +35,21 @@ export const defaultMembers: MemberUser[] = [
 ];
 
 export const prospectiveMembers: MemberUser[] = [
-  { name: "Intake Candidate", email: "candidate@orderofkpi.org", role: "prospective" },
-  { name: "Avery Torrence", email: "averyt16@gmail.com", role: "prospective" },
-  { name: "Charles Edward Miller Jr", email: "hupirate90@me.com", role: "prospective" },
-  { name: "Dennis Mills", email: "demills_10@yahoo.com", role: "prospective" },
-  { name: "Dr. Quincy Dinnerson", email: "quincyld86@gmail.com", role: "prospective" },
-  { name: "Jabari Smith Perry", email: "jabari.smithperry@gmail.com", role: "prospective" },
-  { name: "Lee Sennet", email: "l.a.sennet@gmail.com", role: "prospective" },
-  { name: "Malinski Russell", email: "malineskidrussell@gmail.com", role: "prospective" },
-  { name: "Michael L Coleman", email: "mabmykie1914@gmail.com", role: "prospective" },
-  { name: "Ronald Oliver", email: "roliver449@gmail.com", role: "prospective" },
-  { name: "Steven Burnette", email: "burnettesteven3@gmail.com", role: "prospective" },
-  { name: "Tashaun Najee Benton", email: "tashaunbenton233@gmail.com", role: "prospective" },
-  { name: "Titus Oliver", email: "o_titus@yahoo.com", role: "prospective" },
-  { name: "Zion Gates-Norris", email: "zgatesnorris@gmail.com", role: "prospective" },
-  { name: "John Candidate", email: "candidate@gmail.com", role: "prospective" }
+  { name: "Avery Torrence", email: "averyt16@gmail.com", role: "applicant" },
+  { name: "Charles Miller", email: "hupirate90@me.com", role: "applicant" },
+  { name: "Dennis Mills", email: "demills_10@yahoo.com", role: "applicant" },
+  { name: "Quincy Dinnerson", email: "quincyld86@gmail.com", role: "applicant" },
+  { name: "Jabari Smith-Perry", email: "jabari.smithperry@gmail.com", role: "applicant" },
+  { name: "Lee Sennet", email: "l.a.sennet@gmail.com", role: "applicant" },
+  { name: "Malinski Russell", email: "malineskidrussell@gmail.com", role: "applicant" },
+  { name: "Michael L Coleman", email: "mabmykie1914@gmail.com", role: "applicant" },
+  { name: "Ronald Oliver", email: "roliver449@gmail.com", role: "applicant" },
+  { name: "Steven Burnette", email: "burnettesteven3@gmail.com", role: "applicant" },
+  { name: "Tashaun Najee Benton", email: "tashaunbenton233@gmail.com", role: "applicant" },
+  { name: "Titus Oliver", email: "o_titus@yahoo.com", role: "applicant" },
+  { name: "Zion Gates-Norris", email: "zgatesnorris@gmail.com", role: "applicant" },
+  { name: "Jamar Amber", email: "jaabn2@gmail.com", role: "applicant" },
+  { name: "John Candidate", email: "candidate@gmail.com", role: "applicant" }
 ];
 
 const INITIAL_CANDIDATES_PASSWORDS: Record<string, string> = {
@@ -67,6 +66,7 @@ const INITIAL_CANDIDATES_PASSWORDS: Record<string, string> = {
   'tashaunbenton233@gmail.com': '1821',
   'o_titus@yahoo.com': '7713',
   'zgatesnorris@gmail.com': '4876',
+  'jaabn2@gmail.com': '3795',
   'candidate@gmail.com': '2012'
 };
 
