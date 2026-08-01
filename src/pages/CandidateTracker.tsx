@@ -266,7 +266,15 @@ export default function CandidateTracker() {
                         </div>
                         <div className="flex items-center gap-2 text-ivy/60 text-xs">
                           <Calendar className="w-3 h-3" />
-                          <span>Applied: {new Date(candidate.application_date).toLocaleDateString()}</span>
+                          <span>
+                            {(() => {
+                              const submittedDate = matchingApp?.submitted_at || (isSubmitted ? candidate.application_date : (candidate.status !== 'Inquiry' ? candidate.application_date : null));
+                              if (submittedDate) {
+                                return `Applied: ${new Date(submittedDate).toLocaleDateString()}`;
+                              }
+                              return 'Applied: Pending Submission';
+                            })()}
+                          </span>
                         </div>
                       </div>
 

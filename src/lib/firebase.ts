@@ -335,6 +335,9 @@ export async function firebaseSaveApplication(email: string, data: any, status: 
 
     if (status === 'submitted') {
       payload.submittedAt = now;
+      payload.appliedDate = now;
+      payload.dateApplied = now;
+      payload.applicationDate = now;
     }
 
     await setDoc(appRef, payload, { merge: true });

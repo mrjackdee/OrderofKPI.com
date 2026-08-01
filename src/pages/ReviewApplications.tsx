@@ -253,6 +253,7 @@ export default function ReviewApplications() {
                     {renderDetail("Email", selectedApp.email)}
                     {renderDetail("Place of Employment", selectedApp.data.employment)}
                     {renderDetail("Title / Position", selectedApp.data.position)}
+                    {renderDetail("Application Submitted On", selectedApp.status === 'submitted' && selectedApp.submitted_at ? new Date(selectedApp.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Not Submitted (Draft)")}
                   </div>
 
                   <div className="space-y-4">

@@ -267,8 +267,8 @@ async function initDb() {
       if (!existingCand) {
         sqliteDb.prepare(`
           INSERT INTO candidates (id, name, email, phone, status, application_date, scores, notes, document_vault)
-          VALUES (?, ?, ?, ?, 'Inquiry', ?, '{}', '', '[]')
-        `).run('cand_' + emailNorm.replace(/[^a-z0-9]/g, '_'), c.name, emailNorm, c.phone, new Date().toISOString().split('T')[0]);
+          VALUES (?, ?, ?, ?, 'Inquiry', NULL, '{}', '', '[]')
+        `).run('cand_' + emailNorm.replace(/[^a-z0-9]/g, '_'), c.name, emailNorm, c.phone);
       } else if (existingCand.status === 'Under Review') {
         sqliteDb.prepare("UPDATE candidates SET status = 'Inquiry' WHERE id = ?").run(existingCand.id);
       }
@@ -1024,6 +1024,15 @@ async function startServer() {
   app.get("/api/candidates", (req, res) => {
     try {
       if (useSqlite && sqliteDb) {
+        // Sync application_date and status from submitted membership applications
+        const submittedApps = sqliteDb.prepare("SELECT email, submitted_at FROM membership_applications WHERE status = 'submitted'").all() as any[];
+        for (const app of submittedApps) {
+          if (app.submitted_at) {
+            const dateStr = app.submitted_at.split('T')[0];
+            sqliteDb.prepare("UPDATE candidates SET status = CASE WHEN status = 'Inquiry' THEN 'Applied' ELSE status END, application_date = ? WHERE email = ?").run(dateStr, app.email);
+          }
+        }
+
         const candidates = sqliteDb.prepare("SELECT * FROM candidates").all();
         res.json({ success: true, candidates: candidates.map((c: any) => ({
           ...c,
@@ -1042,8 +1051,8 @@ async function startServer() {
     try {
       const { name, email, phone, status, adminEmail } = req.body;
       const id = Math.random().toString(36).substring(2, 9);
-      const application_date = new Date().toISOString();
       const initialStatus = status || "Inquiry";
+      const application_date = initialStatus === 'Applied' ? new Date().toISOString().split('T')[0] : null;
       
       if (useSqlite && sqliteDb) {
         sqliteDb.prepare(`

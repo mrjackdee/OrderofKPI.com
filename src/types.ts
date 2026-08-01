@@ -21,7 +21,7 @@ export interface Candidate {
   email: string;
   phone?: string;
   status: 'Inquiry' | 'Applied' | 'Tea Time' | 'Interview' | 'Selection' | 'Intake' | 'Rejected';
-  application_date: string;
+  application_date?: string;
   scores?: {
     application?: number;
     interview?: number;

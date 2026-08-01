@@ -293,7 +293,7 @@ export default function MemberPortal() {
                   icon: Users, 
                   path: '/candidate-tracker',
                   color: 'bg-gold text-ivy',
-                  roles: ['admin', 'officer', 'Membership Committee']
+                  roles: ['admin', 'officer', 'Membership Committee', 'Membership Committee Chair']
                 },
                 { 
                   title: 'Process Timeline', 
@@ -328,7 +328,13 @@ export default function MemberPortal() {
                   roles: ['admin', 'officer', 'Membership Committee Chair', 'Membership Committee']
                 }
               ]
-              .filter(tool => !tool.roles || tool.roles.includes(userRole || '') || isAdmin)
+              .filter(tool => 
+                !tool.roles || 
+                tool.roles.includes(userRole || '') || 
+                isAdmin || 
+                (isChair && tool.roles.includes('Membership Committee Chair')) ||
+                (isMembershipCommittee && tool.roles.includes('Membership Committee'))
+              )
               .map((tool) => (
                 <Link
                   key={tool.title}
