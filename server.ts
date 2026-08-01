@@ -29,9 +29,12 @@ interface UserRecord {
 const defaultUsers = [
   { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator", intake_class: "Charter", financial_status: "active", industry: "Technology" },
   { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", intake_class: "Charter", financial_status: "active", industry: "Leadership" },
-  { name: "Jack Dee", email: "jack@orderofkpi.org", role: "member", intake_class: "Spring '24", financial_status: "active", industry: "Consulting" },
-  { name: "Deshaun Stafford", email: "deshaun.stafford@orderofkpi.org", role: "member", intake_class: "Fall '22", financial_status: "active", industry: "Education" },
-  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "officer", title: "Grammateus", intake_class: "Spring '18", financial_status: "active", industry: "Engineering" },
+  { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "Membership Committee", intake_class: "Spring '24", financial_status: "active", industry: "Consulting" },
+  { name: "Jack Dee", email: "jack@orderofkpi.org", role: "Membership Committee", intake_class: "Spring '24", financial_status: "active", industry: "Consulting" },
+  { name: "Deshaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee", intake_class: "Fall '22", financial_status: "active", industry: "Education" },
+  { name: "Deshaun Stafford", email: "deshaun.stafford@orderofkpi.org", role: "Membership Committee", intake_class: "Fall '22", financial_status: "active", industry: "Education" },
+  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member", intake_class: "Spring '18", financial_status: "active", industry: "Engineering" },
+  { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "Membership Committee", intake_class: "Fall '21", financial_status: "active", industry: "Management" },
   { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos", intake_class: "Fall '19", financial_status: "active", industry: "Finance" },
   { name: "Edward Cook", email: "edward.cook@orderofkpi.org", role: "officer", title: "Epistoleus", intake_class: "Spring '20", financial_status: "active", industry: "Law" },
   { name: "Darron Jenkins", email: "darron.jenkins@orderofkpi.org", role: "officer", title: "Hodegos", intake_class: "Fall '21", financial_status: "active", industry: "Public Service" },
@@ -1020,16 +1023,19 @@ async function startServer() {
 
   app.post("/api/candidates", (req, res) => {
     try {
-      const { name, email, phone } = req.body;
+      const { name, email, phone, status, adminEmail } = req.body;
       const id = Math.random().toString(36).substring(2, 9);
       const application_date = new Date().toISOString();
+      const initialStatus = status || "Inquiry";
       
       if (useSqlite && sqliteDb) {
         sqliteDb.prepare(`
           INSERT INTO candidates (id, name, email, phone, status, application_date, scores, notes, document_vault)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(id, name, email, phone || "", "Inquiry", application_date, "{}", "", "[]");
+        `).run(id, name, email, phone || "", initialStatus, application_date, "{}", "", "[]");
       }
+
+      logEvent(adminEmail || "admin", "CANDIDATE_CREATED", `Added new candidate ${name} (${email}) with initial stage ${initialStatus}`);
 
       res.json({ success: true, candidateId: id });
     } catch (err: any) {

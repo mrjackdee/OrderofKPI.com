@@ -24,6 +24,7 @@ import {
 import { Candidate } from '../types';
 import { fetchAllApplications } from '../lib/memberDb';
 import { generateApplicationPDF } from '../utils/pdfGenerator';
+import { logPortalSectionAccess } from '../lib/auditLogger';
 
 const STAGES: Candidate['status'][] = ['Inquiry', 'Applied', 'Tea Time', 'Interview', 'Selection', 'Intake'];
 
@@ -37,6 +38,7 @@ export default function CandidateTracker() {
   const [newCandidate, setNewCandidate] = useState({ name: '', email: '', phone: '' });
 
   useEffect(() => {
+    logPortalSectionAccess('Candidate Tracker');
     fetchCandidates();
     fetchApplications();
   }, []);

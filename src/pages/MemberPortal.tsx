@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import GooglePickerButton from '../components/GooglePickerButton';
 import { createMeetSpace, createGoogleDoc, createGoogleSlide, createGoogleForm } from '../lib/googleWorkspace';
+import { logPortalSectionAccess } from '../lib/auditLogger';
 
 interface WorkspaceActionCardProps {
   icon: React.ElementType;
@@ -46,10 +47,15 @@ const WorkspaceActionCard = ({ icon: Icon, title, subtitle, onClick }: Workspace
 export default function MemberPortal() {
   const userRole = sessionStorage.getItem('userRole');
   const userEmail = sessionStorage.getItem('userEmail');
-  const isChair = userEmail?.toLowerCase() === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair';
-  const isMembershipCommittee = userRole === 'Membership Committee' || isChair;
-  const isAdminOrOfficer = (userRole && userRole !== 'member' && userRole !== 'prospective') || isMembershipCommittee;
+  const isAdmin = userRole === 'admin' || userEmail?.toLowerCase() === 'admin@orderofkpi.org';
+  const isChair = userEmail?.toLowerCase() === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair' || isAdmin;
+  const isMembershipCommittee = userRole === 'Membership Committee' || isChair || isAdmin;
+  const isAdminOrOfficer = (userRole && userRole !== 'member' && userRole !== 'prospective') || isMembershipCommittee || isAdmin;
   const isProspective = userRole === 'prospective';
+
+  React.useEffect(() => {
+    logPortalSectionAccess('Member Portal');
+  }, []);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -322,7 +328,7 @@ export default function MemberPortal() {
                   roles: ['admin', 'officer', 'Membership Committee Chair', 'Membership Committee']
                 }
               ]
-              .filter(tool => !tool.roles || tool.roles.includes(userRole || ''))
+              .filter(tool => !tool.roles || tool.roles.includes(userRole || '') || isAdmin)
               .map((tool) => (
                 <Link
                   key={tool.title}

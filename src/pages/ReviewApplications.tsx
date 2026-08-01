@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { fetchAllApplications } from '../lib/memberDb';
 import { generateApplicationPDF } from '../utils/pdfGenerator';
+import { logPortalSectionAccess } from '../lib/auditLogger';
 
 interface Application {
   id: string;
@@ -54,6 +55,7 @@ export default function ReviewApplications() {
   };
 
   useEffect(() => {
+    logPortalSectionAccess('Review Applications');
     const loadApps = async () => {
       const res = await fetchAllApplications();
       if (res.success) {

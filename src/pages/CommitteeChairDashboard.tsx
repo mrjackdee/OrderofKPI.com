@@ -21,6 +21,7 @@ import {
   Award
 } from 'lucide-react';
 import { Candidate, Member } from '../types';
+import { logPortalSectionAccess } from '../lib/auditLogger';
 
 interface AuditLog {
   id: string;
@@ -56,6 +57,7 @@ export default function CommitteeChairDashboard() {
   const currentUserEmail = sessionStorage.getItem('userEmail') || 'james.haywood@orderofkpi.org';
 
   useEffect(() => {
+    logPortalSectionAccess('Membership Chair Portal');
     loadAllData();
   }, []);
 
