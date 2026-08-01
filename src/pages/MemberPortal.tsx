@@ -45,7 +45,8 @@ const WorkspaceActionCard = ({ icon: Icon, title, subtitle, onClick }: Workspace
 
 export default function MemberPortal() {
   const userRole = sessionStorage.getItem('userRole');
-  const isAdminOrOfficer = userRole && userRole !== 'member' && userRole !== 'prospective';
+  const isMembershipCommittee = userRole === 'Membership Committee';
+  const isAdminOrOfficer = userRole && userRole !== 'member' && userRole !== 'prospective' && !isMembershipCommittee;
   const isProspective = userRole === 'prospective';
 
   const containerVariants = {
@@ -265,7 +266,7 @@ export default function MemberPortal() {
         )}
 
         {/* Administrative Tools */}
-        {isAdminOrOfficer && (
+        {(isAdminOrOfficer || isMembershipCommittee) && (
           <motion.section variants={itemVariants} className="mb-20">
             <h2 className="text-2xl font-display text-ivy mb-8 uppercase tracking-widest border-b border-gold/20 pb-4">Administrative Tools</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -275,37 +276,44 @@ export default function MemberPortal() {
                   desc: 'Member & system management.', 
                   icon: Settings, 
                   path: '/admin-dashboard',
-                  color: 'bg-ivy text-cream'
+                  color: 'bg-ivy text-cream',
+                  roles: ['admin', 'officer']
                 },
                 { 
                   title: 'Candidate Tracker', 
                   desc: 'Manage membership intake.', 
                   icon: Users, 
                   path: '/candidate-tracker',
-                  color: 'bg-gold text-ivy'
+                  color: 'bg-gold text-ivy',
+                  roles: ['admin', 'officer', 'Membership Committee']
                 },
                 { 
                   title: 'Process Timeline', 
                   desc: 'FY27 MIP Strategic Roadmap.', 
                   icon: LayoutGrid, 
                   path: '/gantt-chart',
-                  color: 'bg-ivy text-cream'
+                  color: 'bg-ivy text-cream',
+                  roles: ['admin', 'officer']
                 },
                 { 
                   title: 'Meeting Minutes', 
                   desc: 'AI-powered minutes generator.', 
                   icon: FileText, 
                   path: '/meeting-minutes',
-                  color: 'bg-gold text-ivy'
+                  color: 'bg-gold text-ivy',
+                  roles: ['admin', 'officer']
                 },
                 { 
                   title: 'Review Applications', 
                   desc: 'Review intake submissions.', 
                   icon: ClipboardCheck, 
                   path: '/review-applications',
-                  color: 'bg-ivy text-cream'
+                  color: 'bg-ivy text-cream',
+                  roles: ['admin', 'officer', 'Membership Committee']
                 }
-              ].map((tool) => (
+              ]
+              .filter(tool => !tool.roles || tool.roles.includes(userRole || ''))
+              .map((tool) => (
                 <Link
                   key={tool.title}
                   to={tool.path}

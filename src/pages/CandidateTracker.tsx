@@ -179,7 +179,16 @@ export default function CandidateTracker() {
                       className="bg-white p-5 rounded-lg border border-gold/20 shadow-soft hover:border-gold transition-all group"
                     >
                       <div className="flex justify-between items-start mb-3">
-                        <h3 className="font-display text-lg text-ivy">{candidate.name}</h3>
+                        {isSubmitted ? (
+                          <button
+                            onClick={() => setSelectedApplicationForView(matchingApp)}
+                            className="font-display text-lg text-gold hover:text-ivy underline text-left cursor-pointer transition-colors"
+                          >
+                            {candidate.name}
+                          </button>
+                        ) : (
+                          <h3 className="font-display text-lg text-ivy">{candidate.name}</h3>
+                        )}
                         <div className="relative group/menu">
                           <button className="text-ivy/20 hover:text-ivy transition-colors p-1">
                             <MoreVertical className="w-4 h-4" />

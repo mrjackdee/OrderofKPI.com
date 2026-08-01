@@ -423,6 +423,7 @@ export default function AdminDashboard() {
                     <option value="member">Member</option>
                     <option value="officer">Officer</option>
                     <option value="admin">Administrator</option>
+                    <option value="Membership Committee">Membership Committee</option>
                   </select>
                 </div>
                 <div>
