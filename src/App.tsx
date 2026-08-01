@@ -32,6 +32,7 @@ import MeetingMinutes from './pages/MeetingMinutes';
 import SelectionVoting from './pages/SelectionVoting';
 import Application from './pages/Application';
 import ReviewApplications from './pages/ReviewApplications';
+import CommitteeChairDashboard from './pages/CommitteeChairDashboard';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import ScrollToTop from './components/ScrollToTop';
@@ -69,6 +70,7 @@ export default function App() {
           <Route path="meeting-minutes" element={<ProtectedRoute><MeetingMinutes /></ProtectedRoute>} />
           <Route path="membership-application" element={<ProtectedRoute><Application /></ProtectedRoute>} />
           <Route path="review-applications" element={<ProtectedRoute><ReviewApplications /></ProtectedRoute>} />
+          <Route path="chair-dashboard" element={<ProtectedRoute><CommitteeChairDashboard /></ProtectedRoute>} />
           <Route path="privacy-policy" element={<PrivacyPolicy />} />
           <Route path="terms-of-service" element={<TermsOfService />} />
         </Route>

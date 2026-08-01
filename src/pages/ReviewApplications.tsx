@@ -32,6 +32,27 @@ export default function ReviewApplications() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'submitted'>('all');
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
 
+  const currentUserEmail = sessionStorage.getItem('userEmail') || 'committee_member@orderofkpi.org';
+
+  const logAppAudit = (app: Application, action: string) => {
+    fetch('/api/applications/audit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reviewer_email: currentUserEmail,
+        reviewer_name: currentUserEmail,
+        applicant_email: app.email,
+        applicant_name: `${app.data?.firstName || ''} ${app.data?.lastName || ''}`.trim() || app.email,
+        action
+      })
+    }).catch(err => console.warn('Audit log error:', err));
+  };
+
+  const handleSelectApp = (app: Application) => {
+    setSelectedApp(app);
+    logAppAudit(app, 'ACCESSED_APPLICATION');
+  };
+
   useEffect(() => {
     const loadApps = async () => {
       const res = await fetchAllApplications();
@@ -137,7 +158,7 @@ export default function ReviewApplications() {
               filteredApps.map(app => (
                 <button
                   key={app.id}
-                  onClick={() => setSelectedApp(app)}
+                  onClick={() => handleSelectApp(app)}
                   className={`w-full text-left p-6 rounded-2xl border transition-all duration-300 group relative overflow-hidden ${
                     selectedApp?.id === app.id 
                     ? 'bg-ivy border-ivy shadow-xl shadow-ivy/20' 
@@ -203,12 +224,18 @@ export default function ReviewApplications() {
                       <Mail size={14} /> Send Message
                     </button>
                     <button 
-                      onClick={() => generateApplicationPDF(selectedApp.data, selectedApp.email)}
+                      onClick={() => {
+                        generateApplicationPDF(selectedApp.data, selectedApp.email);
+                        logAppAudit(selectedApp, 'DOWNLOADED_PDF');
+                      }}
                       className="px-6 py-3 bg-gold text-ivy font-bold uppercase tracking-widest text-[10px] hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2"
                     >
                       <FileText size={14} /> Download PDF
                     </button>
-                    <button className="px-6 py-3 bg-ivy text-cream font-bold uppercase tracking-widest text-[10px] hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2">
+                    <button 
+                      onClick={() => logAppAudit(selectedApp, 'PERFORMED_OFFICIAL_REVIEW')}
+                      className="px-6 py-3 bg-ivy text-cream font-bold uppercase tracking-widest text-[10px] hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2"
+                    >
                       <ExternalLink size={14} /> Official Review
                     </button>
                   </div>

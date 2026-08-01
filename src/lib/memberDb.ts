@@ -9,7 +9,7 @@ import {
 export interface MemberUser {
   name: string;
   email: string;
-  role: 'admin' | 'member' | 'officer' | 'prospective' | 'Membership Committee';
+  role: 'admin' | 'member' | 'officer' | 'prospective' | 'Membership Committee' | 'Membership Committee Chair';
   title?: string;
 }
 

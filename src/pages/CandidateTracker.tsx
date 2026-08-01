@@ -85,6 +85,23 @@ export default function CandidateTracker() {
     }
   };
 
+  const currentUserEmail = sessionStorage.getItem('userEmail') || 'committee_chair@orderofkpi.org';
+
+  const handleRemoveCandidate = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to permanently remove candidate "${name}" from the tracker?`)) return;
+
+    try {
+      const res = await fetch(`/api/candidates/${id}?chairEmail=${encodeURIComponent(currentUserEmail)}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        fetchCandidates();
+      }
+    } catch (err) {
+      console.error('Error removing candidate:', err);
+    }
+  };
+
   const updateCandidateStatus = async (id: string, newStatus: Candidate['status']) => {
     const candidate = candidates.find(c => c.id === id);
     if (!candidate) return;
@@ -93,7 +110,7 @@ export default function CandidateTracker() {
       const response = await fetch(`/api/candidates/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...candidate, status: newStatus }),
+        body: JSON.stringify({ ...candidate, status: newStatus, reviewerEmail: currentUserEmail }),
       });
       if (response.ok) {
         fetchCandidates();
@@ -205,9 +222,15 @@ export default function CandidateTracker() {
                             ))}
                             <button
                               onClick={() => updateCandidateStatus(candidate.id, 'Rejected')}
-                              className="w-full text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
+                              className="w-full text-left px-4 py-2 text-xs text-amber-700 hover:bg-amber-50 transition-colors"
                             >
-                              Reject Candidate
+                              Mark as Rejected
+                            </button>
+                            <button
+                              onClick={() => handleRemoveCandidate(candidate.id, candidate.name)}
+                              className="w-full text-left px-4 py-2 text-xs text-red-700 hover:bg-red-50 font-bold transition-colors border-t border-gold/10 flex items-center gap-1"
+                            >
+                              <Trash2 className="w-3 h-3" /> Remove Candidate
                             </button>
                           </div>
                         </div>

@@ -45,8 +45,10 @@ const WorkspaceActionCard = ({ icon: Icon, title, subtitle, onClick }: Workspace
 
 export default function MemberPortal() {
   const userRole = sessionStorage.getItem('userRole');
-  const isMembershipCommittee = userRole === 'Membership Committee';
-  const isAdminOrOfficer = userRole && userRole !== 'member' && userRole !== 'prospective' && !isMembershipCommittee;
+  const userEmail = sessionStorage.getItem('userEmail');
+  const isChair = userEmail?.toLowerCase() === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair';
+  const isMembershipCommittee = userRole === 'Membership Committee' || isChair;
+  const isAdminOrOfficer = (userRole && userRole !== 'member' && userRole !== 'prospective') || isMembershipCommittee;
   const isProspective = userRole === 'prospective';
 
   const containerVariants = {
@@ -309,7 +311,15 @@ export default function MemberPortal() {
                   icon: ClipboardCheck, 
                   path: '/review-applications',
                   color: 'bg-ivy text-cream',
-                  roles: ['admin', 'officer', 'Membership Committee']
+                  roles: ['admin', 'officer', 'Membership Committee', 'Membership Committee Chair']
+                },
+                { 
+                  title: 'Membership Chair Portal', 
+                  desc: 'Review audit logs, committee access & candidate removal.', 
+                  icon: ShieldCheck, 
+                  path: '/chair-dashboard',
+                  color: 'bg-gold text-ivy',
+                  roles: ['admin', 'officer', 'Membership Committee Chair', 'Membership Committee']
                 }
               ]
               .filter(tool => !tool.roles || tool.roles.includes(userRole || ''))

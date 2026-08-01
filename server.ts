@@ -28,6 +28,7 @@ interface UserRecord {
 
 const defaultUsers = [
   { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator", intake_class: "Charter", financial_status: "active", industry: "Technology" },
+  { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", intake_class: "Charter", financial_status: "active", industry: "Leadership" },
   { name: "Jack Dee", email: "jack@orderofkpi.org", role: "member", intake_class: "Spring '24", financial_status: "active", industry: "Consulting" },
   { name: "Deshaun Stafford", email: "deshaun.stafford@orderofkpi.org", role: "member", intake_class: "Fall '22", financial_status: "active", industry: "Education" },
   { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "officer", title: "Grammateus", intake_class: "Spring '18", financial_status: "active", industry: "Engineering" },
@@ -140,6 +141,18 @@ async function initDb() {
         event_type TEXT,
         message TEXT,
         severity TEXT DEFAULT 'info'
+      )
+    `);
+
+    sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS application_audit_logs (
+        id TEXT PRIMARY KEY,
+        reviewer_email TEXT,
+        reviewer_name TEXT,
+        applicant_email TEXT,
+        applicant_name TEXT,
+        action TEXT,
+        timestamp TEXT
       )
     `);
 
@@ -1027,7 +1040,7 @@ async function startServer() {
   app.put("/api/candidates/:id", (req, res) => {
     try {
       const { id } = req.params;
-      const { status, scores, notes, document_vault } = req.body;
+      const { status, scores, notes, document_vault, reviewerEmail } = req.body;
       
       if (useSqlite && sqliteDb) {
         sqliteDb.prepare(`
@@ -1041,9 +1054,159 @@ async function startServer() {
           JSON.stringify(document_vault || []), 
           id
         );
+
+        if (reviewerEmail) {
+          const cand = sqliteDb.prepare("SELECT name, email FROM candidates WHERE id = ?").get(id) as any;
+          if (cand) {
+            logEvent(reviewerEmail, "CANDIDATE_STATUS_CHANGE", `Updated candidate ${cand.name} status to ${status}`);
+          }
+        }
       }
 
       res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.delete("/api/candidates/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      const { chairEmail } = req.query;
+
+      if (useSqlite && sqliteDb) {
+        const cand = sqliteDb.prepare("SELECT name, email FROM candidates WHERE id = ?").get(id) as any;
+        sqliteDb.prepare("DELETE FROM candidates WHERE id = ?").run(id);
+
+        if (cand) {
+          logEvent((chairEmail as string) || "committee_chair", "CANDIDATE_REMOVED", `Removed candidate ${cand.name} (${cand.email}) from active tracking`);
+        }
+      }
+
+      res.json({ success: true, message: "Candidate removed successfully." });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // --- APPLICATION REVIEW AUDIT LOG ENDPOINTS ---
+
+  app.get("/api/applications/audit", (req, res) => {
+    try {
+      if (useSqlite && sqliteDb) {
+        const logs = sqliteDb.prepare("SELECT * FROM application_audit_logs ORDER BY timestamp DESC").all();
+        res.json({ success: true, logs });
+      } else {
+        res.json({ success: true, logs: [] });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.post("/api/applications/audit", (req, res) => {
+    try {
+      const { reviewer_email, reviewer_name, applicant_email, applicant_name, action } = req.body;
+      const id = Math.random().toString(36).substring(2, 9);
+      const timestamp = new Date().toISOString();
+
+      if (useSqlite && sqliteDb) {
+        sqliteDb.prepare(`
+          INSERT INTO application_audit_logs (id, reviewer_email, reviewer_name, applicant_email, applicant_name, action, timestamp)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          id, 
+          reviewer_email || "", 
+          reviewer_name || reviewer_email || "", 
+          applicant_email || "", 
+          applicant_name || applicant_email || "", 
+          action || "ACCESSED_APPLICATION", 
+          timestamp
+        );
+      }
+
+      logEvent(reviewer_email || "system", "APPLICATION_AUDIT", `Reviewer ${reviewer_name || reviewer_email} performed ${action} on candidate ${applicant_name || applicant_email}`);
+
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // --- MEMBERSHIP COMMITTEE MEMBER ENDPOINTS ---
+
+  app.get("/api/committee/members", (req, res) => {
+    try {
+      let committeeMembers: any[] = [];
+      if (useSqlite && sqliteDb) {
+        committeeMembers = sqliteDb.prepare("SELECT * FROM users WHERE role = 'Membership Committee' OR role = 'Membership Committee Chair' OR email = 'james.haywood@orderofkpi.org'").all();
+      } else if (fs.existsSync(jsonDbPath)) {
+        const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+        committeeMembers = Object.values(data).filter((u: any) => u.role === 'Membership Committee' || u.role === 'Membership Committee Chair' || u.email === 'james.haywood@orderofkpi.org');
+      }
+      res.json({ success: true, members: committeeMembers });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.post("/api/committee/members", (req, res) => {
+    try {
+      const { email, chairEmail } = req.body;
+      if (!email) return res.status(400).json({ success: false, message: "Member email is required" });
+
+      const normEmail = email.toLowerCase().trim();
+
+      if (useSqlite && sqliteDb) {
+        const user = sqliteDb.prepare("SELECT * FROM users WHERE email = ?").get(normEmail) as any;
+        if (!user) {
+          return res.status(404).json({ success: false, message: "User email not found in active directory" });
+        }
+        
+        sqliteDb.prepare("UPDATE users SET role = 'Membership Committee' WHERE email = ?").run(normEmail);
+      }
+
+      if (fs.existsSync(jsonDbPath)) {
+        const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+        if (data[normEmail]) {
+          data[normEmail].role = 'Membership Committee';
+          fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
+        }
+      }
+
+      logEvent(chairEmail || "james.haywood@orderofkpi.org", "COMMITTEE_MEMBER_ADDED", `Granted Membership Committee role access to ${normEmail}`);
+
+      res.json({ success: true, message: "Member added to Membership Committee with full review access permissions." });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.delete("/api/committee/members/:email", (req, res) => {
+    try {
+      const { email } = req.params;
+      const { chairEmail } = req.query;
+      const normEmail = email.toLowerCase().trim();
+
+      if (normEmail === 'james.haywood@orderofkpi.org') {
+        return res.status(400).json({ success: false, message: "Cannot remove the Membership Committee Chair" });
+      }
+
+      if (useSqlite && sqliteDb) {
+        sqliteDb.prepare("UPDATE users SET role = 'member' WHERE email = ?").run(normEmail);
+      }
+
+      if (fs.existsSync(jsonDbPath)) {
+        const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+        if (data[normEmail]) {
+          data[normEmail].role = 'member';
+          fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
+        }
+      }
+
+      logEvent((chairEmail as string) || "james.haywood@orderofkpi.org", "COMMITTEE_MEMBER_REMOVED", `Removed Membership Committee access for ${normEmail}`);
+
+      res.json({ success: true, message: "Member removed from Membership Committee." });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
