@@ -53,6 +53,7 @@ export const prospectiveMembers: MemberUser[] = [
 ];
 
 const INITIAL_CANDIDATES_PASSWORDS: Record<string, string> = {
+  'james.haywood@orderofkpi.org': '2012',
   'averyt16@gmail.com': '0784',
   'hupirate90@me.com': '9348',
   'demills_10@yahoo.com': '0844',

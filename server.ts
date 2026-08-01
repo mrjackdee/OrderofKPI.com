@@ -75,6 +75,9 @@ async function initDb() {
     ...initialCandidates.map(c => c.email.toLowerCase().trim())
   ]);
   const defaultPasswordHash = hashPassword("atlanta");
+  const userPasswordOverrides: Record<string, string> = {
+    "james.haywood@orderofkpi.org": "2012"
+  };
   const testUsers = ["admin@orderofkpi.org", "jack@orderofkpi.org"];
 
   try {
@@ -183,14 +186,17 @@ async function initDb() {
     }
 
     // Add or update users to align with latest roles and titles, preserving existing password hashes
-    // Exception: Force password to 'atlanta' for test accounts
+    // Exception: Force password for test accounts or specific overrides
     for (const u of defaultUsers) {
       const emailNorm = u.email.toLowerCase().trim();
       const firstName = u.name.split(" ")[0];
       const existingUser = sqliteDb.prepare("SELECT password_hash FROM users WHERE email = ?").get(emailNorm) as any;
       
       const isTestUser = testUsers.includes(emailNorm);
-      const targetPasswordHash = isTestUser ? defaultPasswordHash : (existingUser ? existingUser.password_hash : defaultPasswordHash);
+      const customPass = userPasswordOverrides[emailNorm];
+      const targetPasswordHash = customPass 
+        ? hashPassword(customPass) 
+        : (isTestUser ? defaultPasswordHash : (existingUser ? existingUser.password_hash : defaultPasswordHash));
 
       if (existingUser) {
         sqliteDb.prepare(`
@@ -224,7 +230,7 @@ async function initDb() {
           emailNorm, 
           u.name, 
           firstName, 
-          defaultPasswordHash, 
+          targetPasswordHash, 
           u.role, 
           u.title || "",
           u.intake_class || null,
@@ -300,6 +306,8 @@ async function initDb() {
     for (const u of defaultUsers) {
       const emailNorm = u.email.toLowerCase().trim();
       const isTestUser = testUsers.includes(emailNorm);
+      const customPass = userPasswordOverrides[emailNorm];
+      const initialHash = customPass ? hashPassword(customPass) : defaultPasswordHash;
 
       if (!cleanData[emailNorm]) {
         const firstName = u.name.split(" ")[0];
@@ -307,7 +315,7 @@ async function initDb() {
           email: emailNorm,
           name: u.name,
           first_name: firstName,
-          password_hash: defaultPasswordHash,
+          password_hash: initialHash,
           is_first_login: 1,
           role: u.role,
           title: u.title || ""
@@ -315,8 +323,9 @@ async function initDb() {
       } else {
         cleanData[emailNorm].role = u.role;
         cleanData[emailNorm].title = u.title || "";
-        // Force test user password to match the requested 'atlanta'
-        if (isTestUser) {
+        if (customPass) {
+          cleanData[emailNorm].password_hash = hashPassword(customPass);
+        } else if (isTestUser) {
           cleanData[emailNorm].password_hash = defaultPasswordHash;
         }
       }
