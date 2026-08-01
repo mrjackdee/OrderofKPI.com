@@ -62,11 +62,11 @@ const initialData: ApplicationData = {
   essay3: '',
   essay4: '',
   essay5: '',
-  isFraternityMember: 'no',
+  isFraternityMember: '',
   fraternityDetails: '',
-  hasAkaFamily: 'no',
+  hasAkaFamily: '',
   akaFamilyDetails: '',
-  previousApplied: 'no',
+  previousApplied: '',
   previousAppliedDetails: '',
   socialUrls: '',
 };
@@ -83,11 +83,6 @@ const Section = ({ title, icon: Icon, isOpen, onToggle, children, isCompleted }:
         </div>
         <div>
           <h3 className="font-display font-bold text-ivy tracking-tight">{title}</h3>
-          {isCompleted && (
-            <span className="text-[10px] text-green-600 font-bold uppercase tracking-wider flex items-center gap-1 mt-0.5">
-              <CheckCircle size={10} /> Section Completed
-            </span>
-          )}
         </div>
       </div>
       <ChevronDown 
@@ -159,9 +154,12 @@ const TextArea = ({ label, value, onChange, placeholder, required = false, minWo
   );
 };
 
-const RadioGroup = ({ label, value, onChange, options }: any) => (
+const RadioGroup = ({ label, value, onChange, options, required = false }: any) => (
   <div className="space-y-3">
-    <label className="text-[11px] text-ivy/60 uppercase tracking-widest font-bold ml-1">{label}</label>
+    <label className="text-[11px] text-ivy/60 uppercase tracking-widest font-bold ml-1 flex justify-between">
+      <span>{label}</span>
+      {required && <span className="text-red-500">*</span>}
+    </label>
     <div className="flex flex-wrap gap-4">
       {options.map((opt: any) => (
         <label key={opt.value} className="flex items-center gap-3 cursor-pointer group">
@@ -185,13 +183,20 @@ const RadioGroup = ({ label, value, onChange, options }: any) => (
   </div>
 );
 
-export default function MembershipApplication() {
+interface ApplicationProps {
+  onUnsavedChangesChange?: (dirty: boolean) => void;
+  saveRef?: React.MutableRefObject<(() => Promise<any>) | null>;
+}
+
+export default function MembershipApplication({ onUnsavedChangesChange, saveRef }: ApplicationProps) {
   const [data, setData] = useState<ApplicationData>(initialData);
   const [openSection, setOpenSection] = useState<string | null>('personal');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const email = sessionStorage.getItem('userEmail') || '';
 
   useEffect(() => {
@@ -202,36 +207,136 @@ export default function MembershipApplication() {
         if (res.application.status === 'submitted') {
           setSubmitted(true);
         }
-        setData(prev => ({ ...prev, ...res.application.data }));
+        const appData = res.application.data || res.application;
+        const mappedData: any = {};
+        const fields: (keyof ApplicationData)[] = [
+          'firstName', 'middleName', 'lastName', 'dateOfBirth', 'phone', 'address',
+          'employment', 'position', 'degrees', 'honors', 'organizations', 'priorKnowledge',
+          'essay1', 'essay2', 'essay3', 'essay4', 'essay5',
+          'isFraternityMember', 'fraternityDetails', 'hasAkaFamily', 'akaFamilyDetails',
+          'previousApplied', 'previousAppliedDetails', 'socialUrls'
+        ];
+        fields.forEach(f => {
+          if (appData[f] !== undefined) {
+            if (f === 'isFraternityMember' || f === 'hasAkaFamily' || f === 'previousApplied') {
+              if (appData[f] === true || appData[f] === 'yes') {
+                mappedData[f] = 'yes';
+              } else if (appData[f] === false || appData[f] === 'no') {
+                mappedData[f] = 'no';
+              } else {
+                mappedData[f] = appData[f] || '';
+              }
+            } else {
+              mappedData[f] = appData[f] || '';
+            }
+          }
+        });
+        setData(prev => ({ ...prev, ...mappedData }));
       }
       setLoading(false);
     };
     loadData();
   }, [email]);
 
+  // Notify parent of dirty state changes
+  useEffect(() => {
+    if (onUnsavedChangesChange) {
+      onUnsavedChangesChange(hasUnsavedChanges);
+    }
+  }, [hasUnsavedChanges, onUnsavedChangesChange]);
+
   const updateField = (field: keyof ApplicationData, value: any) => {
-    setData(prev => ({ ...prev, [field]: value }));
+    setData(prev => {
+      if (prev[field] === value) return prev;
+      setHasUnsavedChanges(true);
+      return { ...prev, [field]: value };
+    });
   };
 
   const handleSave = async (isManual = true) => {
     if (!email) return;
     if (isManual) setSaving(true);
     const res = await saveApplication(email, data, 'draft');
-    if (isManual) {
-      setSaving(false);
-      if (res.success) {
-        // Success feedback
+    if (res.success) {
+      setHasUnsavedChanges(false);
+      if (isManual) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
       }
     }
+    if (isManual) {
+      setSaving(false);
+    }
+    return res;
   };
+
+  // Expose save function to parent ref
+  useEffect(() => {
+    if (saveRef) {
+      saveRef.current = () => handleSave(true);
+    }
+    return () => {
+      if (saveRef) {
+        saveRef.current = null;
+      }
+    };
+  }, [saveRef, data]);
+
+  // Debounced auto-save
+  useEffect(() => {
+    if (loading || submitted || !email || !hasUnsavedChanges) return;
+
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const res = await saveApplication(email, data, 'draft');
+        if (res.success) {
+          setHasUnsavedChanges(false);
+          setSaveSuccess(true);
+          setTimeout(() => setSaveSuccess(false), 3000);
+        }
+      } catch (err) {
+        console.warn('Auto-save error:', err);
+      }
+    }, 1500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [data, loading, submitted, email, hasUnsavedChanges]);
+
+  // Prompt user before exiting window/tab
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   const handleSubmit = async () => {
     if (!email) return;
     setError('');
     
     // Simple validation check
-    const requiredFields: (keyof ApplicationData)[] = ['firstName', 'lastName', 'dateOfBirth', 'phone', 'address', 'essay1', 'essay2', 'essay3', 'essay4', 'essay5'];
+    const requiredFields: (keyof ApplicationData)[] = [
+      'firstName', 'lastName', 'dateOfBirth', 'phone', 'address', 
+      'essay1', 'essay2', 'essay3', 'essay4', 'essay5',
+      'isFraternityMember', 'hasAkaFamily', 'previousApplied'
+    ];
     const missing = requiredFields.filter(f => !data[f]);
+
+    // Also validate conditional disclosures
+    if (data.isFraternityMember === 'yes' && !data.fraternityDetails) {
+      missing.push('fraternityDetails');
+    }
+    if (data.hasAkaFamily === 'yes' && !data.akaFamilyDetails) {
+      missing.push('akaFamilyDetails');
+    }
+    if (data.previousApplied === 'yes' && !data.previousAppliedDetails) {
+      missing.push('previousAppliedDetails');
+    }
     
     if (missing.length > 0) {
       setError('Please complete all required fields and questions before submitting.');
@@ -301,11 +406,8 @@ export default function MembershipApplication() {
     <div className="max-w-4xl mx-auto px-6 py-12 md:py-20 space-y-12">
       <div className="space-y-4 text-center">
         <h1 className="text-4xl md:text-6xl font-display font-bold text-ivy tracking-tighter uppercase italic">
-          New Member <span className="text-gold">Application</span>
+          Member <span className="text-gold">Application</span>
         </h1>
-        <p className="text-ivy/40 text-sm md:text-base max-w-2xl mx-auto leading-relaxed font-body">
-          Kappa Pi — National Membership Portal
-        </p>
       </div>
 
       <div className="bg-ivy p-8 rounded-3xl space-y-4 relative overflow-hidden shadow-2xl">
@@ -484,12 +586,14 @@ export default function MembershipApplication() {
                 value={data.isFraternityMember} 
                 onChange={(v: string) => updateField('isFraternityMember', v)}
                 options={[{ label: 'Yes', value: 'yes' }, { label: 'No', value: 'no' }]}
+                required
               />
               {data.isFraternityMember === 'yes' && (
                 <Input 
                   label="Fraternity Name & Initiation Date" 
                   value={data.fraternityDetails} 
                   onChange={(v: string) => updateField('fraternityDetails', v)} 
+                  required
                 />
               )}
             </div>
@@ -500,6 +604,7 @@ export default function MembershipApplication() {
                 value={data.hasAkaFamily} 
                 onChange={(v: string) => updateField('hasAkaFamily', v)}
                 options={[{ label: 'Yes', value: 'yes' }, { label: 'No', value: 'no' }]}
+                required
               />
               {data.hasAkaFamily === 'yes' && (
                 <TextArea 
@@ -507,16 +612,18 @@ export default function MembershipApplication() {
                   value={data.akaFamilyDetails} 
                   onChange={(v: string) => updateField('akaFamilyDetails', v)} 
                   placeholder="Names, relationships, chapter, and year of initiation..."
+                  required
                 />
               )}
             </div>
 
             <div className="space-y-6 p-6 rounded-2xl bg-gold/5 border border-gold/10">
               <RadioGroup 
-                label="Have you previously applied or pledged Kappa Pi?" 
+                label="Have you previously applied for membership into Kappa Pi?" 
                 value={data.previousApplied} 
                 onChange={(v: string) => updateField('previousApplied', v)}
                 options={[{ label: 'Yes', value: 'yes' }, { label: 'No', value: 'no' }]}
+                required
               />
               {data.previousApplied === 'yes' && (
                 <TextArea 
@@ -524,6 +631,7 @@ export default function MembershipApplication() {
                   value={data.previousAppliedDetails} 
                   onChange={(v: string) => updateField('previousAppliedDetails', v)} 
                   placeholder="Explain why you did not continue or discontinued the process..."
+                  required
                 />
               )}
             </div>
@@ -551,12 +659,30 @@ export default function MembershipApplication() {
       <div className="sticky bottom-8 left-0 right-0 z-40 px-4 md:px-0">
         <div className="max-w-4xl mx-auto bg-ivy/95 backdrop-blur-xl border border-gold/30 rounded-3xl p-6 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-full bg-gold text-ivy">
-              <Info size={20} />
+            <div className={`p-3 rounded-full transition-all duration-300 ${
+              saveSuccess 
+                ? 'bg-green-600 text-cream scale-110' 
+                : hasUnsavedChanges 
+                  ? 'bg-amber-500 text-ivy animate-pulse' 
+                  : 'bg-gold text-ivy'
+            }`}>
+              <CheckCircle size={20} />
             </div>
             <div>
-              <p className="text-cream font-bold text-sm font-display">Draft Progress Auto-Saved</p>
-              <p className="text-gold text-[10px] uppercase tracking-widest font-bold">Last saved: {new Date().toLocaleTimeString()}</p>
+              <p className="text-cream font-bold text-sm font-display">
+                {saveSuccess 
+                  ? 'Draft Saved Successfully!' 
+                  : hasUnsavedChanges 
+                    ? 'Unsaved Draft Changes' 
+                    : 'Draft Progress Saved'}
+              </p>
+              <p className="text-gold text-[10px] uppercase tracking-widest font-bold">
+                {saveSuccess 
+                  ? 'Changes written to secure cloud storage' 
+                  : hasUnsavedChanges 
+                    ? 'Auto-saving soon or click Save Draft...' 
+                    : `Last saved: ${new Date().toLocaleTimeString()}`}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-4 w-full md:w-auto">

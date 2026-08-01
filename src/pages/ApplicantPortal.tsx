@@ -25,6 +25,10 @@ export default function ApplicantPortal() {
   const [candidateStatus, setCandidateStatus] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showExitPrompt, setShowExitPrompt] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const saveRef = React.useRef<(() => Promise<any>) | null>(null);
   const navigate = useNavigate();
 
   const userEmail = sessionStorage.getItem('userEmail') || '';
@@ -59,7 +63,7 @@ export default function ApplicantPortal() {
   }, [userEmail]);
 
   const handleContinueApplication = () => {
-    setActiveTab('application');
+    handleTabClick('application');
     setTimeout(() => {
       const element = document.getElementById('application-form-section');
       if (element) {
@@ -68,12 +72,30 @@ export default function ApplicantPortal() {
     }, 80);
   };
 
+  const handleTabClick = (tab: 'application' | 'timeline' | 'instructions') => {
+    if (activeTab === 'application' && hasUnsavedChanges && tab !== 'application') {
+      setPendingAction(() => () => setActiveTab(tab));
+      setShowExitPrompt(true);
+    } else {
+      setActiveTab(tab);
+    }
+  };
+
   const handleLogout = () => {
     sessionStorage.removeItem('userEmail');
     sessionStorage.removeItem('userName');
     sessionStorage.removeItem('userFirstName');
     sessionStorage.removeItem('userRole');
     navigate('/applicant-login');
+  };
+
+  const handleLogoutClick = () => {
+    if (hasUnsavedChanges) {
+      setPendingAction(() => handleLogout);
+      setShowExitPrompt(true);
+    } else {
+      handleLogout();
+    }
   };
 
   return (
@@ -96,7 +118,7 @@ export default function ApplicantPortal() {
 
           <div className="flex items-center gap-4">
             <button
-              onClick={handleLogout}
+              onClick={handleLogoutClick}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gold/30 bg-white text-ivy text-xs font-bold uppercase tracking-widest hover:bg-gold/10 transition-all shadow-soft"
             >
               <LogOut size={14} className="text-gold" />
@@ -294,7 +316,7 @@ export default function ApplicantPortal() {
         {/* Navigation Tabs */}
         <div className="flex flex-wrap gap-3 border-b border-gold/20 pb-4">
           <button
-            onClick={() => setActiveTab('application')}
+            onClick={() => handleTabClick('application')}
             className={`px-6 py-3 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${
               activeTab === 'application'
                 ? 'bg-ivy text-cream shadow-md'
@@ -306,7 +328,7 @@ export default function ApplicantPortal() {
           </button>
 
           <button
-            onClick={() => setActiveTab('timeline')}
+            onClick={() => handleTabClick('timeline')}
             className={`px-6 py-3 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${
               activeTab === 'timeline'
                 ? 'bg-ivy text-cream shadow-md'
@@ -318,7 +340,7 @@ export default function ApplicantPortal() {
           </button>
 
           <button
-            onClick={() => setActiveTab('instructions')}
+            onClick={() => handleTabClick('instructions')}
             className={`px-6 py-3 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${
               activeTab === 'instructions'
                 ? 'bg-ivy text-cream shadow-md'
@@ -331,11 +353,15 @@ export default function ApplicantPortal() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'application' && (
-          <div id="application-form-section" className="bg-white border border-gold/20 rounded-[32px] p-4 md:p-8 shadow-soft">
-            <Application />
-          </div>
-        )}
+        <div 
+          id="application-form-section" 
+          className={`bg-white border border-gold/20 rounded-[32px] p-4 md:p-8 shadow-soft ${activeTab !== 'application' ? 'hidden' : ''}`}
+        >
+          <Application 
+            onUnsavedChangesChange={setHasUnsavedChanges}
+            saveRef={saveRef}
+          />
+        </div>
 
         {activeTab === 'timeline' && (
           <div className="bg-white border border-gold/20 rounded-[32px] p-8 md:p-12 space-y-8 shadow-soft">
@@ -415,6 +441,82 @@ export default function ApplicantPortal() {
           </div>
         )}
       </div>
+
+      {/* Unsaved Changes Prompt Modal */}
+      <AnimatePresence>
+        {showExitPrompt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                setShowExitPrompt(false);
+                setPendingAction(null);
+              }}
+              className="absolute inset-0 bg-ivy/60 backdrop-blur-sm"
+            />
+            
+            {/* Modal Body */}
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white border border-gold/30 rounded-[24px] p-8 max-w-md w-full relative z-10 shadow-2xl space-y-6"
+            >
+              <div className="space-y-3">
+                <h3 className="text-2xl font-bold uppercase tracking-tight text-ivy font-display">
+                  Unsaved Draft Changes
+                </h3>
+                <p className="text-ivy/70 text-sm font-body leading-relaxed">
+                  You have entered new information since the last time you saved. Would you like to save your progress before exiting?
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={async () => {
+                    if (saveRef.current) {
+                      await saveRef.current();
+                    }
+                    setShowExitPrompt(false);
+                    if (pendingAction) {
+                      pendingAction();
+                      setPendingAction(null);
+                    }
+                  }}
+                  className="w-full py-4 bg-gold text-ivy rounded-2xl font-bold uppercase tracking-widest text-[11px] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  Save and Continue
+                </button>
+                <button
+                  onClick={() => {
+                    setHasUnsavedChanges(false); // Discard changes
+                    setShowExitPrompt(false);
+                    if (pendingAction) {
+                      pendingAction();
+                      setPendingAction(null);
+                    }
+                  }}
+                  className="w-full py-4 border border-gold/30 hover:bg-gold/5 text-ivy rounded-2xl font-bold uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  Discard Changes & Exit
+                </button>
+                <button
+                  onClick={() => {
+                    setShowExitPrompt(false);
+                    setPendingAction(null);
+                  }}
+                  className="w-full py-4 text-ivy/50 hover:text-ivy text-[11px] uppercase tracking-widest font-bold text-center transition-colors cursor-pointer"
+                >
+                  Cancel / Keep Editing
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

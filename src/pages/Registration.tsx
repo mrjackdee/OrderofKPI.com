@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
 
 export default function Registration() {
-  const containerVariants = {
+  const containerVariants: any = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -9,7 +9,7 @@ export default function Registration() {
     }
   };
 
-  const itemVariants = {
+  const itemVariants: any = {
     hidden: { y: 20, opacity: 0 },
     visible: {
       y: 0,

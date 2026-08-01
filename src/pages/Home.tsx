@@ -6,7 +6,7 @@ import { Monitor, ArrowRight } from 'lucide-react';
 const MotionLink = motion(Link);
 
 export default function Home() {
-  const containerVariants = {
+  const containerVariants: any = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -16,7 +16,7 @@ export default function Home() {
     }
   };
 
-  const itemVariants = {
+  const itemVariants: any = {
     hidden: { y: 20, opacity: 0 },
     visible: {
       y: 0,
