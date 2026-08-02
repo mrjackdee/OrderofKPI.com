@@ -272,6 +272,11 @@ const validateApplication = (data: ApplicationData): ValidationErrorItem[] => {
     errors.push({ sectionKey: 'disclosures', sectionTitle: 'Additional Disclosures', fieldLabel: 'Explanation for Discontinuing', reason: 'Explanation required when selecting Yes' });
   }
 
+  // Social & Professional Presence
+  if (!data.socialUrls?.trim()) {
+    errors.push({ sectionKey: 'social', sectionTitle: 'Social & Professional Presence', fieldLabel: 'Social or professional website URLs', reason: 'Response is required (write "none" if not applicable)' });
+  }
+
   return errors;
 };
 
@@ -282,7 +287,15 @@ interface ApplicationProps {
 
 export default function MembershipApplication({ onUnsavedChangesChange, saveRef }: ApplicationProps) {
   const [data, setData] = useState<ApplicationData>(initialData);
-  const [openSection, setOpenSection] = useState<string | null>('personal');
+  const [openSection, setOpenSection] = useState<string | null>(() => {
+    return sessionStorage.getItem('lastApplicationSection') || 'personal';
+  });
+
+  useEffect(() => {
+    if (openSection) {
+      sessionStorage.setItem('lastApplicationSection', openSection);
+    }
+  }, [openSection]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -807,7 +820,7 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
             icon={Info} 
             isOpen={openSection === 'disclosures'} 
             onToggle={() => setOpenSection(openSection === 'disclosures' ? null : 'disclosures')}
-            isCompleted={true}
+            isCompleted={Boolean(data.isFraternityMember && data.hasAkaFamily && data.previousApplied)}
           >
             <div className="space-y-10">
               <div className="space-y-6 p-6 rounded-2xl bg-gold/5 border border-gold/10">
@@ -830,7 +843,7 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
 
               <div className="space-y-6 p-6 rounded-2xl bg-gold/5 border border-gold/10">
                 <RadioGroup 
-                  label="Do you have a family member in Alpha Kappa Alpha Sorority, Inc.?" 
+                  label="Do you have a family member(s) who are members of Alpha Kappa Alpha Sorority, Inc.?" 
                   value={data.hasAkaFamily} 
                   onChange={(v: string) => updateField('hasAkaFamily', v)}
                   options={[{ label: 'Yes', value: 'yes' }, { label: 'No', value: 'no' }]}
@@ -849,7 +862,7 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
 
               <div className="space-y-6 p-6 rounded-2xl bg-gold/5 border border-gold/10">
                 <RadioGroup 
-                  label="Have you previously applied for membership into Kappa Pi?" 
+                  label="Have you previously applied for Kappa Pi membership?" 
                   value={data.previousApplied} 
                   onChange={(v: string) => updateField('previousApplied', v)}
                   options={[{ label: 'Yes', value: 'yes' }, { label: 'No', value: 'no' }]}
@@ -876,7 +889,7 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
             icon={Globe} 
             isOpen={openSection === 'social'} 
             onToggle={() => setOpenSection(openSection === 'social' ? null : 'social')}
-            isCompleted={data.socialUrls}
+            isCompleted={Boolean(data.socialUrls?.trim())}
           >
             <TextArea 
               label="What are your social or professional website URLs (e.g., LinkedIn, Facebook, Instagram)?" 
@@ -884,6 +897,7 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
               onChange={(v: string) => updateField('socialUrls', v)} 
               placeholder="Write 'none' if this does not apply..."
               description="List any websites that depict you in a personal or professional manner."
+              required
             />
           </Section>
         </div>

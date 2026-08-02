@@ -121,11 +121,22 @@ export default function ApplicantPortal() {
   const handleContinueApplication = () => {
     handleTabClick('application');
     setTimeout(() => {
-      const element = document.getElementById('application-form-section');
+      const lastSection = sessionStorage.getItem('lastApplicationSection') || 'personal';
+      const sectionIdMap: Record<string, string> = {
+        personal: 'field-section-personal',
+        professional: 'field-section-professional',
+        academic: 'field-section-academic',
+        community: 'field-section-community',
+        essays: 'field-section-essays',
+        disclosures: 'field-section-disclosures',
+        social: 'field-section-social',
+      };
+      const targetId = sectionIdMap[lastSection] || 'application-form-section';
+      const element = document.getElementById(targetId) || document.getElementById('application-form-section');
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-    }, 80);
+    }, 120);
   };
 
   const handleTabClick = (tab: 'application' | 'timeline' | 'instructions') => {

@@ -32,6 +32,7 @@ export default function CandidateTracker() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
   const [selectedApplicationForView, setSelectedApplicationForView] = useState<any | null>(null);
+  const [openMenuCandidateId, setOpenMenuCandidateId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -342,35 +343,72 @@ export default function CandidateTracker() {
                           ) : (
                             <h3 className="font-display text-lg text-ivy">{candidate.name}</h3>
                           )}
-                          <div className="relative group/menu">
-                            <button className="text-ivy/20 hover:text-ivy transition-colors p-1">
+                          <div className="relative">
+                            <button 
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuCandidateId(openMenuCandidateId === candidate.id ? null : candidate.id);
+                              }}
+                              className="text-ivy/40 hover:text-ivy transition-colors p-1.5 rounded-lg hover:bg-gold/10 cursor-pointer"
+                              title="Change Candidate Status"
+                            >
                               <MoreVertical className="w-4 h-4" />
                             </button>
-                            <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gold/20 rounded-md shadow-lg opacity-0 group-hover/menu:opacity-100 transition-opacity z-10 hidden group-hover/menu:block">
-                              {STAGES.filter(s => s !== stage).map(s => (
-                                <button
-                                  key={s}
-                                  onClick={() => updateCandidateStatus(candidate.id, s)}
-                                  className="w-full text-left px-4 py-2 text-xs text-ivy hover:bg-cream transition-colors first:rounded-t-md last:rounded-b-md flex items-center gap-2"
-                                >
-                                  <span className={`w-2 h-2 rounded-full ${getStatusBadgeConfig(s).dot}`} />
-                                  Move to {s}
-                                </button>
-                              ))}
-                              <button
-                                onClick={() => updateCandidateStatus(candidate.id, 'Rejected')}
-                                className="w-full text-left px-4 py-2 text-xs text-amber-700 hover:bg-amber-50 transition-colors flex items-center gap-2"
-                              >
-                                <span className="w-2 h-2 rounded-full bg-red-500" />
-                                Mark as Rejected
-                              </button>
-                              <button
-                                onClick={() => handleRemoveCandidate(candidate.id, candidate.name)}
-                                className="w-full text-left px-4 py-2 text-xs text-red-700 hover:bg-red-50 font-bold transition-colors border-t border-gold/10 flex items-center gap-1"
-                              >
-                                <Trash2 className="w-3 h-3" /> Remove Candidate
-                              </button>
-                            </div>
+                            {openMenuCandidateId === candidate.id && (
+                              <>
+                                <div 
+                                  className="fixed inset-0 z-20" 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenuCandidateId(null);
+                                  }} 
+                                />
+                                <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-gold/30 rounded-xl shadow-xl z-30 py-1.5 overflow-hidden">
+                                  <div className="px-3.5 py-1.5 border-b border-gold/10 text-[10px] font-bold uppercase tracking-widest text-ivy/50">
+                                    Move Candidate Status
+                                  </div>
+                                  {STAGES.filter(s => s !== stage).map(s => (
+                                    <button
+                                      key={s}
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        updateCandidateStatus(candidate.id, s);
+                                        setOpenMenuCandidateId(null);
+                                      }}
+                                      className="w-full text-left px-3.5 py-2 text-xs text-ivy hover:bg-gold/10 transition-colors flex items-center gap-2 cursor-pointer font-medium"
+                                    >
+                                      <span className={`w-2 h-2 rounded-full ${getStatusBadgeConfig(s).dot}`} />
+                                      Move to {s}
+                                    </button>
+                                  ))}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateCandidateStatus(candidate.id, 'Rejected');
+                                      setOpenMenuCandidateId(null);
+                                    }}
+                                    className="w-full text-left px-3.5 py-2 text-xs text-amber-800 hover:bg-amber-50 transition-colors flex items-center gap-2 border-t border-gold/10 cursor-pointer font-medium"
+                                  >
+                                    <span className="w-2 h-2 rounded-full bg-red-500" />
+                                    Mark as Rejected
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRemoveCandidate(candidate.id, candidate.name);
+                                      setOpenMenuCandidateId(null);
+                                    }}
+                                    className="w-full text-left px-3.5 py-2 text-xs text-red-700 hover:bg-red-50 font-bold transition-colors border-t border-gold/10 flex items-center gap-2 cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 text-red-600" /> Remove Candidate
+                                  </button>
+                                </div>
+                              </>
+                            )}
                           </div>
                         </div>
 
@@ -421,12 +459,7 @@ export default function CandidateTracker() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between pt-4 border-t border-cream">
-                        <div className="flex -space-x-2">
-                          {/* Placeholder for reviewer avatars */}
-                          <div className="w-6 h-6 rounded-full bg-ivy border-2 border-white flex items-center justify-center text-[10px] text-cream font-bold">JD</div>
-                          <div className="w-6 h-6 rounded-full bg-gold border-2 border-white flex items-center justify-center text-[10px] text-ivy font-bold">BS</div>
-                        </div>
+                      <div className="flex items-center justify-end pt-4 border-t border-cream">
                         {matchingApp ? (
                           <button 
                             onClick={() => setSelectedApplicationForView(matchingApp)}
