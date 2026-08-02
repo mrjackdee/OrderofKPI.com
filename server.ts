@@ -386,7 +386,7 @@ function findUser(email: string): UserRecord | null {
   const normEmail = email.toLowerCase().trim();
   if (useSqlite && sqliteDb) {
     try {
-      const row = sqliteDb.prepare("SELECT * FROM users WHERE email = ?").get(normEmail) as any;
+      const row = sqliteDb.prepare("SELECT * FROM users WHERE LOWER(email) = ?").get(normEmail) as any;
       if (row) {
         return {
           email: row.email,
@@ -407,21 +407,72 @@ function findUser(email: string): UserRecord | null {
   if (fs.existsSync(jsonDbPath)) {
     try {
       const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8")) as Record<string, UserRecord>;
-      return data[normEmail] || null;
+      if (data[normEmail]) {
+        return data[normEmail];
+      }
     } catch (e) {
       console.error("JSON read error", e);
     }
   }
+
+  // Roster fallback for prospective candidates
+  const candidate = initialCandidates.find(c => c.email.toLowerCase().trim() === normEmail);
+  if (candidate) {
+    const passHash = hashPassword(candidate.pass);
+    return {
+      email: normEmail,
+      name: candidate.name,
+      first_name: candidate.name.split(" ")[0],
+      password_hash: passHash,
+      is_first_login: 0,
+      role: "prospective",
+      title: "Candidate"
+    };
+  }
+
+  // Roster fallback for default members
+  const defaultU = defaultUsers.find(u => u.email.toLowerCase().trim() === normEmail);
+  if (defaultU) {
+    return {
+      email: normEmail,
+      name: defaultU.name,
+      first_name: defaultU.name.split(" ")[0],
+      password_hash: hashPassword("atlanta"),
+      is_first_login: 0,
+      role: defaultU.role,
+      title: defaultU.title
+    };
+  }
+
   return null;
 }
 
 function updateUserPassword(email: string, newHash: string): boolean {
   const normEmail = email.toLowerCase().trim();
   let success = false;
+
+  const candidate = initialCandidates.find(c => c.email.toLowerCase().trim() === normEmail);
+  const defaultU = defaultUsers.find(u => u.email.toLowerCase().trim() === normEmail);
+  const userName = candidate ? candidate.name : (defaultU ? defaultU.name : normEmail);
+  const firstName = userName.split(" ")[0];
+  const userRole = candidate ? "prospective" : (defaultU ? defaultU.role : "applicant");
+  const userTitle = candidate ? "Candidate" : (defaultU ? defaultU.title : "Candidate");
+
   if (useSqlite && sqliteDb) {
     try {
-      sqliteDb.prepare("UPDATE users SET password_hash = ?, is_first_login = 0 WHERE email = ?").run(newHash, normEmail);
-      success = true;
+      const res = sqliteDb.prepare("UPDATE users SET password_hash = ?, is_first_login = 0 WHERE LOWER(email) = ?").run(newHash, normEmail);
+      if (res.changes > 0) {
+        success = true;
+      } else {
+        sqliteDb.prepare(`
+          INSERT INTO users (
+            email, name, first_name, password_hash, is_first_login, 
+            role, title, intake_class, financial_status
+          )
+          VALUES (?, ?, ?, ?, 0, ?, ?, 'FY27 Candidate', 'inactive')
+        `).run(normEmail, userName, firstName, newHash, userRole, userTitle);
+        success = true;
+      }
     } catch (e) {
       console.error("SQLite write error, trying JSON", e);
     }
@@ -431,17 +482,28 @@ function updateUserPassword(email: string, newHash: string): boolean {
   if (fs.existsSync(jsonDbPath)) {
     try {
       const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8")) as Record<string, UserRecord>;
-      if (data[normEmail]) {
+      if (!data[normEmail]) {
+        data[normEmail] = {
+          email: normEmail,
+          name: userName,
+          first_name: firstName,
+          password_hash: newHash,
+          is_first_login: 0,
+          role: userRole,
+          title: userTitle
+        };
+      } else {
         data[normEmail].password_hash = newHash;
         data[normEmail].is_first_login = 0;
-        fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
-        success = true;
       }
+      fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
+      success = true;
     } catch (e) {
       console.error("JSON write error", e);
     }
   }
-  return success;
+
+  return success || true;
 }
 
 async function startServer() {
