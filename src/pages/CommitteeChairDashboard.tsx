@@ -112,25 +112,18 @@ export default function CommitteeChairDashboard() {
       const data = await res.json();
       const apiCandidates: Candidate[] = (data.success && Array.isArray(data.candidates)) ? data.candidates : [];
 
-      const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
-        id: 'cand_' + m.email.replace(/[^a-z0-9]/g, '_'),
-        name: m.name,
-        email: m.email,
-        status: 'Inquiry',
-        application_date: ''
-      }));
-
-      const candidateMap = new Map<string, Candidate>();
-      for (const fb of fallbacks) {
-        candidateMap.set(fb.email.toLowerCase(), fb);
+      if (apiCandidates.length > 0) {
+        setCandidates(apiCandidates);
+      } else {
+        const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
+          id: 'cand_' + m.email.replace(/[^a-z0-9]/g, '_'),
+          name: m.name,
+          email: m.email,
+          status: 'Inquiry',
+          application_date: ''
+        }));
+        setCandidates(fallbacks);
       }
-      for (const apiC of apiCandidates) {
-        if (apiC && apiC.email) {
-          candidateMap.set(apiC.email.toLowerCase(), apiC);
-        }
-      }
-
-      setCandidates(Array.from(candidateMap.values()));
     } catch (err) {
       console.error('Failed to fetch candidates:', err);
       const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
