@@ -46,7 +46,7 @@ const defaultUsers = [
 const initialCandidates = [
   { name: "Avery Torrence", email: "averyt16@gmail.com", phone: "770-873-0784", pass: "0784" },
   { name: "Charles Miller", email: "hupirate90@me.com", phone: "301-602-9348", pass: "9348" },
-  { name: "Dennis Mills", email: "demills_10@yahoo.com", phone: "252-883-0844", pass: "0844" },
+  { name: "Dennis Test", email: "dennis@gmail.com", phone: "252-883-0844", pass: "0844" },
   { name: "Quincy Dinnerson", email: "quincyld86@gmail.com", phone: "336-420-1326", pass: "1326" },
   { name: "Jabari Smith-Perry", email: "jabari.smithperry@gmail.com", phone: "404-784-7008", pass: "7008" },
   { name: "Lee Sennet", email: "l.a.sennet@gmail.com", phone: "281-740-1774", pass: "1774" },
@@ -550,6 +550,11 @@ async function startServer() {
   app.post("/api/auth/login", (req, res) => {
     const { email, password } = req.body;
     console.log(`[AUTH] Login attempt for: ${email}`);
+
+    if (email && email.toLowerCase().trim() === 'demills_10@yahoo.com') {
+      logEvent(email, "LOGIN_BLOCKED", "Attempted login on permanently disabled account", "error");
+      return res.status(403).json({ success: false, message: "This login account has been permanently disabled." });
+    }
     
     if (!email || !password) {
       return res.status(400).json({ success: false, message: "Email and password are required" });

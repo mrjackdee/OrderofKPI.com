@@ -37,7 +37,7 @@ export const defaultMembers: MemberUser[] = [
 export const prospectiveMembers: MemberUser[] = [
   { name: "Avery Torrence", email: "averyt16@gmail.com", role: "applicant" },
   { name: "Charles Miller", email: "hupirate90@me.com", role: "applicant" },
-  { name: "Dennis Mills", email: "demills_10@yahoo.com", role: "applicant" },
+  { name: "Dennis Test", email: "dennis@gmail.com", role: "applicant" },
   { name: "Quincy Dinnerson", email: "quincyld86@gmail.com", role: "applicant" },
   { name: "Jabari Smith-Perry", email: "jabari.smithperry@gmail.com", role: "applicant" },
   { name: "Lee Sennet", email: "l.a.sennet@gmail.com", role: "applicant" },
@@ -56,7 +56,7 @@ const INITIAL_CANDIDATES_PASSWORDS: Record<string, string> = {
   'james.haywood@orderofkpi.org': '2012',
   'averyt16@gmail.com': '0784',
   'hupirate90@me.com': '9348',
-  'demills_10@yahoo.com': '0844',
+  'dennis@gmail.com': '0844',
   'quincyld86@gmail.com': '1326',
   'jabari.smithperry@gmail.com': '7008',
   'l.a.sennet@gmail.com': '1774',

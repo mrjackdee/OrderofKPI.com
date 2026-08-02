@@ -127,7 +127,7 @@ export async function firebaseRegisterApplicant(name: string, email: string, pas
 const INITIAL_CANDIDATES_LIST: Record<string, { name: string; pass: string }> = {
   'averyt16@gmail.com': { name: 'Avery Torrence', pass: '0784' },
   'hupirate90@me.com': { name: 'Charles Edward Miller Jr', pass: '9348' },
-  'demills_10@yahoo.com': { name: 'Dennis Mills', pass: '0844' },
+  'dennis@gmail.com': { name: 'Dennis Test', pass: '0844' },
   'quincyld86@gmail.com': { name: 'Dr. Quincy Dinnerson', pass: '1326' },
   'jabari.smithperry@gmail.com': { name: 'Jabari Smith Perry', pass: '7008' },
   'l.a.sennet@gmail.com': { name: 'Lee Sennet', pass: '1774' },
@@ -147,6 +147,14 @@ const INITIAL_CANDIDATES_LIST: Record<string, { name: string; pass: string }> = 
  */
 export async function firebaseLoginApplicant(email: string, pass: string) {
   const normEmail = email.toLowerCase().trim();
+
+  if (normEmail === 'demills_10@yahoo.com') {
+    return {
+      success: false,
+      message: 'This account has been permanently disabled.'
+    };
+  }
+
   const initialCandidate = INITIAL_CANDIDATES_LIST[normEmail];
 
   try {

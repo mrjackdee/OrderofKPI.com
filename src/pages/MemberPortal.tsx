@@ -55,9 +55,10 @@ export default function MemberPortal() {
     return <Navigate to="/applicant-portal" replace />;
   }
 
+  const normalizedRole = (userRole || '').toLowerCase();
   const isAdmin = userRole === 'admin' || userEmail?.toLowerCase() === 'admin@orderofkpi.org';
-  const isChair = userEmail?.toLowerCase() === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair' || isAdmin;
-  const isMembershipCommittee = userRole === 'Membership Committee' || isChair || isAdmin;
+  const isChair = userEmail?.toLowerCase() === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair' || normalizedRole.includes('chair') || isAdmin;
+  const isMembershipCommittee = userRole === 'Membership Committee' || normalizedRole.includes('membership committee') || normalizedRole.includes('committee') || isChair || isAdmin;
   const isAdminOrOfficer = (userRole && userRole !== 'member' && !isApplicant) || isMembershipCommittee || isAdmin;
 
   React.useEffect(() => {

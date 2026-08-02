@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ShieldCheck, 
@@ -337,10 +338,16 @@ export default function CommitteeChairDashboard() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link 
+              to="/candidate-tracker"
+              className="px-5 py-3 bg-gold text-ivy hover:bg-gold-light border border-gold rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-md hover:scale-105"
+            >
+              <Users size={16} /> Open Candidate Tracker
+            </Link>
             <button 
               onClick={loadAllData}
-              className="px-5 py-3 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-2xl text-cream text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
+              className="px-5 py-3 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-2xl text-cream text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh Data
             </button>

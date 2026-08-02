@@ -101,11 +101,11 @@ service cloud.firestore {
     }
 
     match /applications/{applicationId} {
-      allow get, list, create, update: if true;
+      allow read, write: if true;
     }
 
     match /candidate_accounts/{accountId} {
-      allow get, list, create, update: if true;
+      allow read, write: if true;
     }
   }
 }
