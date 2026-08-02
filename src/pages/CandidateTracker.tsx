@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { 
   Users, 
@@ -162,8 +162,24 @@ export default function CandidateTracker() {
     }
   };
 
+  const mergedCandidates = useMemo(() => {
+    const submittedAppEmails = new Set<string>();
+    applications.forEach(app => {
+      if (app && (app.status === 'submitted' || app.submitted_at || app.submittedAt)) {
+        if (app.email) submittedAppEmails.add(app.email.toLowerCase().trim());
+      }
+    });
+
+    return candidates.map(c => {
+      if (c.email && submittedAppEmails.has(c.email.toLowerCase().trim()) && c.status === 'Inquiry') {
+        return { ...c, status: 'Applied' as const };
+      }
+      return c;
+    });
+  }, [candidates, applications]);
+
   const updateCandidateStatus = async (id: string, newStatus: Candidate['status']) => {
-    const candidate = candidates.find(c => c.id === id);
+    const candidate = mergedCandidates.find(c => c.id === id);
     if (!candidate) return;
 
     try {
@@ -180,7 +196,7 @@ export default function CandidateTracker() {
     }
   };
 
-  const filteredCandidates = candidates.filter(c => 
+  const filteredCandidates = mergedCandidates.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -272,7 +288,7 @@ export default function CandidateTracker() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-6">
           {STAGES.map(stage => {
             const cfg = getStatusBadgeConfig(stage);
-            const count = candidates.filter(c => c.status === stage).length;
+            const count = mergedCandidates.filter(c => c.status === stage).length;
             return (
               <div 
                 key={stage} 
