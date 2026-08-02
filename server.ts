@@ -1217,6 +1217,20 @@ async function startServer() {
     try {
       const { firstName: reqFirstName, lastName: reqLastName, name: reqName, email, phone, status, adminEmail } = req.body;
 
+      const actorEmail = (adminEmail || req.headers['x-user-email'] || "").toString().toLowerCase().trim();
+      if (actorEmail) {
+        const actor = findUser(actorEmail);
+        const isAdminOrChair = actor && (
+          actor.role === 'admin' || 
+          actor.role === 'Membership Committee Chair' || 
+          actor.email.toLowerCase() === 'james.haywood@orderofkpi.org' ||
+          actor.email.toLowerCase() === 'admin@orderofkpi.org'
+        );
+        if (!isAdminOrChair) {
+          return res.status(403).json({ success: false, message: "Only Administrators and the Membership Committee Chair are authorized to add new candidates." });
+        }
+      }
+
       const firstName = (reqFirstName || "").trim();
       const lastName = (reqLastName || "").trim();
       const name = (reqName || `${firstName} ${lastName}`).trim();

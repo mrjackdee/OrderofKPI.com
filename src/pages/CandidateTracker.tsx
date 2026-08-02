@@ -139,6 +139,8 @@ export default function CandidateTracker() {
   };
 
   const currentUserEmail = sessionStorage.getItem('userEmail') || 'committee_chair@orderofkpi.org';
+  const userRole = sessionStorage.getItem('userRole') || '';
+  const canAddCandidate = userRole === 'admin' || userRole === 'Membership Committee Chair' || currentUserEmail.toLowerCase() === 'james.haywood@orderofkpi.org' || currentUserEmail.toLowerCase() === 'admin@orderofkpi.org';
 
   const handleRemoveCandidate = async (id: string, name: string) => {
     if (!window.confirm(`Are you sure you want to permanently remove candidate "${name}" from the tracker?`)) return;
@@ -266,13 +268,15 @@ export default function CandidateTracker() {
             <h1 className="text-3xl font-display text-cream mb-2">Candidate Tracker</h1>
             <p className="text-cream/70 font-body">Manage and monitor the FY27 Membership Intake Process.</p>
           </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 bg-gold text-ivy px-6 py-3 rounded-md font-bold uppercase tracking-widest hover:brightness-110 transition-all shadow-lg"
-          >
-            <UserPlus className="w-5 h-5" />
-            Add Candidate
-          </button>
+          {canAddCandidate && (
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 bg-gold text-ivy px-6 py-3 rounded-md font-bold uppercase tracking-widest hover:brightness-110 transition-all shadow-lg"
+            >
+              <UserPlus className="w-5 h-5" />
+              Add Candidate
+            </button>
+          )}
         </div>
       </div>
 
