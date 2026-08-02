@@ -548,10 +548,10 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
             <div className="flex items-center gap-2">
               <p className="text-xs font-bold uppercase tracking-widest text-ivy font-display">
                 {saveSuccess 
-                  ? 'Draft Saved to Database' 
+                  ? 'Draft Saved' 
                   : hasUnsavedChanges 
                     ? 'Unsaved Draft Changes' 
-                    : 'Application Draft Synced'}
+                    : 'Application Saved'}
               </p>
               {lastSavedTime && (
                 <span className="text-[10px] bg-gold/10 border border-gold/20 px-2 py-0.5 rounded-md text-ivy font-mono">
@@ -561,8 +561,8 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
             </div>
             <p className="text-[10px] text-ivy/60 font-body">
               {hasUnsavedChanges 
-                ? 'Click Save Draft to store your progress in your account database.' 
-                : 'Your responses are saved to the database and accessible whenever you log in.'}
+                ? 'Click Save Draft to save your latest changes.' 
+                : 'Your responses are saved to your account and accessible whenever you log in.'}
             </p>
           </div>
         </div>
@@ -904,17 +904,17 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
             <div>
               <p className="text-cream font-bold text-sm font-display">
                 {saveSuccess 
-                  ? 'Draft Saved Successfully!' 
+                  ? 'Draft Saved!' 
                   : hasUnsavedChanges 
                     ? 'Unsaved Draft Changes' 
                     : 'Draft Progress Saved'}
               </p>
               <p className="text-gold text-[10px] uppercase tracking-widest font-bold">
                 {saveSuccess 
-                  ? 'Changes written to secure cloud storage' 
+                  ? 'Your progress has been saved' 
                   : hasUnsavedChanges 
-                    ? 'Auto-saving soon or click Save Draft...' 
-                    : `Last saved: ${new Date().toLocaleTimeString()}`}
+                    ? 'Click Save Draft to keep changes' 
+                    : `Last saved: ${lastSavedTime || new Date().toLocaleTimeString()}`}
               </p>
             </div>
           </div>
@@ -963,24 +963,20 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
 
               <div className="space-y-2">
                 <h3 className="text-2xl font-bold uppercase tracking-tight text-ivy">
-                  Draft Saved to Database
+                  Draft Saved
                 </h3>
                 <p className="text-ivy/70 text-xs font-body leading-relaxed">
-                  Your application responses have been securely saved to the database for candidate account <span className="font-bold text-ivy">{email}</span>.
+                  Your application progress has been saved for <span className="font-bold text-ivy">{email}</span>.
                 </p>
               </div>
 
-              <div className="p-4 bg-cream/60 rounded-xl border border-gold/20 text-left space-y-2 text-xs text-ivy/80 font-body">
-                <div className="flex justify-between items-center text-[10px] uppercase font-bold text-gold tracking-widest">
-                  <span>Persistence Status</span>
-                  <span>{lastSavedTime ? `Saved at ${lastSavedTime}` : 'Recorded'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-green-800 font-semibold text-xs">
-                  <CheckCircle size={14} className="text-green-600 shrink-0" />
-                  <span>Synced with Database & Cloud Storage</span>
+              <div className="p-4 bg-cream/60 rounded-xl border border-gold/20 text-center space-y-1.5 text-xs text-ivy/80 font-body">
+                <div className="flex justify-center items-center gap-2 text-green-800 font-bold text-xs">
+                  <CheckCircle size={15} className="text-green-600 shrink-0" />
+                  <span>{lastSavedTime ? `Saved at ${lastSavedTime}` : 'Progress Saved'}</span>
                 </div>
                 <p className="text-ivy/60 text-[11px] leading-relaxed">
-                  You can safely log out and return from any device at any time. Your progress will be restored automatically upon logging in.
+                  You can safely log out or close your browser at any time. When you log back in, your responses will be restored automatically.
                 </p>
               </div>
 

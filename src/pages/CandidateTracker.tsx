@@ -35,7 +35,7 @@ export default function CandidateTracker() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newCandidate, setNewCandidate] = useState({ name: '', email: '', phone: '' });
+  const [newCandidate, setNewCandidate] = useState({ firstName: '', lastName: '', email: '', phone: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
@@ -99,8 +99,8 @@ export default function CandidateTracker() {
 
   const handleAddCandidate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCandidate.name || !newCandidate.email) {
-      setFormError('Candidate name and email address are required.');
+    if (!newCandidate.firstName || !newCandidate.lastName || !newCandidate.email) {
+      setFormError('First Name, Last Name, and Email Address are required.');
       return;
     }
 
@@ -108,21 +108,27 @@ export default function CandidateTracker() {
     setFormError(null);
     setFormSuccess(null);
 
+    const fullName = `${newCandidate.firstName.trim()} ${newCandidate.lastName.trim()}`;
+
     try {
       const response = await fetch('/api/candidates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...newCandidate,
+          firstName: newCandidate.firstName.trim(),
+          lastName: newCandidate.lastName.trim(),
+          name: fullName,
+          email: newCandidate.email.trim(),
+          phone: newCandidate.phone.trim(),
           adminEmail: currentUserEmail
         }),
       });
       const data = await response.json();
       if (data.success) {
-        setFormSuccess(`Candidate ${newCandidate.name} record created successfully!`);
+        setFormSuccess(`Candidate ${fullName} added with applicant account successfully!`);
         setTimeout(() => {
           setShowAddModal(false);
-          setNewCandidate({ name: '', email: '', phone: '' });
+          setNewCandidate({ firstName: '', lastName: '', email: '', phone: '' });
           setFormError(null);
           setFormSuccess(null);
           fetchCandidates();
@@ -473,20 +479,49 @@ export default function CandidateTracker() {
               </div>
             )}
             <form onSubmit={handleAddCandidate} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-ivy/60 mb-2">First Name *</label>
+                  <input
+                    required
+                    type="text"
+                    value={newCandidate.firstName}
+                    onChange={(e) => setNewCandidate({ ...newCandidate, firstName: e.target.value })}
+                    className="w-full px-4 py-2 border border-ivy/10 rounded-md focus:ring-2 focus:ring-ivy/20 focus:border-ivy outline-none"
+                    placeholder="First Name"
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-ivy/60 mb-2">Last Name *</label>
+                  <input
+                    required
+                    type="text"
+                    value={newCandidate.lastName}
+                    onChange={(e) => setNewCandidate({ ...newCandidate, lastName: e.target.value })}
+                    className="w-full px-4 py-2 border border-ivy/10 rounded-md focus:ring-2 focus:ring-ivy/20 focus:border-ivy outline-none"
+                    placeholder="Last Name"
+                    disabled={isSubmitting}
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-ivy/60 mb-2">Full Name</label>
+                <label className="block text-xs font-bold uppercase tracking-widest text-ivy/60 mb-2">Phone Number *</label>
                 <input
                   required
-                  type="text"
-                  value={newCandidate.name}
-                  onChange={(e) => setNewCandidate({ ...newCandidate, name: e.target.value })}
+                  type="tel"
+                  value={newCandidate.phone}
+                  onChange={(e) => setNewCandidate({ ...newCandidate, phone: e.target.value })}
                   className="w-full px-4 py-2 border border-ivy/10 rounded-md focus:ring-2 focus:ring-ivy/20 focus:border-ivy outline-none"
-                  placeholder="Enter full name"
+                  placeholder="(555) 000-0000"
                   disabled={isSubmitting}
                 />
+                <p className="text-[10px] text-ivy/50 mt-1">Last 4 digits serve as initial password.</p>
               </div>
+
               <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-ivy/60 mb-2">Email Address</label>
+                <label className="block text-xs font-bold uppercase tracking-widest text-ivy/60 mb-2">Email Address *</label>
                 <input
                   required
                   type="email"
@@ -496,17 +531,7 @@ export default function CandidateTracker() {
                   placeholder="candidate@example.com"
                   disabled={isSubmitting}
                 />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-ivy/60 mb-2">Phone Number</label>
-                <input
-                  type="tel"
-                  value={newCandidate.phone}
-                  onChange={(e) => setNewCandidate({ ...newCandidate, phone: e.target.value })}
-                  className="w-full px-4 py-2 border border-ivy/10 rounded-md focus:ring-2 focus:ring-ivy/20 focus:border-ivy outline-none"
-                  placeholder="(555) 000-0000"
-                  disabled={isSubmitting}
-                />
+                <p className="text-[10px] text-ivy/50 mt-1">Serves as email login username.</p>
               </div>
               <div className="flex gap-4 pt-4">
                 <button

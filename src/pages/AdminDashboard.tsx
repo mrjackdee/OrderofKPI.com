@@ -89,7 +89,7 @@ export default function AdminDashboard() {
   const [isNewMember, setIsNewMember] = useState(false);
 
   const [showCandidateModal, setShowCandidateModal] = useState(false);
-  const [newCandidate, setNewCandidate] = useState({ name: '', email: '', phone: '', status: 'Inquiry' });
+  const [newCandidate, setNewCandidate] = useState({ firstName: '', lastName: '', email: '', phone: '', status: 'Inquiry' });
 
   const currentUserEmail = sessionStorage.getItem('userEmail') || 'admin@orderofkpi.org';
 
@@ -262,7 +262,12 @@ export default function AdminDashboard() {
   // --- CANDIDATE MANAGEMENT ---
   const handleAddCandidate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCandidate.name || !newCandidate.email) return;
+    if (!newCandidate.firstName || !newCandidate.lastName || !newCandidate.email) {
+      showToast('error', 'First name, last name, and email address are required.');
+      return;
+    }
+
+    const fullName = `${newCandidate.firstName.trim()} ${newCandidate.lastName.trim()}`;
 
     setActionLoading(true);
     try {
@@ -270,16 +275,21 @@ export default function AdminDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...newCandidate,
+          firstName: newCandidate.firstName.trim(),
+          lastName: newCandidate.lastName.trim(),
+          name: fullName,
+          email: newCandidate.email.trim(),
+          phone: newCandidate.phone.trim(),
+          status: newCandidate.status,
           adminEmail: currentUserEmail
         }),
       });
       const data = await response.json();
 
       if (data.success) {
-        showToast('success', `Added new candidate ${newCandidate.name}`);
+        showToast('success', `Added new candidate ${fullName} with applicant account`);
         setShowCandidateModal(false);
-        setNewCandidate({ name: '', email: '', phone: '', status: 'Inquiry' });
+        setNewCandidate({ firstName: '', lastName: '', email: '', phone: '', status: 'Inquiry' });
         fetchCandidates();
         fetchAuditLogs();
       } else {
@@ -1048,20 +1058,46 @@ export default function AdminDashboard() {
             </div>
 
             <form onSubmit={handleAddCandidate} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold uppercase tracking-widest text-ivy/60 mb-1.5">Full Name</label>
-                <input
-                  required
-                  type="text"
-                  value={newCandidate.name}
-                  onChange={(e) => setNewCandidate({ ...newCandidate, name: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-gold/20 rounded-xl focus:ring-2 focus:ring-gold/20 outline-none"
-                  placeholder="e.g. John Candidate"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold uppercase tracking-widest text-ivy/60 mb-1.5">First Name *</label>
+                  <input
+                    required
+                    type="text"
+                    value={newCandidate.firstName}
+                    onChange={(e) => setNewCandidate({ ...newCandidate, firstName: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gold/20 rounded-xl focus:ring-2 focus:ring-gold/20 outline-none"
+                    placeholder="First Name"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold uppercase tracking-widest text-ivy/60 mb-1.5">Last Name *</label>
+                  <input
+                    required
+                    type="text"
+                    value={newCandidate.lastName}
+                    onChange={(e) => setNewCandidate({ ...newCandidate, lastName: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gold/20 rounded-xl focus:ring-2 focus:ring-gold/20 outline-none"
+                    placeholder="Last Name"
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="block font-bold uppercase tracking-widest text-ivy/60 mb-1.5">Email Address</label>
+                <label className="block font-bold uppercase tracking-widest text-ivy/60 mb-1.5">Phone Number *</label>
+                <input
+                  required
+                  type="tel"
+                  value={newCandidate.phone}
+                  onChange={(e) => setNewCandidate({ ...newCandidate, phone: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gold/20 rounded-xl focus:ring-2 focus:ring-gold/20 outline-none"
+                  placeholder="(555) 000-0000"
+                />
+                <p className="text-[10px] text-ivy/50 mt-1">Last 4 digits serve as default initial password.</p>
+              </div>
+
+              <div>
+                <label className="block font-bold uppercase tracking-widest text-ivy/60 mb-1.5">Email Address *</label>
                 <input
                   required
                   type="email"
@@ -1070,17 +1106,7 @@ export default function AdminDashboard() {
                   className="w-full px-4 py-2.5 border border-gold/20 rounded-xl focus:ring-2 focus:ring-gold/20 outline-none"
                   placeholder="candidate@gmail.com"
                 />
-              </div>
-
-              <div>
-                <label className="block font-bold uppercase tracking-widest text-ivy/60 mb-1.5">Phone Number</label>
-                <input
-                  type="tel"
-                  value={newCandidate.phone}
-                  onChange={(e) => setNewCandidate({ ...newCandidate, phone: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-gold/20 rounded-xl focus:ring-2 focus:ring-gold/20 outline-none"
-                  placeholder="(555) 000-0000"
-                />
+                <p className="text-[10px] text-ivy/50 mt-1">Serves as email login username.</p>
               </div>
 
               <div>

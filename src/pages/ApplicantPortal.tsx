@@ -692,6 +692,17 @@ export default function ApplicantPortal() {
                     'Set Password & Enter Portal'
                   )}
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFirstLoginModal(false);
+                    setPwdError('');
+                  }}
+                  className="w-full py-2.5 text-ivy/70 hover:text-ivy font-bold uppercase tracking-widest text-xs transition-all cursor-pointer hover:bg-gold/10 rounded-xl"
+                >
+                  Cancel
+                </button>
               </form>
             </motion.div>
           </div>

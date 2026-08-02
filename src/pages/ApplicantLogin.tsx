@@ -76,7 +76,7 @@ export default function ApplicantLogin() {
           <div className="text-center mb-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-gold/10 border border-gold/20 rounded-full mb-3">
               <ShieldCheck size={12} className="text-gold" />
-              <span className="text-[9px] font-bold text-ivy uppercase tracking-[0.2em]">Firebase Database Secured</span>
+              <span className="text-[9px] font-bold text-ivy uppercase tracking-[0.2em]">Official Candidate Portal</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-display font-bold text-ivy uppercase tracking-wider">
               {mode === 'reset' ? 'Password Reset' : 'Application Portal'}

@@ -1158,10 +1158,14 @@ async function startServer() {
 
   app.post("/api/candidates", (req, res) => {
     try {
-      const { name, email, phone, status, adminEmail } = req.body;
+      const { firstName: reqFirstName, lastName: reqLastName, name: reqName, email, phone, status, adminEmail } = req.body;
+
+      const firstName = (reqFirstName || "").trim();
+      const lastName = (reqLastName || "").trim();
+      const name = (reqName || `${firstName} ${lastName}`).trim();
 
       if (!name || !email) {
-        return res.status(400).json({ success: false, message: "Candidate name and email are required." });
+        return res.status(400).json({ success: false, message: "First name, last name, and email address are required." });
       }
 
       const emailNorm = email.toLowerCase().trim();
@@ -1172,7 +1176,7 @@ async function startServer() {
       const digits = (phone || "").replace(/\D/g, "");
       const pass = digits.length >= 4 ? digits.slice(-4) : "2012";
       const passHash = hashPassword(pass);
-      const firstName = name.split(" ")[0];
+      const displayFirstName = firstName || name.split(" ")[0];
 
       if (useSqlite && sqliteDb) {
         const existingCand = sqliteDb.prepare("SELECT * FROM candidates WHERE LOWER(email) = ? OR id = ?").get(emailNorm, id) as any;
@@ -1194,8 +1198,12 @@ async function startServer() {
               email, name, first_name, password_hash, is_first_login,
               role, title, intake_class, financial_status
             )
-            VALUES (?, ?, ?, ?, 0, 'prospective', 'Candidate', 'FY27 Candidate', 'inactive')
-          `).run(emailNorm, name, firstName, passHash);
+            VALUES (?, ?, ?, ?, 0, 'applicant', 'Candidate', 'FY27 Candidate', 'inactive')
+          `).run(emailNorm, name, displayFirstName, passHash);
+        } else {
+          sqliteDb.prepare(`
+            UPDATE users SET role = 'applicant', password_hash = ? WHERE LOWER(email) = ?
+          `).run(passHash, emailNorm);
         }
       }
 
@@ -1203,26 +1211,24 @@ async function startServer() {
         try {
           const fileData = fs.readFileSync(jsonDbPath, "utf-8");
           const data = JSON.parse(fileData);
-          if (!data[emailNorm]) {
-            data[emailNorm] = {
-              email: emailNorm,
-              name,
-              first_name: firstName,
-              password_hash: passHash,
-              is_first_login: 0,
-              role: "prospective",
-              title: "Candidate"
-            };
-            fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
-          }
+          data[emailNorm] = {
+            email: emailNorm,
+            name,
+            first_name: displayFirstName,
+            password_hash: passHash,
+            is_first_login: 0,
+            role: "applicant",
+            title: "Candidate"
+          };
+          fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
         } catch (e) {
           console.warn('JSON DB sync error:', e);
         }
       }
 
-      logEvent(adminEmail || "admin", "CANDIDATE_CREATED", `Added new candidate ${name} (${emailNorm}) with initial stage ${initialStatus}`);
+      logEvent(adminEmail || "admin", "CANDIDATE_CREATED", `Added new candidate ${name} (${emailNorm}) with applicant account role.`);
 
-      res.json({ success: true, candidateId: id, message: `Candidate ${name} record created successfully.` });
+      res.json({ success: true, candidateId: id, message: `Candidate ${name} record created with applicant account successfully.` });
     } catch (err: any) {
       console.error('Error creating candidate:', err);
       res.status(500).json({ success: false, message: err.message || "Failed to create candidate record." });

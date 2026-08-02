@@ -47,8 +47,9 @@ export default function CommitteeChairDashboard() {
   const [candidateSearch, setCandidateSearch] = useState('');
   const [stageFilter, setStageFilter] = useState('all');
   const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
-  const [newCandidate, setNewCandidate] = useState<{ name: string; email: string; phone: string; status: Candidate['status'] }>({
-    name: '',
+  const [newCandidate, setNewCandidate] = useState<{ firstName: string; lastName: string; email: string; phone: string; status: Candidate['status'] }>({
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     status: 'Inquiry'
@@ -184,25 +185,32 @@ export default function CommitteeChairDashboard() {
   // Add Candidate
   const handleAddCandidate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCandidate.name || !newCandidate.email) {
-      showNotification('error', 'Candidate name and email are required.');
+    if (!newCandidate.firstName || !newCandidate.lastName || !newCandidate.email) {
+      showNotification('error', 'First Name, Last Name, and Email Address are required.');
       return;
     }
+
+    const fullName = `${newCandidate.firstName.trim()} ${newCandidate.lastName.trim()}`;
 
     try {
       const res = await fetch('/api/candidates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...newCandidate,
+          firstName: newCandidate.firstName.trim(),
+          lastName: newCandidate.lastName.trim(),
+          name: fullName,
+          email: newCandidate.email.trim(),
+          phone: newCandidate.phone.trim(),
+          status: newCandidate.status,
           adminEmail: currentUserEmail
         })
       });
       const data = await res.json();
       if (data.success) {
-        showNotification('success', `Candidate ${newCandidate.name} was successfully added.`);
+        showNotification('success', `Candidate ${fullName} added as an applicant account successfully.`);
         setShowAddCandidateModal(false);
-        setNewCandidate({ name: '', email: '', phone: '', status: 'Inquiry' });
+        setNewCandidate({ firstName: '', lastName: '', email: '', phone: '', status: 'Inquiry' });
         fetchCandidates();
         fetchAuditLogs();
       } else {
@@ -728,16 +736,42 @@ export default function CommitteeChairDashboard() {
               </div>
 
               <form onSubmit={handleAddCandidate} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-ivy mb-1">First Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newCandidate.firstName}
+                      onChange={(e) => setNewCandidate({ ...newCandidate, firstName: e.target.value })}
+                      placeholder="First Name"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gold/20 text-sm text-ivy focus:outline-none focus:border-gold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-ivy mb-1">Last Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newCandidate.lastName}
+                      onChange={(e) => setNewCandidate({ ...newCandidate, lastName: e.target.value })}
+                      placeholder="Last Name"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gold/20 text-sm text-ivy focus:outline-none focus:border-gold"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-ivy mb-1">Candidate Name *</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-ivy mb-1">Phone Number *</label>
                   <input
-                    type="text"
+                    type="tel"
                     required
-                    value={newCandidate.name}
-                    onChange={(e) => setNewCandidate({ ...newCandidate, name: e.target.value })}
-                    placeholder="Full Legal Name"
+                    value={newCandidate.phone}
+                    onChange={(e) => setNewCandidate({ ...newCandidate, phone: e.target.value })}
+                    placeholder="(404) 555-0199"
                     className="w-full px-4 py-2.5 rounded-xl border border-gold/20 text-sm text-ivy focus:outline-none focus:border-gold"
                   />
+                  <p className="text-[10px] text-ivy/50 mt-1">Last 4 digits serve as default initial password.</p>
                 </div>
 
                 <div>
@@ -750,17 +784,7 @@ export default function CommitteeChairDashboard() {
                     placeholder="candidate@example.com"
                     className="w-full px-4 py-2.5 rounded-xl border border-gold/20 text-sm text-ivy focus:outline-none focus:border-gold"
                   />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-ivy mb-1">Phone Number</label>
-                  <input
-                    type="tel"
-                    value={newCandidate.phone}
-                    onChange={(e) => setNewCandidate({ ...newCandidate, phone: e.target.value })}
-                    placeholder="(404) 555-0199"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gold/20 text-sm text-ivy focus:outline-none focus:border-gold"
-                  />
+                  <p className="text-[10px] text-ivy/50 mt-1">Serves as email login username.</p>
                 </div>
 
                 <div>
