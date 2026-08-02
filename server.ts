@@ -1003,22 +1003,41 @@ async function startServer() {
 
   app.get("/api/applications/:email", (req, res) => {
     try {
-      const { email } = req.params;
-      if (useSqlite && sqliteDb) {
-        const appRow = sqliteDb.prepare("SELECT * FROM membership_applications WHERE email = ?").get(email) as any;
-        const candRow = sqliteDb.prepare("SELECT status FROM candidates WHERE email = ?").get(email) as any;
-        const candidateStatus = candRow ? candRow.status : null;
+      const normEmail = (req.params.email || "").toLowerCase().trim();
+      let application: any = null;
+      let candidateStatus: string | null = null;
 
-        return res.json({ 
-          success: true, 
-          application: appRow ? {
+      if (useSqlite && sqliteDb) {
+        const appRow = sqliteDb.prepare("SELECT * FROM membership_applications WHERE LOWER(email) = ?").get(normEmail) as any;
+        const candRow = sqliteDb.prepare("SELECT status FROM candidates WHERE LOWER(email) = ?").get(normEmail) as any;
+        if (candRow) candidateStatus = candRow.status;
+
+        if (appRow) {
+          application = {
             ...appRow,
             data: JSON.parse(appRow.data || "{}")
-          } : null,
-          candidateStatus: candidateStatus
-        });
+          };
+        }
       }
-      res.json({ success: true, application: null, candidateStatus: null });
+
+      // JSON file fallback if not found in SQLite
+      const appsJsonFile = path.join(process.cwd(), "data", "applications.json");
+      if (!application && fs.existsSync(appsJsonFile)) {
+        try {
+          const jsonStore = JSON.parse(fs.readFileSync(appsJsonFile, "utf-8"));
+          if (jsonStore[normEmail]) {
+            application = jsonStore[normEmail];
+          }
+        } catch (je) {
+          console.error("JSON read error for application:", je);
+        }
+      }
+
+      return res.json({ 
+        success: true, 
+        application,
+        candidateStatus
+      });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -1027,22 +1046,23 @@ async function startServer() {
   app.post("/api/applications", (req, res) => {
     try {
       const { email, data, status } = req.body;
+      const normEmail = (email || "").toLowerCase().trim();
       const timestamp = new Date().toISOString();
       const id = Math.random().toString(36).substring(2, 9);
       
       if (useSqlite && sqliteDb) {
-        const existing = sqliteDb.prepare("SELECT id FROM membership_applications WHERE email = ?").get(email) as any;
+        const existing = sqliteDb.prepare("SELECT id FROM membership_applications WHERE LOWER(email) = ?").get(normEmail) as any;
         if (existing) {
           sqliteDb.prepare(`
             UPDATE membership_applications 
             SET data = ?, status = ?, last_saved_at = ?, submitted_at = ?
-            WHERE email = ?
+            WHERE LOWER(email) = ?
           `).run(
             JSON.stringify(data), 
             status, 
             timestamp, 
             status === 'submitted' ? timestamp : null,
-            email
+            normEmail
           );
         } else {
           sqliteDb.prepare(`
@@ -1050,7 +1070,7 @@ async function startServer() {
             VALUES (?, ?, ?, ?, ?, ?)
           `).run(
             id, 
-            email, 
+            normEmail, 
             JSON.stringify(data), 
             status, 
             timestamp, 
@@ -1060,27 +1080,51 @@ async function startServer() {
 
         // Auto-update candidates tracker table status to 'Applied' on submission
         if (status === 'submitted') {
-          const existingCand = sqliteDb.prepare("SELECT id FROM candidates WHERE email = ?").get(email) as any;
+          const existingCand = sqliteDb.prepare("SELECT id FROM candidates WHERE LOWER(email) = ?").get(normEmail) as any;
           const todayDate = timestamp.split('T')[0];
           if (existingCand) {
             sqliteDb.prepare(`
               UPDATE candidates 
               SET status = 'Applied', application_date = ?
-              WHERE email = ?
-            `).run(todayDate, email);
+              WHERE LOWER(email) = ?
+            `).run(todayDate, normEmail);
           } else {
             // Find applicant's name from users directory
-            const userRow = sqliteDb.prepare("SELECT name FROM users WHERE email = ?").get(email) as any;
-            const candName = userRow ? userRow.name : email.split('@')[0];
+            const userRow = sqliteDb.prepare("SELECT name FROM users WHERE LOWER(email) = ?").get(normEmail) as any;
+            const candName = userRow ? userRow.name : normEmail.split('@')[0];
             sqliteDb.prepare(`
               INSERT INTO candidates (id, name, email, phone, status, application_date, scores, notes, document_vault)
               VALUES (?, ?, ?, ?, 'Applied', ?, '{}', '', '[]')
-            `).run('cand_' + email.replace(/[^a-z0-9]/g, '_'), candName, email, "", todayDate);
+            `).run('cand_' + normEmail.replace(/[^a-z0-9]/g, '_'), candName, normEmail, "", todayDate);
           }
         }
       }
 
-      res.json({ success: true });
+      // Sync to JSON file disk database
+      const dataDir = path.join(process.cwd(), "data");
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      const appsJsonFile = path.join(dataDir, "applications.json");
+      let jsonStore: Record<string, any> = {};
+      if (fs.existsSync(appsJsonFile)) {
+        try {
+          jsonStore = JSON.parse(fs.readFileSync(appsJsonFile, "utf-8"));
+        } catch (e) {
+          jsonStore = {};
+        }
+      }
+      jsonStore[normEmail] = {
+        id: jsonStore[normEmail]?.id || id,
+        email: normEmail,
+        data,
+        status,
+        last_saved_at: timestamp,
+        submitted_at: status === 'submitted' ? timestamp : jsonStore[normEmail]?.submitted_at || null
+      };
+      fs.writeFileSync(appsJsonFile, JSON.stringify(jsonStore, null, 2));
+
+      res.json({ success: true, message: "Application saved to database" });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }

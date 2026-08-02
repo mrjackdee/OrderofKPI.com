@@ -17,7 +17,8 @@ import {
   ClipboardList,
   Lock,
   KeyRound,
-  Loader2
+  Loader2,
+  Save
 } from 'lucide-react';
 import { fetchApplication, performHybridPasswordChange } from '../lib/memberDb';
 import Application from './Application';
@@ -171,10 +172,24 @@ export default function ApplicantPortal() {
             </p>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {activeTab === 'application' && appStatus !== 'submitted' && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (saveRef.current) {
+                    await saveRef.current();
+                  }
+                }}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gold/40 bg-gold text-ivy text-xs font-bold uppercase tracking-widest hover:brightness-105 transition-all shadow-md cursor-pointer"
+              >
+                <Save size={14} className="text-ivy" />
+                Save Draft
+              </button>
+            )}
             <button
               onClick={handleLogoutClick}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gold/30 bg-white text-ivy text-xs font-bold uppercase tracking-widest hover:bg-gold/10 transition-all shadow-soft"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gold/30 bg-white text-ivy text-xs font-bold uppercase tracking-widest hover:bg-gold/10 transition-all shadow-soft cursor-pointer"
             >
               <LogOut size={14} className="text-gold" />
               Log Out

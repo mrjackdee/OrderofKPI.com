@@ -309,12 +309,12 @@ export function generateApplicationPDF(data: ApplicationData, email: string) {
   );
 
   drawEssay(
-    'Question 3: Describe your active participation in community service projects that address local or societal issues.',
+    'Question 3: How have you actively participated in community service projects that address local or societal issues?',
     data.essay3
   );
 
   drawEssay(
-    'Question 4: What have you done to encourage positive self-esteem and involvement among Black/Brown Queer and Trans* communities?',
+    'Question 4: What have you done to encourage positive self-esteem and involvement among Black and Brown Queer & Trans Communities?',
     data.essay4
   );
 

@@ -725,7 +725,7 @@ export default function CandidateTracker() {
                   </div>
 
                   <div className="p-5 rounded-xl bg-white border border-gold/10 space-y-2">
-                    <p className="text-xs font-bold text-ivy/70">Question 4: Encouraging Self-Esteem & Involvement for Queer/Trans*</p>
+                    <p className="text-xs font-bold text-ivy/70">Question 4: Impact for Black and Brown Queer & Trans Communities</p>
                     <p className="text-ivy leading-relaxed whitespace-pre-wrap">{selectedApplicationForView.data.essay4 || 'Not provided'}</p>
                   </div>
 
