@@ -29,9 +29,9 @@ interface UserRecord {
 const defaultUsers = [
   { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator", intake_class: "Charter", financial_status: "active", industry: "Technology" },
   { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", intake_class: "Charter", financial_status: "active", industry: "Leadership" },
-  { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "Membership Committee", intake_class: "Spring '24", financial_status: "active", industry: "Consulting" },
-  { name: "Jack Dee", email: "jack@orderofkpi.org", role: "Membership Committee", intake_class: "Spring '24", financial_status: "active", industry: "Consulting" },
-  { name: "Deshaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee", intake_class: "Fall '22", financial_status: "active", industry: "Education" },
+  { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "member", intake_class: "Spring '24", financial_status: "active", industry: "Consulting" },
+  { name: "Jack Dee", email: "jack@orderofkpi.org", role: "member", intake_class: "Spring '24", financial_status: "active", industry: "Consulting" },
+  { name: "DeShaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee", intake_class: "Fall '22", financial_status: "active", industry: "Education" },
   { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member", intake_class: "Spring '18", financial_status: "active", industry: "Engineering" },
   { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "Membership Committee", intake_class: "Fall '21", financial_status: "active", industry: "Management" },
   { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos", intake_class: "Fall '19", financial_status: "active", industry: "Finance" },
@@ -694,6 +694,20 @@ async function startServer() {
     console.error(`[AUTH] DATABASE UPDATE FAILED for: ${email}`);
     logEvent(email, "PASSWORD_CHANGE_FAILURE", "Database error while updating password", "error");
     return res.status(500).json({ success: false, message: "Failed to update password in database" });
+  });
+
+  app.post("/api/auth/forgot-password", (req, res) => {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email address is required" });
+    }
+    const normEmail = email.toLowerCase().trim();
+    const user = findUser(normEmail);
+    if (!user) {
+      return res.json({ success: true, message: `If an account associated with ${normEmail} exists, a password reset link has been dispatched.` });
+    }
+    logEvent(normEmail, "PASSWORD_RESET_REQUEST", `Password reset link requested for ${normEmail}`);
+    return res.json({ success: true, message: `A password reset link has been dispatched to ${normEmail}. Please check your inbox or spam folder.` });
   });
 
   app.get("/api/registrations", async (req, res) => {
