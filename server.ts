@@ -1135,27 +1135,56 @@ async function startServer() {
     }
   });
 
+  const candidatesJsonPath = path.join(process.cwd(), "candidates_fallback.json");
+  function getFallbackCandidates(): any[] {
+    try {
+      if (fs.existsSync(candidatesJsonPath)) {
+        return JSON.parse(fs.readFileSync(candidatesJsonPath, "utf-8"));
+      }
+    } catch (e) {}
+    // Initial default fallback candidates
+    return [
+      { id: 'cand_averyt16_gmail_com', name: 'Avery Torrence', email: 'averyt16@gmail.com', phone: '770-873-0784', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
+      { id: 'cand_hupirate90_me_com', name: 'Charles Miller', email: 'hupirate90@me.com', phone: '301-602-9348', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
+      { id: 'cand_dennis_gmail_com', name: 'Dennis Test', email: 'dennis@gmail.com', phone: '252-883-0844', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
+      { id: 'cand_quincyld86_gmail_com', name: 'Dr. Quincy Dinnerson', email: 'quincyld86@gmail.com', phone: '336-420-1326', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
+      { id: 'cand_jabari_smithperry_gmail_com', name: 'Jabari Smith Perry', email: 'jabari.smithperry@gmail.com', phone: '404-784-7008', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
+      { id: 'cand_l_a_sennet_gmail_com', name: 'Lee Sennet', email: 'l.a.sennet@gmail.com', phone: '281-740-1774', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
+      { id: 'cand_candidate_gmail_com', name: 'John Candidate', email: 'candidate@gmail.com', phone: '2012', status: 'Inquiry', scores: {}, notes: '', document_vault: [] }
+    ];
+  }
+  function saveFallbackCandidates(list: any[]) {
+    try {
+      fs.writeFileSync(candidatesJsonPath, JSON.stringify(list, null, 2));
+    } catch (e) {}
+  }
+
   app.get("/api/candidates", (req, res) => {
     try {
+      let candidates: any[] = [];
       if (useSqlite && sqliteDb) {
-        // Sync application_date and status from submitted membership applications
-        const submittedApps = sqliteDb.prepare("SELECT email, submitted_at FROM membership_applications WHERE status = 'submitted'").all() as any[];
-        for (const app of submittedApps) {
-          if (app.submitted_at) {
-            const dateStr = app.submitted_at.split('T')[0];
-            sqliteDb.prepare("UPDATE candidates SET status = CASE WHEN status = 'Inquiry' THEN 'Applied' ELSE status END, application_date = ? WHERE email = ?").run(dateStr, app.email);
+        try {
+          const submittedApps = sqliteDb.prepare("SELECT email, submitted_at FROM membership_applications WHERE status = 'submitted'").all() as any[];
+          for (const app of submittedApps) {
+            if (app.submitted_at) {
+              const dateStr = app.submitted_at.split('T')[0];
+              sqliteDb.prepare("UPDATE candidates SET status = CASE WHEN status = 'Inquiry' THEN 'Applied' ELSE status END, application_date = ? WHERE email = ?").run(dateStr, app.email);
+            }
           }
+          const rows = sqliteDb.prepare("SELECT * FROM candidates").all();
+          candidates = rows.map((c: any) => ({
+            ...c,
+            scores: JSON.parse(c.scores || "{}"),
+            document_vault: JSON.parse(c.document_vault || "[]")
+          }));
+        } catch (dbErr) {
+          console.warn('SQLite candidates read error, falling back to JSON:', dbErr);
+          candidates = getFallbackCandidates();
         }
-
-        const candidates = sqliteDb.prepare("SELECT * FROM candidates").all();
-        res.json({ success: true, candidates: candidates.map((c: any) => ({
-          ...c,
-          scores: JSON.parse(c.scores || "{}"),
-          document_vault: JSON.parse(c.document_vault || "[]")
-        })) });
       } else {
-        res.json({ success: true, candidates: [] });
+        candidates = getFallbackCandidates();
       }
+      res.json({ success: true, candidates });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -1183,33 +1212,64 @@ async function startServer() {
       const passHash = hashPassword(pass);
       const displayFirstName = firstName || name.split(" ")[0];
 
+      let savedInSqlite = false;
       if (useSqlite && sqliteDb) {
-        const existingCand = sqliteDb.prepare("SELECT * FROM candidates WHERE LOWER(email) = ? OR id = ?").get(emailNorm, id) as any;
-        if (!existingCand) {
-          sqliteDb.prepare(`
-            INSERT INTO candidates (id, name, email, phone, status, application_date, scores, notes, document_vault)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `).run(id, name, emailNorm, phone || "", initialStatus, application_date, "{}", "", "[]");
-        } else {
-          sqliteDb.prepare(`
-            UPDATE candidates SET name = ?, phone = ?, status = ?, application_date = COALESCE(application_date, ?) WHERE id = ?
-          `).run(name, phone || "", initialStatus, application_date, existingCand.id);
-        }
+        try {
+          const existingCand = sqliteDb.prepare("SELECT * FROM candidates WHERE LOWER(email) = ? OR id = ?").get(emailNorm, id) as any;
+          if (!existingCand) {
+            sqliteDb.prepare(`
+              INSERT INTO candidates (id, name, email, phone, status, application_date, scores, notes, document_vault)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(id, name, emailNorm, phone || "", initialStatus, application_date, "{}", "", "[]");
+          } else {
+            sqliteDb.prepare(`
+              UPDATE candidates SET name = ?, phone = ?, status = ?, application_date = COALESCE(application_date, ?) WHERE id = ?
+            `).run(name, phone || "", initialStatus, application_date, existingCand.id);
+          }
 
-        const existingUser = sqliteDb.prepare("SELECT * FROM users WHERE LOWER(email) = ?").get(emailNorm) as any;
-        if (!existingUser) {
-          sqliteDb.prepare(`
-            INSERT INTO users (
-              email, name, first_name, password_hash, is_first_login,
-              role, title, intake_class, financial_status
-            )
-            VALUES (?, ?, ?, ?, 0, 'applicant', 'Candidate', 'FY27 Candidate', 'inactive')
-          `).run(emailNorm, name, displayFirstName, passHash);
-        } else {
-          sqliteDb.prepare(`
-            UPDATE users SET role = 'applicant', password_hash = ? WHERE LOWER(email) = ?
-          `).run(passHash, emailNorm);
+          const existingUser = sqliteDb.prepare("SELECT * FROM users WHERE LOWER(email) = ?").get(emailNorm) as any;
+          if (!existingUser) {
+            sqliteDb.prepare(`
+              INSERT INTO users (
+                email, name, first_name, password_hash, is_first_login,
+                role, title, intake_class, financial_status
+              )
+              VALUES (?, ?, ?, ?, 0, 'applicant', 'Candidate', 'FY27 Candidate', 'inactive')
+            `).run(emailNorm, name, displayFirstName, passHash);
+          } else {
+            sqliteDb.prepare(`
+              UPDATE users SET role = 'applicant', password_hash = ? WHERE LOWER(email) = ?
+            `).run(passHash, emailNorm);
+          }
+          savedInSqlite = true;
+        } catch (sqliteErr) {
+          console.warn('SQLite candidate write error, using JSON fallback:', sqliteErr);
         }
+      }
+
+      // Always update JSON fallback / applications store
+      try {
+        const fallbackList = getFallbackCandidates();
+        const index = fallbackList.findIndex(c => c.email.toLowerCase() === emailNorm || c.id === id);
+        const newCandidateEntry = {
+          id,
+          name,
+          email: emailNorm,
+          phone: phone || "",
+          status: initialStatus,
+          application_date,
+          scores: {},
+          notes: '',
+          document_vault: []
+        };
+        if (index >= 0) {
+          fallbackList[index] = { ...fallbackList[index], ...newCandidateEntry };
+        } else {
+          fallbackList.push(newCandidateEntry);
+        }
+        saveFallbackCandidates(fallbackList);
+      } catch (jsonErr) {
+        console.warn('Fallback candidates store error:', jsonErr);
       }
 
       if (fs.existsSync(jsonDbPath)) {
