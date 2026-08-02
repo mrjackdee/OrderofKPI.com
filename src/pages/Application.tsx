@@ -13,9 +13,12 @@ import {
   Info,
   CheckCircle,
   AlertCircle,
-  Globe
+  Globe,
+  Download,
+  FileText
 } from 'lucide-react';
 import { saveApplication, fetchApplication } from '../lib/memberDb';
+import { generateApplicationPDF } from '../utils/pdfGenerator';
 
 interface ApplicationData {
   firstName: string;
@@ -485,38 +488,157 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
 
   if (submitted) {
     return (
-      <div className="max-w-3xl mx-auto px-6 py-20">
+      <div className="max-w-4xl mx-auto px-4 md:px-6 py-10 space-y-8">
+        {/* Submitted Header Banner */}
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white border border-gold/20 rounded-[32px] p-10 md:p-16 text-center space-y-8 shadow-soft"
+          className="bg-white border-2 border-gold/30 rounded-[32px] p-8 md:p-10 shadow-lg space-y-6 text-center md:text-left md:flex md:items-center md:justify-between md:space-y-0"
         >
-          <div className="w-24 h-24 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-gold/20">
-            <CheckCircle size={48} className="text-gold" />
-          </div>
-          <div className="space-y-4">
-            <h1 className="text-4xl md:text-5xl font-display font-bold text-ivy tracking-tighter uppercase">
-              Application <span className="text-gold">Complete</span>
-            </h1>
-            <p className="text-ivy/60 text-lg leading-relaxed font-body max-w-lg mx-auto">
-              Thank you for submitting your application to Kappa Pi. Your information has been securely transmitted to the Membership Committee for review.
-            </p>
-          </div>
-          <div className="pt-6">
-            <div className="bg-cream p-6 rounded-2xl border border-gold/20 text-sm text-ivy/80 inline-block">
-              <p className="font-bold text-ivy mb-2 uppercase tracking-widest text-[11px]">What Happens Next?</p>
-              <p className="font-body">You will be notified via email once your application has been reviewed by the committee.</p>
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="w-20 h-20 bg-green-500/10 border-2 border-green-500/30 text-green-700 rounded-full flex items-center justify-center shrink-0 shadow-inner">
+              <CheckCircle size={40} className="text-green-600" />
+            </div>
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 border border-green-300/60 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                <CheckCircle size={12} /> Status: Submitted (In Review)
+              </div>
+              <h1 className="text-2xl md:text-3xl font-display font-bold text-ivy tracking-tight uppercase">
+                Application <span className="text-gold">Submitted</span>
+              </h1>
+              <p className="text-ivy/70 text-xs md:text-sm font-body leading-relaxed max-w-lg">
+                Your official application has been transmitted to the Membership Committee. You may review your submitted details below at any time.
+              </p>
+              {lastSavedTime && (
+                <p className="text-[11px] text-ivy/50 font-mono">
+                  Recorded at: {lastSavedTime}
+                </p>
+              )}
             </div>
           </div>
-          <div className="pt-8">
-            <button 
-              onClick={() => window.location.href = '/'}
-              className="px-10 py-4 bg-ivy text-cream font-bold uppercase tracking-widest rounded-full hover:scale-105 active:scale-95 transition-all shadow-lg"
+
+          <div className="pt-4 md:pt-0 shrink-0 flex flex-col sm:flex-row md:flex-col gap-3 justify-center">
+            <button
+              onClick={() => generateApplicationPDF(data, email)}
+              className="px-6 py-3 bg-gold text-ivy rounded-xl font-bold uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
             >
-              Return to Portal
+              <Download size={16} /> Download PDF Copy
             </button>
           </div>
         </motion.div>
+
+        {/* Full Submitted Application Read-Only View */}
+        <div className="bg-white border border-gold/20 rounded-[32px] p-6 md:p-10 shadow-soft space-y-10">
+          <div className="border-b border-gold/20 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-ivy uppercase tracking-wide">
+                Submitted Application Copy
+              </h2>
+              <p className="text-xs text-ivy/60 mt-1">
+                Official candidate records on file for <span className="font-semibold text-ivy">{email}</span>
+              </p>
+            </div>
+            <span className="inline-self-start sm:inline-self-auto px-3.5 py-1.5 rounded-full bg-ivy/10 border border-ivy/20 text-ivy text-[10px] font-bold uppercase tracking-widest">
+              Read-Only Record
+            </span>
+          </div>
+
+          {/* Section 1: Personal Info */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-gold flex items-center gap-2 border-b border-gold/10 pb-3">
+              <User size={16} /> Personal Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <ReadDetail label="First Name" value={data.firstName} />
+              <ReadDetail label="Middle Name" value={data.middleName} />
+              <ReadDetail label="Last Name" value={data.lastName} />
+              <ReadDetail label="Date of Birth" value={data.dateOfBirth} />
+              <ReadDetail label="Phone Number" value={data.phone} />
+              <ReadDetail label="Primary Address" value={data.address} />
+              <ReadDetail label="Place of Employment" value={data.employment} />
+              <ReadDetail label="Title / Position" value={data.position} />
+              <ReadDetail label="Applicant Email" value={email} />
+            </div>
+          </div>
+
+          {/* Section 2: Academic & Professional */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-gold flex items-center gap-2 border-b border-gold/10 pb-3">
+              <Briefcase size={16} /> Academic & Professional Background
+            </h3>
+            <div className="grid grid-cols-1 gap-4">
+              <ReadDetail label="Degrees Conferred" value={data.degrees} />
+              <ReadDetail label="Honors, Awards & Achievements" value={data.honors} />
+            </div>
+          </div>
+
+          {/* Section 3: Community Profile */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-gold flex items-center gap-2 border-b border-gold/10 pb-3">
+              <GraduationCap size={16} /> Community & Organization Profile
+            </h3>
+            <div className="grid grid-cols-1 gap-4">
+              <ReadDetail label="Community & Professional Organizations" value={data.organizations} />
+              <ReadDetail label="Prior Knowledge of Kappa Pi" value={data.priorKnowledge} />
+            </div>
+          </div>
+
+          {/* Section 4: Essay Responses */}
+          <div className="space-y-6">
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-gold flex items-center gap-2 border-b border-gold/10 pb-3">
+              <FileText size={16} /> Essay Responses
+            </h3>
+            <ReadEssay 
+              title="Question 1: Why do you wish to become a member of Kappa Pi?" 
+              value={data.essay1} 
+            />
+            <ReadEssay 
+              title="Question 2: Who do you consider a role model in your community and why?" 
+              value={data.essay2} 
+            />
+            <ReadEssay 
+              title="Question 3: Describe service projects or initiatives you have led or participated in." 
+              value={data.essay3} 
+            />
+            <ReadEssay 
+              title="Question 4: How do you handle societal pressures while maintaining self-esteem and integrity?" 
+              value={data.essay4} 
+            />
+            <ReadEssay 
+              title="Question 5: What unique talents, experiences, and professional skills do you possess to contribute to Kappa Pi's premier status?" 
+              value={data.essay5} 
+            />
+          </div>
+
+          {/* Section 5: Disclosures */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-gold flex items-center gap-2 border-b border-gold/10 pb-3">
+              <Info size={16} /> Additional Disclosures
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <ReadDetail label="Member of another fraternity/sorority?" value={data.isFraternityMember ? (data.isFraternityMember === 'yes' ? 'Yes' : 'No') : undefined} />
+              {data.isFraternityMember === 'yes' && (
+                <ReadDetail label="Fraternity/Sorority Details" value={data.fraternityDetails} />
+              )}
+              <ReadDetail label="Family in Alpha Kappa Alpha Sorority, Inc.?" value={data.hasAkaFamily ? (data.hasAkaFamily === 'yes' ? 'Yes' : 'No') : undefined} />
+              {data.hasAkaFamily === 'yes' && (
+                <ReadDetail label="AKA Family Member Details" value={data.akaFamilyDetails} />
+              )}
+              <ReadDetail label="Previously applied for Kappa Pi membership?" value={data.previousApplied ? (data.previousApplied === 'yes' ? 'Yes' : 'No') : undefined} />
+              {data.previousApplied === 'yes' && (
+                <ReadDetail label="Previous Application Details" value={data.previousAppliedDetails} />
+              )}
+            </div>
+          </div>
+
+          {/* Section 6: Social Presence */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-gold flex items-center gap-2 border-b border-gold/10 pb-3">
+              <Globe size={16} /> Social & Professional Presence
+            </h3>
+            <ReadDetail label="Social or professional website URLs" value={data.socialUrls} />
+          </div>
+        </div>
       </div>
     );
   }
@@ -1005,6 +1127,26 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
           </div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function ReadDetail({ label, value }: { label: string; value?: string }) {
+  return (
+    <div className="bg-cream/40 border border-gold/15 rounded-2xl p-4">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-ivy/50 mb-1">{label}</p>
+      <p className="text-sm font-medium text-ivy whitespace-pre-wrap">{value?.trim() ? value : <span className="italic text-ivy/40 font-normal">Not specified</span>}</p>
+    </div>
+  );
+}
+
+function ReadEssay({ title, value }: { title: string; value?: string }) {
+  return (
+    <div className="bg-cream/40 border border-gold/15 rounded-2xl p-5 space-y-2">
+      <p className="text-xs font-bold text-ivy uppercase tracking-wider">{title}</p>
+      <div className="text-sm text-ivy/90 leading-relaxed font-body whitespace-pre-wrap bg-white/80 p-4 rounded-xl border border-gold/10">
+        {value?.trim() ? value : <span className="italic text-ivy/40 font-normal">No response provided</span>}
+      </div>
     </div>
   );
 }
