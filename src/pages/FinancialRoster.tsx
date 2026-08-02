@@ -27,8 +27,8 @@ export default function FinancialRoster() {
 
   useEffect(() => {
     const role = sessionStorage.getItem('userRole');
-    if (!role) {
-      navigate('/login');
+    if (!role || role === 'applicant' || role === 'prospective') {
+      navigate(role ? '/applicant-portal' : '/login', { replace: true });
       return;
     }
     fetchMembers();

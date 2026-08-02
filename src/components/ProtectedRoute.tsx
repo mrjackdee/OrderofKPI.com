@@ -17,9 +17,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If logged in as prospective candidate, redirect away from internal member tools to applicant portal
-  if (userRole === 'prospective' && location.pathname !== '/applicant-portal' && location.pathname !== '/membership-application') {
-    return <Navigate to="/applicant-portal" replace />;
+  // If logged in as applicant or prospective candidate, isolate access strictly to the application process
+  const isApplicant = userRole === 'applicant' || userRole === 'prospective';
+  if (isApplicant) {
+    const allowedApplicantPaths = ['/applicant-portal', '/membership-application', '/privacy-policy', '/terms-of-service'];
+    if (!allowedApplicantPaths.includes(location.pathname)) {
+      return <Navigate to="/applicant-portal" replace />;
+    }
   }
 
   return <>{children}</>;

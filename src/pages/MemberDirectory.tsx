@@ -16,9 +16,11 @@ import {
   ExternalLink,
   Camera
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Member } from '../types';
 
 export default function MemberDirectory() {
+  const navigate = useNavigate();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,8 +28,13 @@ export default function MemberDirectory() {
   const [selectedClass, setSelectedClass] = useState<string>('all');
 
   useEffect(() => {
+    const role = sessionStorage.getItem('userRole');
+    if (!role || role === 'applicant' || role === 'prospective') {
+      navigate(role ? '/applicant-portal' : '/login', { replace: true });
+      return;
+    }
     fetchMembers();
-  }, []);
+  }, [navigate]);
 
   const fetchMembers = async () => {
     try {

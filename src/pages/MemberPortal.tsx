@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { 
   Video, 
   FileText, 
@@ -47,11 +47,18 @@ const WorkspaceActionCard = ({ icon: Icon, title, subtitle, onClick }: Workspace
 export default function MemberPortal() {
   const userRole = sessionStorage.getItem('userRole');
   const userEmail = sessionStorage.getItem('userEmail');
+
+  const isApplicant = userRole === 'applicant' || userRole === 'prospective';
+
+  // If logged in as applicant or prospective, isolate to Applicant Portal
+  if (isApplicant) {
+    return <Navigate to="/applicant-portal" replace />;
+  }
+
   const isAdmin = userRole === 'admin' || userEmail?.toLowerCase() === 'admin@orderofkpi.org';
   const isChair = userEmail?.toLowerCase() === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair' || isAdmin;
   const isMembershipCommittee = userRole === 'Membership Committee' || isChair || isAdmin;
-  const isAdminOrOfficer = (userRole && userRole !== 'member' && userRole !== 'prospective') || isMembershipCommittee || isAdmin;
-  const isProspective = userRole === 'prospective';
+  const isAdminOrOfficer = (userRole && userRole !== 'member' && !isApplicant) || isMembershipCommittee || isAdmin;
 
   React.useEffect(() => {
     logPortalSectionAccess('Member Portal');
@@ -80,55 +87,19 @@ export default function MemberPortal() {
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold/10 border border-gold/20 rounded-full mb-4">
             <ShieldCheck size={14} className="text-gold" />
             <span className="text-[10px] font-bold text-ivy uppercase tracking-[0.2em]">
-              {isProspective ? 'Applicant Portal Access' : 'Secure Member Access'}
+              Secure Member Access
             </span>
           </div>
           <h1 className="text-5xl md:text-7xl font-display font-bold uppercase tracking-tighter text-ivy">
-            {isProspective ? 'Intake' : 'Member'} <span className="text-gold">Portal</span>
+            Member <span className="text-gold">Portal</span>
           </h1>
           <p className="text-ivy/60 text-lg md:text-xl font-body max-w-2xl mx-auto leading-relaxed">
-            {isProspective 
-              ? 'Complete your application, track your progress, and stay updated on the intake process.'
-              : 'Welcome back. Access organizational tools, collaborate with members, and manage administrative workflows.'
-            }
+            Welcome back. Access organizational tools, collaborate with members, and manage administrative workflows.
           </p>
         </motion.div>
 
-        {isProspective && (
-          <motion.div variants={itemVariants} className="max-w-4xl mx-auto">
-            <Link
-              to="/membership-application"
-              className="group block bg-ivy p-12 rounded-[32px] text-cream overflow-hidden relative shadow-2xl hover:scale-[1.02] transition-all duration-500"
-            >
-              <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:scale-110 transition-transform duration-700">
-                <FileText size={180} />
-              </div>
-              <div className="relative z-10 space-y-8">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-cream/10 rounded-2xl flex items-center justify-center border border-cream/20">
-                    <ClipboardList className="text-gold w-6 h-6" />
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-gold">Membership Intake FY27</span>
-                </div>
-                <div className="space-y-4">
-                  <h2 className="text-4xl md:text-5xl font-display font-bold uppercase tracking-tighter leading-none">
-                    Start Your <span className="text-gold">Application</span>
-                  </h2>
-                  <p className="text-cream/60 text-lg max-w-xl font-body leading-relaxed">
-                    Access the official Kappa Pi New Member Application. You can save your progress and return at any time.
-                  </p>
-                </div>
-                <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-widest text-gold group-hover:translate-x-2 transition-transform">
-                  Enter Application Dashboard <ArrowRight size={14} />
-                </div>
-              </div>
-            </Link>
-          </motion.div>
-        )}
-
-        {/* Primary Workspace Tools (Hidden for prospective) */}
-        {!isProspective && (
-          <motion.section variants={itemVariants} className="space-y-8">
+        {/* Primary Workspace Tools */}
+        <motion.section variants={itemVariants} className="space-y-8">
           <div className="flex items-center gap-4">
             <div className="h-px flex-1 bg-gold/20" />
             <h2 className="text-ivy/40 text-[10px] font-bold uppercase tracking-[0.3em]">Google Workspace Console</h2>
@@ -197,13 +168,11 @@ export default function MemberPortal() {
             />
           </div>
         </motion.section>
-        )}
 
         {/* Secondary Resources */}
-        {!isProspective && (
-          <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Drive Browser Card */}
-            <div className="lg:col-span-1 bg-white border border-gold/20 rounded-lg p-10 flex flex-col justify-between items-start space-y-12 shadow-soft">
+        <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Drive Browser Card */}
+          <div className="lg:col-span-1 bg-white border border-gold/20 rounded-lg p-10 flex flex-col justify-between items-start space-y-12 shadow-soft">
             <div className="space-y-4">
               <h3 className="text-ivy text-2xl font-display font-bold uppercase tracking-tight">Archives</h3>
               <p className="text-ivy/60 text-sm leading-relaxed font-body">
@@ -271,7 +240,6 @@ export default function MemberPortal() {
             </Link>
           </div>
         </motion.div>
-        )}
 
         {/* Administrative Tools */}
         {(isAdminOrOfficer || isMembershipCommittee) && (

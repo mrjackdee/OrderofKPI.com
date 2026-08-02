@@ -68,12 +68,20 @@ export default function Layout() {
     hasBadge?: boolean;
   }
 
-  const navItems: NavItem[] = [
+  const isApplicant = userRole === 'applicant' || userRole === 'prospective';
+
+  const navItems: NavItem[] = isApplicant ? [
+    { name: 'APPLICATION PORTAL', path: '/applicant-portal' },
+  ] : [
     { name: 'HOME', path: '/' },
     { name: 'MEMBER PORTAL', path: '/member-portal' },
   ];
 
-  const footerNavItems: NavItem[] = [
+  const footerNavItems: NavItem[] = isApplicant ? [
+    { name: 'APPLICATION PORTAL', path: '/applicant-portal' },
+    { name: 'PRIVACY POLICY', path: '/privacy-policy' },
+    { name: 'TERMS OF SERVICE', path: '/terms-of-service' },
+  ] : [
     { name: 'HOME', path: '/' },
     { name: 'MEMBER PORTAL', path: '/member-portal' },
     { name: 'PRIVACY POLICY', path: '/privacy-policy' },
@@ -89,7 +97,7 @@ export default function Layout() {
             <span>Administrative Session Active — Full System Access Enabled</span>
             <ShieldCheck size={14} className="animate-pulse" />
           </div>
-        ) : userRole === 'prospective' ? (
+        ) : isApplicant ? (
           <div className="bg-gold text-ivy text-[9px] font-bold uppercase tracking-[0.2em] py-1.5 px-4 flex items-center justify-center gap-3 fixed top-0 left-0 right-0 z-[60] border-b border-ivy/10">
             <div className="w-1.5 h-1.5 rounded-full bg-ivy animate-pulse" />
             <span>Prospective Applicant Session Active — FY27 Membership Application Space</span>
