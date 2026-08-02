@@ -92,30 +92,14 @@ export default function Login() {
           
           <div className="flex justify-center mb-6">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center">
-              <ShieldCheck size={32} className="text-primary" />
+              <Lock size={32} className="text-primary" />
             </div>
           </div>
 
           <div className="text-center mb-6">
             <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-widest mb-2">
-              Financial Member <span className="text-primary">Portal</span>
+              Member Portal: <span className="text-primary">Secure Access</span>
             </h1>
-            <p className="text-silver/60 text-xs uppercase tracking-wider font-semibold">
-              Secure Access for Active Members & Officers
-            </p>
-          </div>
-
-          {/* Prospective Applicant Switch Banner */}
-          <div className="mb-6 p-4 rounded-2xl bg-primary/10 border border-primary/30 text-center space-y-2">
-            <p className="text-[10px] text-primary font-black uppercase tracking-widest">
-              Prospective Candidate Applying for Membership?
-            </p>
-            <Link 
-              to="/applicant-login" 
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-black text-xs font-black uppercase tracking-wider rounded-xl hover:bg-white transition-all shadow-md"
-            >
-              Access Applicant Login & Application Portal
-            </Link>
           </div>
 
           {error && (
@@ -195,6 +179,19 @@ export default function Login() {
               )}
             </motion.button>
           </form>
+
+          {/* Prospective Applicant Switch Banner */}
+          <div className="mt-6 p-4 rounded-2xl bg-primary/10 border border-primary/30 text-center space-y-2">
+            <p className="text-[10px] text-primary font-black uppercase tracking-widest">
+              Prospective Candidate Applying for Membership?
+            </p>
+            <Link 
+              to="/applicant-login" 
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-black text-xs font-black uppercase tracking-wider rounded-xl hover:bg-white transition-all shadow-md"
+            >
+              Access Applicant Login & Application Portal
+            </Link>
+          </div>
 
           <div className="mt-8 pt-6 border-t border-silver/10 text-center">
             <p className="text-[10px] text-silver/40 uppercase tracking-wider leading-relaxed">
