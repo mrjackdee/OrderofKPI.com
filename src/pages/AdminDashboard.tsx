@@ -36,6 +36,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Member, Candidate } from '../types';
+import { prospectiveMembers } from '../lib/memberDb';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 
 interface SystemLog {
@@ -161,9 +162,27 @@ export default function AdminDashboard() {
     try {
       const response = await fetch('/api/candidates');
       const data = await response.json();
-      if (data.success) {
-        setCandidates(data.candidates);
+      const apiCandidates: Candidate[] = (data.success && Array.isArray(data.candidates)) ? data.candidates : [];
+
+      const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
+        id: 'cand_' + m.email.replace(/[^a-z0-9]/g, '_'),
+        name: m.name,
+        email: m.email,
+        status: 'Inquiry',
+        application_date: ''
+      }));
+
+      const candidateMap = new Map<string, Candidate>();
+      for (const fb of fallbacks) {
+        candidateMap.set(fb.email.toLowerCase(), fb);
       }
+      for (const apiC of apiCandidates) {
+        if (apiC && apiC.email) {
+          candidateMap.set(apiC.email.toLowerCase(), apiC);
+        }
+      }
+
+      setCandidates(Array.from(candidateMap.values()));
     } catch (error) {
       console.error('Error fetching candidates:', error);
     }

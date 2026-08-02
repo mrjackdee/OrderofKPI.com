@@ -186,17 +186,15 @@ async function initDb() {
     }
 
     // Add or update users to align with latest roles and titles, preserving existing password hashes
-    // Exception: Force password for test accounts or specific overrides
     for (const u of defaultUsers) {
       const emailNorm = u.email.toLowerCase().trim();
       const firstName = u.name.split(" ")[0];
       const existingUser = sqliteDb.prepare("SELECT password_hash FROM users WHERE email = ?").get(emailNorm) as any;
       
-      const isTestUser = testUsers.includes(emailNorm);
       const customPass = userPasswordOverrides[emailNorm];
       const targetPasswordHash = customPass 
         ? hashPassword(customPass) 
-        : (isTestUser ? defaultPasswordHash : (existingUser ? existingUser.password_hash : defaultPasswordHash));
+        : (existingUser ? existingUser.password_hash : defaultPasswordHash);
 
       if (existingUser) {
         sqliteDb.prepare(`
@@ -210,8 +208,6 @@ async function initDb() {
           firstName, 
           u.role, 
           u.title || "", 
-          
-          
           u.intake_class || null, 
           u.financial_status || "inactive", 
           u.industry || null, 
@@ -240,7 +236,7 @@ async function initDb() {
       }
     }
 
-    // Seed official initial candidates
+    // Seed official initial candidates while preserving created/reset passwords
     for (const c of initialCandidates) {
       const emailNorm = c.email.toLowerCase().trim();
       const firstName = c.name.split(" ")[0];
@@ -258,8 +254,8 @@ async function initDb() {
         `).run(emailNorm, c.name, firstName, passHash);
       } else {
         sqliteDb.prepare(`
-          UPDATE users SET password_hash = ?, role = 'prospective', name = ?, first_name = ? WHERE email = ?
-        `).run(passHash, c.name, firstName, emailNorm);
+          UPDATE users SET role = 'prospective', name = ?, first_name = ? WHERE email = ?
+        `).run(c.name, firstName, emailNorm);
       }
 
       // Also seed into candidates tracking table
@@ -305,10 +301,9 @@ async function initDb() {
       }
     }
 
-    // Add missing users or update roles/titles for existing ones
+    // Add missing users or update roles/titles for existing ones without overwriting user-updated passwords
     for (const u of defaultUsers) {
       const emailNorm = u.email.toLowerCase().trim();
-      const isTestUser = testUsers.includes(emailNorm);
       const customPass = userPasswordOverrides[emailNorm];
       const initialHash = customPass ? hashPassword(customPass) : defaultPasswordHash;
 
@@ -328,8 +323,6 @@ async function initDb() {
         cleanData[emailNorm].title = u.title || "";
         if (customPass) {
           cleanData[emailNorm].password_hash = hashPassword(customPass);
-        } else if (isTestUser) {
-          cleanData[emailNorm].password_hash = defaultPasswordHash;
         }
       }
     }
@@ -339,15 +332,22 @@ async function initDb() {
       const firstName = c.name.split(" ")[0];
       const passHash = hashPassword(c.pass);
 
-      cleanData[emailNorm] = {
-        email: emailNorm,
-        name: c.name,
-        first_name: firstName,
-        password_hash: passHash,
-        is_first_login: 0,
-        role: "prospective",
-        title: "Candidate"
-      };
+      if (!cleanData[emailNorm]) {
+        cleanData[emailNorm] = {
+          email: emailNorm,
+          name: c.name,
+          first_name: firstName,
+          password_hash: passHash,
+          is_first_login: 0,
+          role: "prospective",
+          title: "Candidate"
+        };
+      } else {
+        cleanData[emailNorm].name = c.name;
+        cleanData[emailNorm].first_name = firstName;
+        cleanData[emailNorm].role = "prospective";
+        cleanData[emailNorm].title = "Candidate";
+      }
     }
 
     fs.writeFileSync(jsonDbPath, JSON.stringify(cleanData, null, 2));
@@ -1053,22 +1053,73 @@ async function startServer() {
   app.post("/api/candidates", (req, res) => {
     try {
       const { name, email, phone, status, adminEmail } = req.body;
-      const id = Math.random().toString(36).substring(2, 9);
-      const initialStatus = status || "Inquiry";
-      const application_date = initialStatus === 'Applied' ? new Date().toISOString().split('T')[0] : null;
-      
-      if (useSqlite && sqliteDb) {
-        sqliteDb.prepare(`
-          INSERT INTO candidates (id, name, email, phone, status, application_date, scores, notes, document_vault)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(id, name, email, phone || "", initialStatus, application_date, "{}", "", "[]");
+
+      if (!name || !email) {
+        return res.status(400).json({ success: false, message: "Candidate name and email are required." });
       }
 
-      logEvent(adminEmail || "admin", "CANDIDATE_CREATED", `Added new candidate ${name} (${email}) with initial stage ${initialStatus}`);
+      const emailNorm = email.toLowerCase().trim();
+      const id = 'cand_' + emailNorm.replace(/[^a-z0-9]/g, '_');
+      const initialStatus = status || "Inquiry";
+      const application_date = initialStatus === 'Applied' ? new Date().toISOString().split('T')[0] : null;
 
-      res.json({ success: true, candidateId: id });
+      const digits = (phone || "").replace(/\D/g, "");
+      const pass = digits.length >= 4 ? digits.slice(-4) : "2012";
+      const passHash = hashPassword(pass);
+      const firstName = name.split(" ")[0];
+
+      if (useSqlite && sqliteDb) {
+        const existingCand = sqliteDb.prepare("SELECT * FROM candidates WHERE LOWER(email) = ? OR id = ?").get(emailNorm, id) as any;
+        if (!existingCand) {
+          sqliteDb.prepare(`
+            INSERT INTO candidates (id, name, email, phone, status, application_date, scores, notes, document_vault)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(id, name, emailNorm, phone || "", initialStatus, application_date, "{}", "", "[]");
+        } else {
+          sqliteDb.prepare(`
+            UPDATE candidates SET name = ?, phone = ?, status = ?, application_date = COALESCE(application_date, ?) WHERE id = ?
+          `).run(name, phone || "", initialStatus, application_date, existingCand.id);
+        }
+
+        const existingUser = sqliteDb.prepare("SELECT * FROM users WHERE LOWER(email) = ?").get(emailNorm) as any;
+        if (!existingUser) {
+          sqliteDb.prepare(`
+            INSERT INTO users (
+              email, name, first_name, password_hash, is_first_login,
+              role, title, intake_class, financial_status
+            )
+            VALUES (?, ?, ?, ?, 0, 'prospective', 'Candidate', 'FY27 Candidate', 'inactive')
+          `).run(emailNorm, name, firstName, passHash);
+        }
+      }
+
+      if (fs.existsSync(jsonDbPath)) {
+        try {
+          const fileData = fs.readFileSync(jsonDbPath, "utf-8");
+          const data = JSON.parse(fileData);
+          if (!data[emailNorm]) {
+            data[emailNorm] = {
+              email: emailNorm,
+              name,
+              first_name: firstName,
+              password_hash: passHash,
+              is_first_login: 0,
+              role: "prospective",
+              title: "Candidate"
+            };
+            fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
+          }
+        } catch (e) {
+          console.warn('JSON DB sync error:', e);
+        }
+      }
+
+      logEvent(adminEmail || "admin", "CANDIDATE_CREATED", `Added new candidate ${name} (${emailNorm}) with initial stage ${initialStatus}`);
+
+      res.json({ success: true, candidateId: id, message: `Candidate ${name} record created successfully.` });
     } catch (err: any) {
-      res.status(500).json({ success: false, message: err.message });
+      console.error('Error creating candidate:', err);
+      res.status(500).json({ success: false, message: err.message || "Failed to create candidate record." });
     }
   });
 

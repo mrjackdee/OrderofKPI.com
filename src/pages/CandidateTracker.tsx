@@ -36,6 +36,9 @@ export default function CandidateTracker() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newCandidate, setNewCandidate] = useState({ name: '', email: '', phone: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     logPortalSectionAccess('Candidate Tracker');
@@ -58,18 +61,27 @@ export default function CandidateTracker() {
     try {
       const response = await fetch('/api/candidates');
       const data = await response.json();
-      if (data.success && data.candidates && data.candidates.length > 0) {
-        setCandidates(data.candidates);
-      } else {
-        const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
-          id: 'cand_' + m.email.replace(/[^a-z0-9]/g, '_'),
-          name: m.name,
-          email: m.email,
-          status: 'Inquiry',
-          application_date: ''
-        }));
-        setCandidates(fallbacks);
+      const apiCandidates: Candidate[] = (data.success && Array.isArray(data.candidates)) ? data.candidates : [];
+
+      const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
+        id: 'cand_' + m.email.replace(/[^a-z0-9]/g, '_'),
+        name: m.name,
+        email: m.email,
+        status: 'Inquiry',
+        application_date: ''
+      }));
+
+      const candidateMap = new Map<string, Candidate>();
+      for (const fb of fallbacks) {
+        candidateMap.set(fb.email.toLowerCase(), fb);
       }
+      for (const apiC of apiCandidates) {
+        if (apiC && apiC.email) {
+          candidateMap.set(apiC.email.toLowerCase(), apiC);
+        }
+      }
+
+      setCandidates(Array.from(candidateMap.values()));
     } catch (error) {
       console.error('Error fetching candidates:', error);
       const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
@@ -87,20 +99,42 @@ export default function CandidateTracker() {
 
   const handleAddCandidate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newCandidate.name || !newCandidate.email) {
+      setFormError('Candidate name and email address are required.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setFormError(null);
+    setFormSuccess(null);
+
     try {
       const response = await fetch('/api/candidates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newCandidate),
+        body: JSON.stringify({
+          ...newCandidate,
+          adminEmail: currentUserEmail
+        }),
       });
       const data = await response.json();
       if (data.success) {
-        setShowAddModal(false);
-        setNewCandidate({ name: '', email: '', phone: '' });
-        fetchCandidates();
+        setFormSuccess(`Candidate ${newCandidate.name} record created successfully!`);
+        setTimeout(() => {
+          setShowAddModal(false);
+          setNewCandidate({ name: '', email: '', phone: '' });
+          setFormError(null);
+          setFormSuccess(null);
+          fetchCandidates();
+        }, 800);
+      } else {
+        setFormError(data.message || 'Failed to create candidate record.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding candidate:', error);
+      setFormError('Server error while creating candidate record. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -426,6 +460,18 @@ export default function CandidateTracker() {
             className="bg-white w-full max-w-md rounded-lg shadow-2xl border-gold/30 border p-8"
           >
             <h2 className="text-2xl font-display text-ivy mb-6">Add New Candidate</h2>
+            {formError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                <span>{formError}</span>
+              </div>
+            )}
+            {formSuccess && (
+              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                <span>{formSuccess}</span>
+              </div>
+            )}
             <form onSubmit={handleAddCandidate} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-widest text-ivy/60 mb-2">Full Name</label>
@@ -436,6 +482,7 @@ export default function CandidateTracker() {
                   onChange={(e) => setNewCandidate({ ...newCandidate, name: e.target.value })}
                   className="w-full px-4 py-2 border border-ivy/10 rounded-md focus:ring-2 focus:ring-ivy/20 focus:border-ivy outline-none"
                   placeholder="Enter full name"
+                  disabled={isSubmitting}
                 />
               </div>
               <div>
@@ -447,6 +494,7 @@ export default function CandidateTracker() {
                   onChange={(e) => setNewCandidate({ ...newCandidate, email: e.target.value })}
                   className="w-full px-4 py-2 border border-ivy/10 rounded-md focus:ring-2 focus:ring-ivy/20 focus:border-ivy outline-none"
                   placeholder="candidate@example.com"
+                  disabled={isSubmitting}
                 />
               </div>
               <div>
@@ -457,21 +505,35 @@ export default function CandidateTracker() {
                   onChange={(e) => setNewCandidate({ ...newCandidate, phone: e.target.value })}
                   className="w-full px-4 py-2 border border-ivy/10 rounded-md focus:ring-2 focus:ring-ivy/20 focus:border-ivy outline-none"
                   placeholder="(555) 000-0000"
+                  disabled={isSubmitting}
                 />
               </div>
               <div className="flex gap-4 pt-4">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 px-6 py-3 border border-ivy/10 rounded-md font-bold uppercase tracking-widest text-ivy hover:bg-cream transition-all"
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setFormError(null);
+                    setFormSuccess(null);
+                  }}
+                  disabled={isSubmitting}
+                  className="flex-1 px-6 py-3 border border-ivy/10 rounded-md font-bold uppercase tracking-widest text-ivy hover:bg-cream transition-all disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-6 py-3 bg-ivy text-cream rounded-md font-bold uppercase tracking-widest hover:brightness-110 transition-all"
+                  disabled={isSubmitting}
+                  className="flex-1 px-6 py-3 bg-ivy text-cream rounded-md font-bold uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  Create Record
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-cream/30 border-t-cream rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <span>Create Record</span>
+                  )}
                 </button>
               </div>
             </form>
