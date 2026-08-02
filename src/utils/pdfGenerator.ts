@@ -77,24 +77,10 @@ export function generateApplicationPDF(data: ApplicationData, email: string) {
     y = 45;
     // Main Title
     doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(22);
+    doc.setFontSize(18);
     doc.setTextColor(rIvy, gIvy, bIvy);
-    doc.text('KAPPA PI FRATERNITY', pageWidth / 2, y, { align: 'center' });
+    doc.text('MEMBERSHIP APPLICATION SUBMISSION - FY27', pageWidth / 2, y, { align: 'center' });
     y += 20;
-
-    // Subtitle
-    doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(11);
-    doc.setTextColor(rGold, gGold, bGold);
-    doc.text('NATIONAL MEMBERSHIP APPLICATION PORTFOLIO', pageWidth / 2, y, { align: 'center' });
-    y += 15;
-
-    // Intake class metadata
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    doc.text('FY27 INTAKE CLASS — OFFICIAL SUBMISSION', pageWidth / 2, y, { align: 'center' });
-    y += 15;
 
     // Divider
     doc.setDrawColor(rGold, gGold, bGold);
@@ -108,7 +94,7 @@ export function generateApplicationPDF(data: ApplicationData, email: string) {
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(8);
     doc.setTextColor(rIvy, gIvy, bIvy);
-    doc.text('KAPPA PI FRATERNITY — MEMBERSHIP APPLICATION PORTFOLIO', margin, margin - 15);
+    doc.text('KAPPA PI — MEMBERSHIP APPLICATION SUBMISSION', margin, margin - 15);
     
     doc.setFont('Helvetica', 'normal');
     doc.setTextColor(150, 150, 150);
@@ -272,14 +258,14 @@ export function generateApplicationPDF(data: ApplicationData, email: string) {
   y = drawField('Current and Past Organization Involvements', data.organizations, col1X, contentWidth) + 15;
 
   y = checkOverflow(45);
-  y = drawField('Prior Knowledge of Kappa Pi Fraternity', data.priorKnowledge, col1X, contentWidth) + 20;
+  y = drawField('Prior Knowledge of Kappa Pi', data.priorKnowledge, col1X, contentWidth) + 20;
 
   // --- 4. ADDITIONAL DISCLOSURES & SOCIALS ---
   drawSectionHeader('Disclosures & Presence');
 
   y = checkOverflow(35);
-  const yDiscRow1_1 = drawField('Fraternity Member?', data.isFraternityMember, col1X, colWidth);
-  const yDiscRow1_2 = drawField('Fraternity Details', data.fraternityDetails, col2X, contentWidth - colWidth - 20);
+  const yDiscRow1_1 = drawField('Other Org Member?', data.isFraternityMember, col1X, colWidth);
+  const yDiscRow1_2 = drawField('Organization Details', data.fraternityDetails, col2X, contentWidth - colWidth - 20);
   y = Math.max(yDiscRow1_1, yDiscRow1_2) + 15;
 
   y = checkOverflow(35);

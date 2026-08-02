@@ -258,9 +258,9 @@ const validateApplication = (data: ApplicationData): ValidationErrorItem[] => {
 
   // Additional Disclosures
   if (!data.isFraternityMember) {
-    errors.push({ sectionKey: 'disclosures', sectionTitle: 'Additional Disclosures', fieldLabel: 'Fraternity Membership Question', reason: 'Please select Yes or No' });
+    errors.push({ sectionKey: 'disclosures', sectionTitle: 'Additional Disclosures', fieldLabel: 'Organization Membership Question', reason: 'Please select Yes or No' });
   } else if (data.isFraternityMember === 'yes' && !data.fraternityDetails?.trim()) {
-    errors.push({ sectionKey: 'disclosures', sectionTitle: 'Additional Disclosures', fieldLabel: 'Fraternity Name & Initiation Date', reason: 'Details required when selecting Yes' });
+    errors.push({ sectionKey: 'disclosures', sectionTitle: 'Additional Disclosures', fieldLabel: 'Organization Name & Initiation Date', reason: 'Details required when selecting Yes' });
   }
 
   if (!data.hasAkaFamily) {
@@ -616,9 +616,9 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
               <Info size={16} /> Additional Disclosures
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <ReadDetail label="Member of another fraternity/sorority?" value={data.isFraternityMember ? (data.isFraternityMember === 'yes' ? 'Yes' : 'No') : undefined} />
+              <ReadDetail label="Member of another organization/society?" value={data.isFraternityMember ? (data.isFraternityMember === 'yes' ? 'Yes' : 'No') : undefined} />
               {data.isFraternityMember === 'yes' && (
-                <ReadDetail label="Fraternity/Sorority Details" value={data.fraternityDetails} />
+                <ReadDetail label="Organization/Society Details" value={data.fraternityDetails} />
               )}
               <ReadDetail label="Family in Alpha Kappa Alpha Sorority, Inc.?" value={data.hasAkaFamily ? (data.hasAkaFamily === 'yes' ? 'Yes' : 'No') : undefined} />
               {data.hasAkaFamily === 'yes' && (
@@ -875,7 +875,7 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
                 label="What is your prior knowledge of Kappa Pi?" 
                 value={data.priorKnowledge} 
                 onChange={(v: string) => updateField('priorKnowledge', v)} 
-                placeholder="Describe your prior knowledge of the fraternity..."
+                placeholder="Describe your prior knowledge of Kappa Pi..."
               />
             </div>
           </Section>
@@ -947,7 +947,7 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
             <div className="space-y-10">
               <div className="space-y-6 p-6 rounded-2xl bg-gold/5 border border-gold/10">
                 <RadioGroup 
-                  label="Are you a member of a fraternity?" 
+                  label="Are you a member of another Greek-letter organization or professional society?" 
                   value={data.isFraternityMember} 
                   onChange={(v: string) => updateField('isFraternityMember', v)}
                   options={[{ label: 'Yes', value: 'yes' }, { label: 'No', value: 'no' }]}
@@ -955,7 +955,7 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
                 />
                 {data.isFraternityMember === 'yes' && (
                   <Input 
-                    label="What is your fraternity name and initiation date?" 
+                    label="What is the organization name and initiation date?" 
                     value={data.fraternityDetails} 
                     onChange={(v: string) => updateField('fraternityDetails', v)} 
                     required

@@ -278,8 +278,8 @@ export default function ReviewApplications() {
                   <div className="space-y-4">
                     <h3 className="text-ivy/40 font-bold uppercase tracking-[0.2em] text-[11px] border-b border-gold/10 pb-4">Disclosures & Presence</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {renderDetail("Fraternity Member", selectedApp.data.isFraternityMember)}
-                      {renderDetail("Fraternity Details", selectedApp.data.fraternityDetails)}
+                      {renderDetail("Other Org Member", selectedApp.data.isFraternityMember)}
+                      {renderDetail("Organization Details", selectedApp.data.fraternityDetails)}
                       {renderDetail("AKA Family", selectedApp.data.hasAkaFamily)}
                       {renderDetail("AKA Family Details", selectedApp.data.akaFamilyDetails)}
                       {renderDetail("Previous Applied", selectedApp.data.previousApplied)}

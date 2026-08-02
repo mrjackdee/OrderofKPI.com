@@ -736,7 +736,7 @@ export default function CandidateTracker() {
                   <h3 className="text-xs font-bold uppercase tracking-widest text-ivy pb-2 border-b border-gold/20">Disclosures</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <span className="text-[10px] uppercase font-bold text-ivy/40 block">Fraternity Member?</span>
+                      <span className="text-[10px] uppercase font-bold text-ivy/40 block">Other Organization Member?</span>
                       <span className="font-semibold text-ivy capitalize">{selectedApplicationForView.data.isFraternityMember}</span>
                     </div>
                     <div>
@@ -745,7 +745,7 @@ export default function CandidateTracker() {
                     </div>
                     {selectedApplicationForView.data.isFraternityMember === 'yes' && (
                       <div className="col-span-2">
-                        <span className="text-[10px] uppercase font-bold text-ivy/40 block">Fraternity Details</span>
+                        <span className="text-[10px] uppercase font-bold text-ivy/40 block">Organization Details</span>
                         <span className="text-ivy">{selectedApplicationForView.data.fraternityDetails}</span>
                       </div>
                     )}
