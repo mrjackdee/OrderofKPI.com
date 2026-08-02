@@ -459,7 +459,7 @@ export default function CandidateTracker() {
                         </div>
                         <div className="flex items-center gap-2 text-ivy/60 text-xs">
                           <Phone className="w-3 h-3" />
-                          <span>{candidate.phone || 'No phone'}</span>
+                          <span>{candidate.phone || matchingApp?.data?.phone || 'No phone'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-ivy/60 text-xs">
                           <Calendar className="w-3 h-3" />

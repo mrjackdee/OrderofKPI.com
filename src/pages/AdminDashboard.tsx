@@ -70,6 +70,7 @@ export default function AdminDashboard() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [candidateSearch, setCandidateSearch] = useState('');
   const [candidateStageFilter, setCandidateStageFilter] = useState('all');
+  const [applications, setApplications] = useState<any[]>([]);
 
   // Audit Logs State
   const [appAuditLogs, setAppAuditLogs] = useState<ApplicationAuditLog[]>([]);
@@ -136,9 +137,20 @@ export default function AdminDashboard() {
     await Promise.all([
       fetchMembers(),
       fetchCandidates(),
-      fetchAuditLogs()
+      fetchAuditLogs(),
+      fetchApplications()
     ]);
     setLoading(false);
+  };
+
+  const fetchApplications = async () => {
+    try {
+      const res = await fetch('/api/applications');
+      const data = await res.json();
+      if (data.success) {
+        setApplications(data.applications || []);
+      }
+    } catch (err) {}
   };
 
   const showToast = (type: 'success' | 'error', text: string) => {
@@ -680,7 +692,9 @@ export default function AdminDashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredCandidates.map((candidate) => (
+              {filteredCandidates.map((candidate) => {
+                const matchingApp = applications.find(a => a.email.toLowerCase() === candidate.email.toLowerCase());
+                return (
                 <div 
                   key={candidate.id}
                   className="bg-white p-6 rounded-3xl border border-gold/20 shadow-soft hover:border-gold/50 transition-all flex flex-col justify-between space-y-4"
@@ -706,7 +720,7 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="text-xs text-ivy/60 space-y-1 pt-2 border-t border-gold/10">
-                      <p><span className="font-bold text-ivy">Phone:</span> {candidate.phone || 'N/A'}</p>
+                      <p><span className="font-bold text-ivy">Phone:</span> {candidate.phone || matchingApp?.data?.phone || 'N/A'}</p>
                       <p><span className="font-bold text-ivy">Applied Date:</span> {candidate.application_date ? new Date(candidate.application_date).toLocaleDateString() : 'N/A'}</p>
                     </div>
                   </div>
@@ -739,7 +753,8 @@ export default function AdminDashboard() {
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

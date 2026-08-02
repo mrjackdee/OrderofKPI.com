@@ -47,6 +47,7 @@ export default function CommitteeChairDashboard() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [candidateSearch, setCandidateSearch] = useState('');
   const [stageFilter, setStageFilter] = useState('all');
+  const [applications, setApplications] = useState<any[]>([]);
   const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
   const [newCandidate, setNewCandidate] = useState<{ firstName: string; lastName: string; email: string; phone: string; status: Candidate['status'] }>({
     firstName: '',
@@ -77,9 +78,20 @@ export default function CommitteeChairDashboard() {
       fetchAuditLogs(),
       fetchCandidates(),
       fetchCommitteeMembers(),
-      fetchAllMembers()
+      fetchAllMembers(),
+      fetchApplications()
     ]);
     setLoading(false);
+  };
+
+  const fetchApplications = async () => {
+    try {
+      const res = await fetch('/api/applications');
+      const data = await res.json();
+      if (data.success) {
+        setApplications(data.applications || []);
+      }
+    } catch (err) {}
   };
 
   const fetchAuditLogs = async () => {
@@ -568,7 +580,9 @@ export default function CommitteeChairDashboard() {
                 <p className="font-body text-sm italic">No candidates match the specified filter criteria.</p>
               </div>
             ) : (
-              filteredCandidates.map((candidate) => (
+              filteredCandidates.map((candidate) => {
+                const matchingApp = applications.find(a => a.email.toLowerCase() === candidate.email.toLowerCase());
+                return (
                 <div 
                   key={candidate.id}
                   className="bg-white p-6 rounded-3xl border border-gold/20 shadow-soft hover:border-gold/50 transition-all space-y-4 flex flex-col justify-between"
@@ -594,7 +608,7 @@ export default function CommitteeChairDashboard() {
                     </div>
 
                     <div className="text-xs text-ivy/60 space-y-1 font-body pt-2 border-t border-gold/10">
-                      <p><span className="font-bold text-ivy">Phone:</span> {candidate.phone || 'N/A'}</p>
+                      <p><span className="font-bold text-ivy">Phone:</span> {candidate.phone || matchingApp?.data?.phone || 'N/A'}</p>
                       <p><span className="font-bold text-ivy">Applied:</span> {candidate.application_date ? new Date(candidate.application_date).toLocaleDateString() : 'N/A'}</p>
                     </div>
                   </div>
@@ -627,7 +641,8 @@ export default function CommitteeChairDashboard() {
                     </button>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

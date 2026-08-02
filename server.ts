@@ -1083,6 +1083,15 @@ async function startServer() {
           );
         }
 
+        const appPhone = data?.phone || "";
+        if (appPhone) {
+          sqliteDb.prepare(`
+            UPDATE candidates 
+            SET phone = COALESCE(NULLIF(phone, ''), ?)
+            WHERE LOWER(email) = ?
+          `).run(appPhone, normEmail);
+        }
+
         // Auto-update candidates tracker table status to 'Applied' on submission
         if (status === 'submitted') {
           const existingCand = sqliteDb.prepare("SELECT id FROM candidates WHERE LOWER(email) = ?").get(normEmail) as any;
@@ -1090,9 +1099,9 @@ async function startServer() {
           if (existingCand) {
             sqliteDb.prepare(`
               UPDATE candidates 
-              SET status = 'Applied', application_date = ?
+              SET status = 'Applied', application_date = ?, phone = COALESCE(NULLIF(phone, ''), ?)
               WHERE LOWER(email) = ?
-            `).run(todayDate, normEmail);
+            `).run(todayDate, appPhone, normEmail);
           } else {
             // Find applicant's name from users directory
             const userRow = sqliteDb.prepare("SELECT name FROM users WHERE LOWER(email) = ?").get(normEmail) as any;
@@ -1100,7 +1109,7 @@ async function startServer() {
             sqliteDb.prepare(`
               INSERT INTO candidates (id, name, email, phone, status, application_date, scores, notes, document_vault)
               VALUES (?, ?, ?, ?, 'Applied', ?, '{}', '', '[]')
-            `).run('cand_' + normEmail.replace(/[^a-z0-9]/g, '_'), candName, normEmail, "", todayDate);
+            `).run('cand_' + normEmail.replace(/[^a-z0-9]/g, '_'), candName, normEmail, appPhone, todayDate);
           }
         }
       }
