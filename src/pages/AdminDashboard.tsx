@@ -534,6 +534,14 @@ export default function AdminDashboard() {
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
+                <a 
+                  href="/test_credentials.md" 
+                  download="kpi_test_credentials.md"
+                  className="bg-gold/20 hover:bg-gold/30 text-ivy border border-gold/40 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-sm"
+                >
+                  📥 Download Credentials (.md)
+                </a>
+
                 <div className="relative">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ivy/30 w-4 h-4" />
                   <input

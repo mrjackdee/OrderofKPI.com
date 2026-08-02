@@ -2,10 +2,6 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Link, Navigate } from 'react-router-dom';
 import { 
-  Video, 
-  FileText, 
-  Presentation, 
-  ClipboardList, 
   ShieldCheck,
   Users,
   LayoutDashboard,
@@ -16,33 +12,11 @@ import {
   Award,
   Settings,
   LayoutGrid,
-  ChevronRight
+  ChevronRight,
+  FileText
 } from 'lucide-react';
 import GooglePickerButton from '../components/GooglePickerButton';
-import { createMeetSpace, createGoogleDoc, createGoogleSlide, createGoogleForm } from '../lib/googleWorkspace';
 import { logPortalSectionAccess } from '../lib/auditLogger';
-
-interface WorkspaceActionCardProps {
-  icon: React.ElementType;
-  title: string;
-  subtitle: string;
-  onClick: () => void;
-}
-
-const WorkspaceActionCard = ({ icon: Icon, title, subtitle, onClick }: WorkspaceActionCardProps) => (
-  <button 
-    onClick={onClick}
-    className="w-full bg-white border border-gold/20 hover:border-gold hover:shadow-lg rounded-lg p-8 flex flex-col items-center text-center gap-4 transition-all duration-300 shadow-soft group relative overflow-hidden"
-  >
-    <div className="w-16 h-16 rounded-full bg-cream border border-gold/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 relative z-10">
-      <Icon className="text-ivy w-8 h-8" />
-    </div>
-    <div className="relative z-10">
-      <h3 className="text-ivy text-sm font-bold uppercase tracking-widest mb-2">{title}</h3>
-      <p className="text-ivy/40 text-[10px] uppercase tracking-widest">{subtitle}</p>
-    </div>
-  </button>
-);
 
 export default function MemberPortal() {
   const userRole = sessionStorage.getItem('userRole');
@@ -98,77 +72,6 @@ export default function MemberPortal() {
             Welcome back. Access organizational tools, collaborate with members, and manage administrative workflows.
           </p>
         </motion.div>
-
-        {/* Primary Workspace Tools */}
-        <motion.section variants={itemVariants} className="space-y-8">
-          <div className="flex items-center gap-4">
-            <div className="h-px flex-1 bg-gold/20" />
-            <h2 className="text-ivy/40 text-[10px] font-bold uppercase tracking-[0.3em]">Google Workspace Console</h2>
-            <div className="h-px flex-1 bg-gold/20" />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <WorkspaceActionCard 
-              icon={Video}
-              title="Google Meet"
-              subtitle="Start Session"
-              onClick={async () => {
-                try {
-                  const space = await createMeetSpace();
-                  window.open(space.meetingUri || space.meetingCode, '_blank');
-                } catch (err) {
-                  console.error(err);
-                  alert('Please sign in to Workspace to start a meeting');
-                }
-              }}
-            />
-
-            <WorkspaceActionCard 
-              icon={FileText}
-              title="KPI Docs"
-              subtitle="New Document"
-              onClick={async () => {
-                try {
-                  const doc = await createGoogleDoc('New KPI Document');
-                  window.open(`https://docs.google.com/document/d/${doc.documentId}/edit`, '_blank');
-                } catch (err) {
-                  console.error(err);
-                  alert('Please sign in to Workspace to create a document');
-                }
-              }}
-            />
-
-            <WorkspaceActionCard 
-              icon={Presentation}
-              title="KPI Slides"
-              subtitle="New Deck"
-              onClick={async () => {
-                try {
-                  const slide = await createGoogleSlide('New KPI Presentation');
-                  window.open(`https://docs.google.com/presentation/d/${slide.presentationId}/edit`, '_blank');
-                } catch (err) {
-                  console.error(err);
-                  alert('Please sign in to Workspace to create a presentation');
-                }
-              }}
-            />
-
-            <WorkspaceActionCard 
-              icon={ClipboardList}
-              title="KPI Forms"
-              subtitle="Collect Data"
-              onClick={async () => {
-                try {
-                  const form = await createGoogleForm('New KPI Form');
-                  window.open(form.responderUri, '_blank');
-                } catch (err) {
-                  console.error(err);
-                  alert('Please sign in to Workspace to create a form');
-                }
-              }}
-            />
-          </div>
-        </motion.section>
 
         {/* Secondary Resources */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -294,16 +197,17 @@ export default function MemberPortal() {
                   icon: ShieldCheck, 
                   path: '/chair-dashboard',
                   color: 'bg-gold text-ivy',
-                  roles: ['admin', 'officer', 'Membership Committee Chair', 'Membership Committee']
+                  roles: ['admin', 'officer', 'Membership Committee Chair']
                 }
               ]
-              .filter(tool => 
-                !tool.roles || 
-                tool.roles.includes(userRole || '') || 
-                isAdmin || 
-                (isChair && tool.roles.includes('Membership Committee Chair')) ||
-                (isMembershipCommittee && tool.roles.includes('Membership Committee'))
-              )
+              .filter(tool => {
+                if (!tool.roles) return true;
+                if (isAdmin) return true;
+                if (tool.roles.includes(userRole || '')) return true;
+                if (isChair && tool.roles.includes('Membership Committee Chair')) return true;
+                if (isMembershipCommittee && !isChair && tool.roles.includes('Membership Committee') && !tool.roles.includes('Membership Committee Chair')) return true;
+                return false;
+              })
               .map((tool) => (
                 <Link
                   key={tool.title}

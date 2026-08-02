@@ -193,14 +193,7 @@ export default function Login() {
             </Link>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-silver/10 text-center space-y-3">
-            <a 
-              href="/test_credentials.md" 
-              download="kpi_test_credentials.md"
-              className="inline-flex items-center gap-2 text-xs font-bold text-primary hover:text-white transition-colors bg-primary/10 px-4 py-2 rounded-xl border border-primary/20"
-            >
-              📥 Download Test Credentials & Passwords (.md)
-            </a>
+          <div className="mt-8 pt-6 border-t border-silver/10 text-center">
             <p className="text-[10px] text-silver/40 uppercase tracking-wider leading-relaxed">
               Access is restricted to active members of The Order of KP. 
               <br/>Contact administration for credential assistance.
