@@ -10,7 +10,9 @@ import {
   doc, 
   setDoc, 
   getDoc, 
-  getDocFromServer 
+  getDocFromServer,
+  collection,
+  getDocs
 } from 'firebase/firestore';
 import staticFirebaseConfig from '../../firebase-applet-config.json';
 
@@ -398,6 +400,23 @@ export async function firebaseFetchApplication(email: string) {
   } catch (err: any) {
     console.error('Error fetching application from Firestore:', err);
     return { success: false, message: 'Firestore fetch failed' };
+  }
+}
+
+/**
+ * Fetches all candidate applications from Firebase Firestore.
+ */
+export async function firebaseFetchAllApplications() {
+  try {
+    const querySnapshot = await getDocs(collection(db, 'applications'));
+    const list: any[] = [];
+    querySnapshot.forEach((docSnapshot) => {
+      list.push(docSnapshot.data());
+    });
+    return { success: true, applications: list };
+  } catch (err: any) {
+    console.error('Error fetching all applications from Firestore:', err);
+    return { success: false, message: err.message || 'Failed to fetch all applications from Firestore' };
   }
 }
 

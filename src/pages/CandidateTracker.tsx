@@ -22,7 +22,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { Candidate } from '../types';
-import { fetchAllApplications, prospectiveMembers } from '../lib/memberDb';
+import { fetchAllApplications, prospectiveMembers, syncApplicationsFromFirestore } from '../lib/memberDb';
 import { generateApplicationPDF } from '../utils/pdfGenerator';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 
@@ -43,8 +43,16 @@ export default function CandidateTracker() {
 
   useEffect(() => {
     logPortalSectionAccess('Candidate Tracker');
-    fetchCandidates();
-    fetchApplications();
+    const initAndLoad = async () => {
+      try {
+        await syncApplicationsFromFirestore();
+      } catch (e) {
+        console.warn('Sync from Firestore skipped or failed:', e);
+      }
+      fetchCandidates();
+      fetchApplications();
+    };
+    initAndLoad();
   }, []);
 
   const fetchApplications = async () => {

@@ -696,6 +696,125 @@ async function startServer() {
     return res.status(500).json({ success: false, message: "Failed to update password in database" });
   });
 
+  app.post("/api/auth/change-email", (req, res) => {
+    const { currentEmail, newEmail, password } = req.body;
+    console.log(`[AUTH] Email change request from ${currentEmail} to ${newEmail}`);
+
+    if (!currentEmail || !newEmail || !password) {
+      return res.status(400).json({ success: false, message: "Current email, new email, and password are required" });
+    }
+
+    const normCurrent = currentEmail.toLowerCase().trim();
+    const normNew = newEmail.toLowerCase().trim();
+
+    // Look up current user
+    const user = findUser(normCurrent);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Verify password
+    const hashedPass = hashPassword(password);
+    if (user.password_hash !== hashedPass) {
+      return res.status(401).json({ success: false, message: "Incorrect password. Email update rejected." });
+    }
+
+    // Verify if newEmail is already in use (by someone else)
+    if (normCurrent !== normNew) {
+      const existingUser = findUser(normNew);
+      if (existingUser) {
+        return res.status(400).json({ success: false, message: "The new email address is already in use by another account." });
+      }
+    }
+
+    // Update database tables
+    let success = false;
+    if (useSqlite && sqliteDb) {
+      try {
+        sqliteDb.transaction(() => {
+          sqliteDb.prepare("UPDATE users SET email = ? WHERE LOWER(email) = ?").run(normNew, normCurrent);
+          sqliteDb.prepare("UPDATE candidates SET email = ? WHERE LOWER(email) = ?").run(normNew, normCurrent);
+          sqliteDb.prepare("UPDATE membership_applications SET email = ? WHERE LOWER(email) = ?").run(normNew, normCurrent);
+        })();
+        success = true;
+      } catch (dbErr: any) {
+        console.error("SQLite change-email error:", dbErr);
+        return res.status(500).json({ success: false, message: "Database update failed: " + dbErr.message });
+      }
+    }
+
+    // Update kpi_members_v2.json fallback
+    if (fs.existsSync(jsonDbPath)) {
+      try {
+        const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+        if (data[normCurrent]) {
+          data[normNew] = {
+            ...data[normCurrent],
+            email: normNew
+          };
+          delete data[normCurrent];
+          fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
+          success = true;
+        }
+      } catch (e) {
+        console.error("JSON members sync error during email change:", e);
+      }
+    }
+
+    // Update data/applications.json fallback
+    const appsJsonFile = path.join(process.cwd(), "data", "applications.json");
+    if (fs.existsSync(appsJsonFile)) {
+      try {
+        const data = JSON.parse(fs.readFileSync(appsJsonFile, "utf-8"));
+        if (data[normCurrent]) {
+          data[normNew] = {
+            ...data[normCurrent],
+            email: normNew
+          };
+          delete data[normCurrent];
+          fs.writeFileSync(appsJsonFile, JSON.stringify(data, null, 2));
+        }
+      } catch (e) {
+        console.error("JSON applications sync error during email change:", e);
+      }
+    }
+
+    // Update candidates_fallback.json fallback
+    const candidatesJsonPath = path.join(process.cwd(), "candidates_fallback.json");
+    if (fs.existsSync(candidatesJsonPath)) {
+      try {
+        const data = JSON.parse(fs.readFileSync(candidatesJsonPath, "utf-8"));
+        let updated = false;
+        for (const cand of data) {
+          if (cand.email.toLowerCase().trim() === normCurrent) {
+            cand.email = normNew;
+            updated = true;
+          }
+        }
+        if (updated) {
+          fs.writeFileSync(candidatesJsonPath, JSON.stringify(data, null, 2));
+        }
+      } catch (e) {
+        console.error("JSON candidates sync error during email change:", e);
+      }
+    }
+
+    logEvent(normCurrent, "EMAIL_CHANGE", `Updated email address to ${normNew}`);
+
+    return res.json({
+      success: true,
+      message: "Email address changed successfully.",
+      user: {
+        email: normNew,
+        name: user.name,
+        firstName: user.first_name,
+        role: user.role,
+        title: user.title,
+        isFirstLogin: false
+      }
+    });
+  });
+
   app.post("/api/auth/forgot-password", (req, res) => {
     const { email } = req.body;
     if (!email) {
@@ -1158,6 +1277,161 @@ async function startServer() {
     }
   });
 
+  app.post("/api/applications/sync-bulk", (req, res) => {
+    try {
+      const { applications } = req.body;
+      if (!Array.isArray(applications)) {
+        return res.status(400).json({ success: false, message: "Applications must be an array" });
+      }
+
+      console.log(`[SYNC] Bulk syncing ${applications.length} applications from Firestore...`);
+
+      // 1. Sync SQLite DB if available
+      if (useSqlite && sqliteDb) {
+        try {
+          const insertAppStmt = sqliteDb.prepare(`
+            INSERT INTO membership_applications (id, email, data, status, last_saved_at, submitted_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `);
+          const updateAppStmt = sqliteDb.prepare(`
+            UPDATE membership_applications 
+            SET data = ?, status = ?, last_saved_at = ?, submitted_at = ?
+            WHERE LOWER(email) = ?
+          `);
+          const checkAppStmt = sqliteDb.prepare("SELECT id FROM membership_applications WHERE LOWER(email) = ?");
+
+          const checkCandStmt = sqliteDb.prepare("SELECT id, status FROM candidates WHERE LOWER(email) = ?");
+          const updateCandStmt = sqliteDb.prepare(`
+            UPDATE candidates 
+            SET status = 'Applied', application_date = ?, phone = COALESCE(NULLIF(phone, ''), ?)
+            WHERE LOWER(email) = ?
+          `);
+          const insertCandStmt = sqliteDb.prepare(`
+            INSERT INTO candidates (id, name, email, phone, status, application_date, scores, notes, document_vault)
+            VALUES (?, ?, ?, ?, 'Applied', ?, '{}', '', '[]')
+          `);
+
+          sqliteDb.transaction(() => {
+            for (const app of applications) {
+              const email = (app.email || "").toLowerCase().trim();
+              if (!email) continue;
+
+              const status = app.status || "draft";
+              const data = app.data || app; // Handle either format
+              const last_saved_at = app.lastSavedAt || app.last_saved_at || new Date().toISOString();
+              const submitted_at = status === 'submitted' ? (app.submittedAt || app.submitted_at || last_saved_at) : null;
+              const appPhone = data.phone || app.phone || "";
+
+              const existingApp = checkAppStmt.get(email);
+              if (existingApp) {
+                updateAppStmt.run(JSON.stringify(data), status, last_saved_at, submitted_at, email);
+              } else {
+                const id = app.id || Math.random().toString(36).substring(2, 9);
+                insertAppStmt.run(id, email, JSON.stringify(data), status, last_saved_at, submitted_at);
+              }
+
+              // Update candidate tracker status
+              if (status === 'submitted') {
+                const existingCand = checkCandStmt.get(email) as any;
+                const dateStr = (submitted_at || last_saved_at).split('T')[0];
+                if (existingCand) {
+                  updateCandStmt.run(dateStr, appPhone, email);
+                } else {
+                  const firstName = data.firstName || app.firstName || email.split('@')[0];
+                  const lastName = data.lastName || app.lastName || "";
+                  const candName = `${firstName} ${lastName}`.trim();
+                  insertCandStmt.run('cand_' + email.replace(/[^a-z0-9]/g, '_'), candName, email, appPhone, dateStr);
+                }
+              }
+            }
+          })();
+        } catch (dbErr: any) {
+          console.error("[SYNC] SQLite bulk sync failed:", dbErr);
+        }
+      }
+
+      // 2. Sync fallback files
+      const dataDir = path.join(process.cwd(), "data");
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      const appsJsonFile = path.join(dataDir, "applications.json");
+      let jsonStore: Record<string, any> = {};
+      if (fs.existsSync(appsJsonFile)) {
+        try {
+          jsonStore = JSON.parse(fs.readFileSync(appsJsonFile, "utf-8"));
+        } catch (e) {
+          jsonStore = {};
+        }
+      }
+
+      let fallbackCandidates: any[] = [];
+      if (fs.existsSync(candidatesJsonPath)) {
+        try {
+          fallbackCandidates = JSON.parse(fs.readFileSync(candidatesJsonPath, "utf-8"));
+        } catch (e) {
+          fallbackCandidates = [];
+        }
+      }
+
+      for (const app of applications) {
+        const email = (app.email || "").toLowerCase().trim();
+        if (!email) continue;
+
+        const status = app.status || "draft";
+        const data = app.data || app;
+        const last_saved_at = app.lastSavedAt || app.last_saved_at || new Date().toISOString();
+        const submitted_at = status === 'submitted' ? (app.submittedAt || app.submitted_at || last_saved_at) : null;
+        const appPhone = data.phone || app.phone || "";
+
+        jsonStore[email] = {
+          id: app.id || jsonStore[email]?.id || Math.random().toString(36).substring(2, 9),
+          email,
+          data,
+          status,
+          last_saved_at,
+          submitted_at
+        };
+
+        if (status === 'submitted') {
+          const foundCand = fallbackCandidates.find(c => c.email.toLowerCase().trim() === email);
+          const dateStr = (submitted_at || last_saved_at).split('T')[0];
+          if (foundCand) {
+            foundCand.status = 'Applied';
+            foundCand.application_date = dateStr;
+            if (appPhone) foundCand.phone = appPhone;
+          } else {
+            const firstName = data.firstName || app.firstName || email.split('@')[0];
+            const lastName = data.lastName || app.lastName || "";
+            const candName = `${firstName} ${lastName}`.trim();
+            fallbackCandidates.push({
+              id: 'cand_' + email.replace(/[^a-z0-9]/g, '_'),
+              name: candName,
+              email,
+              phone: appPhone,
+              status: 'Applied',
+              application_date: dateStr,
+              scores: {},
+              notes: '',
+              document_vault: []
+            });
+          }
+        }
+      }
+
+      try {
+        fs.writeFileSync(appsJsonFile, JSON.stringify(jsonStore, null, 2));
+        fs.writeFileSync(candidatesJsonPath, JSON.stringify(fallbackCandidates, null, 2));
+      } catch (fsErr) {
+        console.error("[SYNC] Fallback files write failed:", fsErr);
+      }
+
+      res.json({ success: true, message: `Successfully synchronized ${applications.length} applications.` });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
   const candidatesJsonPath = path.join(process.cwd(), "candidates_fallback.json");
   function getFallbackCandidates(): any[] {
     try {
@@ -1187,12 +1461,11 @@ async function startServer() {
       let candidates: any[] = [];
       if (useSqlite && sqliteDb) {
         try {
-          const submittedApps = sqliteDb.prepare("SELECT email, submitted_at FROM membership_applications WHERE status = 'submitted'").all() as any[];
+          const submittedApps = sqliteDb.prepare("SELECT email, submitted_at, last_saved_at FROM membership_applications WHERE status = 'submitted'").all() as any[];
           for (const app of submittedApps) {
-            if (app.submitted_at) {
-              const dateStr = app.submitted_at.split('T')[0];
-              sqliteDb.prepare("UPDATE candidates SET status = CASE WHEN status = 'Inquiry' THEN 'Applied' ELSE status END, application_date = ? WHERE email = ?").run(dateStr, app.email);
-            }
+            const rawDate = app.submitted_at || app.last_saved_at || new Date().toISOString();
+            const dateStr = rawDate.split('T')[0];
+            sqliteDb.prepare("UPDATE candidates SET status = CASE WHEN status = 'Inquiry' THEN 'Applied' ELSE status END, application_date = ? WHERE LOWER(email) = ?").run(dateStr, app.email.toLowerCase().trim());
           }
           const rows = sqliteDb.prepare("SELECT * FROM candidates").all();
           candidates = rows.map((c: any) => ({
@@ -1207,6 +1480,32 @@ async function startServer() {
       } else {
         candidates = getFallbackCandidates();
       }
+
+      // Always double check JSON fallback applications to sync candidate statuses if they are submitted
+      const appsJsonFile = path.join(process.cwd(), "data", "applications.json");
+      if (fs.existsSync(appsJsonFile)) {
+        try {
+          const jsonApps = JSON.parse(fs.readFileSync(appsJsonFile, "utf-8"));
+          Object.keys(jsonApps).forEach((email) => {
+            const app = jsonApps[email];
+            if (app && app.status === 'submitted') {
+              const normEmail = email.toLowerCase().trim();
+              const foundCand = candidates.find(c => c.email.toLowerCase().trim() === normEmail);
+              if (foundCand) {
+                if (foundCand.status === 'Inquiry') {
+                  foundCand.status = 'Applied';
+                }
+                if (!foundCand.application_date && (app.submitted_at || app.last_saved_at)) {
+                  foundCand.application_date = (app.submitted_at || app.last_saved_at).split('T')[0];
+                }
+              }
+            }
+          });
+        } catch (e) {
+          console.error("Error updating candidate statuses from JSON fallback applications:", e);
+        }
+      }
+
       res.json({ success: true, candidates });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });

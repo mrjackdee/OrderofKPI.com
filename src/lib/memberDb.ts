@@ -3,7 +3,8 @@ import {
   firebaseLoginApplicant, 
   firebaseResetApplicantPassword, 
   firebaseSaveApplication, 
-  firebaseFetchApplication 
+  firebaseFetchApplication,
+  firebaseFetchAllApplications
 } from './firebase';
 
 export interface MemberUser {
@@ -294,6 +295,28 @@ export async function performHybridPasswordChange(
   }
 }
 
+/**
+ * Update candidate/applicant email address.
+ */
+export async function changeApplicantEmail(
+  currentEmail: string,
+  newEmail: string,
+  password: string
+): Promise<{ success: boolean; message: string; user?: any }> {
+  try {
+    const response = await fetch('/api/auth/change-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentEmail, newEmail, password }),
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (err: any) {
+    return { success: false, message: err.message || 'Network error occurred while changing email.' };
+  }
+}
+
 // Client-Side Authentication Fallbacks
 function performClientSideLogin(email: string, pass: string) {
   const normEmail = email.toLowerCase().trim();
@@ -425,5 +448,29 @@ export async function fetchAllApplications() {
   } catch (err) {
     console.error('Failed to fetch all applications:', err);
     return { success: false, message: 'Connection error' };
+  }
+}
+
+/**
+ * Syncs all applications from Cloud Firestore to the local Node.js database.
+ * This guarantees durable persistence even if the server is scaled to zero/rebooted.
+ */
+export async function syncApplicationsFromFirestore() {
+  try {
+    const firestoreResult = await firebaseFetchAllApplications();
+    if (!firestoreResult.success || !firestoreResult.applications) {
+      return { success: false, message: firestoreResult.message || 'Could not fetch from Firestore' };
+    }
+
+    const response = await fetch('/api/applications/sync-bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ applications: firestoreResult.applications }),
+    });
+
+    return await response.json();
+  } catch (err: any) {
+    console.error('Failed to sync applications from Firestore to API:', err);
+    return { success: false, message: err.message || 'Connection error' };
   }
 }

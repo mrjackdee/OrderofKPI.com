@@ -18,13 +18,15 @@ import {
   Lock,
   KeyRound,
   Loader2,
-  Save
+  Save,
+  Settings,
+  Mail
 } from 'lucide-react';
-import { fetchApplication, performHybridPasswordChange } from '../lib/memberDb';
+import { fetchApplication, performHybridPasswordChange, changeApplicantEmail } from '../lib/memberDb';
 import Application from './Application';
 
 export default function ApplicantPortal() {
-  const [activeTab, setActiveTab] = useState<'application' | 'timeline' | 'instructions'>('application');
+  const [activeTab, setActiveTab] = useState<'application' | 'timeline' | 'instructions' | 'account'>('application');
   const [appStatus, setAppStatus] = useState<'not_started' | 'draft' | 'submitted'>('not_started');
   const [candidateStatus, setCandidateStatus] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export default function ApplicantPortal() {
   const saveRef = React.useRef<(() => Promise<any>) | null>(null);
   const navigate = useNavigate();
 
-  const userEmail = sessionStorage.getItem('userEmail') || '';
+  const [userEmail, setUserEmail] = useState(() => sessionStorage.getItem('userEmail') || '');
   const userName = sessionStorage.getItem('userName') || 'Applicant';
   const userFirstName = sessionStorage.getItem('userFirstName') || userName.split(' ')[0];
 
@@ -46,6 +48,20 @@ export default function ApplicantPortal() {
   const [pwdError, setPwdError] = useState('');
   const [pwdSuccess, setPwdSuccess] = useState('');
   const [pwdLoading, setPwdLoading] = useState(false);
+
+  // Account settings states
+  const [newEmail, setNewEmail] = useState('');
+  const [emailAuthPassword, setEmailAuthPassword] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [emailSuccess, setEmailSuccess] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+
+  const [settingsCurrentPassword, setSettingsCurrentPassword] = useState('');
+  const [settingsNewPassword, setSettingsNewPassword] = useState('');
+  const [settingsConfirmPassword, setSettingsConfirmPassword] = useState('');
+  const [settingsPwdError, setSettingsPwdError] = useState('');
+  const [settingsPwdSuccess, setSettingsPwdSuccess] = useState('');
+  const [settingsPwdLoading, setSettingsPwdLoading] = useState(false);
 
   useEffect(() => {
     // Check if user is logging in for the first time
@@ -88,6 +104,80 @@ export default function ApplicantPortal() {
       setPwdError(err.message || 'An error occurred updating password.');
     } finally {
       setPwdLoading(false);
+    }
+  };
+
+  const handleSettingsPasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSettingsPwdError('');
+    setSettingsPwdSuccess('');
+
+    if (!settingsNewPassword || settingsNewPassword.length < 8) {
+      setSettingsPwdError('New password must be at least 8 characters long.');
+      return;
+    }
+
+    // Password validation rules: 8+ characters, at least 1 number, at least 1 uppercase letter
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!passwordRegex.test(settingsNewPassword)) {
+      setSettingsPwdError('Password must include at least 8 characters, contain at least 1 number and 1 upper case letter.');
+      return;
+    }
+
+    if (settingsNewPassword !== settingsConfirmPassword) {
+      setSettingsPwdError('New passwords do not match. Please re-enter.');
+      return;
+    }
+
+    setSettingsPwdLoading(true);
+    try {
+      const res = await performHybridPasswordChange(userEmail, settingsCurrentPassword, settingsNewPassword);
+      if (res.success) {
+        setSettingsPwdSuccess('Your password has been updated successfully.');
+        setSettingsCurrentPassword('');
+        setSettingsNewPassword('');
+        setSettingsConfirmPassword('');
+      } else {
+        setSettingsPwdError(res.message || 'Failed to update password.');
+      }
+    } catch (err: any) {
+      setSettingsPwdError(err.message || 'An error occurred updating password.');
+    } finally {
+      setSettingsPwdLoading(false);
+    }
+  };
+
+  const handleSettingsEmailChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEmailError('');
+    setEmailSuccess('');
+
+    if (!newEmail || !newEmail.includes('@')) {
+      setEmailError('Please enter a valid new email address.');
+      return;
+    }
+
+    if (newEmail.toLowerCase().trim() === userEmail.toLowerCase().trim()) {
+      setEmailError('New email is the same as your current email.');
+      return;
+    }
+
+    setEmailLoading(true);
+    try {
+      const res = await changeApplicantEmail(userEmail, newEmail, emailAuthPassword);
+      if (res.success && res.user) {
+        setEmailSuccess('Your email address has been updated successfully.');
+        sessionStorage.setItem('userEmail', res.user.email);
+        setUserEmail(res.user.email);
+        setNewEmail('');
+        setEmailAuthPassword('');
+      } else {
+        setEmailError(res.message || 'Failed to update email address.');
+      }
+    } catch (err: any) {
+      setEmailError(err.message || 'An error occurred updating email address.');
+    } finally {
+      setEmailLoading(false);
     }
   };
 
@@ -139,7 +229,7 @@ export default function ApplicantPortal() {
     }, 120);
   };
 
-  const handleTabClick = (tab: 'application' | 'timeline' | 'instructions') => {
+  const handleTabClick = (tab: 'application' | 'timeline' | 'instructions' | 'account') => {
     if (activeTab === 'application' && hasUnsavedChanges && tab !== 'application') {
       setPendingAction(() => () => setActiveTab(tab));
       setShowExitPrompt(true);
@@ -431,6 +521,18 @@ export default function ApplicantPortal() {
             <HelpCircle size={16} className={activeTab === 'instructions' ? 'text-gold' : 'text-ivy/60'} />
             Applicant Guidelines & FAQs
           </button>
+
+          <button
+            onClick={() => handleTabClick('account')}
+            className={`px-6 py-3 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${
+              activeTab === 'account'
+                ? 'bg-ivy text-cream shadow-md'
+                : 'bg-white border border-gold/20 text-ivy hover:bg-gold/10'
+            }`}
+          >
+            <Settings size={16} className={activeTab === 'account' ? 'text-gold' : 'text-ivy/60'} />
+            Account Settings
+          </button>
         </div>
 
         {/* Tab Content */}
@@ -517,6 +619,200 @@ export default function ApplicantPortal() {
                 <p className="text-ivy/70 text-sm font-body leading-relaxed">
                   Once an application is submitted, it enters the official review stage. If you need to update critical contact information, please reach out to the Membership Committee.
                 </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'account' && (
+          <div className="bg-white border border-gold/20 rounded-[32px] p-6 md:p-10 space-y-8 shadow-soft">
+            <div className="space-y-2 pb-6 border-b border-gold/10">
+              <h3 className="text-2xl font-bold uppercase tracking-tight text-ivy">
+                Account Settings & Security
+              </h3>
+              <p className="text-ivy/60 text-xs md:text-sm font-body leading-relaxed">
+                Manage your candidate portal authentication credentials. Changes to your email address will update your login username.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              {/* Change Email Form */}
+              <div className="space-y-6">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <Mail size={16} className="text-gold" />
+                    <h4 className="font-bold text-base md:text-lg text-ivy uppercase tracking-wide">Change Email Address</h4>
+                  </div>
+                  <p className="text-xs text-ivy/60 font-body">
+                    Update your account email address. This will also update your official candidate records.
+                  </p>
+                </div>
+
+                {emailError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-body">
+                    {emailError}
+                  </div>
+                )}
+
+                {emailSuccess && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800 font-body flex items-center gap-2">
+                    <CheckCircle size={16} className="text-green-600 shrink-0" />
+                    <span>{emailSuccess}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleSettingsEmailChange} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-ivy/70 uppercase tracking-widest font-bold ml-1">Current Email Address</label>
+                    <input
+                      type="email"
+                      value={userEmail}
+                      disabled
+                      className="w-full bg-[#FAF9F5] border border-gold/20 rounded-xl py-2.5 px-4 text-ivy/60 text-xs focus:outline-none cursor-not-allowed font-body"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-ivy/70 uppercase tracking-widest font-bold ml-1">New Email Address</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <Mail size={14} className="text-gold" />
+                      </div>
+                      <input
+                        type="email"
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        className="w-full bg-cream/40 border border-gold/20 rounded-xl py-2.5 pl-10 pr-4 text-ivy text-xs focus:outline-none focus:border-ivy focus:bg-white transition-all font-body"
+                        placeholder="new.email@example.com"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-ivy/70 uppercase tracking-widest font-bold ml-1">Confirm Current Password</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <Lock size={14} className="text-gold" />
+                      </div>
+                      <input
+                        type="password"
+                        value={emailAuthPassword}
+                        onChange={(e) => setEmailAuthPassword(e.target.value)}
+                        className="w-full bg-cream/40 border border-gold/20 rounded-xl py-2.5 pl-10 pr-4 text-ivy text-xs focus:outline-none focus:border-ivy focus:bg-white transition-all font-body"
+                        placeholder="Authorize with your password"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={emailLoading}
+                    className="w-full py-3 bg-ivy text-cream rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-ivy/90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 font-display"
+                  >
+                    {emailLoading ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin text-gold" /> Updating Email...
+                      </>
+                    ) : (
+                      'Update Email Address'
+                    )}
+                  </button>
+                </form>
+              </div>
+
+              {/* Change Password Form */}
+              <div className="space-y-6">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <KeyRound size={16} className="text-gold" />
+                    <h4 className="font-bold text-base md:text-lg text-ivy uppercase tracking-wide">Change Password</h4>
+                  </div>
+                  <p className="text-xs text-ivy/60 font-body">
+                    Update your account password. Passwords must be at least 8 characters with a capital letter and a number.
+                  </p>
+                </div>
+
+                {settingsPwdError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-body">
+                    {settingsPwdError}
+                  </div>
+                )}
+
+                {settingsPwdSuccess && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800 font-body flex items-center gap-2">
+                    <CheckCircle size={16} className="text-green-600 shrink-0" />
+                    <span>{settingsPwdSuccess}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleSettingsPasswordChange} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-ivy/70 uppercase tracking-widest font-bold ml-1">Current Password</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <Lock size={14} className="text-gold" />
+                      </div>
+                      <input
+                        type="password"
+                        value={settingsCurrentPassword}
+                        onChange={(e) => setSettingsCurrentPassword(e.target.value)}
+                        className="w-full bg-cream/40 border border-gold/20 rounded-xl py-2.5 pl-10 pr-4 text-ivy text-xs focus:outline-none focus:border-ivy focus:bg-white transition-all font-body"
+                        placeholder="Enter your current password"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-ivy/70 uppercase tracking-widest font-bold ml-1">New Password</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <Lock size={14} className="text-gold" />
+                      </div>
+                      <input
+                        type="password"
+                        value={settingsNewPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full bg-cream/40 border border-gold/20 rounded-xl py-2.5 pl-10 pr-4 text-ivy text-xs focus:outline-none focus:border-ivy focus:bg-white transition-all font-body"
+                        placeholder="At least 8 characters, 1 uppercase, 1 number"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-ivy/70 uppercase tracking-widest font-bold ml-1">Confirm New Password</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <Lock size={14} className="text-gold" />
+                      </div>
+                      <input
+                        type="password"
+                        value={settingsConfirmPassword}
+                        onChange={(e) => setSettingsConfirmPassword(e.target.value)}
+                        className="w-full bg-cream/40 border border-gold/20 rounded-xl py-2.5 pl-10 pr-4 text-ivy text-xs focus:outline-none focus:border-ivy focus:bg-white transition-all font-body"
+                        placeholder="Confirm your new password"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={settingsPwdLoading}
+                    className="w-full py-3 bg-ivy text-cream rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-ivy/90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 font-display"
+                  >
+                    {settingsPwdLoading ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin text-gold" /> Updating Password...
+                      </>
+                    ) : (
+                      'Update Password'
+                    )}
+                  </button>
+                </form>
               </div>
             </div>
           </div>

@@ -13,7 +13,7 @@ import {
   ShieldCheck,
   AlertCircle
 } from 'lucide-react';
-import { fetchAllApplications } from '../lib/memberDb';
+import { fetchAllApplications, syncApplicationsFromFirestore } from '../lib/memberDb';
 import { generateApplicationPDF } from '../utils/pdfGenerator';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 
@@ -57,6 +57,11 @@ export default function ReviewApplications() {
   useEffect(() => {
     logPortalSectionAccess('Review Applications');
     const loadApps = async () => {
+      try {
+        await syncApplicationsFromFirestore();
+      } catch (e) {
+        console.warn('Sync from Firestore skipped or failed:', e);
+      }
       const res = await fetchAllApplications();
       if (res.success) {
         setApplications(res.applications);
