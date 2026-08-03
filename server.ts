@@ -80,8 +80,7 @@ async function initDb() {
   };
   const testUsers = ["admin@orderofkpi.org", "jack@orderofkpi.org"];
 
-  try {
-    // Try importing better-sqlite3 dynamically
+  const setupSqliteDb = async () => {
     const { default: Database } = await import("better-sqlite3");
     const dbPath = path.join(process.cwd(), "kpi_members_v2.db");
     sqliteDb = new Database(dbPath);
@@ -276,9 +275,29 @@ async function initDb() {
     sqliteDb.prepare("UPDATE candidates SET status = 'Inquiry' WHERE status = 'Under Review'").run();
 
     console.log("SQLite database synchronized with official active roster and candidates.");
-  } catch (err) {
-    console.log("SQLite loading failed, falling back to JSON database file.", err);
-    useSqlite = false;
+  };
+
+  try {
+    await setupSqliteDb();
+  } catch (err: any) {
+    console.warn("Initial SQLite database loading failed. Cleaning corrupted database image and re-initializing...", err?.message || err);
+    try {
+      if (sqliteDb) {
+        try { sqliteDb.close(); } catch (_) {}
+        sqliteDb = null;
+      }
+      const dbPath = path.join(process.cwd(), "kpi_members_v2.db");
+      if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
+      if (fs.existsSync(dbPath + "-wal")) fs.unlinkSync(dbPath + "-wal");
+      if (fs.existsSync(dbPath + "-shm")) fs.unlinkSync(dbPath + "-shm");
+
+      await setupSqliteDb();
+      useSqlite = true;
+    } catch (retryErr) {
+      console.warn("SQLite database re-initialization failed, falling back to JSON database file:", retryErr);
+      useSqlite = false;
+      sqliteDb = null;
+    }
   }
 
   // Always ensure JSON database is seeded, synchronized, and available as a safe fallback/primary option
