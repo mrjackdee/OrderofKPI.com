@@ -12,6 +12,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { logPortalSectionAccess } from '../lib/auditLogger';
+import MemberHeader from '../components/MemberHeader';
 
 export default function MemberPortal() {
   const userRole = sessionStorage.getItem('userRole');
@@ -49,22 +50,23 @@ export default function MemberPortal() {
         initial="hidden"
         animate="visible"
         variants={containerVariants}
-        className="w-full max-w-7xl mx-auto px-6 py-12 md:py-24 space-y-24"
+        className="w-full max-w-7xl mx-auto px-6 py-6 md:py-12 space-y-12"
       >
+        <motion.div variants={itemVariants}>
+          <MemberHeader />
+        </motion.div>
+
         {/* Header Section */}
-        <motion.div variants={itemVariants} className="text-center space-y-6">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold/10 border border-gold/20 rounded-full mb-4">
+        <motion.div variants={itemVariants} className="text-center space-y-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold/10 border border-gold/20 rounded-full mb-1">
             <ShieldCheck size={14} className="text-gold" />
             <span className="text-[10px] font-bold text-ivy uppercase tracking-[0.2em]">
               Secure Member Access
             </span>
           </div>
-          <h1 className="text-5xl md:text-7xl font-display font-bold uppercase tracking-tighter text-ivy">
-            Member <span className="text-gold">Portal</span>
+          <h1 className="text-5xl md:text-6xl font-display font-bold uppercase tracking-tighter text-ivy">
+            Membership <span className="text-gold">Portal</span>
           </h1>
-          <p className="text-ivy/60 text-lg md:text-xl font-body max-w-2xl mx-auto leading-relaxed">
-            Welcome back. Access organizational tools, collaborate with members, and manage administrative workflows.
-          </p>
         </motion.div>
 
         {/* Core Member Tools Grid */}
