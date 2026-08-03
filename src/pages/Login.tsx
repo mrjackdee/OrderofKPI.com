@@ -116,7 +116,7 @@ export default function Login() {
 
           <div className="text-center mb-6">
             <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-widest mb-2">
-              Member Portal: <span className="text-primary">Secure Access</span>
+              Member Portal
             </h1>
           </div>
 
