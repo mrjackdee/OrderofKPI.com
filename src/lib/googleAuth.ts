@@ -1,9 +1,5 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
-import firebaseConfig from '../../firebase-applet-config.json';
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+import { auth } from './firebase';
+import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
 
 const provider = new GoogleAuthProvider();
 // Request Workspace scopes
@@ -14,6 +10,32 @@ provider.addScope('https://www.googleapis.com/auth/meetings.space.readonly');
 provider.addScope('https://www.googleapis.com/auth/documents');
 provider.addScope('https://www.googleapis.com/auth/presentations');
 provider.addScope('https://www.googleapis.com/auth/forms.body');
+
+// Google Classroom Scopes
+provider.addScope('https://www.googleapis.com/auth/classroom.addons.student');
+provider.addScope('https://www.googleapis.com/auth/classroom.addons.teacher');
+provider.addScope('https://www.googleapis.com/auth/classroom.announcements');
+provider.addScope('https://www.googleapis.com/auth/classroom.announcements.readonly');
+provider.addScope('https://www.googleapis.com/auth/classroom.courses');
+provider.addScope('https://www.googleapis.com/auth/classroom.courses.readonly');
+provider.addScope('https://www.googleapis.com/auth/classroom.coursework.me');
+provider.addScope('https://www.googleapis.com/auth/classroom.coursework.me.readonly');
+provider.addScope('https://www.googleapis.com/auth/classroom.coursework.students');
+provider.addScope('https://www.googleapis.com/auth/classroom.coursework.students.readonly');
+provider.addScope('https://www.googleapis.com/auth/classroom.courseworkmaterials');
+provider.addScope('https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly');
+provider.addScope('https://www.googleapis.com/auth/classroom.guardianlinks.me.readonly');
+provider.addScope('https://www.googleapis.com/auth/classroom.guardianlinks.students');
+provider.addScope('https://www.googleapis.com/auth/classroom.guardianlinks.students.readonly');
+provider.addScope('https://www.googleapis.com/auth/classroom.profile.emails');
+provider.addScope('https://www.googleapis.com/auth/classroom.profile.photos');
+provider.addScope('https://www.googleapis.com/auth/classroom.push-notifications');
+provider.addScope('https://www.googleapis.com/auth/classroom.rosters');
+provider.addScope('https://www.googleapis.com/auth/classroom.rosters.readonly');
+provider.addScope('https://www.googleapis.com/auth/classroom.student-submissions.me.readonly');
+provider.addScope('https://www.googleapis.com/auth/classroom.student-submissions.students.readonly');
+provider.addScope('https://www.googleapis.com/auth/classroom.topics');
+provider.addScope('https://www.googleapis.com/auth/classroom.topics.readonly');
 
 let isSigningIn = false;
 let cachedAccessToken: string | null = null;

@@ -34,6 +34,7 @@ import ReviewApplications from './pages/ReviewApplications';
 import CommitteeChairDashboard from './pages/CommitteeChairDashboard';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
+import ClassroomPortal from './pages/ClassroomPortal';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -60,6 +61,7 @@ export default function App() {
           <Route path="selection-voting" element={<ProtectedRoute><SelectionVoting /></ProtectedRoute>} />
           <Route path="constitution" element={<ProtectedRoute><Constitution /></ProtectedRoute>} />
           <Route path="intake-calendar" element={<ProtectedRoute><IntakeCalendar /></ProtectedRoute>} />
+          <Route path="classroom-portal" element={<ProtectedRoute><ClassroomPortal /></ProtectedRoute>} />
           <Route path="gantt-chart" element={<ProtectedRoute allowedRoles={['admin', 'officer', 'Membership Committee', 'Membership Committee Chair', 'member']}><GanttChart /></ProtectedRoute>} />
           <Route path="login" element={<Login />} />
           <Route path="applicant-login" element={<ApplicantLogin />} />

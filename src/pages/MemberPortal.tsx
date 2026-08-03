@@ -9,7 +9,8 @@ import {
   Award,
   Settings,
   LayoutGrid,
-  ChevronRight
+  ChevronRight,
+  GraduationCap
 } from 'lucide-react';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import MemberHeader from '../components/MemberHeader';

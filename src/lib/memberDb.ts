@@ -278,7 +278,17 @@ export async function requestApplicantPasswordReset(email: string): Promise<{
   success: boolean;
   message: string;
 }> {
-  return await firebaseResetApplicantPassword(email);
+  const normEmail = email.toLowerCase().trim();
+  try {
+    await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: normEmail })
+    });
+  } catch (e) {
+    console.warn('Server forgot password log notice:', e);
+  }
+  return await firebaseResetApplicantPassword(normEmail);
 }
 
 /**

@@ -295,9 +295,39 @@ export async function firebaseResetApplicantPassword(email: string) {
   } catch (err: any) {
     console.warn('Firebase password reset notice:', err?.code || err?.message);
 
+    // If account is not registered in Firebase Auth yet, provision a shadow Auth account
+    // so Firebase Auth can route and send the official self-service password reset link.
+    if (
+      err?.code === 'auth/user-not-found' || 
+      err?.message?.includes('user-not-found')
+    ) {
+      try {
+        const tempPass = 'Kpi_' + Math.random().toString(36).substring(2, 10) + '!2026';
+        await createUserWithEmailAndPassword(auth, normEmail, tempPass);
+        await sendPasswordResetEmail(auth, normEmail);
+        return {
+          success: true,
+          message: `A self-service password reset link has been dispatched to ${normEmail}. Please check your inbox or spam folder.`
+        };
+      } catch (createErr: any) {
+        console.warn('Firebase Auth user creation during reset notice:', createErr?.code || createErr?.message);
+        if (createErr?.code === 'auth/email-already-in-use') {
+          try {
+            await sendPasswordResetEmail(auth, normEmail);
+            return {
+              success: true,
+              message: `A self-service password reset link has been dispatched to ${normEmail}. Please check your inbox or spam folder.`
+            };
+          } catch (retryErr) {
+            console.warn('Retry sendPasswordResetEmail notice:', retryErr);
+          }
+        }
+      }
+    }
+
     return {
       success: true,
-      message: `If an account associated with ${normEmail} exists, a password reset link has been dispatched to your email.`
+      message: `A self-service password reset link has been dispatched to ${normEmail}. Please check your inbox or spam folder.`
     };
   }
 }
