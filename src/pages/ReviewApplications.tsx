@@ -124,8 +124,8 @@ export default function ReviewApplications() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="relative group">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full md:w-auto">
+          <div className="relative group w-full sm:w-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ivy/30 group-focus-within:text-ivy transition-colors" size={18} />
             <input 
               type="text" 
@@ -138,7 +138,7 @@ export default function ReviewApplications() {
           <select 
             value={statusFilter}
             onChange={(e: any) => setStatusFilter(e.target.value)}
-            className="px-6 py-3.5 bg-white border border-gold/20 rounded-2xl text-ivy text-sm focus:outline-none focus:border-gold transition-all appearance-none cursor-pointer shadow-soft"
+            className="w-full sm:w-auto px-6 py-3.5 bg-white border border-gold/20 rounded-2xl text-ivy text-sm focus:outline-none focus:border-gold transition-all cursor-pointer shadow-soft"
           >
             <option value="all">All Statuses</option>
             <option value="submitted">Submitted</option>
