@@ -28,7 +28,6 @@ import GanttChart from './pages/GanttChart';
 import MemberPortal from './pages/MemberPortal';
 import MemberDirectory from './pages/MemberDirectory';
 import CandidateTracker from './pages/CandidateTracker';
-import MeetingMinutes from './pages/MeetingMinutes';
 import SelectionVoting from './pages/SelectionVoting';
 import Application from './pages/Application';
 import ReviewApplications from './pages/ReviewApplications';
@@ -56,21 +55,20 @@ export default function App() {
           <Route path="congratulations" element={<ProtectedRoute><Congratulations /></ProtectedRoute>} />
           <Route path="elections" element={<ProtectedRoute><Elections /></ProtectedRoute>} />
           <Route path="voting-portal" element={<ProtectedRoute><VotingPortal /></ProtectedRoute>} />
-          <Route path="admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-          <Route path="candidate-tracker" element={<ProtectedRoute><CandidateTracker /></ProtectedRoute>} />
+          <Route path="admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="candidate-tracker" element={<ProtectedRoute allowedRoles={['admin', 'officer', 'Membership Committee', 'Membership Committee Chair']}><CandidateTracker /></ProtectedRoute>} />
           <Route path="selection-voting" element={<ProtectedRoute><SelectionVoting /></ProtectedRoute>} />
           <Route path="constitution" element={<ProtectedRoute><Constitution /></ProtectedRoute>} />
           <Route path="intake-calendar" element={<ProtectedRoute><IntakeCalendar /></ProtectedRoute>} />
-          <Route path="gantt-chart" element={<ProtectedRoute><GanttChart /></ProtectedRoute>} />
+          <Route path="gantt-chart" element={<ProtectedRoute allowedRoles={['admin', 'officer', 'Membership Committee', 'Membership Committee Chair', 'member']}><GanttChart /></ProtectedRoute>} />
           <Route path="login" element={<Login />} />
           <Route path="applicant-login" element={<ApplicantLogin />} />
           <Route path="applicant-portal" element={<ProtectedRoute><ApplicantPortal /></ProtectedRoute>} />
           <Route path="financial-roster" element={<ProtectedRoute><FinancialRoster /></ProtectedRoute>} />
           <Route path="member-directory" element={<ProtectedRoute><MemberDirectory /></ProtectedRoute>} />
-          <Route path="meeting-minutes" element={<ProtectedRoute><MeetingMinutes /></ProtectedRoute>} />
           <Route path="membership-application" element={<ProtectedRoute><Application /></ProtectedRoute>} />
-          <Route path="review-applications" element={<ProtectedRoute><ReviewApplications /></ProtectedRoute>} />
-          <Route path="chair-dashboard" element={<ProtectedRoute><CommitteeChairDashboard /></ProtectedRoute>} />
+          <Route path="review-applications" element={<ProtectedRoute allowedRoles={['admin', 'officer', 'Membership Committee', 'Membership Committee Chair']}><ReviewApplications /></ProtectedRoute>} />
+          <Route path="chair-dashboard" element={<ProtectedRoute allowedRoles={['admin', 'officer', 'Membership Committee Chair']}><CommitteeChairDashboard /></ProtectedRoute>} />
           <Route path="privacy-policy" element={<PrivacyPolicy />} />
           <Route path="terms-of-service" element={<TermsOfService />} />
         </Route>

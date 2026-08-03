@@ -4,18 +4,13 @@ import { Link, Navigate } from 'react-router-dom';
 import { 
   ShieldCheck,
   Users,
-  LayoutDashboard,
   CalendarDays,
-  FileSpreadsheet,
-  ArrowRight,
   ClipboardCheck,
   Award,
   Settings,
   LayoutGrid,
-  ChevronRight,
-  FileText
+  ChevronRight
 } from 'lucide-react';
-import GooglePickerButton from '../components/GooglePickerButton';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 
 export default function MemberPortal() {
@@ -33,7 +28,6 @@ export default function MemberPortal() {
   const isAdmin = userRole === 'admin' || userEmail?.toLowerCase() === 'admin@orderofkpi.org';
   const isChair = userEmail?.toLowerCase() === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair' || normalizedRole.includes('chair') || isAdmin;
   const isMembershipCommittee = userRole === 'Membership Committee' || normalizedRole.includes('membership committee') || normalizedRole.includes('committee') || isChair || isAdmin;
-  const isAdminOrOfficer = (userRole && userRole !== 'member' && !isApplicant) || isMembershipCommittee || isAdmin;
 
   React.useEffect(() => {
     logPortalSectionAccess('Member Portal');
@@ -73,80 +67,63 @@ export default function MemberPortal() {
           </p>
         </motion.div>
 
-        {/* Secondary Resources */}
-        <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Drive Browser Card */}
-          <div className="lg:col-span-1 bg-white border border-gold/20 rounded-lg p-10 flex flex-col justify-between items-start space-y-12 shadow-soft">
-            <div className="space-y-4">
-              <h3 className="text-ivy text-2xl font-display font-bold uppercase tracking-tight">Archives</h3>
-              <p className="text-ivy/60 text-sm leading-relaxed font-body">
-                Securely browse and manage organizational records directly from your Google Drive integration.
-              </p>
+        {/* Core Member Tools Grid */}
+        <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Link
+            to="/member-directory"
+            className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
+          >
+            <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
+              <Users size={28} />
             </div>
-            <GooglePickerButton 
-              className="w-full bg-ivy text-cream hover:brightness-110 transition-all shadow-lg py-4 font-bold uppercase tracking-widest text-xs"
-              onFileSelect={(file) => window.open(file.url, '_blank')}
-            />
-          </div>
+            <div>
+              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Membership Roster</h4>
+              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Member Directory</p>
+            </div>
+          </Link>
 
-          {/* Quick Links / Status Card */}
-          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Link
-              to="/member-directory"
-              className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
-            >
-              <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
-                <Users size={28} />
-              </div>
-              <div>
-                <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Membership Roster</h4>
-                <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Member Directory</p>
-              </div>
-            </Link>
+          <Link
+            to="/intake-calendar"
+            className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
+          >
+            <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
+              <CalendarDays size={28} />
+            </div>
+            <div>
+              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Intake Calendar</h4>
+              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Process Schedule</p>
+            </div>
+          </Link>
 
-            <Link
-              to="/intake-calendar"
-              className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
-            >
-              <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
-                <CalendarDays size={28} />
-              </div>
-              <div>
-                <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Intake Calendar</h4>
-                <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Process Schedule</p>
-              </div>
-            </Link>
+          <Link
+            to="/financial-roster"
+            className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
+          >
+            <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
+              <ClipboardCheck size={28} />
+            </div>
+            <div>
+              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Financial Status</h4>
+              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Dues Verification</p>
+            </div>
+          </Link>
 
-            <Link
-              to="/financial-roster"
-              className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
-            >
-              <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
-                <ClipboardCheck size={28} />
-              </div>
-              <div>
-                <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Financial Status</h4>
-                <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Dues Verification</p>
-              </div>
-            </Link>
-
-            <Link
-              to="/selection-voting"
-              className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
-            >
-              <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
-                <Award size={28} />
-              </div>
-              <div>
-                <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Voting Portal</h4>
-                <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Selection Committee</p>
-              </div>
-            </Link>
-          </div>
+          <Link
+            to="/selection-voting"
+            className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
+          >
+            <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
+              <Award size={28} />
+            </div>
+            <div>
+              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Voting Portal</h4>
+              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Selection Committee</p>
+            </div>
+          </Link>
         </motion.div>
 
         {/* Administrative Tools */}
-        {(isAdminOrOfficer || isMembershipCommittee) && (
+        {!isApplicant && (
           <motion.section variants={itemVariants} className="mb-20">
             <h2 className="text-2xl font-display text-ivy mb-8 uppercase tracking-widest border-b border-gold/20 pb-4">Administrative Tools</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -157,7 +134,7 @@ export default function MemberPortal() {
                   icon: Settings, 
                   path: '/admin-dashboard',
                   color: 'bg-ivy text-cream',
-                  roles: ['admin', 'officer']
+                  roles: ['admin']
                 },
                 { 
                   title: 'Candidate Tracker', 
@@ -173,15 +150,7 @@ export default function MemberPortal() {
                   icon: LayoutGrid, 
                   path: '/gantt-chart',
                   color: 'bg-ivy text-cream',
-                  roles: ['admin', 'officer']
-                },
-                { 
-                  title: 'Meeting Minutes', 
-                  desc: 'AI-powered minutes generator.', 
-                  icon: FileText, 
-                  path: '/meeting-minutes',
-                  color: 'bg-gold text-ivy',
-                  roles: ['admin', 'officer']
+                  roles: ['admin', 'officer', 'Membership Committee', 'Membership Committee Chair', 'member']
                 },
                 { 
                   title: 'Review Applications', 
@@ -203,9 +172,16 @@ export default function MemberPortal() {
               .filter(tool => {
                 if (!tool.roles) return true;
                 if (isAdmin) return true;
+                
+                // Check direct role inclusion
                 if (tool.roles.includes(userRole || '')) return true;
-                if (isChair && tool.roles.includes('Membership Committee Chair')) return true;
-                if (isMembershipCommittee && !isChair && tool.roles.includes('Membership Committee') && !tool.roles.includes('Membership Committee Chair')) return true;
+                
+                // Chair falls back to Committee actions
+                if (isChair && (tool.roles.includes('Membership Committee Chair') || tool.roles.includes('Membership Committee'))) return true;
+                
+                // Committee members match committee roles
+                if (isMembershipCommittee && tool.roles.includes('Membership Committee')) return true;
+                
                 return false;
               })
               .map((tool) => (
