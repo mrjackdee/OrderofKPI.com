@@ -1,10 +1,12 @@
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { 
   firebaseRegisterApplicant, 
   firebaseLoginApplicant, 
   firebaseResetApplicantPassword, 
   firebaseSaveApplication, 
   firebaseFetchApplication,
-  firebaseFetchAllApplications
+  firebaseFetchAllApplications,
+  auth
 } from './firebase';
 
 export interface MemberUser {
@@ -108,6 +110,32 @@ export async function performHybridLogin(email: string, pass: string): Promise<{
           user: data.user
         };
       } else {
+        // Fallback: If server rejects password, check if they reset it via Firebase
+        try {
+          await signInWithEmailAndPassword(auth, normalizedEmail, pass);
+          // Firebase Auth succeeded. Lookup member directory.
+          const member = defaultMembers.find(m => m.email.toLowerCase() === normalizedEmail) || 
+                         prospectiveMembers.find(m => m.email.toLowerCase() === normalizedEmail);
+          
+          if (member) {
+            const isChanged = localStorage.getItem(`kpi_password_changed_${normalizedEmail}`) === 'true';
+            return {
+              success: true,
+              message: 'Login successful via fallback authentication',
+              user: {
+                email: member.email,
+                name: member.name,
+                firstName: member.name.split(' ')[0],
+                role: member.role,
+                title: member.title,
+                isFirstLogin: !isChanged
+              }
+            };
+          }
+        } catch (firebaseErr) {
+          // Fall through to error
+        }
+        
         return {
           success: false,
           message: data.message || 'Invalid email or password'
@@ -235,7 +263,7 @@ export async function performApplicantLogin(email: string, pass: string): Promis
   }
 
   // 3. Fallback to client-side candidate directory validation
-  const clientRes = performClientSideLogin(normalizedEmail, pass);
+  const clientRes = await performClientSideLogin(normalizedEmail, pass);
   if (clientRes.success) {
     return clientRes;
   }
@@ -318,7 +346,7 @@ export async function changeApplicantEmail(
 }
 
 // Client-Side Authentication Fallbacks
-function performClientSideLogin(email: string, pass: string) {
+async function performClientSideLogin(email: string, pass: string) {
   const normEmail = email.toLowerCase().trim();
   const member = defaultMembers.find(m => m.email.toLowerCase() === normEmail) || 
                  prospectiveMembers.find(m => m.email.toLowerCase() === normEmail);
@@ -333,10 +361,16 @@ function performClientSideLogin(email: string, pass: string) {
   const initialPass = INITIAL_CANDIDATES_PASSWORDS[normEmail] || 'atlanta';
   const savedPass = localStorage.getItem(`kpi_client_password_${normEmail}`) || initialPass;
   if (savedPass !== pass) {
-    return {
-      success: false,
-      message: 'Incorrect password. Please verify your password or use the reset password feature.'
-    };
+    // Check if they reset their password via Firebase
+    try {
+      await signInWithEmailAndPassword(auth, normEmail, pass);
+      // Firebase login succeeded
+    } catch (err) {
+      return {
+        success: false,
+        message: 'Incorrect password. Please verify your password or use the reset password feature.'
+      };
+    }
   }
 
   const isChanged = localStorage.getItem(`kpi_password_changed_${normEmail}`) === 'true';
