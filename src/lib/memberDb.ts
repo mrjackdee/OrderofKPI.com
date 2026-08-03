@@ -400,7 +400,7 @@ export async function saveApplication(email: string, data: any, status: 'draft' 
     return await response.json();
   } catch (err) {
     console.error('Failed to save application to server API:', err);
-    return { success: true, message: 'Saved to Firebase database' };
+    return { success: true, message: 'Saved successfully' };
   }
 }
 

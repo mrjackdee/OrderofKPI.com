@@ -187,6 +187,18 @@ export default function ApplicantLogin() {
                 </>
               )}
             </motion.button>
+
+            {mode === 'reset' && (
+              <div className="text-center mt-4">
+                <button
+                  type="button"
+                  onClick={() => { setMode('login'); setError(''); setSuccessMsg(''); }}
+                  className="text-xs text-ivy/70 hover:text-ivy uppercase tracking-wider font-bold transition-colors"
+                >
+                  Return to Login
+                </button>
+              </div>
+            )}
           </form>
         </div>
       </motion.div>

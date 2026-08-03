@@ -74,7 +74,7 @@ export async function firebaseRegisterApplicant(name: string, email: string, pas
 
     return {
       success: true,
-      message: 'Account created successfully in Firebase Database',
+      message: 'Account created successfully',
       user: {
         uid: user.uid,
         email: normEmail,
@@ -113,7 +113,7 @@ export async function firebaseRegisterApplicant(name: string, email: string, pas
 
     return {
       success: true,
-      message: 'Candidate account saved in Firebase Database',
+      message: 'Candidate account saved',
       user: {
         uid: 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
         email: normEmail,
@@ -180,7 +180,7 @@ export async function firebaseLoginApplicant(email: string, pass: string) {
 
     return {
       success: true,
-      message: 'Firebase login successful',
+      message: 'Login successful',
       user: {
         uid: user.uid,
         email: normEmail,
@@ -209,7 +209,7 @@ export async function firebaseLoginApplicant(email: string, pass: string) {
       if (validPass && pass === validPass) {
         return {
           success: true,
-          message: 'Authenticated via Firebase Database',
+          message: 'Authenticated successfully',
           user: {
             uid: candidateData.uid || 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
             email: normEmail,
@@ -242,7 +242,7 @@ export async function firebaseLoginApplicant(email: string, pass: string) {
 
         return {
           success: true,
-          message: 'Authenticated via candidate account in Firebase Database',
+          message: 'Authenticated via candidate account',
           user: {
             uid: 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
             email: normEmail,
@@ -290,14 +290,14 @@ export async function firebaseResetApplicantPassword(email: string) {
     await sendPasswordResetEmail(auth, normEmail);
     return {
       success: true,
-      message: `A self-service password reset link has been dispatched to ${normEmail} via Firebase. Please check your inbox or spam folder.`
+      message: `A self-service password reset link has been dispatched to ${normEmail}. Please check your inbox or spam folder.`
     };
   } catch (err: any) {
     console.warn('Firebase password reset notice:', err?.code || err?.message);
 
     return {
       success: true,
-      message: `If an account associated with ${normEmail} exists in Firebase, a password reset link has been dispatched to your email.`
+      message: `If an account associated with ${normEmail} exists, a password reset link has been dispatched to your email.`
     };
   }
 }
@@ -367,7 +367,7 @@ export async function firebaseSaveApplication(email: string, data: any, status: 
 
     return {
       success: true,
-      message: status === 'submitted' ? 'Application submitted to Firebase database' : 'Draft saved to Firebase database'
+      message: status === 'submitted' ? 'Application submitted successfully' : 'Draft saved successfully'
     };
   } catch (err: any) {
     console.error('Error saving to Firestore:', err);
