@@ -40,7 +40,15 @@ const defaultUsers = [
   { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus", intake_class: "Charter", financial_status: "active", industry: "Leadership" },
   { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active" },
   { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member", intake_class: "Spring '23", financial_status: "inactive", industry: "Arts" },
-  { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian", intake_class: "Fall '20", financial_status: "active", industry: "Journalism" }
+  { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian", intake_class: "Fall '20", financial_status: "active", industry: "Journalism" },
+  { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus", intake_class: "Charter", financial_status: "active" },
+  { name: "Alejandro Araujo", email: "alejandro.araujo@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active" },
+  { name: "Brandon Addison", email: "brandon.addison@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active" },
+  { name: "Demetrist Thomas", email: "demetrist.thomas@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active" },
+  { name: "Denzel Talley", email: "denzel.talley@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active" },
+  { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active" },
+  { name: "Kevin Jennings", email: "kevin.jennings@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active" },
+  { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active" }
 ];
 
 const initialCandidates = [
