@@ -610,7 +610,7 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-6 py-4">
                         <p className="font-bold text-gold">{member.title || '-'}</p>
-                        <p className="text-[10px] text-ivy/50">{member.intake_class || 'N/A'}</p>
+                        <p className="text-[10px] text-ivy/50">{member.intake_class || 'Member'}</p>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest ${
@@ -1027,7 +1027,7 @@ export default function AdminDashboard() {
                     value={editingMember?.intake_class || ''}
                     onChange={e => setEditingMember({...editingMember!, intake_class: e.target.value})}
                     className="w-full px-4 py-2.5 border border-gold/20 rounded-xl focus:ring-2 focus:ring-gold/20 outline-none"
-                    placeholder="e.g. Charter / Fall '24"
+                    placeholder="e.g. Member"
                   />
                 </div>
                 <div>

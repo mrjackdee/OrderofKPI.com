@@ -36,6 +36,19 @@ export default function MemberDirectory() {
     fetchMembers();
   }, [navigate]);
 
+  const isOfficer = (member: Member): boolean => {
+    if (!member) return false;
+    const role = (member.role || '').toLowerCase();
+    const title = (member.title || '').toLowerCase();
+    if (role === 'officer' || role === 'membership committee' || role === 'membership committee chair') {
+      return true;
+    }
+    if (title && title !== 'administrator' && title !== 'member' && title !== 'candidate') {
+      return true;
+    }
+    return false;
+  };
+
   const fetchMembers = async () => {
     try {
       const response = await fetch('/api/members');
@@ -116,16 +129,6 @@ export default function MemberDirectory() {
                 <option value="admin">Admins</option>
                 <option value="member">Members</option>
               </select>
-              <select
-                value={selectedClass}
-                onChange={(e) => setSelectedClass(e.target.value)}
-                className="w-full sm:w-auto px-4 py-2 border border-ivy/10 rounded-md bg-white text-ivy outline-none"
-              >
-                <option value="all">All Classes</option>
-                {intakeClasses.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
             </div>
           </div>
         </div>
@@ -156,6 +159,18 @@ export default function MemberDirectory() {
                     <p className="text-gold font-semibold text-sm uppercase tracking-wider mb-2">
                       {member.title || (member.role === 'admin' ? 'Administrator' : member.role)}
                     </p>
+                    
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-green-50 border border-green-200 text-[9px] font-black uppercase tracking-widest text-green-700">
+                        <CheckCircle2 className="w-2.5 h-2.5" /> Member
+                      </span>
+                      {isOfficer(member) && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gold/10 border border-gold/20 text-[9px] font-black uppercase tracking-widest text-[#B8860B]">
+                          Officer
+                        </span>
+                      )}
+                    </div>
+
                     <div className="flex items-center gap-2 text-ivy/60 text-sm">
                       <Mail className="w-4 h-4" />
                       <span className="truncate">{member.email}</span>
@@ -165,10 +180,10 @@ export default function MemberDirectory() {
 
                 <div className="mt-6 pt-6 border-t border-cream grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-[10px] uppercase tracking-widest text-ivy/40 font-bold mb-1">Intake Class</p>
+                    <p className="text-[10px] uppercase tracking-widest text-ivy/40 font-bold mb-1">Membership</p>
                     <div className="flex items-center gap-1 text-ivy">
                       <History className="w-3 h-3 text-gold" />
-                      <span className="text-sm font-medium">{member.intake_class || 'N/A'}</span>
+                      <span className="text-sm font-medium">Member</span>
                     </div>
                   </div>
                   <div>

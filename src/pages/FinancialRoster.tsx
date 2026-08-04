@@ -33,6 +33,19 @@ export default function FinancialRoster() {
     fetchMembers();
   }, [navigate]);
 
+  const isOfficer = (member: Member): boolean => {
+    if (!member) return false;
+    const role = (member.role || '').toLowerCase();
+    const title = (member.title || '').toLowerCase();
+    if (role === 'officer' || role === 'membership committee' || role === 'membership committee chair') {
+      return true;
+    }
+    if (title && title !== 'administrator' && title !== 'member' && title !== 'candidate') {
+      return true;
+    }
+    return false;
+  };
+
   const parseCSVLine = (line: string): string[] => {
     const row: string[] = [];
     let current = '';
@@ -271,10 +284,15 @@ export default function FinancialRoster() {
                     {member.title}
                   </div>
                 )}
-                <div className="flex items-center gap-2 text-[#B8860B] text-[10px] font-black uppercase tracking-widest mb-4">
-                  <span>{member.intake_class || 'Member'}</span>
-                  <span className="w-1 h-1 rounded-full bg-[#B8860B]/50" />
-                  <span>{member.role}</span>
+                <div className="flex flex-wrap gap-1.5 mb-4 mt-2">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-green-50 border border-green-200 text-[9px] font-black uppercase tracking-widest text-green-700">
+                    Member
+                  </span>
+                  {isOfficer(member) && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#B8860B]/10 border border-[#B8860B]/20 text-[9px] font-black uppercase tracking-widest text-[#B8860B]">
+                      Officer
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-2 mt-4 pt-4 border-t border-[#B8860B]/20">

@@ -27,28 +27,28 @@ interface UserRecord {
 }
 
 const defaultUsers = [
-  { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator", intake_class: "Charter", financial_status: "active", industry: "Technology" },
-  { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", intake_class: "Charter", financial_status: "active", industry: "Leadership" },
-  { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "member", intake_class: "Spring '24", financial_status: "active", industry: "Consulting" },
-  { name: "Jack Dee", email: "jack@orderofkpi.org", role: "member", intake_class: "Spring '24", financial_status: "active", industry: "Consulting" },
-  { name: "DeShaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee", intake_class: "Fall '22", financial_status: "active", industry: "Education" },
-  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member", intake_class: "Spring '18", financial_status: "active", industry: "Engineering" },
-  { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "Membership Committee", intake_class: "Fall '21", financial_status: "active", industry: "Management" },
-  { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos", intake_class: "Fall '19", financial_status: "active", industry: "Finance" },
-  { name: "Edward Cook", email: "edward.cook@orderofkpi.org", role: "officer", title: "Epistoleus", intake_class: "Spring '20", financial_status: "active", industry: "Law" },
-  { name: "Darron Jenkins", email: "darron.jenkins@orderofkpi.org", role: "officer", title: "Hodegos", intake_class: "Fall '21", financial_status: "active", industry: "Public Service" },
-  { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus", intake_class: "Charter", financial_status: "active", industry: "Leadership" },
-  { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active" },
-  { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member", intake_class: "Spring '23", financial_status: "inactive", industry: "Arts" },
-  { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian", intake_class: "Fall '20", financial_status: "active", industry: "Journalism" },
-  { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus", intake_class: "Charter", financial_status: "active" },
-  { name: "Alejandro Araujo", email: "alejandro.araujo@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active" },
-  { name: "Brandon Addison", email: "brandon.addison@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active" },
-  { name: "Demetrist Thomas", email: "demetrist.thomas@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active" },
-  { name: "Denzel Talley", email: "denzel.talley@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active" },
-  { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active" },
-  { name: "Kevin Jennings", email: "kevin.jennings@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active" },
-  { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member", intake_class: "Charter", financial_status: "active" }
+  { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator", intake_class: "", financial_status: "active", industry: "Technology" },
+  { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", intake_class: "", financial_status: "active", industry: "Leadership" },
+  { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "member", intake_class: "", financial_status: "active", industry: "Consulting" },
+  { name: "Jack Dee", email: "jack@orderofkpi.org", role: "member", intake_class: "", financial_status: "active", industry: "Consulting" },
+  { name: "DeShaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee", intake_class: "", financial_status: "active", industry: "Education" },
+  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member", intake_class: "", financial_status: "active", industry: "Engineering" },
+  { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "Membership Committee", intake_class: "", financial_status: "active", industry: "Management" },
+  { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos", intake_class: "", financial_status: "active", industry: "Finance" },
+  { name: "Edward Cook", email: "edward.cook@orderofkpi.org", role: "officer", title: "Epistoleus", intake_class: "", financial_status: "active", industry: "Law" },
+  { name: "Darron Jenkins", email: "darron.jenkins@orderofkpi.org", role: "officer", title: "Hodegos", intake_class: "", financial_status: "active", industry: "Public Service" },
+  { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus", intake_class: "", financial_status: "active", industry: "Leadership" },
+  { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
+  { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member", intake_class: "", financial_status: "inactive", industry: "Arts" },
+  { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian", intake_class: "", financial_status: "active", industry: "Journalism" },
+  { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus", intake_class: "", financial_status: "active" },
+  { name: "Alejandro Araujo", email: "alejandro.araujo@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
+  { name: "Brandon Addison", email: "brandon.addison@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
+  { name: "Demetrist Thomas", email: "demetrist.thomas@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
+  { name: "Denzel Talley", email: "denzel.talley@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
+  { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
+  { name: "Kevin Jennings", email: "kevin.jennings@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
+  { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" }
 ];
 
 const initialCandidates = [
@@ -203,6 +203,13 @@ async function initDb() {
       // Ignore
     }
 
+    // Force clear intake_class for all existing users to clean incorrect data
+    try {
+      sqliteDb.prepare("UPDATE users SET intake_class = ''").run();
+    } catch (e) {
+      console.error("Error clearing intake_class in DB:", e);
+    }
+
     // SQLite Cleanup (Only log, do not delete dynamically added members)
     const existingRows = sqliteDb.prepare("SELECT email FROM users").all() as { email: string }[];
     for (const row of existingRows) {
@@ -277,7 +284,7 @@ async function initDb() {
             role, title, intake_class, 
             financial_status
           )
-          VALUES (?, ?, ?, ?, 0, 'prospective', 'Candidate', 'FY27 Candidate', 'inactive')
+          VALUES (?, ?, ?, ?, 0, 'prospective', 'Candidate', '', 'inactive')
         `).run(emailNorm, c.name, firstName, passHash);
       } else {
         sqliteDb.prepare(`
@@ -673,7 +680,7 @@ async function startServer() {
           password_hash: passwordHash,
           is_first_login: 0,
           role: 'prospective',
-          intake_class: 'FY27 Candidate',
+          intake_class: '',
           financial_status: 'inactive'
         };
         fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
