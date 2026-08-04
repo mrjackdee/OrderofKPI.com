@@ -210,9 +210,9 @@ export default function ApplicantLogin() {
 
         <div className="mt-6 text-center bg-white border border-gold/30 rounded-2xl p-4 shadow-soft">
           <p className="text-xs text-ivy/80 leading-relaxed font-body">
-            Experiencing issues with the application portal? Please contact support at{' '}
-            <a href="mailto:info@orderofkpi.org" className="font-bold text-gold underline hover:text-ivy transition-colors">
-              info@orderofkpi.org
+            Technical or Portal Issues? Contact Our Support Team at{' '}
+            <a href="mailto:admin@orderofkpi.org" className="font-bold text-gold underline hover:text-ivy transition-colors">
+              admin@orderofkpi.org
             </a>
           </p>
         </div>

@@ -157,25 +157,50 @@ export async function firebaseLoginApplicant(email: string, pass: string) {
   }
 
   const initialCandidate = INITIAL_CANDIDATES_LIST[normEmail];
+  const clientPass = localStorage.getItem(`kpi_client_password_${normEmail}`);
 
+  // 1. Instant check against initial candidates or client password storage
+  if (initialCandidate && pass === initialCandidate.pass) {
+    return {
+      success: true,
+      message: 'Authenticated successfully',
+      user: {
+        uid: 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
+        email: normEmail,
+        name: initialCandidate.name,
+        firstName: initialCandidate.name.split(' ')[0],
+        role: 'prospective',
+        isFirstLogin: false
+      }
+    };
+  }
+
+  if (clientPass && pass === clientPass) {
+    const name = localStorage.getItem(`kpi_client_name_${normEmail}`) || normEmail.split('@')[0];
+    return {
+      success: true,
+      message: 'Authenticated successfully',
+      user: {
+        uid: 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
+        email: normEmail,
+        name,
+        firstName: name.split(' ')[0],
+        role: 'prospective',
+        isFirstLogin: false
+      }
+    };
+  }
+
+  // 2. Try Firebase Auth with a strict 1.5s timeout race
   try {
-    const userCred = await signInWithEmailAndPassword(auth, normEmail, pass);
+    const loginPromise = signInWithEmailAndPassword(auth, normEmail, pass);
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500));
+    
+    const userCred: any = await Promise.race([loginPromise, timeoutPromise]);
     const user = userCred.user;
 
-    // Fetch account details from Firestore
     let name = user.displayName || normEmail.split('@')[0];
     let firstName = name.split(' ')[0];
-
-    try {
-      const candidateDoc = await getDoc(doc(db, 'candidate_accounts', normEmail));
-      if (candidateDoc.exists()) {
-        const data = candidateDoc.data();
-        name = data.name || name;
-        firstName = data.firstName || firstName;
-      }
-    } catch (e) {
-      console.warn('Could not read candidate_accounts from Firestore:', e);
-    }
 
     return {
       success: true,
@@ -190,58 +215,11 @@ export async function firebaseLoginApplicant(email: string, pass: string) {
       }
     };
   } catch (err: any) {
-    console.warn('Firebase Auth login notice:', err?.code || err?.message);
-
-    // Fallback: Check Firestore database candidate_accounts collection
-    let candidateData: any = null;
-    try {
-      const candidateDoc = await getDoc(doc(db, 'candidate_accounts', normEmail));
-      if (candidateDoc.exists()) {
-        candidateData = candidateDoc.data();
-      }
-    } catch (e) {
-      console.warn('Firestore lookup error:', e);
-    }
-
-    if (candidateData) {
-      const validPass = candidateData.pass || (initialCandidate && initialCandidate.pass);
-      if (validPass && pass === validPass) {
+    if (initialCandidate) {
+      if (pass === initialCandidate.pass) {
         return {
           success: true,
           message: 'Authenticated successfully',
-          user: {
-            uid: candidateData.uid || 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
-            email: normEmail,
-            name: candidateData.name || (initialCandidate ? initialCandidate.name : normEmail.split('@')[0]),
-            firstName: candidateData.firstName || (candidateData.name ? candidateData.name.split(' ')[0] : normEmail.split('@')[0]),
-            role: 'prospective',
-            isFirstLogin: false
-          }
-        };
-      }
-    }
-
-    // Check initial candidates list
-    if (initialCandidate) {
-      if (pass === initialCandidate.pass) {
-        // Persist doc into Firestore database so candidate account is stored
-        try {
-          await setDoc(doc(db, 'candidate_accounts', normEmail), {
-            uid: 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
-            email: normEmail,
-            name: initialCandidate.name,
-            firstName: initialCandidate.name.split(' ')[0],
-            role: 'prospective',
-            pass: initialCandidate.pass,
-            createdAt: new Date().toISOString()
-          }, { merge: true });
-        } catch (e) {
-          console.warn('SetDoc notice:', e);
-        }
-
-        return {
-          success: true,
-          message: 'Authenticated via candidate account',
           user: {
             uid: 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
             email: normEmail,

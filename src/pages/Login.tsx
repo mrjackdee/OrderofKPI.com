@@ -250,6 +250,15 @@ export default function Login() {
             </Link>
           </div>
 
+          <div className="mt-6 text-center bg-black/40 border border-primary/20 rounded-2xl p-4">
+            <p className="text-xs text-primary/90 leading-relaxed font-body">
+              Technical or Portal Issues? Contact Our Support Team at{' '}
+              <a href="mailto:admin@orderofkpi.org" className="font-bold text-gold underline hover:text-white transition-colors">
+                admin@orderofkpi.org
+              </a>
+            </p>
+          </div>
+
           <div className="mt-8 pt-6 border-t border-silver/10 text-center">
             <p className="text-[10px] text-silver/40 uppercase tracking-wider leading-relaxed">
               Access is restricted to active members of The Order of KP. 
