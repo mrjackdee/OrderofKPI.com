@@ -347,25 +347,25 @@ export default function GanttChart() {
   };
 
   return (
-    <div className="min-h-screen bg-cream pb-20">
-      <div className="bg-ivy py-16 px-4 mb-12">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-          <div>
-            <h1 className="text-4xl md:text-5xl font-display text-cream mb-4">Process Timeline</h1>
-            <p className="text-cream/70 font-body max-w-2xl">
+    <div className="min-h-screen bg-cream pb-20 w-full overflow-x-hidden">
+      <div className="bg-ivy py-16 px-4 mb-12 w-full">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+          <div className="w-full md:w-auto">
+            <h1 className="text-4xl md:text-5xl font-display text-cream mb-4 break-words">Process Timeline</h1>
+            <p className="text-cream/70 font-body max-w-2xl break-words">
               FY27 Membership Intake Process (MIP) Strategic Roadmap. Visualizing every milestone from preparation to orientation.
             </p>
           </div>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4 w-full md:w-auto justify-start md:justify-end">
             <button 
               onClick={() => setViewMode(viewMode === 'chart' ? 'list' : 'chart')}
-              className="bg-cream/10 hover:bg-cream/20 text-cream p-3 rounded-md transition-all"
+              className="bg-cream/10 hover:bg-cream/20 text-cream p-3 rounded-md transition-all flex items-center justify-center"
             >
               {viewMode === 'chart' ? <List className="w-5 h-5" /> : <LayoutGrid className="w-5 h-5" />}
             </button>
             <button 
               onClick={exportRoadmap}
-              className="bg-gold text-ivy px-6 py-3 rounded-md font-bold uppercase tracking-widest text-xs flex items-center gap-2 hover:brightness-110 transition-all shadow-lg"
+              className="bg-gold text-ivy px-6 py-3 rounded-md font-bold uppercase tracking-widest text-xs flex items-center gap-2 hover:brightness-110 transition-all shadow-lg whitespace-nowrap"
             >
               <Download className="w-4 h-4" /> Export Roadmap
             </button>
@@ -373,13 +373,13 @@ export default function GanttChart() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="w-full max-w-7xl mx-auto px-4 overflow-hidden">
         {viewMode === 'chart' ? (
-          <div className="bg-white p-4 sm:p-8 rounded-lg border border-gold/20 shadow-soft overflow-x-auto" ref={containerRef}>
+          <div className="w-full max-w-full bg-white p-4 sm:p-8 rounded-lg border border-gold/20 shadow-soft overflow-x-auto" ref={containerRef}>
             <div className="sm:hidden text-center text-xs text-ivy/50 mb-4 flex items-center justify-center gap-1.5">
               <span>← Swipe horizontally to explore timeline →</span>
             </div>
-            <div className="w-full">
+            <div className="w-full overflow-x-auto">
               <svg ref={svgRef} className="max-w-none block"></svg>
             </div>
             
