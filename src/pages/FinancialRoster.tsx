@@ -114,15 +114,6 @@ export default function FinancialRoster() {
               <Users size={14} /> Member Directory
             </Link>
           </div>
-
-          <button 
-            onClick={handleSync}
-            disabled={isSyncing}
-            className="px-6 py-2 bg-gold text-ivy rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:brightness-110 transition-all disabled:opacity-50 shadow-lg"
-          >
-            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-            {isSyncing ? 'Syncing...' : 'Sync with Google Sheets'}
-          </button>
         </div>
 
       <div className="pt-8 pb-8 px-6 text-center">
@@ -137,16 +128,9 @@ export default function FinancialRoster() {
             <ShieldCheck className="text-[#1E3F20]" size={24} />
             <div className="h-px w-16 bg-[#B8860B]" />
           </div>
-          <h1 className="text-4xl md:text-6xl font-display text-[#1E3F20] tracking-wider mb-4 uppercase text-center max-w-4xl">
+          <h1 className="text-4xl md:text-6xl font-display text-[#1E3F20] tracking-wider uppercase text-center max-w-4xl">
             Financial Roster
           </h1>
-          <div className="flex items-center justify-center gap-4">
-            <div className="w-2 h-2 rounded-full bg-[#B8860B]" />
-            <p className="text-sm md:text-lg text-[#B8860B] font-medium tracking-[0.1em] md:tracking-[0.2em] uppercase">
-              Live Google Sheets Synchronization
-            </p>
-            <div className="w-2 h-2 rounded-full bg-[#B8860B]" />
-          </div>
         </motion.div>
       </div>
 
