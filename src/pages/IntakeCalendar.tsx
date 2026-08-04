@@ -11,21 +11,32 @@ import {
 import MemberHeader from '../components/MemberHeader';
 
 const events = [
-  { step: 1, title: 'Interest Meeting #1', date: 'Sun, Aug 2, 2026', time: '1:00 PM ET', category: 'Interest Meetings', icon: Users },
-  { step: 2, title: 'Interest Meeting #2', date: 'Mon, Aug 3, 2026', time: '9:08 PM ET', category: 'Interest Meetings', icon: Users },
-  { step: 3, title: 'Applications Distributed', date: 'Aug 2–3, 2026', time: 'After Interest Meetings', category: 'Applications & Scoring', icon: Mail },
-  { step: 4, title: 'Applications Due', date: 'Wed, Aug 5, 2026', time: '11:59 PM ET', category: 'Applications & Scoring', icon: ClipboardCheck },
-  { step: 5, title: 'Application Scoring', date: 'Aug 6–8, 2026', time: 'Committee Review', category: 'Applications & Scoring', icon: Edit3 },
-  { step: 6, title: 'Scoring Notifications & Tea Time Invites', date: 'Mon, Aug 10, 2026', time: 'Dispatched to Candidates', category: 'Applications & Scoring', icon: Star },
-  { step: 7, title: 'Tea Time Period & Facebook Group Opens', date: 'Aug 12–16, 2026', time: 'FB Group Opens Aug 12 (7:00 PM ET)', category: 'Tea Time', icon: Coffee },
-  { step: 8, title: 'Tea Time Zoom Call', date: 'Thu, Aug 13, 2026', time: '8:00 PM – 9:30 PM ET', category: 'Tea Time', icon: Video },
-  { step: 9, title: 'Candidate Interviews', date: 'Aug 19–21, 2026', time: '20 mins each (times TBD)', category: 'Interviews & Review', icon: UserCheck },
-  { step: 10, title: 'Makeup Interviews', date: 'Mon, Aug 24, 2026', time: 'If Needed', category: 'Interviews & Review', icon: UserCheck },
-  { step: 11, title: 'Interview Video Review', date: 'Aug 25–28, 2026', time: 'Review by Active Members', category: 'Interviews & Review', icon: Video },
-  { step: 12, title: 'MIP Voting Period', date: 'Aug 31 – Sep 2, 2026', time: 'Financial Members Voting', category: 'Voting & Next Steps', icon: ThumbsUp },
-  { step: 13, title: 'Candidate Notifications', date: 'Fri, Sep 4, 2026', time: 'Selection Dispatched', category: 'Voting & Next Steps', icon: Star },
-  { step: 14, title: 'No Contact Period Begins', date: 'Mon, Sep 7, 2026', time: 'Formal Restrictions', category: 'Voting & Next Steps', icon: Hand },
-  { step: 15, title: '1st Initiation Payment Due', date: 'Fri, Sep 11, 2026', time: 'Membership Due', category: 'Voting & Next Steps', icon: Wallet },
+  { step: 1, title: 'Interest Meeting #1', date: 'Sunday, August 2', time: '1:00 PM ET', category: 'Interest Meetings', icon: Users },
+  { step: 2, title: 'Interest Meeting #2', date: 'Monday, August 3', time: '9:08 PM ET', category: 'Interest Meetings', icon: Users },
+  { step: 3, title: 'Applications Distributed', date: 'After each interest meeting', time: 'Distributed to attendees', category: 'Applications & Scoring', icon: Mail },
+  { step: 4, title: 'Applications Due', date: 'Friday, August 7', time: '12:00 PM (noon) ET', category: 'Applications & Scoring', icon: ClipboardCheck },
+  { step: 5, title: 'Application Scoring', date: 'Friday, August 7 – Sunday, August 9', time: 'Scoring period', category: 'Applications & Scoring', icon: Edit3 },
+  { step: 6, title: 'Candidate Notifications & Tea Time Invites', date: 'Monday, August 10, 2026', time: 'Scoring removals & Tea Time invites', category: 'Applications & Scoring', icon: Star },
+  { step: 7, title: 'Tea Time Period', date: 'Wednesday, August 12 – Sunday, August 16', time: 'Tea Time period', category: 'Tea Time', icon: Coffee },
+  { step: 8, title: 'Facebook Group Opens', date: 'Wednesday, August 12 – Sunday, August 16', time: 'Opens Aug 12 at 7:00 PM ET', category: 'Tea Time', icon: Users },
+  { step: 9, title: 'Tea Time Zoom Call', date: 'Thursday, August 13', time: '8:00 PM – 9:30 PM ET', category: 'Tea Time', icon: Video },
+  { step: 10, title: 'Candidate Interviews', date: 'Wednesday, August 19 – Friday, August 21', time: '20 minutes each (times TBD)', category: 'Interviews & Review', icon: UserCheck },
+  { step: 11, title: 'Makeup Interviews', date: 'Monday, August 24', time: 'If needed', category: 'Interviews & Review', icon: UserCheck },
+  { step: 12, title: 'Interview Video Review', date: 'Tuesday, August 25 – Friday, August 28', time: 'Review by active members', category: 'Interviews & Review', icon: Video },
+  { step: 13, title: 'MIP Voting Period', date: 'Monday, August 31 – Wednesday, September 2', time: 'MIP voting period', category: 'Voting & Next Steps', icon: ThumbsUp },
+  { step: 14, title: 'Candidate Notifications', date: 'Friday, September 4', time: 'Candidate notifications', category: 'Voting & Next Steps', icon: Star },
+  { step: 15, title: 'No Contact Period Begins', date: 'Monday, September 7', time: 'No contact period begins', category: 'Voting & Next Steps', icon: Hand },
+  { step: 16, title: 'First Initiation Payment Due', date: 'Friday, September 11', time: 'Due from candidates for membership', category: 'Voting & Next Steps', icon: Wallet },
+];
+
+const deanEvents = [
+  { step: 1, title: 'Chapter Notification & Nominations Open', date: 'Friday, August 7', time: 'Chapter notification of Dean process and opening of nomination submissions', icon: Mail },
+  { step: 2, title: 'Dean Nominations Accepted', date: 'Monday, August 10 – Wednesday, August 12', time: 'Closes 9:08 PM ET on August 12', icon: Edit3 },
+  { step: 3, title: 'Special Meeting', date: 'Sunday, August 16', time: '7:00 PM ET', icon: Users },
+  { step: 4, title: 'Dean Team Voting', date: 'Monday, August 17 – Wednesday, August 19', time: 'Dean team voting', icon: ThumbsUp },
+  { step: 5, title: 'Announcement of Dean', date: 'Friday, August 21', time: 'Announcement of Dean', icon: Star },
+  { step: 6, title: 'Dean Selects Assistant Dean & Team', date: 'Monday, August 24 – Friday, August 28', time: 'Assistant Dean of Pledges and Dean team', icon: UserCheck },
+  { step: 7, title: 'Drop Date for Dean Team', date: 'Friday, August 28', time: 'Drop date for Dean team', icon: Shield },
 ];
 
 export default function IntakeCalendar() {
@@ -217,6 +228,36 @@ export default function IntakeCalendar() {
         doc.text(`${ev.date} | ${ev.time}`, 120, y);
         y += 6;
       });
+      y += 6;
+    });
+
+    // Dean Process Timeline in PDF
+    if (y > 250) {
+      doc.addPage();
+      y = 20;
+    }
+    doc.setFillColor(245, 243, 230);
+    doc.rect(14, y - 5, 182, 8, 'F');
+    doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(30, 63, 32);
+    doc.text('Dean Process Timeline', 16, y);
+    y += 8;
+
+    deanEvents.forEach((ev) => {
+      if (y > 275) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(30, 63, 32);
+      doc.text(`• #${ev.step} - ${ev.title}`, 18, y);
+
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`${ev.date} | ${ev.time}`, 120, y);
       y += 6;
     });
 
@@ -555,6 +596,45 @@ export default function IntakeCalendar() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Dean Process Timeline Section */}
+            <div className="bg-[#FFFFFF] border border-[#B8860B]/30 rounded-2xl p-6 md:p-8 shadow-[0_6px_24px_rgba(30,63,32,0.05)] mt-12">
+              <h2 className="text-xl md:text-2xl font-serif text-[#1E3F20] font-bold tracking-wide mb-6 border-b border-[#B8860B]/20 pb-3 flex items-center gap-3">
+                <span className="w-3 h-3 rounded-full bg-[#1E3F20]" />
+                Dean Process Timeline
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {deanEvents.map((event) => (
+                  <div 
+                    key={event.step}
+                    className="bg-[#FDFCF0] border border-[#B8860B]/30 rounded-xl p-5 flex flex-col justify-between hover:border-[#1E3F20] transition-all duration-300 relative group shadow-sm hover:shadow-md"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="bg-[#1E3F20] text-white text-xs font-bold px-2.5 py-1 rounded-full">
+                          Dean Step #{event.step}
+                        </span>
+                        <event.icon size={22} className="text-[#B8860B] group-hover:scale-110 transition-transform" />
+                      </div>
+                      
+                      <h3 className="text-[#1E3F20] font-bold text-base mb-2 leading-snug">
+                        {event.title}
+                      </h3>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-[#B8860B]/20">
+                      <p className="text-[#1E3F20] font-bold text-xs uppercase tracking-wider">
+                        {event.date}
+                      </p>
+                      <p className="text-[#B8860B] text-xs font-semibold mt-0.5">
+                        {event.time}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
           </div>
