@@ -98,11 +98,16 @@ export async function performHybridLogin(email: string, pass: string): Promise<{
   const normalizedEmail = email.toLowerCase().trim();
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
+
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: normalizedEmail, password: pass }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
 
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
