@@ -91,7 +91,7 @@ export default function MemberDirectory() {
             animate={{ opacity: 1, y: 0 }}
             className="text-4xl md:text-5xl font-display text-cream mb-4"
           >
-            Member Directory
+            Access Directory
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
@@ -99,7 +99,7 @@ export default function MemberDirectory() {
             transition={{ delay: 0.1 }}
             className="text-cream/80 max-w-2xl mx-auto font-body"
           >
-            Connecting the legacy of Order of KPI through our membership.
+            List of All users with Login access.
           </motion.p>
         </div>
       </div>
@@ -203,11 +203,6 @@ export default function MemberDirectory() {
                     </div>
                   </div>
                 </div>
-
-                    <div className="mt-4 pt-4 border-t border-cream flex items-center gap-2">
-                    <GraduationCap className="w-4 h-4 text-gold" />
-                    <span className="text-xs text-ivy/70">{member.industry || 'Graduate'} {member.grad_year ? `('${member.grad_year})` : ''}</span>
-                  </div>
               </div>
             </motion.div>
           ))}
