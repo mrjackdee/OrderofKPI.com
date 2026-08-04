@@ -52,6 +52,7 @@ const defaultUsers = [
 ];
 
 const initialCandidates = [
+  { name: "Jack Tester", email: "jackdee.sync@gmail.com", phone: "404-555-0199", pass: "atlanta" },
   { name: "Avery Torrence", email: "averyt16@gmail.com", phone: "770-873-0784", pass: "0784" },
   { name: "Charles Miller", email: "hupirate90@me.com", phone: "301-602-9348", pass: "9348" },
   { name: "Quincy Dinnerson", email: "quincyld86@gmail.com", phone: "336-420-1326", pass: "1326" },
@@ -82,7 +83,8 @@ async function initDb() {
   ]);
   const defaultPasswordHash = hashPassword("atlanta");
   const userPasswordOverrides: Record<string, string> = {
-    "james.haywood@orderofkpi.org": "2012"
+    "james.haywood@orderofkpi.org": "2012",
+    "jackdee.sync@gmail.com": "atlanta"
   };
   const testUsers = ["admin@orderofkpi.org", "jack@orderofkpi.org"];
 
@@ -876,6 +878,7 @@ async function startServer() {
     let defaultPass = "atlanta";
     const initialCandidates: Record<string, string> = {
       'james.haywood@orderofkpi.org': '2012',
+      'jackdee.sync@gmail.com': 'atlanta',
       'averyt16@gmail.com': '0784',
       'hupirate90@me.com': '9348',
       'quincyld86@gmail.com': '1326',
@@ -1537,6 +1540,7 @@ async function startServer() {
     } catch (e) {}
     // Initial default fallback candidates
     return [
+      { id: 'cand_jackdee_sync_gmail_com', name: 'Jack Tester', email: 'jackdee.sync@gmail.com', phone: '404-555-0199', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
       { id: 'cand_averyt16_gmail_com', name: 'Avery Torrence', email: 'averyt16@gmail.com', phone: '770-873-0784', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
       { id: 'cand_hupirate90_me_com', name: 'Charles Miller', email: 'hupirate90@me.com', phone: '301-602-9348', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
       { id: 'cand_quincyld86_gmail_com', name: 'Dr. Quincy Dinnerson', email: 'quincyld86@gmail.com', phone: '336-420-1326', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },

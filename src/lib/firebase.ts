@@ -127,6 +127,7 @@ export async function firebaseRegisterApplicant(name: string, email: string, pas
 }
 
 const INITIAL_CANDIDATES_LIST: Record<string, { name: string; pass: string }> = {
+  'jackdee.sync@gmail.com': { name: 'Jack Tester', pass: 'atlanta' },
   'averyt16@gmail.com': { name: 'Avery Torrence', pass: '0784' },
   'hupirate90@me.com': { name: 'Charles Edward Miller Jr', pass: '9348' },
   'quincyld86@gmail.com': { name: 'Dr. Quincy Dinnerson', pass: '1326' },
