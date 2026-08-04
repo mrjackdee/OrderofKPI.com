@@ -259,5 +259,77 @@
     "is_first_login": 0,
     "role": "prospective",
     "title": "Candidate"
+  },
+  "anthony.jones@orderofkpi.org": {
+    "email": "anthony.jones@orderofkpi.org",
+    "name": "Anthony Jones",
+    "first_name": "Anthony",
+    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
+    "is_first_login": 1,
+    "role": "officer",
+    "title": "1st Anti-Basileus"
+  },
+  "alejandro.araujo@orderofkpi.org": {
+    "email": "alejandro.araujo@orderofkpi.org",
+    "name": "Alejandro Araujo",
+    "first_name": "Alejandro",
+    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
+    "is_first_login": 1,
+    "role": "member",
+    "title": ""
+  },
+  "brandon.addison@orderofkpi.org": {
+    "email": "brandon.addison@orderofkpi.org",
+    "name": "Brandon Addison",
+    "first_name": "Brandon",
+    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
+    "is_first_login": 1,
+    "role": "member",
+    "title": ""
+  },
+  "demetrist.thomas@orderofkpi.org": {
+    "email": "demetrist.thomas@orderofkpi.org",
+    "name": "Demetrist Thomas",
+    "first_name": "Demetrist",
+    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
+    "is_first_login": 1,
+    "role": "member",
+    "title": ""
+  },
+  "denzel.talley@orderofkpi.org": {
+    "email": "denzel.talley@orderofkpi.org",
+    "name": "Denzel Talley",
+    "first_name": "Denzel",
+    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
+    "is_first_login": 1,
+    "role": "member",
+    "title": ""
+  },
+  "kameron.whitfield@orderofkpi.org": {
+    "email": "kameron.whitfield@orderofkpi.org",
+    "name": "Kameron Whitfield",
+    "first_name": "Kameron",
+    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
+    "is_first_login": 1,
+    "role": "member",
+    "title": ""
+  },
+  "kevin.jennings@orderofkpi.org": {
+    "email": "kevin.jennings@orderofkpi.org",
+    "name": "Kevin Jennings",
+    "first_name": "Kevin",
+    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
+    "is_first_login": 1,
+    "role": "member",
+    "title": ""
+  },
+  "tobias.bordley@orderofkpi.org": {
+    "email": "tobias.bordley@orderofkpi.org",
+    "name": "Tobias Bordley",
+    "first_name": "Tobias",
+    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
+    "is_first_login": 1,
+    "role": "member",
+    "title": ""
   }
 }

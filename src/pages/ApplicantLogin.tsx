@@ -130,7 +130,7 @@ export default function ApplicantLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-cream/40 border border-gold/20 rounded-xl py-3 pl-11 pr-4 text-ivy text-sm focus:outline-none focus:border-ivy focus:bg-white transition-all placeholder:text-ivy/30"
-                  placeholder="candidate@gmail.com"
+                  placeholder="applicant@gmail.com"
                   required
                   disabled={loading}
                 />

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
+import { jsPDF } from 'jspdf';
 import { 
   Heart, Users, Coffee, Edit3, ClipboardCheck, Mail, Video, 
   ThumbsUp, Star, Hand, Wallet, Sparkles, Shield, UserCheck, 
@@ -139,6 +140,98 @@ export default function IntakeCalendar() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
   };
 
+  const exportToPDF = () => {
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    // Header background / styling
+    doc.setFillColor(30, 63, 32); // #1E3F20 Ivy
+    doc.rect(0, 0, 210, 38, 'F');
+
+    doc.setTextColor(253, 252, 240); // #FDFCF0 Cream
+    doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('MEMBERSHIP INTAKE CALENDAR', 105, 15, { align: 'center' });
+
+    doc.setFontSize(10);
+    doc.setTextColor(184, 134, 11); // Gold #B8860B
+    doc.text('August 2026 – September 2026', 105, 25, { align: 'center' });
+
+    let y = 48;
+    const sections = [
+      {
+        title: 'I. Interest Meetings',
+        events: events.filter(e => e.category === 'Interest Meetings')
+      },
+      {
+        title: 'II. Candidate Applications and Scoring',
+        events: events.filter(e => e.category === 'Applications & Scoring')
+      },
+      {
+        title: 'III. Tea Time',
+        events: events.filter(e => e.category === 'Tea Time')
+      },
+      {
+        title: 'IV. Candidate Interviews and Review',
+        events: events.filter(e => e.category === 'Interviews & Review')
+      },
+      {
+        title: 'V. Voting, Notifications, and Next Steps',
+        events: events.filter(e => e.category === 'Voting & Next Steps')
+      }
+    ];
+
+    doc.setFont('Helvetica', 'normal');
+
+    sections.forEach((sec) => {
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+
+      // Section title banner
+      doc.setFillColor(245, 243, 230);
+      doc.rect(14, y - 5, 182, 8, 'F');
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(30, 63, 32);
+      doc.text(sec.title, 16, y);
+      y += 8;
+
+      sec.events.forEach((ev) => {
+        if (y > 275) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(30, 63, 32);
+        doc.text(`• #${ev.step} - ${ev.title}`, 18, y);
+
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`${ev.date} | ${ev.time}`, 120, y);
+        y += 6;
+      });
+      y += 6;
+    });
+
+    // Footer
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Official Membership Intake Calendar — Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
+    }
+
+    doc.save('Membership_Intake_Calendar_2026.pdf');
+  };
+
   return (
     <div className="min-h-screen w-full bg-[#FDFCF0] font-sans pb-20 relative overflow-hidden">
       <div className="relative z-10">
@@ -191,8 +284,8 @@ export default function IntakeCalendar() {
           </motion.div>
         </div>
 
-        {/* View Mode Switcher */}
-        <div className="flex justify-center mb-10 px-4">
+        {/* View Mode Switcher & PDF Export */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10 px-4">
           <div className="bg-white border border-[#B8860B]/30 p-1.5 rounded-full flex shadow-[0_4px_12px_rgba(30,63,32,0.04)] z-20 relative">
             <button
               onClick={() => setViewMode('interactive')}
@@ -215,6 +308,13 @@ export default function IntakeCalendar() {
               <CalendarDays size={14} /> Official Flyer
             </button>
           </div>
+
+          <button
+            onClick={exportToPDF}
+            className="bg-[#B8860B] hover:bg-[#1E3F20] text-white px-6 py-3 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-md transition-colors cursor-pointer"
+          >
+            <Download size={14} /> Export Professional PDF
+          </button>
         </div>
 
         {viewMode === 'flyer' ? (

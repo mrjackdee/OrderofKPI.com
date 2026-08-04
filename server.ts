@@ -54,7 +54,6 @@ const defaultUsers = [
 const initialCandidates = [
   { name: "Avery Torrence", email: "averyt16@gmail.com", phone: "770-873-0784", pass: "0784" },
   { name: "Charles Miller", email: "hupirate90@me.com", phone: "301-602-9348", pass: "9348" },
-  { name: "Dennis Test", email: "dennis@gmail.com", phone: "252-883-0844", pass: "0844" },
   { name: "Quincy Dinnerson", email: "quincyld86@gmail.com", phone: "336-420-1326", pass: "1326" },
   { name: "Jabari Smith-Perry", email: "jabari.smithperry@gmail.com", phone: "404-784-7008", pass: "7008" },
   { name: "Lee Sennet", email: "l.a.sennet@gmail.com", phone: "281-740-1774", pass: "1774" },
@@ -65,8 +64,7 @@ const initialCandidates = [
   { name: "Tashaun Najee Benton", email: "tashaunbenton233@gmail.com", phone: "973-592-1821", pass: "1821" },
   { name: "Titus Oliver", email: "o_titus@yahoo.com", phone: "662-654-7713", pass: "7713" },
   { name: "Zion Gates-Norris", email: "zgatesnorris@gmail.com", phone: "954-234-4876", pass: "4876" },
-  { name: "Jamar Amber", email: "jaabn2@gmail.com", phone: "410-443-3795", pass: "3795" },
-  { name: "John Candidate", email: "candidate@gmail.com", phone: "2012", pass: "2012" }
+  { name: "Jamar Amber", email: "jaabn2@gmail.com", phone: "410-443-3795", pass: "3795" }
 ];
 
 let useSqlite = true;
@@ -174,11 +172,11 @@ async function initDb() {
       // Column already exists
     }
     
-    // Ensure legacy deshaun.stafford@orderofkpi.org and candidate@orderofkpi.org accounts are purged
+    // Ensure legacy deshaun.stafford@orderofkpi.org, dennis@gmail.com, and candidate@gmail.com accounts are purged
     try {
-      sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'deshaun.stafford@orderofkpi.org'").run();
-      sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'candidate@orderofkpi.org'").run();
-      sqliteDb.prepare("DELETE FROM candidates WHERE LOWER(email) = 'candidate@orderofkpi.org'").run();
+      sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) IN ('deshaun.stafford@orderofkpi.org', 'candidate@orderofkpi.org', 'dennis@gmail.com', 'candidate@gmail.com')").run();
+      sqliteDb.prepare("DELETE FROM candidates WHERE LOWER(email) IN ('candidate@orderofkpi.org', 'dennis@gmail.com', 'candidate@gmail.com')").run();
+      sqliteDb.prepare("DELETE FROM membership_applications WHERE LOWER(email) IN ('dennis@gmail.com', 'candidate@gmail.com')").run();
     } catch (e) {
       // Ignore
     }
@@ -860,7 +858,6 @@ async function startServer() {
       'james.haywood@orderofkpi.org': '2012',
       'averyt16@gmail.com': '0784',
       'hupirate90@me.com': '9348',
-      'dennis@gmail.com': '0844',
       'quincyld86@gmail.com': '1326',
       'jabari.smithperry@gmail.com': '7008',
       'l.a.sennet@gmail.com': '1774',
@@ -871,8 +868,7 @@ async function startServer() {
       'tashaunbenton233@gmail.com': '1821',
       'o_titus@yahoo.com': '7713',
       'zgatesnorris@gmail.com': '4876',
-      'jaabn2@gmail.com': '3795',
-      'candidate@gmail.com': '2012'
+      'jaabn2@gmail.com': '3795'
     };
     if (initialCandidates[normEmail]) {
       defaultPass = initialCandidates[normEmail];
@@ -1523,11 +1519,9 @@ async function startServer() {
     return [
       { id: 'cand_averyt16_gmail_com', name: 'Avery Torrence', email: 'averyt16@gmail.com', phone: '770-873-0784', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
       { id: 'cand_hupirate90_me_com', name: 'Charles Miller', email: 'hupirate90@me.com', phone: '301-602-9348', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
-      { id: 'cand_dennis_gmail_com', name: 'Dennis Test', email: 'dennis@gmail.com', phone: '252-883-0844', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
       { id: 'cand_quincyld86_gmail_com', name: 'Dr. Quincy Dinnerson', email: 'quincyld86@gmail.com', phone: '336-420-1326', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
       { id: 'cand_jabari_smithperry_gmail_com', name: 'Jabari Smith Perry', email: 'jabari.smithperry@gmail.com', phone: '404-784-7008', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
-      { id: 'cand_l_a_sennet_gmail_com', name: 'Lee Sennet', email: 'l.a.sennet@gmail.com', phone: '281-740-1774', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
-      { id: 'cand_candidate_gmail_com', name: 'John Candidate', email: 'candidate@gmail.com', phone: '2012', status: 'Inquiry', scores: {}, notes: '', document_vault: [] }
+      { id: 'cand_l_a_sennet_gmail_com', name: 'Lee Sennet', email: 'l.a.sennet@gmail.com', phone: '281-740-1774', status: 'Inquiry', scores: {}, notes: '', document_vault: [] }
     ];
   }
   function saveFallbackCandidates(list: any[]) {

@@ -1120,7 +1120,7 @@ export default function AdminDashboard() {
                   value={newCandidate.email}
                   onChange={(e) => setNewCandidate({ ...newCandidate, email: e.target.value })}
                   className="w-full px-4 py-2.5 border border-gold/20 rounded-xl focus:ring-2 focus:ring-gold/20 outline-none"
-                  placeholder="candidate@gmail.com"
+                  placeholder="applicant@gmail.com"
                 />
                 <p className="text-[10px] text-ivy/50 mt-1">Serves as email login username.</p>
               </div>

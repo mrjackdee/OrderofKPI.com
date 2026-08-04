@@ -129,7 +129,6 @@ export async function firebaseRegisterApplicant(name: string, email: string, pas
 const INITIAL_CANDIDATES_LIST: Record<string, { name: string; pass: string }> = {
   'averyt16@gmail.com': { name: 'Avery Torrence', pass: '0784' },
   'hupirate90@me.com': { name: 'Charles Edward Miller Jr', pass: '9348' },
-  'dennis@gmail.com': { name: 'Dennis Test', pass: '0844' },
   'quincyld86@gmail.com': { name: 'Dr. Quincy Dinnerson', pass: '1326' },
   'jabari.smithperry@gmail.com': { name: 'Jabari Smith Perry', pass: '7008' },
   'l.a.sennet@gmail.com': { name: 'Lee Sennet', pass: '1774' },
@@ -139,8 +138,7 @@ const INITIAL_CANDIDATES_LIST: Record<string, { name: string; pass: string }> = 
   'burnettesteven3@gmail.com': { name: 'Steven Burnette', pass: '2275' },
   'tashaunbenton233@gmail.com': { name: 'Tashaun Najee Benton', pass: '1821' },
   'o_titus@yahoo.com': { name: 'Titus Oliver', pass: '7713' },
-  'zgatesnorris@gmail.com': { name: 'Zion Gates-Norris', pass: '4876' },
-  'candidate@gmail.com': { name: 'John Candidate', pass: '2012' }
+  'zgatesnorris@gmail.com': { name: 'Zion Gates-Norris', pass: '4876' }
 };
 
 /**
