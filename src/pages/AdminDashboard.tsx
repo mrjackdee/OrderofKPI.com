@@ -399,6 +399,12 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <Link
+              to="/standalone-application"
+              className="px-4 py-2.5 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-xl text-cream text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
+            >
+              <FileText className="w-3.5 h-3.5" /> Open Backup Manual Application Form &rarr;
+            </Link>
             <button
               onClick={loadAllData}
               className="px-4 py-2.5 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-xl text-cream text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"

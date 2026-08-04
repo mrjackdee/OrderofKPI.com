@@ -658,14 +658,6 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
         <h1 className="text-4xl md:text-6xl font-display font-bold text-ivy tracking-tighter uppercase italic">
           Member <span className="text-gold">Application</span>
         </h1>
-        <div>
-          <a 
-            href="/standalone-application" 
-            className="text-xs font-bold uppercase tracking-widest text-ivy/70 hover:text-gold transition-colors inline-flex items-center gap-1.5 underline"
-          >
-            <FileText size={14} /> Open Standalone Backup Application Form &rarr;
-          </a>
-        </div>
       </div>
 
       <div className="bg-ivy p-8 rounded-3xl space-y-4 relative overflow-hidden shadow-2xl">

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { 
   Users, 
@@ -290,7 +291,15 @@ export default function CandidateTracker() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <div>
             <h1 className="text-3xl font-display text-cream mb-2">Candidate Tracker</h1>
-            <p className="text-cream/70 font-body">Manage and monitor the FY27 Membership Intake Process.</p>
+            <p className="text-cream/70 font-body mb-2">Manage and monitor the FY27 Membership Intake Process.</p>
+            <div>
+              <Link 
+                to="/standalone-application" 
+                className="text-xs font-bold uppercase tracking-widest text-gold hover:text-white transition-colors inline-flex items-center gap-1.5 underline"
+              >
+                <FileText size={14} /> Open Backup Manual Application Form &rarr;
+              </Link>
+            </div>
           </div>
           {canAddCandidate && (
             <button
