@@ -121,22 +121,44 @@ export default function IntakeCalendar() {
       y += 8;
 
       sec.events.forEach((ev) => {
-        if (y > 275) {
-          doc.addPage();
-          y = 20;
-        }
+        // Prepare left side text and right side text
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(9);
         doc.setTextColor(30, 63, 32);
-        doc.text(`• #${ev.step} - ${ev.title}`, 18, y);
+        const leftLines = doc.splitTextToSize(`• #${ev.step} - ${ev.title}`, 98);
 
         doc.setFont('Helvetica', 'normal');
         doc.setFontSize(8);
         doc.setTextColor(100, 100, 100);
-        doc.text(`${ev.date} | ${ev.time}`, 120, y);
-        y += 6;
+        const rightLines = doc.splitTextToSize(`${ev.date} | ${ev.time}`, 74);
+
+        const maxLines = Math.max(leftLines.length, rightLines.length);
+        const rowHeight = maxLines * 4.5 + 2.5;
+
+        if (y + rowHeight > 275) {
+          doc.addPage();
+          y = 20;
+        }
+
+        // Render left lines
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(30, 63, 32);
+        leftLines.forEach((line: string, index: number) => {
+          doc.text(line, 18, y + (index * 4.5));
+        });
+
+        // Render right lines
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        rightLines.forEach((line: string, index: number) => {
+          doc.text(line, 120, y + (index * 4.5));
+        });
+
+        y += rowHeight;
       });
-      y += 6;
+      y += 4;
     });
 
     // Dean Process Timeline in PDF
@@ -153,20 +175,42 @@ export default function IntakeCalendar() {
     y += 8;
 
     deanEvents.forEach((ev) => {
-      if (y > 275) {
-        doc.addPage();
-        y = 20;
-      }
+      // Prepare left side text and right side text
       doc.setFont('Helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(30, 63, 32);
-      doc.text(`• #${ev.step} - ${ev.title}`, 18, y);
+      const leftLines = doc.splitTextToSize(`• #${ev.step} - ${ev.title}`, 98);
 
       doc.setFont('Helvetica', 'normal');
       doc.setFontSize(8);
       doc.setTextColor(100, 100, 100);
-      doc.text(`${ev.date} | ${ev.time}`, 120, y);
-      y += 6;
+      const rightLines = doc.splitTextToSize(`${ev.date} | ${ev.time}`, 74);
+
+      const maxLines = Math.max(leftLines.length, rightLines.length);
+      const rowHeight = maxLines * 4.5 + 2.5;
+
+      if (y + rowHeight > 275) {
+        doc.addPage();
+        y = 20;
+      }
+
+      // Render left lines
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(30, 63, 32);
+      leftLines.forEach((line: string, index: number) => {
+        doc.text(line, 18, y + (index * 4.5));
+      });
+
+      // Render right lines
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      rightLines.forEach((line: string, index: number) => {
+        doc.text(line, 120, y + (index * 4.5));
+      });
+
+      y += rowHeight;
     });
 
     // Footer
