@@ -658,6 +658,14 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
         <h1 className="text-4xl md:text-6xl font-display font-bold text-ivy tracking-tighter uppercase italic">
           Member <span className="text-gold">Application</span>
         </h1>
+        <div>
+          <a 
+            href="/standalone-application" 
+            className="text-xs font-bold uppercase tracking-widest text-ivy/70 hover:text-gold transition-colors inline-flex items-center gap-1.5 underline"
+          >
+            <FileText size={14} /> Open Standalone Backup Application Form &rarr;
+          </a>
+        </div>
       </div>
 
       <div className="bg-ivy p-8 rounded-3xl space-y-4 relative overflow-hidden shadow-2xl">
@@ -711,12 +719,20 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+          <button 
+            type="button"
+            onClick={() => generateApplicationPDF(data, email)}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-ivy text-gold border border-gold/40 font-bold uppercase tracking-widest text-xs hover:brightness-110 active:scale-95 transition-all shadow-md cursor-pointer"
+          >
+            <Download size={16} />
+            Extract PDF
+          </button>
           <button 
             type="button"
             onClick={() => handleSave(true)}
             disabled={saving}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gold text-ivy font-bold uppercase tracking-widest text-xs hover:brightness-105 active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gold text-ivy font-bold uppercase tracking-widest text-xs hover:brightness-105 active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50"
           >
             <Save size={16} />
             {saving ? 'Saving...' : 'Save Draft'}
@@ -725,7 +741,7 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
             type="button"
             onClick={handleSubmit}
             disabled={saving}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-ivy text-cream font-bold uppercase tracking-widest text-xs hover:brightness-110 active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-ivy text-cream font-bold uppercase tracking-widest text-xs hover:brightness-110 active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50"
           >
             <Send size={16} className="text-gold" />
             Submit Form

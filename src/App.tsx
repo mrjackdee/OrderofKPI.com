@@ -30,6 +30,7 @@ import MemberDirectory from './pages/MemberDirectory';
 import CandidateTracker from './pages/CandidateTracker';
 import SelectionVoting from './pages/SelectionVoting';
 import Application from './pages/Application';
+import StandaloneApplication from './pages/StandaloneApplication';
 import ReviewApplications from './pages/ReviewApplications';
 import CommitteeChairDashboard from './pages/CommitteeChairDashboard';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -75,6 +76,7 @@ export default function App() {
           <Route path="financial-roster" element={<ProtectedRoute><FinancialRoster /></ProtectedRoute>} />
           <Route path="member-directory" element={<ProtectedRoute><MemberDirectory /></ProtectedRoute>} />
           <Route path="membership-application" element={<ProtectedRoute><Application /></ProtectedRoute>} />
+          <Route path="standalone-application" element={<StandaloneApplication />} />
           <Route path="review-applications" element={<ProtectedRoute allowedRoles={['admin', 'officer', 'Membership Committee', 'Membership Committee Chair']}><ReviewApplications /></ProtectedRoute>} />
           <Route path="chair-dashboard" element={<ProtectedRoute allowedRoles={['admin', 'officer', 'Membership Committee Chair']}><CommitteeChairDashboard /></ProtectedRoute>} />
           <Route path="dean-nomination" element={<ProtectedRoute><DeanNominationForm /></ProtectedRoute>} />
