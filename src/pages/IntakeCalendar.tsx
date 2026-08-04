@@ -10,27 +10,21 @@ import {
 import MemberHeader from '../components/MemberHeader';
 
 const events = [
-  { step: 1, title: 'Inquire Within', date: 'Jul 8, 2026', icon: Heart },
-  { step: 2, title: 'Interest Meeting', date: 'Jul 19, 2026', icon: Users },
-  { step: 3, title: 'Application Due', date: 'Jul 21, 2026', icon: ClipboardCheck },
-  { step: 4, title: 'Tea Time Invitations', date: 'Jul 23, 2026', icon: Mail },
-  { step: 5, title: 'Tea Time', date: 'Jul 26–Aug 1, 2026', icon: Coffee },
-  { step: 6, title: 'Interview Emails Sent', date: 'Aug 9, 2026', icon: Mail },
-  { step: 7, title: 'Interviews', date: 'Aug 12, 14, 15, 2026', icon: Users },
-  { step: 8, title: 'Video Reviews', date: 'Aug 16–20, 2026', icon: Video },
-  { step: 9, title: 'Financial Chapter Members Voting', date: 'Aug 21, 2026', icon: UserCheck },
-  { step: 10, title: 'Intake Notified of Selection', date: 'Aug 27, 2026', icon: Star },
-  { step: 11, title: 'No Contact Period Starts', date: 'Aug 27, 2026', icon: Hand },
-  { step: 12, title: '1st Payment', date: 'Sep 11, 2026', icon: Wallet },
-  { step: 13, title: 'A Splendid Affair', date: 'Sep 16, 2026', icon: Sparkles },
-  { step: 14, title: 'Start Intake', date: 'Sep 17, 2026', icon: Shield },
-  { step: 15, title: '2nd Payment', date: 'Oct 11, 2026', icon: Wallet },
-  { step: 16, title: 'Sisterhood Weekend', date: 'Oct 16–18, 2026', icon: Leaf },
-  { step: 17, title: '3rd Payment', date: 'Nov 11, 2026', icon: Wallet },
-  { step: 18, title: 'Ivy Weekend', date: 'Nov 13–15, 2026', icon: Leaf },
-  { step: 19, title: '4th Payment (Final)', date: 'Dec 11, 2026', icon: Wallet },
-  { step: 20, title: 'Sisterhood Weekend', date: 'Dec 11–13, 2026', icon: Leaf },
-  { step: 21, title: 'Initiation Weekend', date: 'Jan 15–17, 2027', icon: GraduationCap },
+  { step: 1, title: 'Interest Meeting #1', date: 'Sun, Aug 2, 2026', time: '1:00 PM ET', category: 'Interest Meetings', icon: Users },
+  { step: 2, title: 'Interest Meeting #2', date: 'Mon, Aug 3, 2026', time: '9:08 PM ET', category: 'Interest Meetings', icon: Users },
+  { step: 3, title: 'Applications Distributed', date: 'Aug 2–3, 2026', time: 'After Interest Meetings', category: 'Applications & Scoring', icon: Mail },
+  { step: 4, title: 'Applications Due', date: 'Wed, Aug 5, 2026', time: '11:59 PM ET', category: 'Applications & Scoring', icon: ClipboardCheck },
+  { step: 5, title: 'Application Scoring', date: 'Aug 6–8, 2026', time: 'Committee Review', category: 'Applications & Scoring', icon: Edit3 },
+  { step: 6, title: 'Scoring Notifications & Tea Time Invites', date: 'Mon, Aug 10, 2026', time: 'Dispatched to Candidates', category: 'Applications & Scoring', icon: Star },
+  { step: 7, title: 'Tea Time Period & Facebook Group Opens', date: 'Aug 12–16, 2026', time: 'FB Group Opens Aug 12 (7:00 PM ET)', category: 'Tea Time', icon: Coffee },
+  { step: 8, title: 'Tea Time Zoom Call', date: 'Thu, Aug 13, 2026', time: '8:00 PM – 9:30 PM ET', category: 'Tea Time', icon: Video },
+  { step: 9, title: 'Candidate Interviews', date: 'Aug 19–21, 2026', time: '20 mins each (times TBD)', category: 'Interviews & Review', icon: UserCheck },
+  { step: 10, title: 'Makeup Interviews', date: 'Mon, Aug 24, 2026', time: 'If Needed', category: 'Interviews & Review', icon: UserCheck },
+  { step: 11, title: 'Interview Video Review', date: 'Aug 25–28, 2026', time: 'Review by Active Members', category: 'Interviews & Review', icon: Video },
+  { step: 12, title: 'MIP Voting Period', date: 'Aug 31 – Sep 2, 2026', time: 'Financial Members Voting', category: 'Voting & Next Steps', icon: ThumbsUp },
+  { step: 13, title: 'Candidate Notifications', date: 'Fri, Sep 4, 2026', time: 'Selection Dispatched', category: 'Voting & Next Steps', icon: Star },
+  { step: 14, title: 'No Contact Period Begins', date: 'Mon, Sep 7, 2026', time: 'Formal Restrictions', category: 'Voting & Next Steps', icon: Hand },
+  { step: 15, title: '1st Initiation Payment Due', date: 'Fri, Sep 11, 2026', time: 'Membership Due', category: 'Voting & Next Steps', icon: Wallet },
 ];
 
 export default function IntakeCalendar() {
@@ -147,13 +141,6 @@ export default function IntakeCalendar() {
 
   return (
     <div className="min-h-screen w-full bg-[#FDFCF0] font-sans pb-20 relative overflow-hidden">
-      {/* Draft Watermark */}
-      <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-0 opacity-10">
-        <h1 className="text-[15rem] md:text-[25rem] font-black uppercase text-[#1E3F20] -rotate-45 select-none whitespace-nowrap">
-          Draft
-        </h1>
-      </div>
-
       <div className="relative z-10">
         <div className="pt-24">
           <MemberHeader />
@@ -197,7 +184,7 @@ export default function IntakeCalendar() {
             <div className="flex items-center justify-center gap-4">
               <div className="w-2 h-2 rounded-full bg-[#B8860B]" />
               <p className="text-lg md:text-2xl text-[#B8860B] font-medium tracking-[0.2em] uppercase">
-                July 2026 – January 2027
+                August 2026 – September 2026
               </p>
               <div className="w-2 h-2 rounded-full bg-[#B8860B]" />
             </div>
@@ -372,13 +359,16 @@ export default function IntakeCalendar() {
                   
                   <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
                     {[
-                      { step: 1, title: 'Inquire Within', date: 'Jul 8, 2026', desc: 'Formal start of the outreach period.' },
-                      { step: 3, title: 'Application Due', date: 'Jul 21, 2026', desc: 'Application packages must be complete.' },
-                      { step: 5, title: 'Tea Time Gatherings', date: 'Jul 26–Aug 1, 2026', desc: 'Social tea-time sessions with applicants.' },
-                      { step: 7, title: 'Applicant Interviews', date: 'Aug 12, 14, 15, 2026', desc: 'Officer panel reviews.' },
-                      { step: 10, title: 'Selection Notification', date: 'Aug 27, 2026', desc: 'Final notification letters dispatched.' },
-                      { step: 14, title: 'Intake Commencement', date: 'Sep 17, 2026', desc: 'Education sessions and formal curriculum begin.' },
-                      { step: 21, title: 'Initiation Weekend', date: 'Jan 15–17, 2027', desc: 'Culmination and formal induction ceremonies.' },
+                      { step: 1, title: 'Interest Meeting #1', date: 'Sun, Aug 2, 2026', desc: '1:00 PM ET — Session 1 for prospective candidates.' },
+                      { step: 2, title: 'Interest Meeting #2', date: 'Mon, Aug 3, 2026', desc: '9:08 PM ET — Session 2 for prospective candidates.' },
+                      { step: 4, title: 'Applications Due', date: 'Wed, Aug 5, 2026', desc: '11:59 PM ET deadline for candidate submission.' },
+                      { step: 6, title: 'Scoring & Invites', date: 'Mon, Aug 10, 2026', desc: 'Tea Time invitations issued to advancing candidates.' },
+                      { step: 8, title: 'Tea Time Zoom Call', date: 'Thu, Aug 13, 2026', desc: '8:00 PM – 9:30 PM ET candidate social gathering.' },
+                      { step: 9, title: 'Candidate Interviews', date: 'Aug 19–21, 2026', desc: '20-minute individual interview panels.' },
+                      { step: 12, title: 'MIP Voting Period', date: 'Aug 31 – Sep 2', desc: 'Financial chapter members selection voting.' },
+                      { step: 13, title: 'Selection Notifications', date: 'Fri, Sep 4, 2026', desc: 'Official notifications dispatched to candidates.' },
+                      { step: 14, title: 'No Contact Period', date: 'Mon, Sep 7, 2026', time: 'Formal restrictions take effect.' },
+                      { step: 15, title: '1st Initiation Payment', date: 'Fri, Sep 11, 2026', desc: 'First initiation dues payment deadline.' },
                     ].map((m) => (
                       <div key={m.step} className="flex gap-3 text-left">
                         <div className="w-7 h-7 rounded-full bg-[#1E3F20] text-white flex-shrink-0 flex items-center justify-center font-bold text-xs">
@@ -389,7 +379,7 @@ export default function IntakeCalendar() {
                             <h4 className="font-bold text-sm text-[#1E3F20]">{m.title}</h4>
                             <span className="text-xs font-bold text-[#B8860B] whitespace-nowrap">{m.date}</span>
                           </div>
-                          <p className="text-gray-500 text-xs leading-relaxed mt-0.5">{m.desc}</p>
+                          <p className="text-gray-500 text-xs leading-relaxed mt-0.5">{m.desc || m.time}</p>
                         </div>
                       </div>
                     ))}
@@ -400,44 +390,73 @@ export default function IntakeCalendar() {
             </div>
           </div>
         ) : (
-          /* Grid Layout */
-          <div className="max-w-[1400px] mx-auto px-4 md:px-8">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-6 md:gap-8 relative pt-4">
-              
-              {events.map((event, index) => (
-                <motion.div
-                  key={event.step}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true, margin: "-50px" }}
-                  variants={itemVariants}
-                  transition={{ delay: index * 0.05 }}
-                  className="flex flex-col items-center"
-                >
-                  <div className="bg-white border-2 border-[#B8860B] rounded-xl p-4 w-full h-full flex flex-col items-center text-center shadow-[0_8px_20px_rgba(30,63,32,0.08)] relative hover:-translate-y-1 transition-transform duration-300">
-                    
-                    {/* Step Number */}
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#1E3F20] text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2 border-[#FDFCF0] shadow-md z-10">
-                      {event.step}
-                    </div>
+          /* Interactive Grid & Section Breakdown Layout */
+          <div className="max-w-[1400px] mx-auto px-4 md:px-8 space-y-12">
+            
+            {/* Section Breakdown Cards */}
+            <div className="space-y-8">
+              {[
+                {
+                  sectionTitle: '1. Interest Meetings',
+                  events: events.filter(e => e.category === 'Interest Meetings')
+                },
+                {
+                  sectionTitle: '2. Candidate Applications and Scoring',
+                  events: events.filter(e => e.category === 'Applications & Scoring')
+                },
+                {
+                  sectionTitle: '3. Tea Time',
+                  events: events.filter(e => e.category === 'Tea Time')
+                },
+                {
+                  sectionTitle: '4. Candidate Interviews and Review',
+                  events: events.filter(e => e.category === 'Interviews & Review')
+                },
+                {
+                  sectionTitle: '5. Voting, Notifications, and Next Steps',
+                  events: events.filter(e => e.category === 'Voting & Next Steps')
+                }
+              ].map((section, secIdx) => (
+                <div key={secIdx} className="bg-white border border-[#B8860B]/30 rounded-2xl p-6 md:p-8 shadow-[0_6px_24px_rgba(30,63,32,0.05)]">
+                  <h2 className="text-xl md:text-2xl font-serif text-[#1E3F20] font-bold uppercase tracking-wider mb-6 border-b border-[#B8860B]/20 pb-3 flex items-center gap-3">
+                    <span className="w-3 h-3 rounded-full bg-[#B8860B]" />
+                    {section.sectionTitle}
+                  </h2>
 
-                    <div className="mt-4 mb-3">
-                      <event.icon size={36} strokeWidth={1.5} className="text-[#1E3F20]" />
-                    </div>
-                    
-                    <h3 className="text-[#1E3F20] font-bold text-sm leading-tight mb-3 flex-grow">
-                      {event.title}
-                    </h3>
-                    
-                    <div className="w-full h-px bg-gradient-to-r from-transparent via-[#B8860B]/50 to-transparent my-2" />
-                    
-                    <p className="text-[#B8860B] text-xs font-semibold tracking-wider uppercase mt-1">
-                      {event.date}
-                    </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {section.events.map((event) => (
+                      <div 
+                        key={event.step}
+                        className="bg-[#FDFCF0] border border-[#B8860B]/30 rounded-xl p-5 flex flex-col justify-between hover:border-[#1E3F20] transition-all duration-300 relative group shadow-sm hover:shadow-md"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="bg-[#1E3F20] text-white text-xs font-bold px-2.5 py-1 rounded-full">
+                              Step #{event.step}
+                            </span>
+                            <event.icon size={22} className="text-[#B8860B] group-hover:scale-110 transition-transform" />
+                          </div>
+                          
+                          <h3 className="text-[#1E3F20] font-bold text-base mb-2 leading-snug">
+                            {event.title}
+                          </h3>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-[#B8860B]/20">
+                          <p className="text-[#1E3F20] font-bold text-xs uppercase tracking-wider">
+                            {event.date}
+                          </p>
+                          <p className="text-[#B8860B] text-xs font-semibold mt-0.5">
+                            {event.time}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
+
           </div>
         )}
         

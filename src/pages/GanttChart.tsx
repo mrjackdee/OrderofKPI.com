@@ -21,16 +21,16 @@ interface Task {
 }
 
 const INITIAL_TASKS: Task[] = [
-  { id: '1', name: 'Strategic Planning', start: new Date(2026, 7, 1), end: new Date(2026, 7, 15), category: 'Preparation', progress: 100 },
-  { id: '2', name: 'Resource Development', start: new Date(2026, 7, 10), end: new Date(2026, 7, 30), category: 'Preparation', progress: 80 },
-  { id: '3', name: 'Interest Meetings', start: new Date(2026, 8, 1), end: new Date(2026, 8, 20), category: 'Marketing', progress: 40 },
-  { id: '4', name: 'Social Media Campaign', start: new Date(2026, 8, 1), end: new Date(2026, 9, 15), category: 'Marketing', progress: 20 },
-  { id: '5', name: 'Application Window', start: new Date(2026, 9, 15), end: new Date(2026, 10, 15), category: 'Application', progress: 0 },
-  { id: '6', name: 'Dossier Review', start: new Date(2026, 10, 1), end: new Date(2026, 10, 30), category: 'Application', progress: 0 },
-  { id: '7', name: 'Tea Time Events', start: new Date(2026, 11, 1), end: new Date(2026, 11, 15), category: 'Interviews', progress: 0 },
-  { id: '8', name: 'Formal Interviews', start: new Date(2026, 11, 10), end: new Date(2026, 11, 25), category: 'Interviews', progress: 0 },
-  { id: '9', name: 'Selection Voting', start: new Date(2027, 0, 5), end: new Date(2027, 0, 15), category: 'Selection', progress: 0 },
-  { id: '10', name: 'Intake Orientation', start: new Date(2027, 0, 20), end: new Date(2027, 1, 10), category: 'Intake', progress: 0 }
+  { id: '1', name: 'Interest Meetings (#1 & #2)', start: new Date(2026, 7, 2), end: new Date(2026, 7, 3), category: 'Marketing', progress: 100 },
+  { id: '2', name: 'Candidate Applications', start: new Date(2026, 7, 2), end: new Date(2026, 7, 5), category: 'Application', progress: 80 },
+  { id: '3', name: 'Application Scoring', start: new Date(2026, 7, 6), end: new Date(2026, 7, 8), category: 'Application', progress: 50 },
+  { id: '4', name: 'Notifications & Tea Time Invites', start: new Date(2026, 7, 10), end: new Date(2026, 7, 10), category: 'Application', progress: 0 },
+  { id: '5', name: 'Tea Time Period & Zoom Call', start: new Date(2026, 7, 12), end: new Date(2026, 7, 16), category: 'Interviews', progress: 0 },
+  { id: '6', name: 'Candidate Interviews', start: new Date(2026, 7, 19), end: new Date(2026, 7, 24), category: 'Interviews', progress: 0 },
+  { id: '7', name: 'Interview Video Review', start: new Date(2026, 7, 25), end: new Date(2026, 7, 28), category: 'Interviews', progress: 0 },
+  { id: '8', name: 'MIP Voting Period', start: new Date(2026, 7, 31), end: new Date(2026, 8, 2), category: 'Selection', progress: 0 },
+  { id: '9', name: 'Candidate Notifications & No Contact', start: new Date(2026, 8, 4), end: new Date(2026, 8, 7), category: 'Selection', progress: 0 },
+  { id: '10', name: 'First Initiation Payment Due', start: new Date(2026, 8, 11), end: new Date(2026, 8, 11), category: 'Intake', progress: 0 }
 ];
 
 export default function GanttChart() {
