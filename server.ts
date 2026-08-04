@@ -144,6 +144,26 @@ async function initDb() {
     `);
 
     sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS dean_nominations (
+        id TEXT PRIMARY KEY,
+        voter_email TEXT UNIQUE,
+        nominee_first_name TEXT,
+        nominee_last_name TEXT,
+        statement TEXT,
+        timestamp TEXT
+      )
+    `);
+
+    sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS dean_votes (
+        id TEXT PRIMARY KEY,
+        voter_email TEXT UNIQUE,
+        nominee_name TEXT,
+        timestamp TEXT
+      )
+    `);
+
+    sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS system_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
@@ -1920,6 +1940,438 @@ async function startServer() {
       }
 
       res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // --- DEAN NOMINATION ENDPOINTS ---
+  const deanNominationsJsonPath = path.join(process.cwd(), "dean_nominations_fallback.json");
+  function getFallbackDeanNominations(): any[] {
+    try {
+      if (fs.existsSync(deanNominationsJsonPath)) {
+        return JSON.parse(fs.readFileSync(deanNominationsJsonPath, "utf-8"));
+      }
+    } catch (e) {}
+    return [];
+  }
+  function saveFallbackDeanNominations(list: any[]) {
+    try {
+      fs.writeFileSync(deanNominationsJsonPath, JSON.stringify(list, null, 2));
+    } catch (e) {}
+  }
+
+  // --- DEAN VOTING ENDPOINTS ---
+  const deanVotesJsonPath = path.join(process.cwd(), "dean_votes_fallback.json");
+  function getFallbackDeanVotes(): any[] {
+    try {
+      if (fs.existsSync(deanVotesJsonPath)) {
+        return JSON.parse(fs.readFileSync(deanVotesJsonPath, "utf-8"));
+      }
+    } catch (e) {}
+    return [];
+  }
+  function saveFallbackDeanVotes(list: any[]) {
+    try {
+      fs.writeFileSync(deanVotesJsonPath, JSON.stringify(list, null, 2));
+    } catch (e) {}
+  }
+
+  app.get("/api/admin/dean-votes", (req, res) => {
+    try {
+      let votes: any[] = [];
+      if (useSqlite && sqliteDb) {
+        try {
+          votes = sqliteDb.prepare("SELECT id, voter_email, nominee_name, timestamp FROM dean_votes").all();
+        } catch (dbErr) {
+          votes = getFallbackDeanVotes();
+        }
+      } else {
+        votes = getFallbackDeanVotes();
+      }
+      res.json({ success: true, votes });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.put("/api/admin/dean-votes/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      const { nominee_name } = req.body;
+      if (!nominee_name) {
+        return res.status(400).json({ success: false, message: "Nominee name is required." });
+      }
+
+      if (useSqlite && sqliteDb) {
+        try {
+          sqliteDb.prepare(`
+            UPDATE dean_votes 
+            SET nominee_name = ?
+            WHERE id = ?
+          `).run(nominee_name.trim(), id);
+        } catch (dbErr) {
+          console.error("SQLite update dean vote error:", dbErr);
+        }
+      }
+
+      const list = getFallbackDeanVotes();
+      const idx = list.findIndex(v => v.id === id);
+      if (idx >= 0) {
+        list[idx] = {
+          ...list[idx],
+          nominee_name: nominee_name.trim()
+        };
+        saveFallbackDeanVotes(list);
+      }
+
+      res.json({ success: true, message: "Vote updated successfully." });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.delete("/api/admin/dean-votes/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+
+      if (useSqlite && sqliteDb) {
+        try {
+          sqliteDb.prepare("DELETE FROM dean_votes WHERE id = ?").run(id);
+        } catch (dbErr) {
+          console.error("SQLite delete dean vote error:", dbErr);
+        }
+      }
+
+      let list = getFallbackDeanVotes();
+      list = list.filter(v => v.id !== id);
+      saveFallbackDeanVotes(list);
+
+      res.json({ success: true, message: "Vote deleted successfully." });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.get("/api/dean-votes", (req, res) => {
+    try {
+      let votes: any[] = [];
+      if (useSqlite && sqliteDb) {
+        try {
+          votes = sqliteDb.prepare("SELECT id, nominee_name, timestamp FROM dean_votes").all();
+        } catch (dbErr) {
+          votes = getFallbackDeanVotes().map(v => ({
+            id: v.id,
+            nominee_name: v.nominee_name,
+            timestamp: v.timestamp
+          }));
+        }
+      } else {
+        votes = getFallbackDeanVotes().map(v => ({
+          id: v.id,
+          nominee_name: v.nominee_name,
+          timestamp: v.timestamp
+        }));
+      }
+      res.json({ success: true, votes });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.get("/api/dean-votes/user", (req, res) => {
+    try {
+      const email = (req.query.email as string || "").toLowerCase().trim();
+      if (!email) {
+        return res.status(400).json({ success: false, message: "Email required" });
+      }
+      let vote = null;
+      if (useSqlite && sqliteDb) {
+        try {
+          vote = sqliteDb.prepare("SELECT id, nominee_name, timestamp FROM dean_votes WHERE LOWER(voter_email) = ?").get(email);
+        } catch (dbErr) {
+          const list = getFallbackDeanVotes();
+          const found = list.find(v => (v.voter_email || "").toLowerCase().trim() === email);
+          if (found) {
+            vote = {
+              id: found.id,
+              nominee_name: found.nominee_name,
+              timestamp: found.timestamp
+            };
+          }
+        }
+      } else {
+        const list = getFallbackDeanVotes();
+        const found = list.find(v => (v.voter_email || "").toLowerCase().trim() === email);
+        if (found) {
+          vote = {
+            id: found.id,
+            nominee_name: found.nominee_name,
+            timestamp: found.timestamp
+          };
+        }
+      }
+      res.json({ success: true, vote });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.post("/api/dean-votes", (req, res) => {
+    try {
+      const { voter_email, nominee_name } = req.body;
+      if (!voter_email || !nominee_name) {
+        return res.status(400).json({ success: false, message: "Voter email and nominee name are required." });
+      }
+
+      const emailNorm = voter_email.toLowerCase().trim();
+      const id = Math.random().toString(36).substring(2, 9);
+      const timestamp = new Date().toISOString();
+
+      if (useSqlite && sqliteDb) {
+        try {
+          const existing = sqliteDb.prepare("SELECT id FROM dean_votes WHERE LOWER(voter_email) = ?").get(emailNorm) as any;
+          if (existing) {
+            sqliteDb.prepare(`
+              UPDATE dean_votes 
+              SET nominee_name = ?, timestamp = ?
+              WHERE LOWER(voter_email) = ?
+            `).run(nominee_name.trim(), timestamp, emailNorm);
+          } else {
+            sqliteDb.prepare(`
+              INSERT INTO dean_votes (id, voter_email, nominee_name, timestamp)
+              VALUES (?, ?, ?, ?)
+            `).run(id, emailNorm, nominee_name.trim(), timestamp);
+          }
+        } catch (dbErr) {
+          console.error("SQLite dean votes error:", dbErr);
+        }
+      }
+
+      const list = getFallbackDeanVotes();
+      const idx = list.findIndex(v => (v.voter_email || "").toLowerCase().trim() === emailNorm);
+      const entry = {
+        id: idx >= 0 ? list[idx].id : id,
+        voter_email: emailNorm,
+        nominee_name: nominee_name.trim(),
+        timestamp
+      };
+      if (idx >= 0) {
+        list[idx] = entry;
+      } else {
+        list.push(entry);
+      }
+      saveFallbackDeanVotes(list);
+
+      logEvent(emailNorm, "DEAN_VOTE_SUBMITTED", `Cast vote for Intake Dean: ${nominee_name}`);
+
+      res.json({ success: true, message: "Vote successfully recorded." });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.get("/api/admin/dean-nominations", (req, res) => {
+    try {
+      let nominations: any[] = [];
+      if (useSqlite && sqliteDb) {
+        try {
+          nominations = sqliteDb.prepare("SELECT id, voter_email, nominee_first_name, nominee_last_name, statement, timestamp FROM dean_nominations").all();
+        } catch (dbErr) {
+          nominations = getFallbackDeanNominations();
+        }
+      } else {
+        nominations = getFallbackDeanNominations();
+      }
+      res.json({ success: true, nominations });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.put("/api/admin/dean-nominations/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      const { nominee_first_name, nominee_last_name, statement } = req.body;
+      if (!nominee_first_name || !nominee_last_name || !statement) {
+        return res.status(400).json({ success: false, message: "All fields are required." });
+      }
+
+      if (useSqlite && sqliteDb) {
+        try {
+          sqliteDb.prepare(`
+            UPDATE dean_nominations 
+            SET nominee_first_name = ?, nominee_last_name = ?, statement = ?
+            WHERE id = ?
+          `).run(nominee_first_name.trim(), nominee_last_name.trim(), statement.trim(), id);
+        } catch (dbErr) {
+          console.error("SQLite update nomination error:", dbErr);
+        }
+      }
+
+      const list = getFallbackDeanNominations();
+      const idx = list.findIndex(n => n.id === id);
+      if (idx >= 0) {
+        list[idx] = {
+          ...list[idx],
+          nominee_first_name: nominee_first_name.trim(),
+          nominee_last_name: nominee_last_name.trim(),
+          statement: statement.trim()
+        };
+        saveFallbackDeanNominations(list);
+      }
+
+      res.json({ success: true, message: "Nomination updated successfully." });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.delete("/api/admin/dean-nominations/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+
+      if (useSqlite && sqliteDb) {
+        try {
+          sqliteDb.prepare("DELETE FROM dean_nominations WHERE id = ?").run(id);
+        } catch (dbErr) {
+          console.error("SQLite delete nomination error:", dbErr);
+        }
+      }
+
+      let list = getFallbackDeanNominations();
+      list = list.filter(n => n.id !== id);
+      saveFallbackDeanNominations(list);
+
+      res.json({ success: true, message: "Nomination deleted successfully." });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.get("/api/dean-nominations", (req, res) => {
+    try {
+      let nominations: any[] = [];
+      if (useSqlite && sqliteDb) {
+        try {
+          nominations = sqliteDb.prepare("SELECT id, nominee_first_name, nominee_last_name, statement, timestamp FROM dean_nominations").all();
+        } catch (dbErr) {
+          nominations = getFallbackDeanNominations().map(n => ({
+            id: n.id,
+            nominee_first_name: n.nominee_first_name,
+            nominee_last_name: n.nominee_last_name,
+            statement: n.statement,
+            timestamp: n.timestamp
+          }));
+        }
+      } else {
+        nominations = getFallbackDeanNominations().map(n => ({
+          id: n.id,
+          nominee_first_name: n.nominee_first_name,
+          nominee_last_name: n.nominee_last_name,
+          statement: n.statement,
+          timestamp: n.timestamp
+        }));
+      }
+      res.json({ success: true, nominations });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.get("/api/dean-nominations/user", (req, res) => {
+    try {
+      const email = (req.query.email as string || "").toLowerCase().trim();
+      if (!email) {
+        return res.status(400).json({ success: false, message: "Email required" });
+      }
+      let nomination = null;
+      if (useSqlite && sqliteDb) {
+        try {
+          nomination = sqliteDb.prepare("SELECT id, nominee_first_name, nominee_last_name, statement, timestamp FROM dean_nominations WHERE LOWER(voter_email) = ?").get(email);
+        } catch (dbErr) {
+          const list = getFallbackDeanNominations();
+          const found = list.find(n => (n.voter_email || "").toLowerCase().trim() === email);
+          if (found) {
+            nomination = {
+              id: found.id,
+              nominee_first_name: found.nominee_first_name,
+              nominee_last_name: found.nominee_last_name,
+              statement: found.statement,
+              timestamp: found.timestamp
+            };
+          }
+        }
+      } else {
+        const list = getFallbackDeanNominations();
+        const found = list.find(n => (n.voter_email || "").toLowerCase().trim() === email);
+        if (found) {
+          nomination = {
+            id: found.id,
+            nominee_first_name: found.nominee_first_name,
+            nominee_last_name: found.nominee_last_name,
+            statement: found.statement,
+            timestamp: found.timestamp
+          };
+        }
+      }
+      res.json({ success: true, nomination });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.post("/api/dean-nominations", (req, res) => {
+    try {
+      const { voter_email, nominee_first_name, nominee_last_name, statement } = req.body;
+      if (!voter_email || !nominee_first_name || !nominee_last_name || !statement) {
+        return res.status(400).json({ success: false, message: "All fields (voter email, nominee first name, last name, and statement) are required." });
+      }
+
+      const emailNorm = voter_email.toLowerCase().trim();
+      const id = Math.random().toString(36).substring(2, 9);
+      const timestamp = new Date().toISOString();
+
+      if (useSqlite && sqliteDb) {
+        try {
+          const existing = sqliteDb.prepare("SELECT id FROM dean_nominations WHERE LOWER(voter_email) = ?").get(emailNorm) as any;
+          if (existing) {
+            sqliteDb.prepare(`
+              UPDATE dean_nominations 
+              SET nominee_first_name = ?, nominee_last_name = ?, statement = ?, timestamp = ?
+              WHERE LOWER(voter_email) = ?
+            `).run(nominee_first_name.trim(), nominee_last_name.trim(), statement.trim(), timestamp, emailNorm);
+          } else {
+            sqliteDb.prepare(`
+              INSERT INTO dean_nominations (id, voter_email, nominee_first_name, nominee_last_name, statement, timestamp)
+              VALUES (?, ?, ?, ?, ?, ?)
+            `).run(id, emailNorm, nominee_first_name.trim(), nominee_last_name.trim(), statement.trim(), timestamp);
+          }
+        } catch (dbErr) {
+          console.error("SQLite dean nominations error:", dbErr);
+        }
+      }
+
+      const list = getFallbackDeanNominations();
+      const idx = list.findIndex(n => (n.voter_email || "").toLowerCase().trim() === emailNorm);
+      const entry = {
+        id: idx >= 0 ? list[idx].id : id,
+        voter_email: emailNorm,
+        nominee_first_name: nominee_first_name.trim(),
+        nominee_last_name: nominee_last_name.trim(),
+        statement: statement.trim(),
+        timestamp
+      };
+      if (idx >= 0) {
+        list[idx] = entry;
+      } else {
+        list.push(entry);
+      }
+      saveFallbackDeanNominations(list);
+
+      logEvent(emailNorm, "DEAN_NOMINATION_SUBMITTED", `Submitted nomination for Intake Dean: ${nominee_first_name} ${nominee_last_name}`);
+
+      res.json({ success: true, message: "Nomination successfully recorded." });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }

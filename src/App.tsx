@@ -35,6 +35,12 @@ import CommitteeChairDashboard from './pages/CommitteeChairDashboard';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import ClassroomPortal from './pages/ClassroomPortal';
+import DeanNominationForm from './pages/DeanNominationForm';
+import DeanNominationDashboard from './pages/DeanNominationDashboard';
+import DeanAuditLogDashboard from './pages/DeanAuditLogDashboard';
+import DeanVotingForm from './pages/DeanVotingForm';
+import DeanVotingDashboard from './pages/DeanVotingDashboard';
+import DeanVotingAuditDashboard from './pages/DeanVotingAuditDashboard';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -71,6 +77,12 @@ export default function App() {
           <Route path="membership-application" element={<ProtectedRoute><Application /></ProtectedRoute>} />
           <Route path="review-applications" element={<ProtectedRoute allowedRoles={['admin', 'officer', 'Membership Committee', 'Membership Committee Chair']}><ReviewApplications /></ProtectedRoute>} />
           <Route path="chair-dashboard" element={<ProtectedRoute allowedRoles={['admin', 'officer', 'Membership Committee Chair']}><CommitteeChairDashboard /></ProtectedRoute>} />
+          <Route path="dean-nomination" element={<ProtectedRoute><DeanNominationForm /></ProtectedRoute>} />
+          <Route path="dean-nomination-dashboard" element={<ProtectedRoute><DeanNominationDashboard /></ProtectedRoute>} />
+          <Route path="dean-audit-dashboard" element={<ProtectedRoute allowedRoles={['admin']}><DeanAuditLogDashboard /></ProtectedRoute>} />
+          <Route path="dean-voting" element={<ProtectedRoute><DeanVotingForm /></ProtectedRoute>} />
+          <Route path="dean-voting-dashboard" element={<ProtectedRoute><DeanVotingDashboard /></ProtectedRoute>} />
+          <Route path="dean-voting-audit" element={<ProtectedRoute allowedRoles={['admin']}><DeanVotingAuditDashboard /></ProtectedRoute>} />
           <Route path="privacy-policy" element={<PrivacyPolicy />} />
           <Route path="terms-of-service" element={<TermsOfService />} />
         </Route>

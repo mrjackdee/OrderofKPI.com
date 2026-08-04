@@ -29,6 +29,7 @@ export default function MemberPortal() {
   const normalizedRole = (userRole || '').toLowerCase();
   const isAdmin = userRole === 'admin' || userEmail?.toLowerCase() === 'admin@orderofkpi.org';
   const isChair = userEmail?.toLowerCase() === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair' || normalizedRole.includes('chair') || isAdmin;
+  const isBrian = userEmail?.toLowerCase() === 'brian.johnson@orderofkpi.org';
   const isMembershipCommittee = userRole === 'Membership Committee' || normalizedRole.includes('membership committee') || normalizedRole.includes('committee') || isChair || isAdmin;
 
   React.useEffect(() => {
@@ -123,6 +124,32 @@ export default function MemberPortal() {
               <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Selection Committee</p>
             </div>
           </Link>
+
+          <Link
+            to="/dean-nomination"
+            className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
+          >
+            <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
+              <Award size={28} />
+            </div>
+            <div>
+              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Nominate Intake Dean</h4>
+              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Member Nomination Form</p>
+            </div>
+          </Link>
+
+          <Link
+            to="/dean-voting"
+            className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
+          >
+            <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
+              <Award size={28} />
+            </div>
+            <div>
+              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Vote for Intake Dean</h4>
+              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Team Voting Ballot</p>
+            </div>
+          </Link>
         </motion.div>
 
         {/* Administrative Tools */}
@@ -170,11 +197,44 @@ export default function MemberPortal() {
                   path: '/chair-dashboard',
                   color: 'bg-gold text-ivy',
                   roles: ['admin', 'officer', 'Membership Committee Chair']
+                },
+                { 
+                  title: 'Dean Nomination Results', 
+                  desc: 'Anonymous aggregated nominee tallies.', 
+                  icon: Award, 
+                  path: '/dean-nomination-dashboard',
+                  color: 'bg-ivy text-cream',
+                  roles: ['admin', 'officer', 'Membership Committee Chair', 'Membership Committee', 'brian']
+                },
+                { 
+                  title: 'Dean Audit & Management', 
+                  desc: 'Admin log mapping voters to nominees with edit/delete.', 
+                  icon: ShieldCheck, 
+                  path: '/dean-audit-dashboard',
+                  color: 'bg-gold text-ivy',
+                  roles: ['admin']
+                },
+                { 
+                  title: 'Dean Voting Results', 
+                  desc: 'Anonymous aggregated vote tallies.', 
+                  icon: Award, 
+                  path: '/dean-voting-dashboard',
+                  color: 'bg-ivy text-cream',
+                  roles: ['admin', 'officer', 'Membership Committee Chair', 'Membership Committee', 'brian']
+                },
+                { 
+                  title: 'Dean Voting Audit & Mgmt', 
+                  desc: 'Admin log mapping voters to votes with edit/delete.', 
+                  icon: ShieldCheck, 
+                  path: '/dean-voting-audit',
+                  color: 'bg-gold text-ivy',
+                  roles: ['admin']
                 }
               ]
               .filter(tool => {
                 if (!tool.roles) return true;
                 if (isAdmin) return true;
+                if (isBrian && tool.roles.includes('brian')) return true;
                 
                 // Check direct role inclusion
                 if (tool.roles.includes(userRole || '')) return true;
