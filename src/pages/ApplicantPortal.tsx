@@ -20,7 +20,8 @@ import {
   Loader2,
   Save,
   Settings,
-  Mail
+  Mail,
+  X
 } from 'lucide-react';
 import { fetchApplication, performHybridPasswordChange, changeApplicantEmail } from '../lib/memberDb';
 import Application from './Application';
@@ -909,6 +910,17 @@ export default function ApplicantPortal() {
               exit={{ scale: 0.95, opacity: 0 }}
               className="bg-white border border-gold/40 rounded-[28px] p-6 md:p-8 max-w-md w-full relative z-10 shadow-2xl space-y-6"
             >
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFirstLoginModal(false);
+                  setPwdError('');
+                }}
+                className="absolute top-5 right-5 text-ivy/40 hover:text-ivy transition-colors p-1.5 rounded-full hover:bg-gold/10 cursor-pointer"
+                title="Close"
+              >
+                <X size={18} />
+              </button>
               <div className="text-center space-y-2">
                 <div className="w-12 h-12 bg-gold/15 text-ivy rounded-2xl flex items-center justify-center mx-auto border border-gold/30 font-display">
                   <KeyRound size={22} className="text-gold" />

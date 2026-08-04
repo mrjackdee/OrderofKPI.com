@@ -104,7 +104,6 @@ export default function MemberHeader() {
   };
 
   const closeChangePasswordModal = () => {
-    if (isFirstLogin) return; // Prevent closing if forced
     setShowModal(false);
     // Reset states
     setCurrentPassword('');
@@ -170,14 +169,13 @@ export default function MemberHeader() {
               exit={{ scale: 0.95, opacity: 0 }}
               className="relative w-full max-w-md bg-pure-black border border-primary/40 rounded-3xl p-6 md:p-8 shadow-[0_20px_50px_rgba(212,175,55,0.15)]"
             >
-              {!isFirstLogin && (
-                <button
-                  onClick={closeChangePasswordModal}
-                  className="absolute top-5 right-5 text-silver/40 hover:text-white transition-colors p-1.5 rounded-full hover:bg-white/5"
-                >
-                  <X size={18} />
-                </button>
-              )}
+              <button
+                onClick={closeChangePasswordModal}
+                className="absolute top-5 right-5 text-silver/40 hover:text-white transition-colors p-1.5 rounded-full hover:bg-white/5 cursor-pointer"
+                title="Close"
+              >
+                <X size={18} />
+              </button>
 
               {success ? (
                 <div className="text-center py-6">
@@ -314,13 +312,22 @@ export default function MemberHeader() {
                       </div>
                     </div>
 
-                    <button
-                      type="submit"
-                      disabled={loading || !isFormValid}
-                      className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-white text-black py-3.5 rounded-xl font-black uppercase tracking-widest text-xs transition-colors mt-2 disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      Update Password
-                    </button>
+                    <div className="space-y-2 mt-4">
+                      <button
+                        type="submit"
+                        disabled={loading || !isFormValid}
+                        className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-white text-black py-3.5 rounded-xl font-black uppercase tracking-widest text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        Update Password
+                      </button>
+                      <button
+                        type="button"
+                        onClick={closeChangePasswordModal}
+                        className="w-full py-2.5 text-silver/60 hover:text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
+                      >
+                        Cancel / Skip for Now
+                      </button>
+                    </div>
                   </form>
                 </div>
               )}
