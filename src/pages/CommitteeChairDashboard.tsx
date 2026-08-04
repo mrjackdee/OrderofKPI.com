@@ -184,7 +184,7 @@ export default function CommitteeChairDashboard() {
         fetchAuditLogs();
       }
     } catch (err) {
-      showNotification('error', 'Failed to update candidate status');
+      showNotification('error', 'Unable to update candidate status. Please try again.');
     }
   };
 
@@ -220,10 +220,10 @@ export default function CommitteeChairDashboard() {
         fetchCandidates();
         fetchAuditLogs();
       } else {
-        showNotification('error', data.message || 'Failed to add candidate');
+        showNotification('error', data.message || 'Unable to add candidate. Please try again.');
       }
     } catch (err) {
-      showNotification('error', 'Error adding candidate');
+      showNotification('error', 'Error adding candidate. Please try again.');
     }
   };
 
@@ -241,10 +241,10 @@ export default function CommitteeChairDashboard() {
         fetchCandidates();
         fetchAuditLogs();
       } else {
-        showNotification('error', data.message || 'Failed to remove candidate');
+        showNotification('error', data.message || 'Unable to remove candidate. Please try again.');
       }
     } catch (err) {
-      showNotification('error', 'Error removing candidate');
+      showNotification('error', 'Error removing candidate. Please try again.');
     }
   };
 
@@ -271,10 +271,10 @@ export default function CommitteeChairDashboard() {
         fetchCommitteeMembers();
         fetchAllMembers();
       } else {
-        showNotification('error', data.message || 'Failed to add committee member.');
+        showNotification('error', data.message || 'Unable to add committee member. Please try again.');
       }
     } catch (err) {
-      showNotification('error', 'Failed to update committee roster.');
+      showNotification('error', 'Unable to update committee roster. Please try again.');
     }
   };
 
@@ -292,10 +292,10 @@ export default function CommitteeChairDashboard() {
         fetchCommitteeMembers();
         fetchAllMembers();
       } else {
-        showNotification('error', data.message || 'Failed to revoke permissions');
+        showNotification('error', data.message || 'Unable to revoke permissions. Please try again.');
       }
     } catch (err) {
-      showNotification('error', 'Error modifying committee permissions');
+      showNotification('error', 'Error modifying committee permissions. Please try again.');
     }
   };
 

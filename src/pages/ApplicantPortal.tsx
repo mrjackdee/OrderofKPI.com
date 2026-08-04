@@ -98,10 +98,10 @@ export default function ApplicantPortal() {
           setShowFirstLoginModal(false);
         }, 1200);
       } else {
-        setPwdError(res.message || 'Failed to update password.');
+        setPwdError(res.message || 'Unable to update password. Please try again.');
       }
     } catch (err: any) {
-      setPwdError(err.message || 'An error occurred updating password.');
+      setPwdError(err.message || 'An error occurred while updating password. Please try again.');
     } finally {
       setPwdLoading(false);
     }
@@ -138,10 +138,10 @@ export default function ApplicantPortal() {
         setSettingsNewPassword('');
         setSettingsConfirmPassword('');
       } else {
-        setSettingsPwdError(res.message || 'Failed to update password.');
+        setSettingsPwdError(res.message || 'Unable to update password. Please try again.');
       }
     } catch (err: any) {
-      setSettingsPwdError(err.message || 'An error occurred updating password.');
+      setSettingsPwdError(err.message || 'An error occurred while updating password. Please try again.');
     } finally {
       setSettingsPwdLoading(false);
     }
@@ -172,10 +172,10 @@ export default function ApplicantPortal() {
         setNewEmail('');
         setEmailAuthPassword('');
       } else {
-        setEmailError(res.message || 'Failed to update email address.');
+        setEmailError(res.message || 'Unable to update email address. Please try again.');
       }
     } catch (err: any) {
-      setEmailError(err.message || 'An error occurred updating email address.');
+      setEmailError(err.message || 'An error occurred while updating email address. Please try again.');
     } finally {
       setEmailLoading(false);
     }

@@ -234,10 +234,10 @@ export default function AdminDashboard() {
         setShowMemberModal(false);
         fetchMembers();
       } else {
-        showToast('error', data.message || 'Failed to save member record.');
+        showToast('error', data.message || 'Unable to save member record. Please try again.');
       }
     } catch (error) {
-      showToast('error', 'Error saving member record.');
+      showToast('error', 'Error saving member record. Please try again.');
     } finally {
       setActionLoading(false);
     }
@@ -257,10 +257,10 @@ export default function AdminDashboard() {
         showToast('success', `Deleted user ${email} from system.`);
         fetchMembers();
       } else {
-        showToast('error', data.message || 'Failed to delete user.');
+        showToast('error', data.message || 'Unable to delete user. Please try again.');
       }
     } catch (error) {
-      showToast('error', 'Error deleting user.');
+      showToast('error', 'Error deleting user. Please try again.');
     }
   };
 
@@ -298,10 +298,10 @@ export default function AdminDashboard() {
         fetchCandidates();
         fetchAuditLogs();
       } else {
-        showToast('error', data.message || 'Failed to add candidate.');
+        showToast('error', data.message || 'Unable to add candidate. Please try again.');
       }
     } catch (error) {
-      showToast('error', 'Error adding candidate.');
+      showToast('error', 'Error adding candidate. Please try again.');
     } finally {
       setActionLoading(false);
     }
@@ -324,10 +324,10 @@ export default function AdminDashboard() {
         fetchCandidates();
         fetchAuditLogs();
       } else {
-        showToast('error', 'Failed to update candidate status.');
+        showToast('error', 'Unable to update candidate status. Please try again.');
       }
     } catch (error) {
-      showToast('error', 'Error updating candidate status.');
+      showToast('error', 'Error updating candidate status. Please try again.');
     }
   };
 
@@ -345,10 +345,10 @@ export default function AdminDashboard() {
         fetchCandidates();
         fetchAuditLogs();
       } else {
-        showToast('error', data.message || 'Failed to remove candidate.');
+        showToast('error', data.message || 'Unable to remove candidate. Please try again.');
       }
     } catch (error) {
-      showToast('error', 'Error removing candidate.');
+      showToast('error', 'Error removing candidate. Please try again.');
     }
   };
 

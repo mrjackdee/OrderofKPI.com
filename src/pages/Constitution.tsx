@@ -339,7 +339,7 @@ export default function Constitution() {
       setSubmitterName('');
     } catch (err: any) {
       console.error(err);
-      setSubmissionError('Failed to submit revision. Please check your network connection.');
+      setSubmissionError('Unable to submit revision at this time. Please check your network connection and try again.');
     } finally {
       setIsSubmitting(false);
     }

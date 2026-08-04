@@ -96,7 +96,7 @@ export default function MemberHeader() {
       const isTechnical = err.message.includes('JSON') || err.message.includes('token') || err.message.includes('fetch');
       setError(isTechnical
         ? 'The update service is temporarily offline. Your password change was not saved. Please try again later.'
-        : err.message || 'Failed to update your password. Please verify your current password and try again.'
+        : err.message || 'Unable to update your password. Please verify your current password and try again.'
       );
     } finally {
       setLoading(false);

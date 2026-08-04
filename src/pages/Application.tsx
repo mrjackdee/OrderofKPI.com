@@ -474,7 +474,7 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      setError(res.message || 'Failed to submit application. Please try again.');
+      setError(res.message || 'Unable to submit application at this time. Please try again.');
     }
   };
 

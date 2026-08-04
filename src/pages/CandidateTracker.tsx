@@ -136,7 +136,7 @@ export default function CandidateTracker() {
           fetchCandidates();
         }, 800);
       } else {
-        setFormError(data.message || 'Failed to create candidate record.');
+        setFormError(data.message || 'Unable to create candidate record. Please try again.');
       }
     } catch (error: any) {
       console.error('Error adding candidate:', error);

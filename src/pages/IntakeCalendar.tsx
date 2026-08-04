@@ -130,11 +130,11 @@ export default function IntakeCalendar() {
         setImageSrc(`/membership_intake_calendar.jpg?t=${Date.now()}`);
         setTimeout(() => setUploadSuccess(false), 3000);
       } else {
-        setUploadError(data.message || 'Failed to upload image');
+        setUploadError(data.message || 'Unable to upload image flyer. Please try again.');
       }
     } catch (err) {
       console.error('Upload error:', err);
-      setUploadError('Network error while uploading flyer');
+      setUploadError('Network error while uploading flyer. Please check your connection and try again.');
     } finally {
       setUploading(false);
     }

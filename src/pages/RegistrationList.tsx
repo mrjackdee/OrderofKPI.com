@@ -119,7 +119,7 @@ export default function RegistrationList() {
             </div>
           ) : error ? (
             <div className="bg-red-950/30 border border-red-500/20 rounded-xl p-6 text-center">
-              <p className="text-red-400 font-medium mb-2">Failed to Load</p>
+              <p className="text-red-400 font-medium mb-2">Registration Data Unavailable</p>
               <p className="text-red-400/80 text-sm font-light">{error}</p>
               <button 
                 onClick={() => window.location.reload()}
