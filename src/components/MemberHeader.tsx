@@ -129,7 +129,11 @@ export default function MemberHeader() {
               <span className="px-3.5 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest bg-[#D4AF37] text-[#122c14] shadow-md">
                 {role === 'admin' ? 'Administrator' : role === 'officer' ? 'Officer' : 'Financial Member'}
               </span>
-              {title && (
+              {title && 
+               title.toLowerCase() !== 'administrator' && 
+               title.toLowerCase() !== 'officer' && 
+               title.toLowerCase() !== 'member' && 
+               title.toLowerCase() !== 'financial member' && (
                 <span className="px-3.5 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest bg-white/10 text-[#FFDF79] border-2 border-[#D4AF37]/50 shadow-md">
                   {title}
                 </span>
