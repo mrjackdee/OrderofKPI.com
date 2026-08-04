@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Lock, Mail, ArrowRight, ShieldCheck, Loader2, RefreshCw, CheckCircle } from 'lucide-react';
 import { performHybridLogin, requestApplicantPasswordReset } from '../lib/memberDb';
+import { useToast } from '../components/ToastContext';
 
 export default function Login() {
   const [mode, setMode] = useState<'login' | 'reset'>('login');
@@ -14,6 +15,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { showToast } = useToast();
 
   const from = (location.state as any)?.from?.pathname || '/intake-calendar';
 
@@ -71,10 +73,11 @@ export default function Login() {
         navigate(from, { replace: true });
       } catch (err: any) {
         const isTechnical = err.message.includes('JSON') || err.message.includes('token') || err.message.includes('fetch');
-        setError(isTechnical 
-          ? 'The authentication service is temporarily unavailable or undergoing maintenance. Please check your internet connection or try again later.'
-          : err.message || 'Login failed. Please verify your credentials and try again.'
-        );
+        const friendlyMsg = isTechnical 
+          ? 'The authentication service is temporarily busy or unavailable. Please check your connection or contact info@orderofkpi.org.'
+          : (err.message || 'Unable to sign in. Please check your credentials or contact info@orderofkpi.org.');
+        setError(friendlyMsg);
+        showToast(friendlyMsg, 'error');
       } finally {
         setLoading(false);
       }
@@ -87,7 +90,9 @@ export default function Login() {
           throw new Error(result.message);
         }
       } catch (err: any) {
-        setError(err.message || 'An error occurred. Please try again.');
+        const friendlyMsg = err.message || 'Unable to process your request at this time. Please contact info@orderofkpi.org.';
+        setError(friendlyMsg);
+        showToast(friendlyMsg, 'error');
       } finally {
         setLoading(false);
       }

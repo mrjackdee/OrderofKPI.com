@@ -44,13 +44,15 @@ import DeanVotingDashboard from './pages/DeanVotingDashboard';
 import DeanVotingAuditDashboard from './pages/DeanVotingAuditDashboard';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from './components/ProtectedRoute';
+import { ToastProvider } from './components/ToastContext';
 
 export default function App() {
   return (
     <Router>
-      <ScrollToTop />
-      <Routes>
-        <Route path="/" element={<Layout />}>
+      <ToastProvider>
+        <ScrollToTop />
+        <Routes>
+          <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="member-portal" element={<ProtectedRoute><MemberPortal /></ProtectedRoute>} />
           <Route path="conference-portal" element={<ConferencePortal />} />
@@ -89,6 +91,7 @@ export default function App() {
           <Route path="terms-of-service" element={<TermsOfService />} />
         </Route>
       </Routes>
+      </ToastProvider>
     </Router>
   );
 }

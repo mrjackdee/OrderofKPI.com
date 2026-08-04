@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Lock, Mail, User, ArrowRight, ShieldCheck, Loader2, FileText, CheckCircle, KeyRound, RefreshCw } from 'lucide-react';
 import { performApplicantLogin, performApplicantRegister, requestApplicantPasswordReset } from '../lib/memberDb';
+import { useToast } from '../components/ToastContext';
 
 export default function ApplicantLogin() {
   const [mode, setMode] = useState<'login' | 'reset'>('login');
@@ -13,6 +14,7 @@ export default function ApplicantLogin() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { showToast } = useToast();
 
   const from = (location.state as any)?.from?.pathname || '/applicant-portal';
 
@@ -53,7 +55,11 @@ export default function ApplicantLogin() {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred. Please verify your details and try again.');
+      const friendlyMsg = err.name === 'AbortError' || err.message?.includes('aborted') || err.message?.includes('network') || err.message?.includes('Failed to fetch')
+        ? 'The request took longer than expected or the system is busy. Please try again or contact info@orderofkpi.org for support.'
+        : (err.message || 'Unable to complete your sign in. Please check your credentials or contact info@orderofkpi.org.');
+      setError(friendlyMsg);
+      showToast(friendlyMsg, 'error');
     } finally {
       setLoading(false);
     }
@@ -200,6 +206,15 @@ export default function ApplicantLogin() {
               </div>
             )}
           </form>
+        </div>
+
+        <div className="mt-6 text-center bg-white border border-gold/30 rounded-2xl p-4 shadow-soft">
+          <p className="text-xs text-ivy/80 leading-relaxed font-body">
+            Experiencing issues with the application portal? Please contact support at{' '}
+            <a href="mailto:info@orderofkpi.org" className="font-bold text-gold underline hover:text-ivy transition-colors">
+              info@orderofkpi.org
+            </a>
+          </p>
         </div>
       </motion.div>
     </div>

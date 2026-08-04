@@ -270,6 +270,15 @@ export default function Layout() {
         </main>
 
         <footer className="w-full border-t border-primary py-12 px-6 md:px-10 bg-black text-center flex flex-col items-center gap-8">
+          <div className="w-full max-w-lg mx-auto p-4 bg-primary/5 border border-primary/20 rounded-2xl text-center">
+            <p className="text-xs text-primary/90 uppercase tracking-widest font-body">
+              Experiencing portal or application issues? Contact support at{' '}
+              <a href="mailto:info@orderofkpi.org" className="text-gold font-bold underline hover:text-white transition-colors">
+                info@orderofkpi.org
+              </a>
+            </p>
+          </div>
+
           <nav className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
             {footerNavItems.map((item) => (
               item.isExternal ? (
