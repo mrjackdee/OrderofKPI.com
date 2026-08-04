@@ -41,14 +41,10 @@ export function generateApplicationPDF(data: ApplicationData, email: string) {
   const contentWidth = pageWidth - (margin * 2); // 522 pt
   let y = 50;
 
-  // Primary colors
+  // Primary colors (Ivy & Charcoal)
   const rIvy = 20;
   const gIvy = 59;
   const bIvy = 43;
-
-  const rGold = 197;
-  const gGold = 160;
-  const bGold = 89;
 
   const rCharcoal = 51;
   const gCharcoal = 51;
@@ -71,7 +67,7 @@ export function generateApplicationPDF(data: ApplicationData, email: string) {
     // Top colored bars
     doc.setFillColor(rIvy, gIvy, bIvy);
     doc.rect(0, 0, pageWidth, 15, 'F');
-    doc.setFillColor(rGold, gGold, bGold);
+    doc.setFillColor(rIvy, gIvy, bIvy);
     doc.rect(0, 15, pageWidth, 5, 'F');
 
     y = 45;
@@ -83,7 +79,7 @@ export function generateApplicationPDF(data: ApplicationData, email: string) {
     y += 20;
 
     // Divider
-    doc.setDrawColor(rGold, gGold, bGold);
+    doc.setDrawColor(rIvy, gIvy, bIvy);
     doc.setLineWidth(1);
     doc.line(margin, y, pageWidth - margin, y);
     y += 25;
@@ -100,7 +96,7 @@ export function generateApplicationPDF(data: ApplicationData, email: string) {
     doc.setTextColor(150, 150, 150);
     doc.text(`Candidate: ${data.firstName} ${data.lastName}`, pageWidth - margin, margin - 15, { align: 'right' });
 
-    doc.setDrawColor(rGold, gGold, bGold);
+    doc.setDrawColor(rIvy, gIvy, bIvy);
     doc.setLineWidth(0.5);
     doc.line(margin, margin - 10, pageWidth - margin, margin - 10);
   }
@@ -135,8 +131,8 @@ export function generateApplicationPDF(data: ApplicationData, email: string) {
     doc.setFillColor(rIvy, gIvy, bIvy);
     doc.rect(margin, y, contentWidth, 22, 'F');
     
-    // Accent gold tab on the left
-    doc.setFillColor(rGold, gGold, bGold);
+    // Accent ivy tab on the left
+    doc.setFillColor(rIvy, gIvy, bIvy);
     doc.rect(margin, y, 6, 22, 'F');
 
     // Section title text
@@ -187,7 +183,7 @@ export function generateApplicationPDF(data: ApplicationData, email: string) {
     }
 
     y = checkOverflow(20);
-    // Left visual margin border in gold
+    // Left visual margin border in ivy
     const answerStartY = y - 4;
     
     doc.setFont('Helvetica', 'normal');
@@ -204,7 +200,7 @@ export function generateApplicationPDF(data: ApplicationData, email: string) {
     }
 
     const answerEndY = y - 6;
-    doc.setDrawColor(rGold, gGold, bGold);
+    doc.setDrawColor(rIvy, gIvy, bIvy);
     doc.setLineWidth(1.5);
     doc.line(margin + 4, answerStartY, margin + 4, answerEndY);
 
