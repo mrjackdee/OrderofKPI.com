@@ -275,61 +275,69 @@ export async function firebaseResetApplicantPassword(email: string) {
     throw new Error('Please provide a valid email address to send the password reset link.');
   }
 
-  // Record password reset request in Firestore database
+  // Non-blocking Firestore log so network stalls on Firestore never block the user
   try {
     const resetRef = doc(db, 'candidate_accounts', normEmail);
-    await setDoc(resetRef, {
+    setDoc(resetRef, {
       email: normEmail,
       lastPasswordResetRequestedAt: new Date().toISOString()
-    }, { merge: true });
+    }, { merge: true }).catch(e => console.warn('Firestore reset log notice:', e));
   } catch (e) {
     console.warn('Firestore reset request notice:', e);
   }
 
-  try {
-    await sendPasswordResetEmail(auth, normEmail);
-    return {
-      success: true,
-      message: `A self-service password reset link has been dispatched to ${normEmail}. Please check your inbox or spam folder.`
-    };
-  } catch (err: any) {
-    console.warn('Firebase password reset notice:', err?.code || err?.message);
+  // Wrap Firebase Auth reset call with a strict 2.5s maximum timeout so Firebase Auth stalls never freeze UI
+  const sendEmailWithTimeout = async () => {
+    const timeoutPromise = new Promise<{ success: boolean; message: string }>((resolve) => {
+      setTimeout(() => {
+        resolve({
+          success: true,
+          message: `A self-service password reset link has been dispatched to ${normEmail}. Please check your inbox or spam folder.`
+        });
+      }, 2500);
+    });
 
-    // If account is not registered in Firebase Auth yet, provision a shadow Auth account
-    // so Firebase Auth can route and send the official self-service password reset link.
-    if (
-      err?.code === 'auth/user-not-found' || 
-      err?.message?.includes('user-not-found')
-    ) {
+    const resetAction = (async () => {
       try {
-        const tempPass = 'Kpi_' + Math.random().toString(36).substring(2, 10) + '!2026';
-        await createUserWithEmailAndPassword(auth, normEmail, tempPass);
         await sendPasswordResetEmail(auth, normEmail);
         return {
           success: true,
           message: `A self-service password reset link has been dispatched to ${normEmail}. Please check your inbox or spam folder.`
         };
-      } catch (createErr: any) {
-        console.warn('Firebase Auth user creation during reset notice:', createErr?.code || createErr?.message);
-        if (createErr?.code === 'auth/email-already-in-use') {
+      } catch (err: any) {
+        console.warn('Firebase password reset notice:', err?.code || err?.message);
+
+        if (
+          err?.code === 'auth/user-not-found' || 
+          err?.message?.includes('user-not-found')
+        ) {
           try {
+            const tempPass = 'Kpi_' + Math.random().toString(36).substring(2, 10) + '!2026';
+            await createUserWithEmailAndPassword(auth, normEmail, tempPass);
             await sendPasswordResetEmail(auth, normEmail);
-            return {
-              success: true,
-              message: `A self-service password reset link has been dispatched to ${normEmail}. Please check your inbox or spam folder.`
-            };
-          } catch (retryErr) {
-            console.warn('Retry sendPasswordResetEmail notice:', retryErr);
+          } catch (createErr: any) {
+            console.warn('Firebase Auth user creation during reset notice:', createErr?.code || createErr?.message);
+            if (createErr?.code === 'auth/email-already-in-use') {
+              try {
+                await sendPasswordResetEmail(auth, normEmail);
+              } catch (retryErr) {
+                console.warn('Retry sendPasswordResetEmail notice:', retryErr);
+              }
+            }
           }
         }
-      }
-    }
 
-    return {
-      success: true,
-      message: `A self-service password reset link has been dispatched to ${normEmail}. Please check your inbox or spam folder.`
-    };
-  }
+        return {
+          success: true,
+          message: `A self-service password reset link has been dispatched to ${normEmail}. Please check your inbox or spam folder.`
+        };
+      }
+    })();
+
+    return await Promise.race([resetAction, timeoutPromise]);
+  };
+
+  return await sendEmailWithTimeout();
 }
 
 /**

@@ -279,16 +279,42 @@ export async function requestApplicantPasswordReset(email: string): Promise<{
   message: string;
 }> {
   const normEmail = email.toLowerCase().trim();
+  let serverMessage = '';
+
   try {
-    await fetch('/api/auth/forgot-password', {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+    const resp = await fetch('/api/auth/forgot-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: normEmail })
+      body: JSON.stringify({ email: normEmail }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
+
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data && data.message) {
+        serverMessage = data.message;
+      }
+    }
   } catch (e) {
     console.warn('Server forgot password log notice:', e);
   }
-  return await firebaseResetApplicantPassword(normEmail);
+
+  try {
+    const firebaseRes = await firebaseResetApplicantPassword(normEmail);
+    return {
+      success: true,
+      message: serverMessage || firebaseRes.message
+    };
+  } catch (e) {
+    return {
+      success: true,
+      message: serverMessage || `A self-service password reset link has been dispatched to ${normEmail}. Please check your inbox or spam folder.`
+    };
+  }
 }
 
 /**

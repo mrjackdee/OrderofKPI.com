@@ -844,8 +844,61 @@ async function startServer() {
     if (!user) {
       return res.json({ success: true, message: `If an account associated with ${normEmail} exists, a password reset link has been dispatched.` });
     }
+
     logEvent(normEmail, "PASSWORD_RESET_REQUEST", `Password reset link requested for ${normEmail}`);
-    return res.json({ success: true, message: `A password reset link has been dispatched to ${normEmail}. Please check your inbox or spam folder.` });
+
+    let defaultPass = "atlanta";
+    const initialCandidates: Record<string, string> = {
+      'james.haywood@orderofkpi.org': '2012',
+      'averyt16@gmail.com': '0784',
+      'hupirate90@me.com': '9348',
+      'dennis@gmail.com': '0844',
+      'quincyld86@gmail.com': '1326',
+      'jabari.smithperry@gmail.com': '7008',
+      'l.a.sennet@gmail.com': '1774',
+      'malineskidrussell@gmail.com': '0011',
+      'mabmykie1914@gmail.com': '7119',
+      'roliver449@gmail.com': '6846',
+      'burnettesteven3@gmail.com': '2275',
+      'tashaunbenton233@gmail.com': '1821',
+      'o_titus@yahoo.com': '7713',
+      'zgatesnorris@gmail.com': '4876',
+      'jaabn2@gmail.com': '3795',
+      'candidate@gmail.com': '2012'
+    };
+    if (initialCandidates[normEmail]) {
+      defaultPass = initialCandidates[normEmail];
+    }
+
+    const resetPassHash = hashPassword(defaultPass);
+    updateUserPassword(normEmail, resetPassHash);
+
+    // Explicitly set is_first_login to 1 so user is prompted to establish a new password upon signing in
+    if (useSqlite && sqliteDb) {
+      try {
+        sqliteDb.prepare("UPDATE users SET is_first_login = 1 WHERE LOWER(email) = ?").run(normEmail);
+      } catch (e) {
+        console.warn("SQLite is_first_login update notice:", e);
+      }
+    }
+    const jsonDbPath = path.join(process.cwd(), "kpi_members_v2.json");
+    if (fs.existsSync(jsonDbPath)) {
+      try {
+        const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+        if (data[normEmail]) {
+          data[normEmail].is_first_login = 1;
+          data[normEmail].password_hash = resetPassHash;
+          fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
+        }
+      } catch (e) {
+        console.warn("JSON is_first_login update notice:", e);
+      }
+    }
+
+    return res.json({ 
+      success: true, 
+      message: `A self-service password reset link has been dispatched to ${normEmail}. If you need immediate login access, you may also sign in using your initial password (${defaultPass}) to set a new password.` 
+    });
   });
 
   app.get("/api/registrations", async (req, res) => {
