@@ -354,7 +354,7 @@ export default function IntakeCalendar() {
             onClick={exportToPDF}
             className="bg-[#B8860B] hover:bg-[#1E3F20] text-white px-6 py-3 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-md transition-colors cursor-pointer"
           >
-            <Download size={14} /> Export Professional PDF
+            <Download size={14} /> Export to PDF
           </button>
         </div>
 
