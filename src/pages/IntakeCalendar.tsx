@@ -397,28 +397,28 @@ export default function IntakeCalendar() {
             <div className="space-y-8">
               {[
                 {
-                  sectionTitle: '1. Interest Meetings',
+                  sectionTitle: 'I. Interest Meetings',
                   events: events.filter(e => e.category === 'Interest Meetings')
                 },
                 {
-                  sectionTitle: '2. Candidate Applications and Scoring',
+                  sectionTitle: 'II. Candidate Applications and Scoring',
                   events: events.filter(e => e.category === 'Applications & Scoring')
                 },
                 {
-                  sectionTitle: '3. Tea Time',
+                  sectionTitle: 'III. Tea Time',
                   events: events.filter(e => e.category === 'Tea Time')
                 },
                 {
-                  sectionTitle: '4. Candidate Interviews and Review',
+                  sectionTitle: 'IV. Candidate Interviews and Review',
                   events: events.filter(e => e.category === 'Interviews & Review')
                 },
                 {
-                  sectionTitle: '5. Voting, Notifications, and Next Steps',
+                  sectionTitle: 'V. Voting, Notifications, and Next Steps',
                   events: events.filter(e => e.category === 'Voting & Next Steps')
                 }
               ].map((section, secIdx) => (
-                <div key={secIdx} className="bg-white border border-[#B8860B]/30 rounded-2xl p-6 md:p-8 shadow-[0_6px_24px_rgba(30,63,32,0.05)]">
-                  <h2 className="text-xl md:text-2xl font-serif text-[#1E3F20] font-bold uppercase tracking-wider mb-6 border-b border-[#B8860B]/20 pb-3 flex items-center gap-3">
+                <div key={secIdx} className="bg-[#FFFFFF] border border-[#B8860B]/30 rounded-2xl p-6 md:p-8 shadow-[0_6px_24px_rgba(30,63,32,0.05)]">
+                  <h2 className="text-xl md:text-2xl font-serif text-[#1E3F20] font-bold tracking-wide mb-6 border-b border-[#B8860B]/20 pb-3 flex items-center gap-3">
                     <span className="w-3 h-3 rounded-full bg-[#B8860B]" />
                     {section.sectionTitle}
                   </h2>
