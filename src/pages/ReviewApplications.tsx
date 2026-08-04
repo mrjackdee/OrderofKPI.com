@@ -57,16 +57,25 @@ export default function ReviewApplications() {
   useEffect(() => {
     logPortalSectionAccess('Review Applications');
     const loadApps = async () => {
-      try {
-        await syncApplicationsFromFirestore();
-      } catch (e) {
-        console.warn('Sync from Firestore skipped or failed:', e);
-      }
+      // Fetch immediately from local server API
       const res = await fetchAllApplications();
       if (res.success) {
         setApplications(res.applications);
       }
       setLoading(false);
+
+      // Perform Firestore sync in background
+      try {
+        const syncRes = await syncApplicationsFromFirestore();
+        if (syncRes && syncRes.success) {
+          const updatedRes = await fetchAllApplications();
+          if (updatedRes.success) {
+            setApplications(updatedRes.applications);
+          }
+        }
+      } catch (e) {
+        console.warn('Sync from Firestore skipped or failed:', e);
+      }
     };
     loadApps();
   }, []);

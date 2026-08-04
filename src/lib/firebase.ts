@@ -446,12 +446,20 @@ export async function firebaseFetchApplication(email: string) {
  */
 export async function firebaseFetchAllApplications() {
   try {
-    const querySnapshot = await getDocs(collection(db, 'applications'));
-    const list: any[] = [];
-    querySnapshot.forEach((docSnapshot) => {
-      list.push(docSnapshot.data());
+    const fetchPromise = (async () => {
+      const querySnapshot = await getDocs(collection(db, 'applications'));
+      const list: any[] = [];
+      querySnapshot.forEach((docSnapshot) => {
+        list.push(docSnapshot.data());
+      });
+      return { success: true, applications: list };
+    })();
+
+    const timeoutPromise = new Promise<{ success: boolean; message: string }>((resolve) => {
+      setTimeout(() => resolve({ success: false, message: 'Firestore query timed out' }), 3500);
     });
-    return { success: true, applications: list };
+
+    return await Promise.race([fetchPromise, timeoutPromise]);
   } catch (err: any) {
     console.error('Error fetching all applications from Firestore:', err);
     return { success: false, message: err.message || 'Failed to fetch all applications from Firestore' };

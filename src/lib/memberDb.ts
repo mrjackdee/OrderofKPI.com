@@ -528,8 +528,9 @@ export async function fetchAllApplications() {
 export async function syncApplicationsFromFirestore() {
   try {
     const firestoreResult = await firebaseFetchAllApplications();
-    if (!firestoreResult.success || !firestoreResult.applications) {
-      return { success: false, message: firestoreResult.message || 'Could not fetch from Firestore' };
+    if (!firestoreResult.success || !('applications' in firestoreResult) || !firestoreResult.applications) {
+      const errMsg = ('message' in firestoreResult && firestoreResult.message) ? firestoreResult.message : 'Could not fetch from Firestore';
+      return { success: false, message: errMsg };
     }
 
     const response = await fetch('/api/applications/sync-bulk', {

@@ -43,16 +43,23 @@ export default function CandidateTracker() {
 
   useEffect(() => {
     logPortalSectionAccess('Candidate Tracker');
-    const initAndLoad = async () => {
+    // Fetch local server candidates and applications immediately for instant UI load
+    fetchCandidates();
+    fetchApplications();
+
+    // Perform Firestore sync in background without delaying initial render
+    const bgSync = async () => {
       try {
-        await syncApplicationsFromFirestore();
+        const syncRes = await syncApplicationsFromFirestore();
+        if (syncRes && syncRes.success) {
+          fetchCandidates();
+          fetchApplications();
+        }
       } catch (e) {
         console.warn('Sync from Firestore skipped or failed:', e);
       }
-      fetchCandidates();
-      fetchApplications();
     };
-    initAndLoad();
+    bgSync();
   }, []);
 
   const fetchApplications = async () => {
@@ -146,9 +153,18 @@ export default function CandidateTracker() {
     }
   };
 
-  const currentUserEmail = sessionStorage.getItem('userEmail') || 'committee_chair@orderofkpi.org';
+  const currentUserEmail = sessionStorage.getItem('userEmail') || '';
   const userRole = sessionStorage.getItem('userRole') || '';
-  const canAddCandidate = userRole === 'admin' || userRole === 'Membership Committee Chair' || currentUserEmail.toLowerCase() === 'james.haywood@orderofkpi.org' || currentUserEmail.toLowerCase() === 'admin@orderofkpi.org';
+  const normEmail = currentUserEmail.toLowerCase().trim();
+  const isChairOrAdmin = 
+    userRole === 'admin' || 
+    userRole === 'Membership Committee Chair' || 
+    normEmail === 'james.haywood@orderofkpi.org' || 
+    normEmail === 'admin@orderofkpi.org' || 
+    normEmail === 'info@kpi2012.org';
+
+  const canAddCandidate = isChairOrAdmin;
+  const canMoveCandidateStatus = isChairOrAdmin;
 
   const handleRemoveCandidate = async (id: string, name: string) => {
     if (!window.confirm(`Are you sure you want to permanently remove candidate "${name}" from the tracker?`)) return;
@@ -364,73 +380,75 @@ export default function CandidateTracker() {
                           ) : (
                             <h3 className="font-display text-lg text-ivy">{candidate.name}</h3>
                           )}
-                          <div className="relative">
-                            <button 
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuCandidateId(openMenuCandidateId === candidate.id ? null : candidate.id);
-                              }}
-                              className="text-ivy/40 hover:text-ivy transition-colors p-1.5 rounded-lg hover:bg-gold/10 cursor-pointer"
-                              title="Change Candidate Status"
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                            {openMenuCandidateId === candidate.id && (
-                              <>
-                                <div 
-                                  className="fixed inset-0 z-20" 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenMenuCandidateId(null);
-                                  }} 
-                                />
-                                <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-gold/30 rounded-xl shadow-xl z-30 py-1.5 overflow-hidden">
-                                  <div className="px-3.5 py-1.5 border-b border-gold/10 text-[10px] font-bold uppercase tracking-widest text-ivy/50">
-                                    Move Candidate Status
-                                  </div>
-                                  {STAGES.filter(s => s !== stage).map(s => (
+                          {canMoveCandidateStatus && (
+                            <div className="relative">
+                              <button 
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuCandidateId(openMenuCandidateId === candidate.id ? null : candidate.id);
+                                }}
+                                className="text-ivy/40 hover:text-ivy transition-colors p-1.5 rounded-lg hover:bg-gold/10 cursor-pointer"
+                                title="Change Candidate Status"
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+                              {openMenuCandidateId === candidate.id && (
+                                <>
+                                  <div 
+                                    className="fixed inset-0 z-20" 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenMenuCandidateId(null);
+                                    }} 
+                                  />
+                                  <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-gold/30 rounded-xl shadow-xl z-30 py-1.5 overflow-hidden">
+                                    <div className="px-3.5 py-1.5 border-b border-gold/10 text-[10px] font-bold uppercase tracking-widest text-ivy/50">
+                                      Move Candidate Status
+                                    </div>
+                                    {STAGES.filter(s => s !== stage).map(s => (
+                                      <button
+                                        key={s}
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          updateCandidateStatus(candidate.id, s);
+                                          setOpenMenuCandidateId(null);
+                                        }}
+                                        className="w-full text-left px-3.5 py-2 text-xs text-ivy hover:bg-gold/10 transition-colors flex items-center gap-2 cursor-pointer font-medium"
+                                      >
+                                        <span className={`w-2 h-2 rounded-full ${getStatusBadgeConfig(s).dot}`} />
+                                        Move to {s}
+                                      </button>
+                                    ))}
                                     <button
-                                      key={s}
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        updateCandidateStatus(candidate.id, s);
+                                        updateCandidateStatus(candidate.id, 'Rejected');
                                         setOpenMenuCandidateId(null);
                                       }}
-                                      className="w-full text-left px-3.5 py-2 text-xs text-ivy hover:bg-gold/10 transition-colors flex items-center gap-2 cursor-pointer font-medium"
+                                      className="w-full text-left px-3.5 py-2 text-xs text-amber-800 hover:bg-amber-50 transition-colors flex items-center gap-2 border-t border-gold/10 cursor-pointer font-medium"
                                     >
-                                      <span className={`w-2 h-2 rounded-full ${getStatusBadgeConfig(s).dot}`} />
-                                      Move to {s}
+                                      <span className="w-2 h-2 rounded-full bg-red-500" />
+                                      Mark as Rejected
                                     </button>
-                                  ))}
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      updateCandidateStatus(candidate.id, 'Rejected');
-                                      setOpenMenuCandidateId(null);
-                                    }}
-                                    className="w-full text-left px-3.5 py-2 text-xs text-amber-800 hover:bg-amber-50 transition-colors flex items-center gap-2 border-t border-gold/10 cursor-pointer font-medium"
-                                  >
-                                    <span className="w-2 h-2 rounded-full bg-red-500" />
-                                    Mark as Rejected
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRemoveCandidate(candidate.id, candidate.name);
-                                      setOpenMenuCandidateId(null);
-                                    }}
-                                    className="w-full text-left px-3.5 py-2 text-xs text-red-700 hover:bg-red-50 font-bold transition-colors border-t border-gold/10 flex items-center gap-2 cursor-pointer"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5 text-red-600" /> Remove Candidate
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </div>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRemoveCandidate(candidate.id, candidate.name);
+                                        setOpenMenuCandidateId(null);
+                                      }}
+                                      className="w-full text-left px-3.5 py-2 text-xs text-red-700 hover:bg-red-50 font-bold transition-colors border-t border-gold/10 flex items-center gap-2 cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5 text-red-600" /> Remove Candidate
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         {/* Color-Coded Status Badges */}

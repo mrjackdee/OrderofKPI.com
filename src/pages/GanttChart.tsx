@@ -5,7 +5,6 @@ import {
   Calendar, 
   ChevronLeft, 
   ChevronRight, 
-  Info,
   Clock,
   LayoutGrid,
   List,
@@ -250,20 +249,7 @@ export default function GanttChart() {
           </div>
         )}
 
-        <div className="mt-12 p-8 bg-ivy text-cream rounded-lg shadow-xl flex flex-col md:flex-row items-center gap-8 border-gold/30 border">
-          <div className="bg-gold/20 p-4 rounded-full border border-gold/30">
-            <Info className="w-8 h-8 text-gold" />
-          </div>
-          <div>
-            <h3 className="text-2xl font-display mb-2">Automated Deadline Notifications</h3>
-            <p className="text-cream/70 text-sm max-w-xl">
-              The MIP Timeline is synced with the Grammateus dashboard. Officers will receive automated alerts via email and the portal for upcoming phase transitions.
-            </p>
-          </div>
-          <button className="bg-gold text-ivy px-8 py-3 rounded-md font-bold uppercase tracking-widest text-xs hover:brightness-110 transition-all ml-auto">
-            Configure Alerts
-          </button>
-        </div>
+
       </div>
     </div>
   );
