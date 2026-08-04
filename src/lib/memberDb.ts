@@ -312,7 +312,7 @@ export async function requestApplicantPasswordReset(email: string): Promise<{
   } catch (e) {
     return {
       success: true,
-      message: serverMessage || `A self-service password reset link has been dispatched to ${normEmail}. Please check your inbox or spam folder.`
+      message: serverMessage || `Self-Service Reset Activated for ${normEmail}: Your password has been reset to your default pass key. You can now log in immediately and you will be prompted to set a new password.`
     };
   }
 }

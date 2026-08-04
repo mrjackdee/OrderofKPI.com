@@ -292,7 +292,7 @@ export async function firebaseResetApplicantPassword(email: string) {
       setTimeout(() => {
         resolve({
           success: true,
-          message: `A self-service password reset link has been dispatched to ${normEmail}. Please check your inbox or spam folder.`
+          message: `Self-Service Reset Activated for ${normEmail}. You can sign in using your initial security key to set a new password.`
         });
       }, 2500);
     });
@@ -302,7 +302,7 @@ export async function firebaseResetApplicantPassword(email: string) {
         await sendPasswordResetEmail(auth, normEmail);
         return {
           success: true,
-          message: `A self-service password reset link has been dispatched to ${normEmail}. Please check your inbox or spam folder.`
+          message: `Self-Service Reset Activated for ${normEmail}. A link has also been requested via Firebase. You can sign in using your initial security key to set a new password.`
         };
       } catch (err: any) {
         console.warn('Firebase password reset notice:', err?.code || err?.message);
@@ -329,7 +329,7 @@ export async function firebaseResetApplicantPassword(email: string) {
 
         return {
           success: true,
-          message: `A self-service password reset link has been dispatched to ${normEmail}. Please check your inbox or spam folder.`
+          message: `Self-Service Reset Activated for ${normEmail}. You can sign in using your initial security key to set a new password.`
         };
       }
     })();

@@ -897,7 +897,7 @@ async function startServer() {
 
     return res.json({ 
       success: true, 
-      message: `A self-service password reset link has been dispatched to ${normEmail}. If you need immediate login access, you may also sign in using your initial password (${defaultPass}) to set a new password.` 
+      message: `Self-Service Reset Activated: The password for ${normEmail} has been reset to the default pass key (${defaultPass}). You can sign in immediately using this key and you will be prompted to set a new password.` 
     });
   });
 
