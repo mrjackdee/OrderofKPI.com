@@ -190,14 +190,23 @@ export default function ApplicantPortal() {
       }
 
       try {
+        const normEmail = userEmail.toLowerCase().trim();
+        const isSubmittedLocal = localStorage.getItem(`kpi_app_submitted_${normEmail}`) === 'true';
+        
         const res = await fetchApplication(userEmail);
         if (res) {
-          if (res.application) {
-            setAppStatus(res.application.status || 'draft');
-            setLastSaved(res.application.submitted_at || res.application.last_saved_at || null);
-          }
           if (res.candidateStatus) {
             setCandidateStatus(res.candidateStatus);
+          }
+
+          if (res.application?.status === 'submitted' || res.candidateStatus === 'Applied' || isSubmittedLocal) {
+            setAppStatus('submitted');
+            setLastSaved(res.application?.submitted_at || res.application?.submittedAt || res.application?.last_saved_at || new Date().toISOString());
+          } else if (res.application) {
+            setAppStatus(res.application.status || 'draft');
+            setLastSaved(res.application.last_saved_at || res.application.lastSavedAt || null);
+          } else if (isSubmittedLocal) {
+            setAppStatus('submitted');
           }
         }
       } catch (err) {

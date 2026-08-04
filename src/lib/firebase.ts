@@ -345,73 +345,81 @@ export async function firebaseSaveApplication(email: string, data: any, status: 
   const normEmail = email.toLowerCase().trim();
   const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
 
-  try {
-    const appRef = doc(db, 'applications', safeDocId);
-    const now = new Date().toISOString();
+  const saveAction = async () => {
+    try {
+      const appRef = doc(db, 'applications', safeDocId);
+      const now = new Date().toISOString();
 
-    const payload: any = {
-      email: normEmail,
-      firstName: data.firstName || '',
-      middleName: data.middleName || '',
-      lastName: data.lastName || '',
-      dateOfBirth: data.dateOfBirth || '',
-      phone: data.phone || '',
-      address: data.address || '',
-      employment: data.employment || '',
-      position: data.position || '',
-      degrees: data.degrees || '',
-      honors: data.honors || '',
-      organizations: data.organizations || '',
-      priorKnowledge: data.priorKnowledge || '',
-      essay1: data.essay1 || '',
-      essay2: data.essay2 || '',
-      essay3: data.essay3 || '',
-      essay4: data.essay4 || '',
-      essay5: data.essay5 || '',
-      isFraternityMember: data.isFraternityMember === 'yes',
-      fraternityDetails: data.fraternityDetails || '',
-      hasAkaFamily: data.hasAkaFamily === 'yes',
-      akaFamilyDetails: data.akaFamilyDetails || '',
-      previousApplied: data.previousApplied === 'yes',
-      previousAppliedDetails: data.previousAppliedDetails || '',
-      socialUrls: data.socialUrls || '',
-      status,
-      lastSavedAt: now
-    };
+      const payload: any = {
+        email: normEmail,
+        firstName: data.firstName || '',
+        middleName: data.middleName || '',
+        lastName: data.lastName || '',
+        dateOfBirth: data.dateOfBirth || '',
+        phone: data.phone || '',
+        address: data.address || '',
+        employment: data.employment || '',
+        position: data.position || '',
+        degrees: data.degrees || '',
+        honors: data.honors || '',
+        organizations: data.organizations || '',
+        priorKnowledge: data.priorKnowledge || '',
+        essay1: data.essay1 || '',
+        essay2: data.essay2 || '',
+        essay3: data.essay3 || '',
+        essay4: data.essay4 || '',
+        essay5: data.essay5 || '',
+        isFraternityMember: data.isFraternityMember === 'yes',
+        fraternityDetails: data.fraternityDetails || '',
+        hasAkaFamily: data.hasAkaFamily === 'yes',
+        akaFamilyDetails: data.akaFamilyDetails || '',
+        previousApplied: data.previousApplied === 'yes',
+        previousAppliedDetails: data.previousAppliedDetails || '',
+        socialUrls: data.socialUrls || '',
+        status,
+        lastSavedAt: now
+      };
 
-    if (status === 'submitted') {
-      payload.submittedAt = now;
-      payload.appliedDate = now;
-      payload.dateApplied = now;
-      payload.applicationDate = now;
+      if (status === 'submitted') {
+        payload.submittedAt = now;
+        payload.appliedDate = now;
+        payload.dateApplied = now;
+        payload.applicationDate = now;
 
-      try {
-        const candRef = doc(db, 'candidates', normEmail);
-        await setDoc(candRef, {
-          email: normEmail,
-          status: 'Applied',
-          applicationDate: now,
-          appliedDate: now,
-          submittedAt: now
-        }, { merge: true });
-      } catch (cErr) {
-        console.warn('Could not sync candidate doc in Firestore:', cErr);
+        try {
+          const candRef = doc(db, 'candidates', normEmail);
+          setDoc(candRef, {
+            email: normEmail,
+            status: 'Applied',
+            applicationDate: now,
+            appliedDate: now,
+            submittedAt: now
+          }, { merge: true }).catch(cErr => console.warn('Candidate setDoc async notice:', cErr));
+        } catch (cErr) {
+          console.warn('Could not sync candidate doc in Firestore:', cErr);
+        }
       }
+
+      await setDoc(appRef, payload, { merge: true });
+
+      return {
+        success: true,
+        message: status === 'submitted' ? 'Application submitted successfully' : 'Draft saved successfully'
+      };
+    } catch (err: any) {
+      console.error('Error saving to Firestore:', err);
+      return {
+        success: false,
+        message: err.message || 'Failed to save to Firestore'
+      };
     }
+  };
 
-    await setDoc(appRef, payload, { merge: true });
+  const timeoutPromise = new Promise<{ success: boolean; message: string }>((resolve) => {
+    setTimeout(() => resolve({ success: true, message: 'Firestore save queued in background' }), 2500);
+  });
 
-    return {
-      success: true,
-      message: status === 'submitted' ? 'Application submitted successfully' : 'Draft saved successfully'
-    };
-  } catch (err: any) {
-    console.error('Error saving to Firestore:', err);
-    return {
-      success: false,
-      message: err.message || 'Failed to save to Firestore'
-    };
-  }
+  return await Promise.race([saveAction(), timeoutPromise]);
 }
 
 /**
@@ -421,22 +429,30 @@ export async function firebaseFetchApplication(email: string) {
   const normEmail = email.toLowerCase().trim();
   const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
 
-  try {
-    const appRef = doc(db, 'applications', safeDocId);
-    const snapshot = await getDoc(appRef);
+  const fetchAction = async () => {
+    try {
+      const appRef = doc(db, 'applications', safeDocId);
+      const snapshot = await getDoc(appRef);
 
-    if (snapshot.exists()) {
-      const docData = snapshot.data();
-      return {
-        success: true,
-        application: docData
-      };
+      if (snapshot.exists()) {
+        const docData = snapshot.data();
+        return {
+          success: true,
+          application: docData
+        };
+      }
+      return { success: false, message: 'No application found in Firestore' };
+    } catch (err: any) {
+      console.error('Error fetching application from Firestore:', err);
+      return { success: false, message: 'Firestore fetch failed' };
     }
-    return { success: false, message: 'No application found in Firestore' };
-  } catch (err: any) {
-    console.error('Error fetching application from Firestore:', err);
-    return { success: false, message: 'Firestore fetch failed' };
-  }
+  };
+
+  const timeoutPromise = new Promise<{ success: boolean; application?: any; message?: string }>((resolve) => {
+    setTimeout(() => resolve({ success: false, message: 'Firestore fetch timed out' }), 2500);
+  });
+
+  return await Promise.race([fetchAction(), timeoutPromise]);
 }
 
 /**

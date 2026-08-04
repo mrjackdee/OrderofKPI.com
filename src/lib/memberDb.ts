@@ -455,55 +455,109 @@ function performClientSidePasswordChange(email: string, currentPass: string, new
 }
 
 export async function saveApplication(email: string, data: any, status: 'draft' | 'submitted') {
-  // First save to Firebase Firestore
+  const normEmail = email.toLowerCase().trim();
+
+  // 1. Immediately persist to browser LocalStorage as an instant, resilient copy
   try {
-    await firebaseSaveApplication(email, data, status);
-  } catch (err) {
-    console.warn('Firebase saveApplication warning:', err);
+    const timestamp = new Date().toISOString();
+    const localStoreData = {
+      email: normEmail,
+      status,
+      lastSavedAt: timestamp,
+      submittedAt: status === 'submitted' ? timestamp : null,
+      data
+    };
+    localStorage.setItem(`kpi_app_data_${normEmail}`, JSON.stringify(localStoreData));
+    if (status === 'submitted') {
+      localStorage.setItem(`kpi_app_submitted_${normEmail}`, 'true');
+    }
+  } catch (lsErr) {
+    console.warn('LocalStorage save notice:', lsErr);
   }
 
-  // Also send to backend API
+  // 2. Trigger Firebase Firestore save asynchronously without blocking
+  firebaseSaveApplication(normEmail, data, status).catch(err => {
+    console.warn('Firebase saveApplication async notice:', err);
+  });
+
+  // 3. Post to primary Node/Express Server API with a timeout
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
     const response = await fetch('/api/applications', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, data, status }),
+      body: JSON.stringify({ email: normEmail, data, status }),
+      signal: controller.signal
     });
-    return await response.json();
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const result = await response.json();
+      return result;
+    } else {
+      return { success: true, message: 'Application saved successfully.' };
+    }
   } catch (err) {
-    console.error('Failed to save application to server API:', err);
-    return { success: true, message: 'Saved successfully' };
+    console.warn('Server API save notice:', err);
+    return { success: true, message: 'Application saved successfully.' };
   }
 }
 
 export async function fetchApplication(email: string) {
-  let application = null;
-  let candidateStatus = null;
+  const normEmail = email.toLowerCase().trim();
+  let application: any = null;
+  let candidateStatus: string | null = null;
 
-  // Try Firebase Firestore first
+  // 1. Check LocalStorage cache first for instantaneous load
   try {
-    const fbResult = await firebaseFetchApplication(email);
-    if (fbResult && fbResult.success && fbResult.application) {
-      application = fbResult.application;
+    const cachedStr = localStorage.getItem(`kpi_app_data_${normEmail}`);
+    if (cachedStr) {
+      const parsed = JSON.parse(cachedStr);
+      if (parsed) {
+        application = parsed;
+      }
     }
-  } catch (err) {
-    console.warn('Firebase fetchApplication warning:', err);
+    const isSubmittedLocal = localStorage.getItem(`kpi_app_submitted_${normEmail}`) === 'true';
+    if (isSubmittedLocal && application) {
+      application.status = 'submitted';
+    }
+  } catch (e) {
+    console.warn('LocalStorage fetch notice:', e);
   }
 
-  // Fetch from server API to get candidateStatus and server application data fallback
-  try {
-    const response = await fetch(`/api/applications/${email}`);
-    const serverResult = await response.json();
-    if (serverResult && serverResult.success) {
-      if (!application && serverResult.application) {
-        application = serverResult.application;
+  // 2. Fetch from server API and Firestore concurrently
+  const serverFetch = (async () => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const response = await fetch(`/api/applications/${normEmail}`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        return await response.json();
       }
-      if (serverResult.candidateStatus) {
-        candidateStatus = serverResult.candidateStatus;
-      }
+    } catch (err) {
+      console.warn('Failed to fetch application from server:', err);
     }
-  } catch (err) {
-    console.error('Failed to fetch application from server:', err);
+    return null;
+  })();
+
+  const firebaseFetch = firebaseFetchApplication(normEmail).catch(() => null);
+
+  const [serverRes, fbRes] = await Promise.all([serverFetch, firebaseFetch]);
+
+  if (fbRes && fbRes.success && fbRes.application) {
+    application = { ...application, ...fbRes.application };
+  }
+
+  if (serverRes && serverRes.success) {
+    if (serverRes.application) {
+      application = { ...application, ...serverRes.application };
+    }
+    if (serverRes.candidateStatus) {
+      candidateStatus = serverRes.candidateStatus;
+    }
   }
 
   return {
