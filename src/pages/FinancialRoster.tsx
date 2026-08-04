@@ -42,7 +42,7 @@ export default function FinancialRoster() {
         setMembers(data.members);
       }
     } catch (err) {
-      setError('Failed to load roster data.');
+      setError('Roster Data not yet available.');
     } finally {
       setIsLoading(false);
     }
