@@ -113,16 +113,16 @@ export default function StandaloneApplication() {
             <ArrowLeft size={16} /> Back to Applicant Portal
           </Link>
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-gold/10 text-ivy border border-gold/30 rounded-full text-[10px] font-bold uppercase tracking-widest">
-            Standalone Backup Form
+            Manual Application Form
           </div>
         </div>
 
         <div className="text-center space-y-3 bg-white border border-gold/30 rounded-[32px] p-8 md:p-12 shadow-soft">
           <h1 className="text-3xl md:text-5xl font-display font-bold text-ivy uppercase tracking-tight">
-            Order of KPI <span className="text-gold">Membership Application</span> (Standalone)
+            Order of KPI <span className="text-gold">Membership Application Form</span>
           </h1>
           <p className="text-ivy/70 text-xs md:text-sm font-body max-w-2xl mx-auto leading-relaxed">
-            Use this standalone backup form to manually fill in all candidate application fields offline or independently. You can download and extract your official application PDF at any time.
+            Manual form to complete the application. You can download and extract your official application PDF at any time.
           </p>
           <div className="pt-4 flex flex-wrap justify-center gap-4">
             <button
@@ -519,7 +519,7 @@ export default function StandaloneApplication() {
             <div className="bg-ivy text-cream rounded-[28px] p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
               <div>
                 <h4 className="font-display font-bold text-lg uppercase tracking-tight text-gold">Ready to Export or Submit?</h4>
-                <p className="text-xs text-cream/70 mt-1">Extract an official PDF copy instantly or submit your completed backup form.</p>
+                <p className="text-xs text-cream/70 mt-1">Extract an official PDF copy instantly or submit your completed application form.</p>
               </div>
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <button
