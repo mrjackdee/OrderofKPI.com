@@ -22,7 +22,6 @@ export default function FinancialRoster() {
   const [sortBy, setSortBy] = useState<'lastName' | 'firstName' | 'paymentDate'>('lastName');
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -34,39 +33,106 @@ export default function FinancialRoster() {
     fetchMembers();
   }, [navigate]);
 
-  const fetchMembers = async () => {
-    try {
-      const response = await fetch('/api/members');
-      const data = await response.json();
-      if (data.success) {
-        setMembers(data.members);
+  const parseCSVLine = (line: string): string[] => {
+    const row: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        row.push(current.trim());
+        current = '';
+      } else {
+        current += char;
       }
-    } catch (err) {
-      setError('Roster Data not yet available.');
-    } finally {
-      setIsLoading(false);
     }
+    row.push(current.trim());
+    return row;
   };
 
-  const handleSync = async () => {
-    setIsSyncing(true);
+  const fetchMembers = async () => {
+    setIsLoading(true);
     setError('');
     try {
-      const response = await fetch('/api/financials/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ spreadsheetId: 'OFFICIAL_ROSTER_ID' })
-      });
-      const data = await response.json();
-      if (data.success) {
-        await fetchMembers();
-      } else {
-        throw new Error(data.error);
+      // 1. Fetch directory members from backend API for metadata (role, title, profile_photo, intake_class)
+      let dirMembers: Member[] = [];
+      try {
+        const response = await fetch('/api/members');
+        const data = await response.json();
+        if (data.success && Array.isArray(data.members)) {
+          dirMembers = data.members;
+        }
+      } catch (err) {
+        console.warn('Could not fetch backend directory members:', err);
       }
+
+      // 2. Fetch live Google Sheet CSV for financial status (Column D: FY27 Paid = TRUE)
+      const sheetUrl = 'https://docs.google.com/spreadsheets/d/1-IMvMUANALE3KC1UY46QwHpmdIeEM268ZXSCK_Amj3s/gviz/tq?tqx=out:csv';
+      const sheetRes = await fetch(sheetUrl);
+      if (!sheetRes.ok) {
+        throw new Error('Failed to load roster data from Google Sheet.');
+      }
+      const csvText = await sheetRes.text();
+      const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+      const activeFinancialMembers: Member[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = parseCSVLine(lines[i]);
+        const firstName = cols[0] || '';
+        const lastName = cols[1] || '';
+        const fy27Paid = (cols[3] || '').trim().toUpperCase() === 'TRUE';
+        const personalEmail = cols[5] || '';
+        const kpiEmail = cols[7] || '';
+        const email = (kpiEmail || personalEmail || `${firstName.toLowerCase()}.${lastName.toLowerCase()}@orderofkpi.org`).toLowerCase().trim();
+
+        if (fy27Paid && (firstName || lastName)) {
+          const fullName = `${firstName} ${lastName}`.trim();
+
+          // Match with local directory member if exists
+          const matchedDirMember = dirMembers.find(m => 
+            m.email.toLowerCase() === email || 
+            m.name.toLowerCase() === fullName.toLowerCase()
+          );
+
+          activeFinancialMembers.push({
+            name: fullName,
+            first_name: firstName,
+            email: email,
+            role: matchedDirMember?.role || 'member',
+            title: matchedDirMember?.title || '',
+            is_first_login: false,
+            intake_class: matchedDirMember?.intake_class || 'Member',
+            financial_status: 'active',
+            grad_year: matchedDirMember?.grad_year || '',
+            profile_photo: matchedDirMember?.profile_photo || '',
+            industry: matchedDirMember?.industry || ''
+          });
+        }
+      }
+
+      setMembers(activeFinancialMembers);
     } catch (err: any) {
-      setError(err.message || 'Sync failed. Ensure Google Sheets integration is configured.');
+      console.error('Error fetching financial members:', err);
+      // Fallback to active financial members in API directory
+      try {
+        const response = await fetch('/api/members');
+        const data = await response.json();
+        if (data.success && Array.isArray(data.members)) {
+          setMembers(data.members.filter((m: Member) => m.financial_status === 'active'));
+        }
+      } catch (fallbackErr) {
+        setError('Roster Data not yet available.');
+      }
     } finally {
-      setIsSyncing(false);
+      setIsLoading(false);
     }
   };
 
