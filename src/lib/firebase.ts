@@ -3,7 +3,8 @@ import {
   getAuth, 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
-  sendPasswordResetEmail 
+  sendPasswordResetEmail,
+  connectAuthEmulator
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -12,7 +13,8 @@ import {
   getDoc, 
   getDocFromServer,
   collection,
-  getDocs
+  getDocs,
+  connectFirestoreEmulator
 } from 'firebase/firestore';
 import staticFirebaseConfig from '../../firebase-applet-config.json';
 
@@ -31,6 +33,33 @@ const activeFirebaseConfig = {
 const app = getApps().length > 0 ? getApp() : initializeApp(activeFirebaseConfig);
 export const db = getFirestore(app, activeFirebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
+
+// ---------------------------------------------------------------------------
+// Emulator support: set VITE_USE_EMULATOR=true in .env.local to use local
+// Firebase emulators instead of production Firestore/Auth.
+// ---------------------------------------------------------------------------
+if (metaEnv.VITE_USE_EMULATOR === 'true') {
+  try {
+    connectFirestoreEmulator(db, 'localhost', 8080);
+    connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+    console.info('[Firebase] 🔧 Connected to LOCAL emulators (Firestore:8080, Auth:9099)');
+  } catch (e) {
+    // Already connected — safe to ignore
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Dev-mode debug logger — logs raw Firestore document shapes before
+// normalization so you can spot schema mismatches in DevTools > Console.
+// Only active when VITE_DEBUG_FIRESTORE=true in .env.local
+// ---------------------------------------------------------------------------
+export function debugLogRawDoc(label: string, data: unknown) {
+  if (metaEnv.VITE_DEBUG_FIRESTORE === 'true') {
+    console.group(`[Firestore DEBUG] ${label}`);
+    console.log('Raw document shape:', JSON.stringify(data, null, 2));
+    console.groupEnd();
+  }
+}
 
 export interface BallotInfo {
   id: string;
@@ -502,18 +531,22 @@ export async function firebaseFetchApplication(email: string) {
       const appRef1 = doc(db, 'membership_applications', safeDocId);
       const snapshot1 = await getDoc(appRef1);
       if (snapshot1.exists()) {
+        const rawData1 = snapshot1.data();
+        debugLogRawDoc(`firebaseFetchApplication [membership_applications/${safeDocId}]`, rawData1);
         return {
           success: true,
-          application: normalizeApplication(snapshot1.data())
+          application: normalizeApplication(rawData1)
         };
       }
 
       const appRef2 = doc(db, 'applications', safeDocId);
       const snapshot2 = await getDoc(appRef2);
       if (snapshot2.exists()) {
+        const rawData2 = snapshot2.data();
+        debugLogRawDoc(`firebaseFetchApplication [applications/${safeDocId}]`, rawData2);
         return {
           success: true,
-          application: normalizeApplication(snapshot2.data())
+          application: normalizeApplication(rawData2)
         };
       }
 
@@ -544,6 +577,7 @@ export async function firebaseFetchAllApplications() {
         const querySnapshot1 = await getDocs(collection(db, 'membership_applications'));
         querySnapshot1.forEach((docSnapshot) => {
           const appData = docSnapshot.data();
+          debugLogRawDoc(`firebaseFetchAllApplications [membership_applications/${docSnapshot.id}]`, appData);
           if (appData && appData.email) {
             const normalized = normalizeApplication(appData);
             if (normalized) {
@@ -560,6 +594,7 @@ export async function firebaseFetchAllApplications() {
         const querySnapshot2 = await getDocs(collection(db, 'applications'));
         querySnapshot2.forEach((docSnapshot) => {
           const appData = docSnapshot.data();
+          debugLogRawDoc(`firebaseFetchAllApplications [applications/${docSnapshot.id}]`, appData);
           if (appData && appData.email) {
             const normEmail = appData.email.toLowerCase().trim();
             if (!seenEmails.has(normEmail)) {
