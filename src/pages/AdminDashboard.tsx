@@ -38,6 +38,9 @@ import {
 import { Member, Candidate } from '../types';
 import { prospectiveMembers } from '../lib/memberDb';
 import { logPortalSectionAccess } from '../lib/auditLogger';
+import { googleSignIn, getAccessToken } from '../lib/googleAuth';
+import { createGoogleForm, getGoogleForm, getGoogleFormResponses } from '../lib/googleWorkspace';
+import { Chrome, ArrowDownToLine, Check, Database, Key, Lock, RefreshCw } from 'lucide-react';
 
 interface SystemLog {
   id?: number;
@@ -60,8 +63,21 @@ interface ApplicationAuditLog {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'users' | 'candidates' | 'audits' | 'intake' | 'revisions'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'candidates' | 'audits' | 'intake' | 'revisions' | 'googleForms' | 'passwordLogs'>('users');
+  const [passwordLogSearch, setPasswordLogSearch] = useState('');
+  const [passwordLogFilter, setPasswordLogFilter] = useState<'all' | 'change' | 'failure'>('all');
+  const [isPingingDb, setIsPingingDb] = useState(false);
   
+  // Google Forms Integration State
+  const [googleAuthToken, setGoogleAuthToken] = useState<string | null>(null);
+  const [googleFormId, setGoogleFormId] = useState('');
+  const [inputFormId, setInputFormId] = useState('');
+  const [newFormTitle, setNewFormTitle] = useState('FY27 Membership Intake Application');
+  const [formDetails, setFormDetails] = useState<any>(null);
+  const [formResponses, setFormResponses] = useState<any[]>([]);
+  const [formsLoading, setFormsLoading] = useState(false);
+  const [importedCount, setImportedCount] = useState<number | null>(null);
+
   // Members State
   const [members, setMembers] = useState<Member[]>([]);
   const [memberSearch, setMemberSearch] = useState('');
@@ -93,6 +109,269 @@ export default function AdminDashboard() {
   const [newCandidate, setNewCandidate] = useState({ firstName: '', lastName: '', email: '', phone: '', status: 'Inquiry' });
 
   const currentUserEmail = sessionStorage.getItem('userEmail') || 'admin@orderofkpi.org';
+
+  useEffect(() => {
+    // Check Google Token
+    getAccessToken().then(token => {
+      if (token) setGoogleAuthToken(token);
+    });
+
+    // Check Firestore settings for google_form
+    const fetchFormSetting = async () => {
+      try {
+        const { doc, getDoc } = await import('firebase/firestore');
+        const docSnap = await getDoc(doc(db, 'settings', 'google_form'));
+        if (docSnap.exists()) {
+          const fid = docSnap.data().formId;
+          if (fid) {
+            setGoogleFormId(fid);
+            setInputFormId(fid);
+          }
+        }
+      } catch (err) {
+        console.warn('Error loading form settings from firestore:', err);
+      }
+    };
+    fetchFormSetting();
+  }, []);
+
+  const loadFormAndResponses = async (formIdToLoad: string, tokenToUse?: string) => {
+    const activeToken = tokenToUse || googleAuthToken;
+    if (!formIdToLoad || !activeToken) return;
+
+    setFormsLoading(true);
+    try {
+      const fd = await getGoogleForm(formIdToLoad);
+      setFormDetails(fd);
+
+      const resp = await getGoogleFormResponses(formIdToLoad);
+      if (resp && resp.responses) {
+        setFormResponses(resp.responses);
+      } else {
+        setFormResponses([]);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setNotification({ type: 'error', text: err.message || 'Failed to load Google Form details or responses.' });
+    } finally {
+      setFormsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (googleFormId && googleAuthToken) {
+      loadFormAndResponses(googleFormId, googleAuthToken);
+    }
+  }, [googleFormId, googleAuthToken]);
+
+  const handleAuthorizeGoogle = async () => {
+    try {
+      const res = await googleSignIn();
+      if (res) {
+        setGoogleAuthToken(res.accessToken);
+        setNotification({ type: 'success', text: 'Successfully authenticated with Google Workspace!' });
+        if (googleFormId) {
+          loadFormAndResponses(googleFormId, res.accessToken);
+        }
+      }
+    } catch (err: any) {
+      setNotification({ type: 'error', text: err.message || 'Google Authentication failed.' });
+    }
+  };
+
+  const handleCreateForm = async () => {
+    if (!googleAuthToken) {
+      setNotification({ type: 'error', text: 'Please authorize with Google first.' });
+      return;
+    }
+    setFormsLoading(true);
+    try {
+      const newForm = await createGoogleForm(newFormTitle);
+      if (newForm && newForm.formId) {
+        const fid = newForm.formId;
+        setGoogleFormId(fid);
+        setInputFormId(fid);
+
+        // Save Form ID to Firestore settings
+        const { doc, setDoc } = await import('firebase/firestore');
+        await setDoc(doc(db, 'settings', 'google_form'), {
+          formId: fid,
+          title: newFormTitle,
+          createdAt: new Date().toISOString()
+        });
+
+        setNotification({ type: 'success', text: `Google Form "${newFormTitle}" created and linked successfully!` });
+      }
+    } catch (err: any) {
+      setNotification({ type: 'error', text: err.message || 'Failed to create Google Form.' });
+    } finally {
+      setFormsLoading(false);
+    }
+  };
+
+  const handleLinkForm = async () => {
+    if (!inputFormId.trim()) {
+      setNotification({ type: 'error', text: 'Please enter a valid Google Form ID.' });
+      return;
+    }
+    const cleanId = inputFormId.trim();
+    setFormsLoading(true);
+    try {
+      await getGoogleForm(cleanId);
+      setGoogleFormId(cleanId);
+
+      // Save Form ID to Firestore settings
+      const { doc, setDoc } = await import('firebase/firestore');
+      await setDoc(doc(db, 'settings', 'google_form'), {
+        formId: cleanId,
+        updatedAt: new Date().toISOString()
+      });
+
+      setNotification({ type: 'success', text: 'Google Form linked successfully!' });
+    } catch (err: any) {
+      setNotification({ type: 'error', text: 'Invalid Form ID or insufficient permissions. Verify your Google Auth.' });
+    } finally {
+      setFormsLoading(false);
+    }
+  };
+
+  const handleImportResponses = async () => {
+    if (!formDetails || formResponses.length === 0) {
+      setNotification({ type: 'error', text: 'No responses available to import.' });
+      return;
+    }
+
+    setFormsLoading(true);
+    let successCount = 0;
+
+    try {
+      const questionMap: Record<string, string> = {};
+      if (formDetails.items) {
+        formDetails.items.forEach((item: any) => {
+          if (item.questionItem?.question?.questionId) {
+            questionMap[item.questionItem.question.questionId] = item.title || '';
+          }
+        });
+      }
+
+      const { doc, setDoc } = await import('firebase/firestore');
+
+      for (const resp of formResponses) {
+        let email = (resp.respondentEmail || '').toLowerCase().trim();
+        let fullName = '';
+        let firstName = '';
+        let lastName = '';
+        let phone = '';
+        let essay1 = '';
+        let essay2 = '';
+        let essay3 = '';
+        const rawAnswers: Record<string, string> = {};
+
+        if (resp.answers) {
+          Object.keys(resp.answers).forEach((qId) => {
+            const ansObj = resp.answers[qId];
+            const qTitle = questionMap[qId] || '';
+            const ansVal = ansObj.textAnswers?.answers?.[0]?.value || '';
+            if (ansVal) {
+              rawAnswers[qTitle] = ansVal;
+
+              const lowerTitle = qTitle.toLowerCase();
+              if (lowerTitle.includes('email') && !email) {
+                email = ansVal.toLowerCase().trim();
+              } else if (lowerTitle.includes('first name') || lowerTitle.includes('given name')) {
+                firstName = ansVal.trim();
+              } else if (lowerTitle.includes('last name') || lowerTitle.includes('surname')) {
+                lastName = ansVal.trim();
+              } else if (lowerTitle.includes('full name') || lowerTitle.includes('your name')) {
+                fullName = ansVal.trim();
+              } else if (lowerTitle.includes('phone') || lowerTitle.includes('cell') || lowerTitle.includes('number')) {
+                phone = ansVal.trim();
+              } else if (lowerTitle.includes('essay 1') || lowerTitle.includes('statement') || lowerTitle.includes('why do you wish')) {
+                essay1 = ansVal;
+              } else if (lowerTitle.includes('essay 2') || lowerTitle.includes('community')) {
+                essay2 = ansVal;
+              } else if (lowerTitle.includes('essay 3') || lowerTitle.includes('leadership')) {
+                essay3 = ansVal;
+              }
+            }
+          });
+        }
+
+        if (!firstName && !lastName && fullName) {
+          const parts = fullName.split(' ');
+          firstName = parts[0] || '';
+          lastName = parts.slice(1).join(' ') || '';
+        } else if ((firstName || lastName) && !fullName) {
+          fullName = `${firstName} ${lastName}`.trim();
+        }
+
+        if (!email) continue;
+
+        const safeDocId = email.replace(/[^a-zA-Z0-9]/g, '_');
+
+        const appRef = doc(db, 'applications', safeDocId);
+        await setDoc(appRef, {
+          email,
+          firstName,
+          lastName,
+          phone,
+          essay1,
+          essay2,
+          essay3,
+          status: 'submitted',
+          submittedAt: new Date().toISOString(),
+          lastSavedAt: new Date().toISOString(),
+          source: 'Google Forms'
+        }, { merge: true });
+
+        const candidateDocRef = doc(db, 'candidate_accounts', email);
+        await setDoc(candidateDocRef, {
+          uid: 'google_form_' + safeDocId,
+          email,
+          name: fullName || email.split('@')[0],
+          firstName: firstName || email.split('@')[0],
+          role: 'prospective',
+          pass: phone.slice(-4) || '2026',
+          createdAt: new Date().toISOString(),
+          source: 'Google Forms'
+        }, { merge: true });
+
+        successCount++;
+      }
+
+      setImportedCount(successCount);
+      setNotification({
+        type: 'success',
+        text: `Successfully imported ${successCount} application(s) from Google Form into Firebase!`
+      });
+      loadAllData();
+    } catch (err: any) {
+      console.error(err);
+      setNotification({ type: 'error', text: err.message || 'Error occurred during responses import.' });
+    } finally {
+      setFormsLoading(false);
+    }
+  };
+
+  const handleTestDatabasePing = async () => {
+    setIsPingingDb(true);
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: 'admin@orderofkpi.org',
+          newPassword: 'InvalidPasswordFormatTest'
+        })
+      });
+      await response.json();
+      setNotification({ type: 'success', text: 'Database persistence ping dispatched! Real-time audit log captured.' });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsPingingDb(false);
+    }
+  };
 
   useEffect(() => {
     const role = sessionStorage.getItem('userRole');
@@ -524,6 +803,27 @@ export default function AdminDashboard() {
           >
             <FileText className="w-4 h-4 text-gold" /> Bylaw Revisions ({revisions.length})
           </button>
+
+          <button
+            onClick={() => setActiveTab('googleForms')}
+            className={`px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+              activeTab === 'googleForms' ? 'bg-ivy text-cream shadow-md border border-gold/30' : 'bg-white text-ivy/70 hover:bg-gold/10'
+            }`}
+          >
+            <Chrome className="w-4 h-4 text-gold" /> Google Forms ({formResponses.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab('passwordLogs')}
+            className={`px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+              activeTab === 'passwordLogs' ? 'bg-ivy text-cream shadow-md border border-gold/30' : 'bg-white text-ivy/70 hover:bg-gold/10'
+            }`}
+          >
+            <Key className="w-4 h-4 text-gold" /> Password Audit Stream
+            <span className="px-2 py-0.5 rounded-full text-[10px] bg-gold/20 text-gold font-bold">
+              {systemLogs.filter(l => l.event_type.includes('PASSWORD')).length}
+            </span>
+          </button>
         </div>
 
         {/* TAB 1: USER MANAGEMENT */}
@@ -573,78 +873,80 @@ export default function AdminDashboard() {
             </div>
 
             <div className="bg-white rounded-3xl border border-gold/20 shadow-soft overflow-hidden">
-              <table className="w-full text-left">
-                <thead className="bg-ivy text-cream border-b border-gold/10 text-[10px] font-display uppercase tracking-widest">
-                  <tr>
-                    <th className="px-6 py-4">User Details</th>
-                    <th className="px-6 py-4">Assigned Role</th>
-                    <th className="px-6 py-4">Title / Intake Class</th>
-                    <th className="px-6 py-4">Financial Status</th>
-                    <th className="px-6 py-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gold/10 text-xs text-ivy font-body">
-                  {filteredMembers.map(member => (
-                    <tr key={member.email} className="hover:bg-gold/5 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-ivy/5 border border-gold/20 flex items-center justify-center font-bold text-gold">
-                            {member.name ? member.name.charAt(0) : 'U'}
-                          </div>
-                          <div>
-                            <p className="font-bold text-ivy">{member.name}</p>
-                            <p className="text-[10px] text-ivy/50">{member.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                          member.role === 'admin' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
-                          member.role === 'Membership Committee Chair' ? 'bg-gold text-ivy font-extrabold' :
-                          member.role === 'Membership Committee' ? 'bg-emerald-100 text-emerald-800' :
-                          member.role === 'officer' ? 'bg-blue-100 text-blue-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {member.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="font-bold text-gold">{member.title || '-'}</p>
-                        <p className="text-[10px] text-ivy/50">{member.intake_class || 'Member'}</p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest ${
-                          member.financial_status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {member.financial_status || 'inactive'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => {
-                              setIsNewMember(false);
-                              setEditingMember(member);
-                              setShowMemberModal(true);
-                            }}
-                            className="p-2 text-ivy/60 hover:text-ivy hover:bg-gold/10 rounded-lg transition-colors"
-                            title="Edit User"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => deleteMember(member.email, member.name)}
-                            className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete User"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-ivy text-cream border-b border-gold/10 text-[10px] font-display uppercase tracking-widest">
+                    <tr>
+                      <th className="px-6 py-4">User Details</th>
+                      <th className="px-6 py-4">Assigned Role</th>
+                      <th className="px-6 py-4">Title / Intake Class</th>
+                      <th className="px-6 py-4">Financial Status</th>
+                      <th className="px-6 py-4 text-right">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gold/10 text-xs text-ivy font-body">
+                    {filteredMembers.map(member => (
+                      <tr key={member.email} className="hover:bg-gold/5 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-ivy/5 border border-gold/20 flex items-center justify-center font-bold text-gold">
+                              {member.name ? member.name.charAt(0) : 'U'}
+                            </div>
+                            <div>
+                              <p className="font-bold text-ivy">{member.name}</p>
+                              <p className="text-[10px] text-ivy/50">{member.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            member.role === 'admin' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+                            member.role === 'Membership Committee Chair' ? 'bg-gold text-ivy font-extrabold' :
+                            member.role === 'Membership Committee' ? 'bg-emerald-100 text-emerald-800' :
+                            member.role === 'officer' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {member.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="font-bold text-gold">{member.title || '-'}</p>
+                          <p className="text-[10px] text-ivy/50">{member.intake_class || 'Member'}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest ${
+                            member.financial_status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {member.financial_status || 'inactive'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setIsNewMember(false);
+                                setEditingMember(member);
+                                setShowMemberModal(true);
+                              }}
+                              className="p-2 text-ivy/60 hover:text-ivy hover:bg-gold/10 rounded-lg transition-colors"
+                              title="Edit User"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => deleteMember(member.email, member.name)}
+                              className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete User"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
@@ -949,6 +1251,437 @@ export default function AdminDashboard() {
                       <p className="text-ivy/70">{rev.description}</p>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 6: GOOGLE FORMS INTEGRATION */}
+        {activeTab === 'googleForms' && (
+          <div className="space-y-6">
+            <div className="bg-white p-6 md:p-8 rounded-3xl border border-gold/20 shadow-soft space-y-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gold/10 pb-4">
+                <div>
+                  <h2 className="text-xl font-display font-bold text-ivy uppercase italic">
+                    Google Forms <span className="text-gold">Integration Console</span>
+                  </h2>
+                  <p className="text-ivy/60 text-xs mt-1">
+                    Design or link official Google Forms and import prospective candidate applications directly into Firebase.
+                  </p>
+                </div>
+                <div>
+                  {!googleAuthToken ? (
+                    <button
+                      onClick={handleAuthorizeGoogle}
+                      className="px-5 py-2.5 bg-gold text-ivy rounded-xl text-xs font-bold uppercase tracking-wider hover:brightness-105 transition-all flex items-center gap-2 shadow-md"
+                    >
+                      <Chrome className="w-4 h-4" /> Authorize with Google
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 text-green-800 rounded-xl text-xs font-bold">
+                      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                      Google API Connected
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {!googleAuthToken ? (
+                <div className="p-6 bg-[#FAF9F5] border border-gold/20 rounded-2xl text-center space-y-4">
+                  <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center mx-auto">
+                    <Chrome className="w-6 h-6 text-gold" />
+                  </div>
+                  <div className="max-w-md mx-auto space-y-2">
+                    <h3 className="font-display font-bold text-ivy text-sm uppercase">Google Authentication Required</h3>
+                    <p className="text-xs text-ivy/60 leading-relaxed">
+                      To create and sync official Google Forms, please sign in using your Google Workspace administration account.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleAuthorizeGoogle}
+                    className="px-6 py-2.5 bg-ivy text-cream hover:bg-ivy/90 rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
+                  >
+                    Authenticate Now &rarr;
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  {/* Left Column: Form Configuration */}
+                  <div className="lg:col-span-5 space-y-6">
+                    {/* Create New Form Section */}
+                    <div className="p-5 bg-[#FAF9F5] border border-gold/20 rounded-2xl space-y-4">
+                      <h3 className="font-display font-bold text-ivy text-xs uppercase tracking-wider flex items-center gap-2 border-b border-gold/10 pb-2">
+                        <Database className="w-4 h-4 text-gold" /> Create Intake Form
+                      </h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-ivy/60 mb-1">New Form Title</label>
+                          <input
+                            type="text"
+                            value={newFormTitle}
+                            onChange={(e) => setNewFormTitle(e.target.value)}
+                            placeholder="e.g. FY27 Membership Intake Application"
+                            className="w-full px-4 py-2.5 rounded-xl border border-gold/20 text-xs font-body focus:outline-none focus:ring-2 focus:ring-gold/30 bg-white"
+                          />
+                        </div>
+                        <button
+                          onClick={handleCreateForm}
+                          disabled={formsLoading}
+                          className="w-full px-4 py-2.5 bg-gold text-ivy rounded-xl text-xs font-bold uppercase tracking-wider hover:brightness-105 transition-all disabled:opacity-50"
+                        >
+                          {formsLoading ? 'Generating Form...' : 'Create New Google Form'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Link Existing Form Section */}
+                    <div className="p-5 bg-[#FAF9F5] border border-gold/20 rounded-2xl space-y-4">
+                      <h3 className="font-display font-bold text-ivy text-xs uppercase tracking-wider flex items-center gap-2 border-b border-gold/10 pb-2">
+                        <Chrome className="w-4 h-4 text-gold" /> Link Existing Form ID
+                      </h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-ivy/60 mb-1">Google Form ID</label>
+                          <input
+                            type="text"
+                            value={inputFormId}
+                            onChange={(e) => setInputFormId(e.target.value)}
+                            placeholder="Enter the 44-character Google Form ID"
+                            className="w-full px-4 py-2.5 rounded-xl border border-gold/20 text-xs font-body focus:outline-none focus:ring-2 focus:ring-gold/30 bg-white"
+                          />
+                        </div>
+                        <button
+                          onClick={handleLinkForm}
+                          disabled={formsLoading}
+                          className="w-full px-4 py-2.5 bg-ivy text-cream hover:bg-ivy/90 rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                        >
+                          {formsLoading ? 'Verifying...' : 'Link Existing Google Form'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Active Form Details & Response Sync */}
+                  <div className="lg:col-span-7 space-y-6">
+                    {googleFormId ? (
+                      <div className="p-5 bg-[#FAF9F5] border border-gold/20 rounded-2xl space-y-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gold/10 pb-3">
+                          <div>
+                            <span className="text-[9px] uppercase font-bold bg-gold/20 text-gold px-2 py-0.5 rounded-md">Linked Active Form</span>
+                            <h3 className="font-display font-bold text-ivy text-sm uppercase mt-1">
+                              {formDetails?.info?.title || 'Loading Form Details...'}
+                            </h3>
+                          </div>
+                          <a
+                            href={`https://docs.google.com/forms/d/${googleFormId}/edit`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-gold hover:text-gold/80 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
+                          >
+                            Open in Google Forms &rarr;
+                          </a>
+                        </div>
+
+                        {formDetails?.info?.description && (
+                          <p className="text-xs text-ivy/60 font-body italic leading-relaxed">
+                            "{formDetails.info.description}"
+                          </p>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-4 pt-2">
+                          <div className="bg-white p-4 rounded-xl border border-gold/10">
+                            <span className="block text-[10px] uppercase font-bold text-ivy/40">Total Responses</span>
+                            <span className="text-2xl font-display font-bold text-ivy mt-1 block">
+                              {formResponses.length}
+                            </span>
+                          </div>
+                          <div className="bg-white p-4 rounded-xl border border-gold/10">
+                            <span className="block text-[10px] uppercase font-bold text-ivy/40">Sync Status</span>
+                            <span className="text-xs font-bold text-green-700 mt-2 block flex items-center gap-1">
+                              <Check className="w-3.5 h-3.5" /> Fully Connected
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Import Responses Panel */}
+                        {formResponses.length > 0 ? (
+                          <div className="pt-4 space-y-3 border-t border-gold/10">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-xs font-bold uppercase text-ivy">Database Synchronization</h4>
+                              <span className="text-[10px] text-ivy/40 uppercase font-mono">Real-time mapping</span>
+                            </div>
+                            <p className="text-xs text-ivy/60 leading-relaxed font-body">
+                              Automatically map Google Form text answers into formal prospective candidate database accounts. Default passwords will be set to the last 4 digits of their phone numbers to enable dynamic candidate logins!
+                            </p>
+                            <button
+                              onClick={handleImportResponses}
+                              disabled={formsLoading}
+                              className="w-full py-3 bg-ivy text-cream hover:bg-ivy/90 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                              <ArrowDownToLine className="w-4 h-4 text-gold" />
+                              {formsLoading ? 'Synchronizing Datasets...' : `Synchronize & Import ${formResponses.length} Responses`}
+                            </button>
+                            {importedCount !== null && (
+                              <p className="text-center text-xs font-bold text-green-700 bg-green-50 border border-green-200 py-2.5 rounded-xl">
+                                Success: Loaded {importedCount} prospective candidate(s) into database.
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-center">
+                            <p className="text-xs text-amber-800 font-bold">
+                              No responses have been submitted to this Google Form yet.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Responses Preview Table with Horizontal/Vertical Scroll */}
+                        {formResponses.length > 0 && (
+                          <div className="pt-4 border-t border-gold/10 space-y-2">
+                            <h4 className="text-xs font-bold uppercase text-ivy">Live Responses Queue</h4>
+                            <div className="overflow-x-auto overflow-y-auto max-h-60 rounded-xl border border-gold/15 bg-white">
+                              <table className="w-full text-left border-collapse text-[11px]">
+                                <thead>
+                                  <tr className="bg-[#FAF9F5] border-b border-gold/20 text-ivy/70">
+                                    <th className="p-2.5 font-bold uppercase tracking-wider">Response ID</th>
+                                    <th className="p-2.5 font-bold uppercase tracking-wider">Email Address</th>
+                                    <th className="p-2.5 font-bold uppercase tracking-wider">Submission Time</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {formResponses.map((r: any) => (
+                                    <tr key={r.responseId} className="border-b border-gold/5 hover:bg-[#FAF9F5] transition-colors">
+                                      <td className="p-2.5 font-mono text-gold font-bold">{r.responseId}</td>
+                                      <td className="p-2.5 font-bold">{r.respondentEmail || 'No Email Collected'}</td>
+                                      <td className="p-2.5 text-ivy/60">{r.createTime ? new Date(r.createTime).toLocaleString() : 'N/A'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="h-full flex flex-col justify-center items-center p-8 bg-[#FAF9F5] border border-dashed border-gold/30 rounded-2xl text-center space-y-3">
+                        <Chrome className="w-10 h-10 text-gold/40" />
+                        <div>
+                          <h4 className="font-display font-bold text-ivy text-xs uppercase">No Active Form Linked</h4>
+                          <p className="text-xs text-ivy/50 max-w-sm mx-auto mt-1">
+                            Create a new form on the left panel or paste an existing Google Form ID to fetch real-time survey datasets.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 7: PASSWORD CHANGE AUDIT LOGS */}
+        {activeTab === 'passwordLogs' && (
+          <div className="space-y-6">
+            {/* Header Banner */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-gold/20 shadow-soft">
+              <div>
+                <h2 className="text-xl font-display font-bold text-ivy uppercase italic flex items-center gap-2">
+                  <Key className="w-5 h-5 text-gold" />
+                  Password Real-Time Event & <span className="text-gold">Database Audit Stream</span>
+                </h2>
+                <p className="text-ivy/60 text-xs mt-1">
+                  Monitor live password change events, verify real-time database cluster persistence, and trace credential updates.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleTestDatabasePing}
+                  disabled={isPingingDb}
+                  className="px-4 py-2.5 bg-ivy text-cream hover:bg-ivy/90 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 border border-gold/30 shadow-md disabled:opacity-50 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-gold ${isPingingDb ? 'animate-spin' : ''}`} />
+                  {isPingingDb ? 'Testing Sync...' : 'Test DB Persistence Ping'}
+                </button>
+              </div>
+            </div>
+
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white p-5 rounded-2xl border border-gold/20 shadow-soft flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-gold/10 border border-gold/30 flex items-center justify-center text-gold shrink-0">
+                  <Key className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-ivy/50">Total Password Changes</p>
+                  <p className="text-2xl font-display font-bold text-ivy">
+                    {systemLogs.filter(l => l.event_type === 'PASSWORD_CHANGE').length}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-gold/20 shadow-soft flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center text-green-700 shrink-0">
+                  <Database className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-ivy/50">DB Persistence Engine</p>
+                  <p className="text-xs font-bold text-green-700 uppercase">100% Operational</p>
+                  <p className="text-[9px] text-ivy/40">SQLite + Overrides + Firestore</p>
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-gold/20 shadow-soft flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-ivy/50">Failed Validation/Alerts</p>
+                  <p className="text-2xl font-display font-bold text-amber-700">
+                    {systemLogs.filter(l => l.event_type.includes('PASSWORD') && l.severity !== 'info').length}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-gold/20 shadow-soft flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 shrink-0">
+                  <Clock className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-ivy/50">Live Stream Status</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
+                    <span className="text-xs font-bold text-ivy uppercase">Active SSE Stream</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter Toolbar */}
+            <div className="bg-white p-4 rounded-2xl border border-gold/20 shadow-soft flex flex-col md:flex-row justify-between items-center gap-4">
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ivy/30 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search by user email or log details..."
+                  value={passwordLogSearch}
+                  onChange={(e) => setPasswordLogSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-cream/50 border border-gold/20 rounded-xl text-xs text-ivy focus:outline-none focus:border-gold"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <button
+                  onClick={() => setPasswordLogFilter('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                    passwordLogFilter === 'all' ? 'bg-ivy text-cream' : 'bg-cream text-ivy/60 hover:text-ivy'
+                  }`}
+                >
+                  All Events
+                </button>
+                <button
+                  onClick={() => setPasswordLogFilter('change')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                    passwordLogFilter === 'change' ? 'bg-emerald-700 text-cream' : 'bg-cream text-ivy/60 hover:text-ivy'
+                  }`}
+                >
+                  Password Changes
+                </button>
+                <button
+                  onClick={() => setPasswordLogFilter('failure')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                    passwordLogFilter === 'failure' ? 'bg-amber-700 text-cream' : 'bg-cream text-ivy/60 hover:text-ivy'
+                  }`}
+                >
+                  Validation Alerts
+                </button>
+              </div>
+            </div>
+
+            {/* Password Audit Logs Table */}
+            <div className="bg-white rounded-3xl border border-gold/20 overflow-hidden shadow-soft">
+              <div className="p-4 bg-ivy text-cream font-display uppercase tracking-wider text-[11px] flex justify-between items-center">
+                <span className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-gold" /> Real-Time Password Audit Log Stream
+                </span>
+                <span className="text-gold font-mono text-[10px] bg-gold/10 px-2.5 py-0.5 rounded-full border border-gold/20">
+                  SSE Event Stream Active
+                </span>
+              </div>
+
+              {systemLogs.filter(l => l.event_type.includes('PASSWORD') || l.event_type.includes('LOGIN')).length === 0 ? (
+                <div className="p-16 text-center text-ivy/40 space-y-3">
+                  <Key className="w-10 h-10 mx-auto text-gold/30" />
+                  <p className="font-body text-sm italic">No password events logged in current session stream yet.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-cream border-b border-gold/10 text-[10px] font-bold uppercase tracking-widest text-ivy/50">
+                      <tr>
+                        <th className="py-4 px-6">Timestamp</th>
+                        <th className="py-4 px-6">Account Email</th>
+                        <th className="py-4 px-6">Event Category</th>
+                        <th className="py-4 px-6">Database Sync & Audit Detail</th>
+                        <th className="py-4 px-6 text-right">Commit Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gold/10 text-ivy font-body">
+                      {systemLogs
+                        .filter(log => {
+                          const isPass = log.event_type.includes('PASSWORD') || log.event_type.includes('LOGIN');
+                          if (!isPass) return false;
+
+                          if (passwordLogFilter === 'change' && !log.event_type.includes('CHANGE')) return false;
+                          if (passwordLogFilter === 'failure' && !log.event_type.includes('FAILURE') && log.severity === 'info') return false;
+
+                          if (passwordLogSearch) {
+                            const q = passwordLogSearch.toLowerCase();
+                            return log.email.toLowerCase().includes(q) || log.message.toLowerCase().includes(q) || log.event_type.toLowerCase().includes(q);
+                          }
+
+                          return true;
+                        })
+                        .map((log, idx) => (
+                          <tr key={idx} className="hover:bg-gold/5 transition-colors">
+                            <td className="py-4 px-6 text-ivy/50 font-mono whitespace-nowrap text-[11px]">
+                              {new Date(log.timestamp).toLocaleString()}
+                            </td>
+                            <td className="py-4 px-6 font-bold text-ivy">
+                              <div className="flex items-center gap-2">
+                                <Shield className="w-3.5 h-3.5 text-gold" />
+                                <span>{log.email}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 px-6">
+                              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                log.event_type === 'PASSWORD_CHANGE' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                                log.event_type.includes('FAILURE') ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                                'bg-blue-100 text-blue-800 border border-blue-200'
+                              }`}>
+                                <Activity className="w-3 h-3" />
+                                {log.event_type.replace(/_/g, ' ')}
+                              </span>
+                            </td>
+                            <td className="py-4 px-6 text-xs text-ivy/80 max-w-xs">
+                              {log.message}
+                            </td>
+                            <td className="py-4 px-6 text-right">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                log.severity === 'error' ? 'bg-red-100 text-red-800' :
+                                log.severity === 'warning' ? 'bg-amber-100 text-amber-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                                <CheckCircle2 className="w-3 h-3" />
+                                {log.severity === 'info' ? 'Committed' : log.severity.toUpperCase()}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>

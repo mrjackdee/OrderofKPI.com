@@ -28,6 +28,24 @@ import Application from './Application';
 
 export default function ApplicantPortal() {
   const [activeTab, setActiveTab] = useState<'application' | 'timeline' | 'instructions' | 'account'>('application');
+  const [linkedGoogleFormId, setLinkedGoogleFormId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchLinkedForm = async () => {
+      try {
+        const { doc, getDoc } = await import('firebase/firestore');
+        const { db } = await import('../lib/firebase');
+        const docSnap = await getDoc(doc(db, 'settings', 'google_form'));
+        if (docSnap.exists()) {
+          const fid = docSnap.data().formId;
+          if (fid) setLinkedGoogleFormId(fid);
+        }
+      } catch (err) {
+        console.warn('Error fetching linked google form:', err);
+      }
+    };
+    fetchLinkedForm();
+  }, []);
   const [appStatus, setAppStatus] = useState<'not_started' | 'draft' | 'submitted'>('not_started');
   const [candidateStatus, setCandidateStatus] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
@@ -550,6 +568,28 @@ export default function ApplicantPortal() {
           id="application-form-section" 
           className={`bg-white border border-gold/20 rounded-[32px] p-4 md:p-8 shadow-soft ${activeTab !== 'application' ? 'hidden' : ''}`}
         >
+          {linkedGoogleFormId && (
+            <div className="mb-6 p-5 bg-gold/10 border border-gold/30 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-gold/20 rounded-md text-[9px] font-bold text-ivy uppercase tracking-wider">
+                  <Sparkles size={10} className="text-gold" /> Google Forms Option
+                </div>
+                <h4 className="text-xs font-bold text-ivy uppercase">Google Forms Application Available</h4>
+                <p className="text-[11px] text-ivy/60">
+                  You can optionally complete your FY27 membership intake application using our official Google Form instead of this interactive portal.
+                </p>
+              </div>
+              <a
+                href={`https://docs.google.com/forms/d/${linkedGoogleFormId}/viewform`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 bg-ivy text-cream hover:bg-ivy/90 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all inline-flex items-center gap-2 whitespace-nowrap shadow-sm"
+              >
+                Go to Google Form &rarr;
+              </a>
+            </div>
+          )}
+
           <Application 
             onUnsavedChangesChange={setHasUnsavedChanges}
             saveRef={saveRef}

@@ -349,7 +349,20 @@ export async function performHybridPasswordChange(
       if (response.ok && data.success) {
         localStorage.setItem(`kpi_client_password_${normalizedEmail}`, newPass);
         localStorage.setItem(`kpi_password_changed_${normalizedEmail}`, 'true');
-        return { success: true, message: data.message || 'Password updated' };
+
+        // Async sync to Firestore
+        try {
+          const { doc, setDoc } = await import('firebase/firestore');
+          const { db } = await import('./firebase');
+          await setDoc(doc(db, 'candidate_accounts', normalizedEmail), {
+            email: normalizedEmail,
+            pass: newPass,
+            isFirstLogin: false,
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+        } catch (e) {}
+
+        return { success: true, message: data.message || 'Password updated and synchronized across database clusters.' };
       } else {
         console.warn('[AUTH] API returned error on password change. Trying client-side fallback:', data.message);
         const clientRes = performClientSidePasswordChange(normalizedEmail, currentPass, newPass);

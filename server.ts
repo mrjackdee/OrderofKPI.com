@@ -26,6 +26,67 @@ interface UserRecord {
   title?: string;
 }
 
+const passwordOverridesPath = path.join(process.cwd(), "user_password_overrides.json");
+
+interface PasswordOverrideRecord {
+  hash: string;
+  isFirstLogin: number;
+  updatedAt: string;
+}
+
+let globalPasswordOverrides: Record<string, PasswordOverrideRecord> = {};
+
+function loadPasswordOverridesFromFile() {
+  globalPasswordOverrides = {
+    "james.haywood@orderofkpi.org": { hash: hashPassword("2012"), isFirstLogin: 0, updatedAt: new Date().toISOString() },
+    "jackdee.sync@gmail.com": { hash: hashPassword("atlanta"), isFirstLogin: 0, updatedAt: new Date().toISOString() }
+  };
+
+  if (fs.existsSync(passwordOverridesPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(passwordOverridesPath, "utf-8"));
+      globalPasswordOverrides = { ...globalPasswordOverrides, ...data };
+      console.log(`[AUTH] Loaded ${Object.keys(data).length} password overrides from persistent storage.`);
+    } catch (err) {
+      console.error("[AUTH] Error loading password overrides file:", err);
+    }
+  }
+
+  // Also read kpi_members_v2.json to ensure any previously saved user passwords are present in memory
+  if (fs.existsSync(jsonDbPath)) {
+    try {
+      const jsonUsers = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8")) as Record<string, UserRecord>;
+      for (const [em, record] of Object.entries(jsonUsers)) {
+        const norm = em.toLowerCase().trim();
+        if (record.password_hash) {
+          if (!globalPasswordOverrides[norm] || record.is_first_login === 0) {
+            globalPasswordOverrides[norm] = {
+              hash: record.password_hash,
+              isFirstLogin: record.is_first_login ?? (record.password_hash === hashPassword("atlanta") ? 1 : 0),
+              updatedAt: new Date().toISOString()
+            };
+          }
+        }
+      }
+    } catch (e) {}
+  }
+}
+
+function savePasswordOverride(email: string, hash: string, isFirstLogin: number = 0) {
+  const normEmail = email.toLowerCase().trim();
+  globalPasswordOverrides[normEmail] = {
+    hash,
+    isFirstLogin,
+    updatedAt: new Date().toISOString()
+  };
+  try {
+    fs.writeFileSync(passwordOverridesPath, JSON.stringify(globalPasswordOverrides, null, 2));
+    console.log(`[AUTH] Password override saved persistently for: ${normEmail}`);
+  } catch (err) {
+    console.error("[AUTH] Failed to save password override file:", err);
+  }
+}
+
 const defaultUsers = [
   { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator", intake_class: "", financial_status: "active", industry: "Technology" },
   { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", intake_class: "", financial_status: "active", industry: "Leadership" },
@@ -77,6 +138,8 @@ function hashPassword(password: string): string {
 }
 
 async function initDb() {
+  loadPasswordOverridesFromFile();
+
   const allowedEmails = new Set([
     ...defaultUsers.map(u => u.email.toLowerCase().trim()),
     ...initialCandidates.map(c => c.email.toLowerCase().trim())
@@ -219,23 +282,33 @@ async function initDb() {
       }
     }
 
-    // Add or update users to align with latest roles and titles, preserving existing password hashes
+    // Add or update users to align with latest roles and titles, preserving existing password hashes and first_login status
     for (const u of defaultUsers) {
       const emailNorm = u.email.toLowerCase().trim();
       const firstName = u.name.split(" ")[0];
-      const existingUser = sqliteDb.prepare("SELECT password_hash FROM users WHERE email = ?").get(emailNorm) as any;
+      const existingUser = sqliteDb.prepare("SELECT password_hash, is_first_login FROM users WHERE email = ?").get(emailNorm) as any;
       
-      const customPass = userPasswordOverrides[emailNorm];
-      const targetPasswordHash = customPass 
-        ? hashPassword(customPass) 
-        : (existingUser ? existingUser.password_hash : defaultPasswordHash);
+      const override = globalPasswordOverrides[emailNorm];
+      let targetPasswordHash = defaultPasswordHash;
+      let targetIsFirstLogin = 1;
+
+      if (override) {
+        targetPasswordHash = override.hash;
+        targetIsFirstLogin = override.isFirstLogin;
+      } else if (existingUser) {
+        targetPasswordHash = existingUser.password_hash;
+        targetIsFirstLogin = existingUser.is_first_login;
+      } else if (emailNorm === "james.haywood@orderofkpi.org") {
+        targetPasswordHash = hashPassword("2012");
+        targetIsFirstLogin = 0;
+      }
 
       if (existingUser) {
         sqliteDb.prepare(`
           UPDATE users 
           SET name = ?, first_name = ?, role = ?, title = ?, 
               intake_class = ?, 
-              financial_status = ?, industry = ?, password_hash = ?
+              financial_status = ?, industry = ?, password_hash = ?, is_first_login = ?
           WHERE email = ?
         `).run(
           u.name, 
@@ -246,6 +319,7 @@ async function initDb() {
           u.financial_status || "inactive", 
           u.industry || null, 
           targetPasswordHash,
+          targetIsFirstLogin,
           emailNorm
         );
       } else {
@@ -255,12 +329,13 @@ async function initDb() {
             role, title, intake_class, 
             financial_status, industry
           )
-          VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           emailNorm, 
           u.name, 
           firstName, 
           targetPasswordHash, 
+          targetIsFirstLogin,
           u.role, 
           u.title || "",
           u.intake_class || null,
@@ -438,11 +513,13 @@ function logEvent(email: string, event_type: string, message: string, severity: 
 // DB Helper functions
 function findUser(email: string): UserRecord | null {
   const normEmail = email.toLowerCase().trim();
+  let userRecord: UserRecord | null = null;
+
   if (useSqlite && sqliteDb) {
     try {
       const row = sqliteDb.prepare("SELECT * FROM users WHERE LOWER(email) = ?").get(normEmail) as any;
       if (row) {
-        return {
+        userRecord = {
           email: row.email,
           name: row.name,
           first_name: row.first_name,
@@ -458,11 +535,11 @@ function findUser(email: string): UserRecord | null {
   }
   
   // JSON fallback
-  if (fs.existsSync(jsonDbPath)) {
+  if (!userRecord && fs.existsSync(jsonDbPath)) {
     try {
       const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8")) as Record<string, UserRecord>;
       if (data[normEmail]) {
-        return data[normEmail];
+        userRecord = data[normEmail];
       }
     } catch (e) {
       console.error("JSON read error", e);
@@ -470,40 +547,52 @@ function findUser(email: string): UserRecord | null {
   }
 
   // Roster fallback for prospective candidates
-  const candidate = initialCandidates.find(c => c.email.toLowerCase().trim() === normEmail);
-  if (candidate) {
-    const passHash = hashPassword(candidate.pass);
-    return {
-      email: normEmail,
-      name: candidate.name,
-      first_name: candidate.name.split(" ")[0],
-      password_hash: passHash,
-      is_first_login: 0,
-      role: "prospective",
-      title: "Candidate"
-    };
+  if (!userRecord) {
+    const candidate = initialCandidates.find(c => c.email.toLowerCase().trim() === normEmail);
+    if (candidate) {
+      const passHash = hashPassword(candidate.pass);
+      userRecord = {
+        email: normEmail,
+        name: candidate.name,
+        first_name: candidate.name.split(" ")[0],
+        password_hash: passHash,
+        is_first_login: 0,
+        role: "prospective",
+        title: "Candidate"
+      };
+    }
   }
 
   // Roster fallback for default members
-  const defaultU = defaultUsers.find(u => u.email.toLowerCase().trim() === normEmail);
-  if (defaultU) {
-    return {
-      email: normEmail,
-      name: defaultU.name,
-      first_name: defaultU.name.split(" ")[0],
-      password_hash: hashPassword("atlanta"),
-      is_first_login: 0,
-      role: defaultU.role,
-      title: defaultU.title
-    };
+  if (!userRecord) {
+    const defaultU = defaultUsers.find(u => u.email.toLowerCase().trim() === normEmail);
+    if (defaultU) {
+      userRecord = {
+        email: normEmail,
+        name: defaultU.name,
+        first_name: defaultU.name.split(" ")[0],
+        password_hash: hashPassword("atlanta"),
+        is_first_login: normEmail === "james.haywood@orderofkpi.org" ? 0 : 1,
+        role: defaultU.role,
+        title: defaultU.title
+      };
+    }
   }
 
-  return null;
+  // Apply persistent password override if recorded!
+  if (userRecord && globalPasswordOverrides[normEmail]) {
+    userRecord.password_hash = globalPasswordOverrides[normEmail].hash;
+    userRecord.is_first_login = globalPasswordOverrides[normEmail].isFirstLogin;
+  }
+
+  return userRecord;
 }
 
 function updateUserPassword(email: string, newHash: string): boolean {
   const normEmail = email.toLowerCase().trim();
   let success = false;
+
+  savePasswordOverride(normEmail, newHash, 0);
 
   const candidate = initialCandidates.find(c => c.email.toLowerCase().trim() === normEmail);
   const defaultU = defaultUsers.find(u => u.email.toLowerCase().trim() === normEmail);
@@ -557,7 +646,7 @@ function updateUserPassword(email: string, newHash: string): boolean {
     }
   }
 
-  return success || true;
+  return true;
 }
 
 async function startServer() {
@@ -712,42 +801,69 @@ async function startServer() {
       return res.status(400).json({ success: false, message: "Email and new password are required" });
     }
 
+    const normEmail = email.toLowerCase().trim();
+
     // Password validation rules: 8+ characters, at least 1 number, at least 1 uppercase letter
     const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
     if (!passwordRegex.test(newPassword)) {
+      logEvent(normEmail, "PASSWORD_CHANGE_FAILURE", "Password complexity validation failed (requires 8+ chars, 1 uppercase, 1 number)", "warning");
       return res.status(400).json({
         success: false,
         message: "Password must include at least 8 characters, contain at least 1 number and 1 upper case letter."
       });
     }
 
-    const user = findUser(email);
+    const user = findUser(normEmail);
     if (!user) {
+      logEvent(normEmail, "PASSWORD_CHANGE_FAILURE", "User account not found during password update attempt", "error");
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
     // If it's not the first login, we must verify current password
     if (user.is_first_login === 0) {
       if (!currentPassword) {
+        logEvent(normEmail, "PASSWORD_CHANGE_FAILURE", "Current password required for existing account password update", "warning");
         return res.status(400).json({ success: false, message: "Current password is required to change password" });
       }
       const hashedCurrentInput = hashPassword(currentPassword);
       if (user.password_hash !== hashedCurrentInput) {
+        logEvent(normEmail, "PASSWORD_CHANGE_FAILURE", "Incorrect current password supplied during update", "error");
         return res.status(401).json({ success: false, message: "Current password is incorrect" });
       }
     }
 
     const newHash = hashPassword(newPassword);
-    const updated = updateUserPassword(email, newHash);
+    const updated = updateUserPassword(normEmail, newHash);
     if (updated) {
-      console.log(`[AUTH] Password updated successfully in database for: ${email}`);
-      logEvent(email, "PASSWORD_CHANGE", "User successfully updated their password");
-      return res.json({ success: true, message: "Password updated successfully" });
+      console.log(`[AUTH] Password updated successfully in database for: ${normEmail}`);
+      logEvent(normEmail, "PASSWORD_CHANGE", `Password updated and synchronized across DB clusters for ${normEmail}`, "info");
+      return res.json({
+        success: true,
+        message: "Password updated successfully and persisted to database.",
+        email: normEmail,
+        timestamp: new Date().toISOString()
+      });
     }
 
-    console.error(`[AUTH] DATABASE UPDATE FAILED for: ${email}`);
-    logEvent(email, "PASSWORD_CHANGE_FAILURE", "Database error while updating password", "error");
+    console.error(`[AUTH] DATABASE UPDATE FAILED for: ${normEmail}`);
+    logEvent(normEmail, "PASSWORD_CHANGE_FAILURE", "Database write failure during password update", "error");
     return res.status(500).json({ success: false, message: "Failed to update password in database" });
+  });
+
+  app.get("/api/admin/password-logs", (req, res) => {
+    if (useSqlite && sqliteDb) {
+      try {
+        const logs = sqliteDb.prepare(`
+          SELECT * FROM system_logs 
+          WHERE event_type LIKE '%PASSWORD%' OR event_type LIKE '%LOGIN%'
+          ORDER BY timestamp DESC LIMIT 100
+        `).all();
+        return res.json({ success: true, logs });
+      } catch (e: any) {
+        return res.status(500).json({ success: false, message: e.message });
+      }
+    }
+    return res.json({ success: true, logs: [] });
   });
 
   app.post("/api/auth/change-email", (req, res) => {

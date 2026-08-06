@@ -107,5 +107,9 @@ service cloud.firestore {
     match /candidate_accounts/{accountId} {
       allow read, write: if true;
     }
+
+    match /settings/{settingId} {
+      allow read, write: if true;
+    }
   }
 }

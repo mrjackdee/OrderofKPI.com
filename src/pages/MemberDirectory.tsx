@@ -82,7 +82,7 @@ export default function MemberDirectory() {
   const intakeClasses = Array.from(new Set(members.map(m => m.intake_class).filter(Boolean))) as string[];
 
   return (
-    <div className="min-h-screen bg-cream pb-12">
+    <div className="min-h-screen bg-cream pb-12 w-full overflow-x-hidden">
       {/* Hero Section */}
       <div className="bg-ivy py-16 px-4 mb-8">
         <div className="max-w-7xl mx-auto text-center">

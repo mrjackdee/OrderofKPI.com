@@ -158,25 +158,11 @@ export async function firebaseLoginApplicant(email: string, pass: string) {
 
   const initialCandidate = INITIAL_CANDIDATES_LIST[normEmail];
   const clientPass = localStorage.getItem(`kpi_client_password_${normEmail}`);
+  const isChanged = localStorage.getItem(`kpi_password_changed_${normEmail}`) === 'true';
 
-  // 1. Instant check against initial candidates or client password storage
-  if (initialCandidate && pass === initialCandidate.pass) {
-    return {
-      success: true,
-      message: 'Authenticated successfully',
-      user: {
-        uid: 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
-        email: normEmail,
-        name: initialCandidate.name,
-        firstName: initialCandidate.name.split(' ')[0],
-        role: 'prospective',
-        isFirstLogin: false
-      }
-    };
-  }
-
+  // 1. Instant check against saved updated password
   if (clientPass && pass === clientPass) {
-    const name = localStorage.getItem(`kpi_client_name_${normEmail}`) || normEmail.split('@')[0];
+    const name = localStorage.getItem(`kpi_client_name_${normEmail}`) || (initialCandidate ? initialCandidate.name : normEmail.split('@')[0]);
     return {
       success: true,
       message: 'Authenticated successfully',
@@ -185,6 +171,22 @@ export async function firebaseLoginApplicant(email: string, pass: string) {
         email: normEmail,
         name,
         firstName: name.split(' ')[0],
+        role: 'prospective',
+        isFirstLogin: false
+      }
+    };
+  }
+
+  // Allow initial default candidate password only if not changed
+  if (initialCandidate && pass === initialCandidate.pass && !isChanged && !clientPass) {
+    return {
+      success: true,
+      message: 'Authenticated successfully',
+      user: {
+        uid: 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
+        email: normEmail,
+        name: initialCandidate.name,
+        firstName: initialCandidate.name.split(' ')[0],
         role: 'prospective',
         isFirstLogin: false
       }

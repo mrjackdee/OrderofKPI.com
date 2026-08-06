@@ -286,16 +286,16 @@ export default function CandidateTracker() {
   };
 
   return (
-    <div className="min-h-screen bg-cream pb-12">
-      <div className="bg-ivy py-12 px-4 mb-8">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+    <div className="min-h-screen bg-cream pb-12 w-full overflow-x-hidden">
+      <div className="bg-ivy py-12 px-4 mb-8 w-full">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <h1 className="text-3xl font-display text-cream mb-2">Candidate Tracker</h1>
-            <p className="text-cream/70 font-body mb-2">Manage and monitor the FY27 Membership Intake Process.</p>
+            <h1 className="text-3xl font-display text-cream mb-2 break-words">Candidate Tracker</h1>
+            <p className="text-cream/70 font-body mb-2 break-words">Manage and monitor the FY27 Membership Intake Process.</p>
             <div>
               <Link 
                 to="/standalone-application" 
-                className="text-xs font-bold uppercase tracking-widest text-gold hover:text-white transition-colors inline-flex items-center gap-1.5 underline"
+                className="text-xs font-bold uppercase tracking-widest text-gold hover:text-white transition-colors inline-flex items-center gap-1.5 underline break-all"
               >
                 <FileText size={14} /> Open Backup Manual Application Form &rarr;
               </Link>
@@ -304,7 +304,7 @@ export default function CandidateTracker() {
           {canAddCandidate && (
             <button
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 bg-gold text-ivy px-6 py-3 rounded-md font-bold uppercase tracking-widest hover:brightness-110 transition-all shadow-lg"
+              className="flex items-center gap-2 bg-gold text-ivy px-6 py-3 rounded-md font-bold uppercase tracking-widest hover:brightness-110 transition-all shadow-lg w-full md:w-auto justify-center whitespace-nowrap"
             >
               <UserPlus className="w-5 h-5" />
               Add Candidate
@@ -313,7 +313,7 @@ export default function CandidateTracker() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="w-full max-w-7xl mx-auto px-4 overflow-hidden">
         {/* Stage Summary / Color-Coded Status Legend */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-6">
           {STAGES.map(stage => {
@@ -347,7 +347,11 @@ export default function CandidateTracker() {
         </div>
 
         {/* Kanban Board */}
-        <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide">
+        <div className="sm:hidden text-center text-xs text-ivy/50 mb-4 flex items-center justify-center gap-1.5">
+          <span>← Swipe horizontally to view process stages →</span>
+        </div>
+
+        <div className="flex gap-6 overflow-x-auto pb-6 scroll-smooth touch-pan-x">
           {STAGES.map(stage => {
             const stageCfg = getStatusBadgeConfig(stage);
             return (
