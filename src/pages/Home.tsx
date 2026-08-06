@@ -59,7 +59,7 @@ export default function Home() {
               The Order of KP
             </motion.h1>
             <motion.span variants={itemVariants} className="block text-primary text-sm md:text-xl font-light tracking-[0.1em] md:tracking-[0.15em] mt-2 md:mt-4 uppercase max-w-2xl mx-auto leading-relaxed">
-              Empowering Communities • Fostering Leadership • Driving Impact
+              Empowering Our Communities • Fostering Leadership • Driving Impact
             </motion.span>
           </div>
         </div>
