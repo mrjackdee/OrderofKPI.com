@@ -613,8 +613,11 @@ export default function AdminDashboard() {
   const handleRemoveCandidate = async (id: string, name: string) => {
     if (!window.confirm(`Permanently remove candidate "${name}" from the active intake tracking roster?`)) return;
 
+    // Optimistically update candidate state
+    setCandidates(prev => prev.filter(c => c.id !== id && c.email?.toLowerCase().trim() !== id.toLowerCase().trim()));
+
     try {
-      const response = await fetch(`/api/candidates/${id}?chairEmail=${encodeURIComponent(currentUserEmail)}`, {
+      const response = await fetch(`/api/candidates/${encodeURIComponent(id)}?chairEmail=${encodeURIComponent(currentUserEmail)}`, {
         method: 'DELETE'
       });
       const data = await response.json();
@@ -625,9 +628,11 @@ export default function AdminDashboard() {
         fetchAuditLogs();
       } else {
         showToast('error', data.message || 'Unable to remove candidate. Please try again.');
+        fetchCandidates();
       }
     } catch (error) {
       showToast('error', 'Error removing candidate. Please try again.');
+      fetchCandidates();
     }
   };
 

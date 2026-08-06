@@ -80,28 +80,9 @@ export default function CandidateTracker() {
       const data = await response.json();
       const apiCandidates: Candidate[] = (data.success && Array.isArray(data.candidates)) ? data.candidates : [];
 
-      if (apiCandidates.length > 0) {
-        setCandidates(apiCandidates);
-      } else {
-        const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
-          id: 'cand_' + m.email.replace(/[^a-z0-9]/g, '_'),
-          name: m.name,
-          email: m.email,
-          status: 'Inquiry',
-          application_date: ''
-        }));
-        setCandidates(fallbacks);
-      }
+      setCandidates(apiCandidates);
     } catch (error) {
       console.error('Error fetching candidates:', error);
-      const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
-        id: 'cand_' + m.email.replace(/[^a-z0-9]/g, '_'),
-        name: m.name,
-        email: m.email,
-        status: 'Inquiry',
-        application_date: ''
-      }));
-      setCandidates(fallbacks);
     } finally {
       setLoading(false);
     }
@@ -170,15 +151,23 @@ export default function CandidateTracker() {
   const handleRemoveCandidate = async (id: string, name: string) => {
     if (!window.confirm(`Are you sure you want to permanently remove candidate "${name}" from the tracker?`)) return;
 
+    // Optimistically remove from state so the UI updates immediately
+    setCandidates(prev => prev.filter(c => c.id !== id && c.email?.toLowerCase().trim() !== id.toLowerCase().trim()));
+
     try {
-      const res = await fetch(`/api/candidates/${id}?chairEmail=${encodeURIComponent(currentUserEmail)}`, {
+      const res = await fetch(`/api/candidates/${encodeURIComponent(id)}?chairEmail=${encodeURIComponent(currentUserEmail)}`, {
         method: 'DELETE',
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        fetchCandidates();
+      } else {
+        console.error('Failed to remove candidate:', data.message);
         fetchCandidates();
       }
     } catch (err) {
       console.error('Error removing candidate:', err);
+      fetchCandidates();
     }
   };
 
@@ -202,6 +191,9 @@ export default function CandidateTracker() {
     const candidate = mergedCandidates.find(c => c.id === id);
     if (!candidate) return;
 
+    // Optimistically update candidate status
+    setCandidates(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
+
     try {
       const response = await fetch(`/api/candidates/${id}`, {
         method: 'PUT',
@@ -210,9 +202,12 @@ export default function CandidateTracker() {
       });
       if (response.ok) {
         fetchCandidates();
+      } else {
+        fetchCandidates();
       }
     } catch (error) {
       console.error('Error updating candidate:', error);
+      fetchCandidates();
     }
   };
 

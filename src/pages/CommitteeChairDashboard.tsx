@@ -231,8 +231,11 @@ export default function CommitteeChairDashboard() {
   const handleRemoveCandidate = async (candidateId: string, name: string) => {
     if (!window.confirm(`Are you sure you want to permanently remove applicant "${name}" from the candidate tracker?`)) return;
 
+    // Optimistically update candidate state
+    setCandidates(prev => prev.filter(c => c.id !== candidateId && c.email?.toLowerCase().trim() !== candidateId.toLowerCase().trim()));
+
     try {
-      const res = await fetch(`/api/candidates/${candidateId}?chairEmail=${encodeURIComponent(currentUserEmail)}`, {
+      const res = await fetch(`/api/candidates/${encodeURIComponent(candidateId)}?chairEmail=${encodeURIComponent(currentUserEmail)}`, {
         method: 'DELETE'
       });
       const data = await res.json();
@@ -242,9 +245,11 @@ export default function CommitteeChairDashboard() {
         fetchAuditLogs();
       } else {
         showNotification('error', data.message || 'Unable to remove candidate. Please try again.');
+        fetchCandidates();
       }
     } catch (err) {
       showNotification('error', 'Error removing candidate. Please try again.');
+      fetchCandidates();
     }
   };
 

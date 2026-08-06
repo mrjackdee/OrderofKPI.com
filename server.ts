@@ -132,6 +132,74 @@ const initialCandidates = [
 let useSqlite = true;
 let sqliteDb: any = null;
 const jsonDbPath = path.join(process.cwd(), "kpi_members_v2.json");
+const candidatesJsonPath = path.join(process.cwd(), "candidates_fallback.json");
+const deletedCandidatesJsonPath = path.join(process.cwd(), "deleted_candidates.json");
+
+function getDeletedCandidatesSet(): Set<string> {
+  const deletedSet = new Set<string>();
+  if (useSqlite && sqliteDb) {
+    try {
+      const rows = sqliteDb.prepare("SELECT id_or_email FROM deleted_candidates").all() as any[];
+      for (const row of rows) {
+        if (row.id_or_email) deletedSet.add(row.id_or_email.toLowerCase().trim());
+      }
+    } catch (e) {}
+  }
+  if (fs.existsSync(deletedCandidatesJsonPath)) {
+    try {
+      const jsonList = JSON.parse(fs.readFileSync(deletedCandidatesJsonPath, "utf-8"));
+      if (Array.isArray(jsonList)) {
+        jsonList.forEach((item: string) => {
+          if (item) deletedSet.add(item.toLowerCase().trim());
+        });
+      }
+    } catch (e) {}
+  }
+  return deletedSet;
+}
+
+function recordDeletedCandidate(id: string, email?: string) {
+  const deletedSet = getDeletedCandidatesSet();
+  if (id) deletedSet.add(id.toLowerCase().trim());
+  if (email) deletedSet.add(email.toLowerCase().trim());
+
+  if (useSqlite && sqliteDb) {
+    try {
+      const now = new Date().toISOString();
+      if (id) {
+        sqliteDb.prepare("INSERT OR REPLACE INTO deleted_candidates (id_or_email, deleted_at) VALUES (?, ?)").run(id.toLowerCase().trim(), now);
+      }
+      if (email) {
+        sqliteDb.prepare("INSERT OR REPLACE INTO deleted_candidates (id_or_email, deleted_at) VALUES (?, ?)").run(email.toLowerCase().trim(), now);
+      }
+    } catch (e) {}
+  }
+
+  try {
+    fs.writeFileSync(deletedCandidatesJsonPath, JSON.stringify(Array.from(deletedSet), null, 2));
+  } catch (e) {}
+}
+
+function clearDeletedCandidateRecord(id: string, email?: string) {
+  if (useSqlite && sqliteDb) {
+    try {
+      if (id) sqliteDb.prepare("DELETE FROM deleted_candidates WHERE LOWER(id_or_email) = ?").run(id.toLowerCase().trim());
+      if (email) sqliteDb.prepare("DELETE FROM deleted_candidates WHERE LOWER(id_or_email) = ?").run(email.toLowerCase().trim());
+    } catch (e) {}
+  }
+  try {
+    if (fs.existsSync(deletedCandidatesJsonPath)) {
+      const jsonList = JSON.parse(fs.readFileSync(deletedCandidatesJsonPath, "utf-8"));
+      if (Array.isArray(jsonList)) {
+        const filtered = jsonList.filter((item: string) => {
+          const norm = item.toLowerCase().trim();
+          return norm !== (id || "").toLowerCase().trim() && norm !== (email || "").toLowerCase().trim();
+        });
+        fs.writeFileSync(deletedCandidatesJsonPath, JSON.stringify(filtered, null, 2));
+      }
+    }
+  } catch (e) {}
+}
 
 function hashPassword(password: string): string {
   return crypto.createHash("sha256").update(password).digest("hex");
@@ -184,6 +252,13 @@ async function initDb() {
         scores TEXT,
         notes TEXT,
         document_vault TEXT
+      )
+    `);
+
+    sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS deleted_candidates (
+        id_or_email TEXT PRIMARY KEY,
+        deleted_at TEXT
       )
     `);
 
@@ -346,8 +421,13 @@ async function initDb() {
     }
 
     // Seed official initial candidates while preserving created/reset passwords
+    const initialDeletedSet = getDeletedCandidatesSet();
     for (const c of initialCandidates) {
       const emailNorm = c.email.toLowerCase().trim();
+      const candId = 'cand_' + emailNorm.replace(/[^a-z0-9]/g, '_');
+      if (initialDeletedSet.has(emailNorm) || initialDeletedSet.has(candId)) {
+        continue;
+      }
       const firstName = c.name.split(" ")[0];
       const passHash = hashPassword(c.pass);
 
@@ -1654,7 +1734,6 @@ async function startServer() {
     }
   });
 
-  const candidatesJsonPath = path.join(process.cwd(), "candidates_fallback.json");
   function getFallbackCandidates(): any[] {
     try {
       if (fs.existsSync(candidatesJsonPath)) {
@@ -1680,6 +1759,8 @@ async function startServer() {
   app.get("/api/candidates", (req, res) => {
     try {
       let candidates: any[] = [];
+      const deletedSet = getDeletedCandidatesSet();
+
       if (useSqlite && sqliteDb) {
         try {
           const submittedApps = sqliteDb.prepare("SELECT email, submitted_at, last_saved_at FROM membership_applications WHERE status = 'submitted'").all() as any[];
@@ -1727,6 +1808,13 @@ async function startServer() {
         }
       }
 
+      // Filter out deleted candidates across all sources
+      candidates = candidates.filter(c => {
+        const cId = (c.id || "").toLowerCase().trim();
+        const cEmail = (c.email || "").toLowerCase().trim();
+        return !deletedSet.has(cId) && !deletedSet.has(cEmail);
+      });
+
       res.json({ success: true, candidates });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
@@ -1761,6 +1849,7 @@ async function startServer() {
 
       const emailNorm = email.toLowerCase().trim();
       const id = 'cand_' + emailNorm.replace(/[^a-z0-9]/g, '_');
+      clearDeletedCandidateRecord(id, emailNorm);
       const initialStatus = status || "Inquiry";
       const application_date = initialStatus === 'Applied' ? new Date().toISOString().split('T')[0] : null;
 
@@ -1891,20 +1980,43 @@ async function startServer() {
 
   app.delete("/api/candidates/:id", (req, res) => {
     try {
-      const { id } = req.params;
+      const rawId = req.params.id;
       const { chairEmail } = req.query;
+      const normId = decodeURIComponent(rawId || "").toLowerCase().trim();
+
+      let targetCandName = "Candidate";
+      let targetCandEmail = "";
 
       if (useSqlite && sqliteDb) {
-        const cand = sqliteDb.prepare("SELECT name, email FROM candidates WHERE id = ?").get(id) as any;
-        sqliteDb.prepare("DELETE FROM candidates WHERE id = ?").run(id);
-
+        const cand = sqliteDb.prepare("SELECT name, email FROM candidates WHERE LOWER(id) = ? OR LOWER(email) = ?").get(normId, normId) as any;
         if (cand) {
-          logEvent((chairEmail as string) || "committee_chair", "CANDIDATE_REMOVED", `Removed candidate ${cand.name} (${cand.email}) from active tracking`);
+          targetCandName = cand.name;
+          targetCandEmail = cand.email;
         }
+        sqliteDb.prepare("DELETE FROM candidates WHERE LOWER(id) = ? OR LOWER(email) = ?").run(normId, normId);
       }
+
+      // Also search fallback candidates list
+      const fallbackList = getFallbackCandidates();
+      const matchInFallback = fallbackList.find(c => (c.id || "").toLowerCase() === normId || (c.email || "").toLowerCase() === normId);
+      if (matchInFallback) {
+        if (!targetCandEmail) targetCandEmail = matchInFallback.email;
+        if (targetCandName === "Candidate") targetCandName = matchInFallback.name;
+      }
+
+      // Remove from fallback list and save
+      const newFallback = fallbackList.filter(c => (c.id || "").toLowerCase() !== normId && (c.email || "").toLowerCase() !== normId);
+      saveFallbackCandidates(newFallback);
+
+      // Record in persistent deleted candidates set
+      recordDeletedCandidate(normId, targetCandEmail);
+
+      // Log audit event
+      logEvent((chairEmail as string) || "committee_chair", "CANDIDATE_REMOVED", `Removed candidate ${targetCandName} (${targetCandEmail || normId}) from active tracking`);
 
       res.json({ success: true, message: "Candidate removed successfully." });
     } catch (err: any) {
+      console.error('Error deleting candidate:', err);
       res.status(500).json({ success: false, message: err.message });
     }
   });
