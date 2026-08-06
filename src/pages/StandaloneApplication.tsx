@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { generateApplicationPDF } from '../utils/pdfGenerator';
+import { saveApplication } from '../lib/memberDb';
 
 interface ApplicationData {
   firstName: string;
@@ -89,15 +90,22 @@ export default function StandaloneApplication() {
     generateApplicationPDF(data, email || 'applicant@orderofkpi.org');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!data.firstName || !data.lastName || !email) {
       setError('Please fill in your name and email address to submit.');
       return;
     }
     setError('');
-    setSubmitted(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    try {
+      await saveApplication(email, data, 'submitted');
+      setSubmitted(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err: any) {
+      console.error('Submission error:', err);
+      setError('An error occurred while submitting your application. Please try again.');
+    }
   };
 
   return (

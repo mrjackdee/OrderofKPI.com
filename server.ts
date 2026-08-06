@@ -1424,18 +1424,37 @@ async function startServer() {
 
   app.get("/api/applications", (req, res) => {
     try {
+      let apps: any[] = [];
       if (useSqlite && sqliteDb) {
-        const applications = sqliteDb.prepare("SELECT * FROM membership_applications").all();
-        res.json({ 
-          success: true, 
-          applications: applications.map((a: any) => ({
+        try {
+          const applications = sqliteDb.prepare("SELECT * FROM membership_applications").all();
+          apps = applications.map((a: any) => ({
             ...a,
-            data: JSON.parse(a.data || "{}")
-          })) 
-        });
-      } else {
-        res.json({ success: true, applications: [] });
+            data: typeof a.data === 'string' ? JSON.parse(a.data || "{}") : a.data
+          }));
+        } catch (dbErr) {
+          console.warn('SQLite applications read error:', dbErr);
+        }
       }
+
+      // Merge JSON file fallback applications
+      const appsJsonFile = path.join(process.cwd(), "data", "applications.json");
+      if (fs.existsSync(appsJsonFile)) {
+        try {
+          const jsonStore = JSON.parse(fs.readFileSync(appsJsonFile, "utf-8"));
+          const existingEmails = new Set(apps.map((a: any) => (a.email || '').toLowerCase().trim()));
+          Object.keys(jsonStore).forEach(e => {
+            const norm = e.toLowerCase().trim();
+            if (norm && !existingEmails.has(norm)) {
+              apps.push(jsonStore[e]);
+            }
+          });
+        } catch (je) {
+          console.error("JSON read error for applications list:", je);
+        }
+      }
+
+      res.json({ success: true, applications: apps });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -1527,20 +1546,26 @@ async function startServer() {
           `).run(appPhone, normEmail);
         }
 
-        // Auto-update candidates tracker table status to 'Applied' on submission
+        // Auto-update or insert candidates tracker table status to 'Applied' on submission
         if (status === 'submitted') {
+          const normEmail = (email || "").toLowerCase().trim();
           const existingCand = sqliteDb.prepare("SELECT id FROM candidates WHERE LOWER(email) = ?").get(normEmail) as any;
           const todayDate = timestamp.split('T')[0];
+          const appPhone = data?.phone || "";
+          
           if (existingCand) {
             sqliteDb.prepare(`
               UPDATE candidates 
-              SET status = 'Applied', application_date = ?, phone = COALESCE(NULLIF(phone, ''), ?)
+              SET status = CASE WHEN status = 'Inquiry' THEN 'Applied' ELSE status END,
+                  application_date = COALESCE(NULLIF(application_date, ''), ?),
+                  phone = COALESCE(NULLIF(phone, ''), ?)
               WHERE LOWER(email) = ?
             `).run(todayDate, appPhone, normEmail);
           } else {
-            // Find applicant's name from users directory
             const userRow = sqliteDb.prepare("SELECT name FROM users WHERE LOWER(email) = ?").get(normEmail) as any;
-            const candName = userRow ? userRow.name : normEmail.split('@')[0];
+            const firstName = data?.firstName || userRow?.name?.split(' ')[0] || normEmail.split('@')[0];
+            const lastName = data?.lastName || (userRow?.name?.split(' ').slice(1).join(' ')) || '';
+            const candName = `${firstName} ${lastName}`.trim();
             sqliteDb.prepare(`
               INSERT INTO candidates (id, name, email, phone, status, application_date, scores, notes, document_vault)
               VALUES (?, ?, ?, ?, 'Applied', ?, '{}', '', '[]')
@@ -1605,7 +1630,9 @@ async function startServer() {
           const checkCandStmt = sqliteDb.prepare("SELECT id, status FROM candidates WHERE LOWER(email) = ?");
           const updateCandStmt = sqliteDb.prepare(`
             UPDATE candidates 
-            SET status = 'Applied', application_date = ?, phone = COALESCE(NULLIF(phone, ''), ?)
+            SET status = CASE WHEN status = 'Inquiry' THEN 'Applied' ELSE status END,
+                application_date = COALESCE(NULLIF(application_date, ''), ?),
+                phone = COALESCE(NULLIF(phone, ''), ?)
             WHERE LOWER(email) = ?
           `);
           const insertCandStmt = sqliteDb.prepare(`
@@ -1763,12 +1790,33 @@ async function startServer() {
 
       if (useSqlite && sqliteDb) {
         try {
-          const submittedApps = sqliteDb.prepare("SELECT email, submitted_at, last_saved_at FROM membership_applications WHERE status = 'submitted'").all() as any[];
+          const submittedApps = sqliteDb.prepare("SELECT email, data, submitted_at, last_saved_at FROM membership_applications WHERE status = 'submitted'").all() as any[];
           for (const app of submittedApps) {
+            const normEmail = (app.email || "").toLowerCase().trim();
+            if (!normEmail) continue;
             const rawDate = app.submitted_at || app.last_saved_at || new Date().toISOString();
             const dateStr = rawDate.split('T')[0];
-            sqliteDb.prepare("UPDATE candidates SET status = CASE WHEN status = 'Inquiry' THEN 'Applied' ELSE status END, application_date = ? WHERE LOWER(email) = ?").run(dateStr, app.email.toLowerCase().trim());
+
+            let dataObj: any = {};
+            try { dataObj = typeof app.data === 'string' ? JSON.parse(app.data) : (app.data || {}); } catch(e){}
+            const appPhone = dataObj.phone || "";
+
+            const existingCand = sqliteDb.prepare("SELECT id FROM candidates WHERE LOWER(email) = ?").get(normEmail) as any;
+            if (existingCand) {
+              sqliteDb.prepare("UPDATE candidates SET status = CASE WHEN status = 'Inquiry' THEN 'Applied' ELSE status END, application_date = COALESCE(NULLIF(application_date, ''), ?), phone = COALESCE(NULLIF(phone, ''), ?) WHERE LOWER(email) = ?").run(dateStr, appPhone, normEmail);
+            } else {
+              const userRow = sqliteDb.prepare("SELECT name FROM users WHERE LOWER(email) = ?").get(normEmail) as any;
+              const firstName = dataObj.firstName || userRow?.name?.split(' ')[0] || normEmail.split('@')[0];
+              const lastName = dataObj.lastName || (userRow?.name?.split(' ').slice(1).join(' ')) || '';
+              const candName = `${firstName} ${lastName}`.trim();
+
+              sqliteDb.prepare(`
+                INSERT INTO candidates (id, name, email, phone, status, application_date, scores, notes, document_vault)
+                VALUES (?, ?, ?, ?, 'Applied', ?, '{}', '', '[]')
+              `).run('cand_' + normEmail.replace(/[^a-z0-9]/g, '_'), candName, normEmail, appPhone, dateStr);
+            }
           }
+
           const rows = sqliteDb.prepare("SELECT * FROM candidates").all();
           candidates = rows.map((c: any) => ({
             ...c,
@@ -1783,7 +1831,7 @@ async function startServer() {
         candidates = getFallbackCandidates();
       }
 
-      // Always double check JSON fallback applications to sync candidate statuses if they are submitted
+      // Always double check JSON fallback applications to synthesize candidate statuses if they are submitted
       const appsJsonFile = path.join(process.cwd(), "data", "applications.json");
       if (fs.existsSync(appsJsonFile)) {
         try {
@@ -1793,13 +1841,35 @@ async function startServer() {
             if (app && app.status === 'submitted') {
               const normEmail = email.toLowerCase().trim();
               const foundCand = candidates.find(c => c.email.toLowerCase().trim() === normEmail);
+              const dataObj = app.data || app;
+              const appPhone = dataObj.phone || "";
+              const dateStr = (app.submitted_at || app.last_saved_at || new Date().toISOString()).split('T')[0];
+
               if (foundCand) {
                 if (foundCand.status === 'Inquiry') {
                   foundCand.status = 'Applied';
                 }
-                if (!foundCand.application_date && (app.submitted_at || app.last_saved_at)) {
-                  foundCand.application_date = (app.submitted_at || app.last_saved_at).split('T')[0];
+                if (!foundCand.application_date) {
+                  foundCand.application_date = dateStr;
                 }
+                if (!foundCand.phone && appPhone) {
+                  foundCand.phone = appPhone;
+                }
+              } else {
+                const firstName = dataObj.firstName || normEmail.split('@')[0];
+                const lastName = dataObj.lastName || "";
+                const candName = `${firstName} ${lastName}`.trim();
+                candidates.push({
+                  id: 'cand_' + normEmail.replace(/[^a-z0-9]/g, '_'),
+                  name: candName,
+                  email: normEmail,
+                  phone: appPhone,
+                  status: 'Applied',
+                  application_date: dateStr,
+                  scores: {},
+                  notes: '',
+                  document_vault: []
+                });
               }
             }
           });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate, Link } from 'react-router-dom';
 import { db } from '../lib/firebase';
@@ -36,7 +36,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Member, Candidate } from '../types';
-import { prospectiveMembers } from '../lib/memberDb';
+import { prospectiveMembers, fetchAllApplications } from '../lib/memberDb';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import { googleSignIn, getAccessToken } from '../lib/googleAuth';
 import { createGoogleForm, getGoogleForm, getGoogleFormResponses } from '../lib/googleWorkspace';
@@ -424,10 +424,9 @@ export default function AdminDashboard() {
 
   const fetchApplications = async () => {
     try {
-      const res = await fetch('/api/applications');
-      const data = await res.json();
-      if (data.success) {
-        setApplications(data.applications || []);
+      const res = await fetchAllApplications();
+      if (res.success && Array.isArray(res.applications)) {
+        setApplications(res.applications);
       }
     } catch (err) {}
   };
@@ -644,7 +643,59 @@ export default function AdminDashboard() {
     (m.title && m.title.toLowerCase().includes(memberSearch.toLowerCase()))
   );
 
-  const filteredCandidates = candidates.filter(c => {
+  const mergedCandidates = useMemo(() => {
+    const submittedAppsMap = new Map<string, any>();
+    applications.forEach(app => {
+      if (app && (app.status === 'submitted' || app.submitted_at || app.submittedAt)) {
+        if (app.email) submittedAppsMap.set(app.email.toLowerCase().trim(), app);
+      }
+    });
+
+    const seenEmails = new Set<string>();
+    const updated = candidates.map(c => {
+      const normEmail = (c.email || '').toLowerCase().trim();
+      if (normEmail) seenEmails.add(normEmail);
+      if (normEmail && submittedAppsMap.has(normEmail)) {
+        const app = submittedAppsMap.get(normEmail);
+        const appPhone = app?.data?.phone || app?.phone || c.phone || '';
+        const appDate = (app?.submitted_at || app?.submittedAt || app?.last_saved_at || app?.lastSavedAt || '').split('T')[0];
+        return {
+          ...c,
+          status: (c.status === 'Inquiry' ? 'Applied' : c.status) as Candidate['status'],
+          phone: appPhone,
+          application_date: c.application_date || appDate || ''
+        };
+      }
+      return c;
+    });
+
+    // Synthesize missing candidates from submitted applications
+    submittedAppsMap.forEach((app, normEmail) => {
+      if (!seenEmails.has(normEmail)) {
+        const firstName = app.data?.firstName || app.firstName || normEmail.split('@')[0];
+        const lastName = app.data?.lastName || app.lastName || '';
+        const name = `${firstName} ${lastName}`.trim();
+        const appPhone = app.data?.phone || app.phone || '';
+        const appDate = (app.submitted_at || app.submittedAt || app.last_saved_at || app.lastSavedAt || new Date().toISOString()).split('T')[0];
+        
+        updated.push({
+          id: 'cand_' + normEmail.replace(/[^a-z0-9]/g, '_'),
+          name: name || normEmail,
+          email: normEmail,
+          phone: appPhone,
+          status: 'Applied',
+          application_date: appDate,
+          scores: {},
+          notes: '',
+          document_vault: []
+        });
+      }
+    });
+
+    return updated;
+  }, [candidates, applications]);
+
+  const filteredCandidates = mergedCandidates.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(candidateSearch.toLowerCase()) || c.email.toLowerCase().includes(candidateSearch.toLowerCase());
     const matchesStage = candidateStageFilter === 'all' || c.status === candidateStageFilter;
     return matchesSearch && matchesStage;

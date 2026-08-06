@@ -580,6 +580,22 @@ export async function fetchApplication(email: string) {
     }
   }
 
+  // Self-Healing Background Sync:
+  // If local or Firestore has marked the application as submitted, but server API doesn't have it submitted, re-sync to server DB
+  const isLocalSubmitted = typeof localStorage !== 'undefined' && localStorage.getItem(`kpi_app_submitted_${normEmail}`) === 'true';
+  const isAppSubmitted = application?.status === 'submitted' || isLocalSubmitted;
+  const isServerSubmitted = serverRes?.application?.status === 'submitted';
+
+  if (isAppSubmitted && !isServerSubmitted && application) {
+    if (application) {
+      application.status = 'submitted';
+    }
+    const appDataPayload = application?.data || application || {};
+    saveApplication(normEmail, appDataPayload, 'submitted').catch(err => {
+      console.warn('Background auto-sync submission failed:', err);
+    });
+  }
+
   return {
     success: !!application || !!candidateStatus,
     application,
@@ -588,13 +604,81 @@ export async function fetchApplication(email: string) {
 }
 
 export async function fetchAllApplications() {
-  try {
-    const response = await fetch('/api/applications');
-    return await response.json();
-  } catch (err) {
-    console.error('Failed to fetch all applications:', err);
-    return { success: false, message: 'Connection error' };
+  let apiApps: any[] = [];
+  let fbApps: any[] = [];
+
+  const apiFetch = (async () => {
+    try {
+      const response = await fetch('/api/applications');
+      const data = await response.json();
+      if (data.success && Array.isArray(data.applications)) {
+        return data.applications;
+      }
+    } catch (err) {
+      console.warn('API fetchAllApplications warning:', err);
+    }
+    return [];
+  })();
+
+  const fbFetch = (async () => {
+    try {
+      const fbRes = await firebaseFetchAllApplications();
+      if (fbRes.success && Array.isArray(fbRes.applications)) {
+        return fbRes.applications;
+      }
+    } catch (err) {
+      console.warn('Firestore fetchAllApplications warning:', err);
+    }
+    return [];
+  })();
+
+  const [aApps, fApps] = await Promise.all([apiFetch, fbFetch]);
+  apiApps = aApps || [];
+  fbApps = fApps || [];
+
+  // Merge applications, prioritizing submitted status and newer timestamp
+  const mergedMap = new Map<string, any>();
+
+  // Add API apps first
+  apiApps.forEach(app => {
+    const email = (app.email || '').toLowerCase().trim();
+    if (email) mergedMap.set(email, app);
+  });
+
+  // Merge Firestore apps
+  let hasNewFromFb = false;
+  fbApps.forEach(fbApp => {
+    const email = (fbApp.email || '').toLowerCase().trim();
+    if (!email) return;
+
+    if (!mergedMap.has(email)) {
+      mergedMap.set(email, fbApp);
+      hasNewFromFb = true;
+    } else {
+      const existing = mergedMap.get(email);
+      // Upgrade if Firestore has 'submitted' and API didn't
+      if (fbApp.status === 'submitted' && existing.status !== 'submitted') {
+        mergedMap.set(email, { ...existing, ...fbApp, status: 'submitted' });
+        hasNewFromFb = true;
+      }
+    }
+  });
+
+  const mergedApplications = Array.from(mergedMap.values());
+
+  // Trigger background sync to server API if Firestore had new records
+  if (hasNewFromFb && fbApps.length > 0) {
+    fetch('/api/applications/sync-bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ applications: fbApps }),
+    }).catch(e => console.warn('Background sync-bulk trigger error:', e));
   }
+
+  return {
+    success: true,
+    applications: mergedApplications
+  };
 }
 
 /**
