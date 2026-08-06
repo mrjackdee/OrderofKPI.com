@@ -320,6 +320,91 @@ export async function firebaseResetApplicantPassword(email: string) {
 }
 
 /**
+ * Helper to normalize application schema retrieved from Firestore.
+ * Handles both flat (top-level) schemas and nested schemas seamlessly.
+ */
+export function normalizeApplication(app: any): any {
+  if (!app) return null;
+  
+  let dataObj = app.data;
+  if (typeof dataObj === 'string') {
+    try {
+      dataObj = JSON.parse(dataObj);
+    } catch (e) {
+      dataObj = null;
+    }
+  }
+
+  if (!dataObj || typeof dataObj !== 'object') {
+    dataObj = {
+      firstName: app.firstName || app.first_name || '',
+      middleName: app.middleName || app.middle_name || '',
+      lastName: app.lastName || app.last_name || '',
+      dateOfBirth: app.dateOfBirth || app.date_of_birth || '',
+      phone: app.phone || '',
+      address: app.address || '',
+      employment: app.employment || '',
+      position: app.position || '',
+      degrees: app.degrees || '',
+      honors: app.honors || '',
+      organizations: app.organizations || '',
+      priorKnowledge: app.priorKnowledge || app.prior_knowledge || '',
+      essay1: app.essay1 || '',
+      essay2: app.essay2 || '',
+      essay3: app.essay3 || '',
+      essay4: app.essay4 || '',
+      essay5: app.essay5 || '',
+      isFraternityMember: app.isFraternityMember !== undefined ? (app.isFraternityMember === 'yes' || app.isFraternityMember === true ? 'yes' : 'no') : 'no',
+      fraternityDetails: app.fraternityDetails || '',
+      hasAkaFamily: app.hasAkaFamily !== undefined ? (app.hasAkaFamily === 'yes' || app.hasAkaFamily === true ? 'yes' : 'no') : 'no',
+      akaFamilyDetails: app.akaFamilyDetails || '',
+      previousApplied: app.previousApplied !== undefined ? (app.previousApplied === 'yes' || app.previousApplied === true ? 'yes' : 'no') : 'no',
+      previousAppliedDetails: app.previousAppliedDetails || '',
+      socialUrls: app.socialUrls || ''
+    };
+  } else {
+    dataObj = {
+      firstName: dataObj.firstName || app.firstName || '',
+      middleName: dataObj.middleName || app.middleName || '',
+      lastName: dataObj.lastName || app.lastName || '',
+      dateOfBirth: dataObj.dateOfBirth || app.dateOfBirth || '',
+      phone: dataObj.phone || app.phone || '',
+      address: dataObj.address || app.address || '',
+      employment: dataObj.employment || app.employment || '',
+      position: dataObj.position || app.position || '',
+      degrees: dataObj.degrees || app.degrees || '',
+      honors: dataObj.honors || app.honors || '',
+      organizations: dataObj.organizations || app.organizations || '',
+      priorKnowledge: dataObj.priorKnowledge || app.priorKnowledge || '',
+      essay1: dataObj.essay1 || app.essay1 || '',
+      essay2: dataObj.essay2 || app.essay2 || '',
+      essay3: dataObj.essay3 || app.essay3 || '',
+      essay4: dataObj.essay4 || app.essay4 || '',
+      essay5: dataObj.essay5 || app.essay5 || '',
+      isFraternityMember: dataObj.isFraternityMember || (app.isFraternityMember === 'yes' || app.isFraternityMember === true ? 'yes' : 'no'),
+      fraternityDetails: dataObj.fraternityDetails || app.fraternityDetails || '',
+      hasAkaFamily: dataObj.hasAkaFamily || (app.hasAkaFamily === 'yes' || app.hasAkaFamily === true ? 'yes' : 'no'),
+      akaFamilyDetails: dataObj.akaFamilyDetails || app.akaFamilyDetails || '',
+      previousApplied: dataObj.previousApplied || (app.previousApplied === 'yes' || app.previousApplied === true ? 'yes' : 'no'),
+      previousAppliedDetails: dataObj.previousAppliedDetails || app.previousAppliedDetails || '',
+      socialUrls: dataObj.socialUrls || app.socialUrls || ''
+    };
+  }
+
+  const email = (app.email || '').toLowerCase().trim();
+  return {
+    id: app.id || 'app_' + email.replace(/[^a-zA-Z0-9]/g, '_'),
+    email: email,
+    status: app.status || 'draft',
+    lastSavedAt: app.lastSavedAt || app.last_saved_at || new Date().toISOString(),
+    last_saved_at: app.last_saved_at || app.lastSavedAt || new Date().toISOString(),
+    submittedAt: app.submittedAt || app.submitted_at || null,
+    submitted_at: app.submitted_at || app.submittedAt || null,
+    data: dataObj
+  };
+}
+
+/**
  * Saves candidate application to Firebase Firestore database.
  */
 export async function firebaseSaveApplication(email: string, data: any, status: 'draft' | 'submitted') {
@@ -419,7 +504,7 @@ export async function firebaseFetchApplication(email: string) {
       if (snapshot1.exists()) {
         return {
           success: true,
-          application: snapshot1.data()
+          application: normalizeApplication(snapshot1.data())
         };
       }
 
@@ -428,7 +513,7 @@ export async function firebaseFetchApplication(email: string) {
       if (snapshot2.exists()) {
         return {
           success: true,
-          application: snapshot2.data()
+          application: normalizeApplication(snapshot2.data())
         };
       }
 
@@ -460,8 +545,11 @@ export async function firebaseFetchAllApplications() {
         querySnapshot1.forEach((docSnapshot) => {
           const appData = docSnapshot.data();
           if (appData && appData.email) {
-            list.push(appData);
-            seenEmails.add(appData.email.toLowerCase().trim());
+            const normalized = normalizeApplication(appData);
+            if (normalized) {
+              list.push(normalized);
+              seenEmails.add(normalized.email);
+            }
           }
         });
       } catch (err) {
@@ -475,8 +563,11 @@ export async function firebaseFetchAllApplications() {
           if (appData && appData.email) {
             const normEmail = appData.email.toLowerCase().trim();
             if (!seenEmails.has(normEmail)) {
-              list.push(appData);
-              seenEmails.add(normEmail);
+              const normalized = normalizeApplication(appData);
+              if (normalized) {
+                list.push(normalized);
+                seenEmails.add(normEmail);
+              }
             }
           }
         });

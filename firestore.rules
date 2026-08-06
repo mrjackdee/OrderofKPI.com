@@ -104,6 +104,18 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /membership_applications/{applicationId} {
+      allow read, write: if true;
+    }
+
+    match /candidates/{candidateId} {
+      allow read, write: if true;
+    }
+
+    match /user_password_overrides/{overrideId} {
+      allow read, write: if true;
+    }
+
     match /candidate_accounts/{accountId} {
       allow read, write: if true;
     }
