@@ -350,10 +350,25 @@ export async function performHybridPasswordChange(
         localStorage.setItem(`kpi_client_password_${normalizedEmail}`, newPass);
         localStorage.setItem(`kpi_password_changed_${normalizedEmail}`, 'true');
 
-        // Async sync to Firestore
+        // Async sync to Firestore (both user_password_overrides and candidate_accounts)
         try {
           const { doc, setDoc } = await import('firebase/firestore');
           const { db } = await import('./firebase');
+
+          let passwordHash = data.hash;
+          if (!passwordHash) {
+            const msgUint8 = new TextEncoder().encode(newPass);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+            passwordHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+          }
+
+          await setDoc(doc(db, 'user_password_overrides', normalizedEmail), {
+            email: normalizedEmail,
+            hash: passwordHash,
+            isFirstLogin: false,
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+
           await setDoc(doc(db, 'candidate_accounts', normalizedEmail), {
             email: normalizedEmail,
             pass: newPass,
@@ -682,24 +697,48 @@ export async function fetchAllApplications() {
 }
 
 /**
- * Syncs all applications from Cloud Firestore to the local Node.js database.
+ * Syncs all applications and password overrides from Cloud Firestore to the local Node.js database.
  * This guarantees durable persistence even if the server is scaled to zero/rebooted.
  */
 export async function syncApplicationsFromFirestore() {
   try {
     const firestoreResult = await firebaseFetchAllApplications();
-    if (!firestoreResult.success || !('applications' in firestoreResult) || !firestoreResult.applications) {
-      const errMsg = ('message' in firestoreResult && firestoreResult.message) ? firestoreResult.message : 'Could not fetch from Firestore';
-      return { success: false, message: errMsg };
+    if (firestoreResult.success && 'applications' in firestoreResult && firestoreResult.applications) {
+      await fetch('/api/applications/sync-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applications: firestoreResult.applications }),
+      }).catch(() => {});
     }
 
-    const response = await fetch('/api/applications/sync-bulk', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ applications: firestoreResult.applications }),
-    });
+    // Sync password overrides from Firestore user_password_overrides to local server memory/DB
+    try {
+      const { collection, getDocs } = await import('firebase/firestore');
+      const { db } = await import('./firebase');
+      const snap = await getDocs(collection(db, 'user_password_overrides'));
+      const overrides: any[] = [];
+      snap.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.email && data.hash) {
+          overrides.push({
+            email: data.email,
+            hash: data.hash,
+            isFirstLogin: data.isFirstLogin ? 1 : 0
+          });
+        }
+      });
+      if (overrides.length > 0) {
+        await fetch('/api/auth/sync-password-overrides', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ overrides }),
+        }).catch(() => {});
+      }
+    } catch (e) {
+      console.warn('Sync password overrides from Firestore notice:', e);
+    }
 
-    return await response.json();
+    return { success: true };
   } catch (err: any) {
     console.error('Failed to sync applications from Firestore to API:', err);
     return { success: false, message: err.message || 'Connection error' };

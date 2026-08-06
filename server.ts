@@ -28,6 +28,17 @@ interface UserRecord {
 
 const passwordOverridesPath = path.join(process.cwd(), "user_password_overrides.json");
 
+let firebaseProjectId = process.env.VITE_FIREBASE_PROJECT_ID || "";
+let firebaseApiKey = process.env.VITE_FIREBASE_API_KEY || "";
+try {
+  const cfgPath = path.join(process.cwd(), "firebase-applet-config.json");
+  if (fs.existsSync(cfgPath)) {
+    const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf-8"));
+    if (!firebaseProjectId) firebaseProjectId = cfg.projectId || "";
+    if (!firebaseApiKey) firebaseApiKey = cfg.apiKey || "";
+  }
+} catch (e) {}
+
 interface PasswordOverrideRecord {
   hash: string;
   isFirstLogin: number;
@@ -72,6 +83,55 @@ function loadPasswordOverridesFromFile() {
   }
 }
 
+async function syncPasswordOverridesFromFirestoreCloud() {
+  if (!firebaseProjectId || !firebaseApiKey) return;
+  try {
+    const url = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/user_password_overrides?key=${firebaseApiKey}`;
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && Array.isArray(data.documents)) {
+      let loadedCount = 0;
+      for (const doc of data.documents) {
+        const fields = doc.fields || {};
+        const email = fields.email?.stringValue || fields.email?.bytesValue || doc.name.split("/").pop() || "";
+        const normEmail = email.toLowerCase().trim();
+        const hash = fields.hash?.stringValue || "";
+        const isFirstLogin = fields.isFirstLogin?.integerValue !== undefined
+          ? Number(fields.isFirstLogin.integerValue)
+          : (fields.isFirstLogin?.booleanValue === false ? 0 : 1);
+        const updatedAt = fields.updatedAt?.stringValue || new Date().toISOString();
+
+        if (normEmail && hash) {
+          globalPasswordOverrides[normEmail] = { hash, isFirstLogin, updatedAt };
+          loadedCount++;
+          
+          if (useSqlite && sqliteDb) {
+            try {
+              sqliteDb.prepare("UPDATE users SET password_hash = ?, is_first_login = ? WHERE LOWER(email) = ?").run(hash, isFirstLogin, normEmail);
+            } catch (e) {}
+          }
+          if (fs.existsSync(jsonDbPath)) {
+            try {
+              const jsonUsers = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8")) as Record<string, UserRecord>;
+              if (jsonUsers[normEmail]) {
+                jsonUsers[normEmail].password_hash = hash;
+                jsonUsers[normEmail].is_first_login = isFirstLogin;
+                fs.writeFileSync(jsonDbPath, JSON.stringify(jsonUsers, null, 2));
+              }
+            } catch (e) {}
+          }
+        }
+      }
+      if (loadedCount > 0) {
+        console.log(`[AUTH Cloud Sync] Hydrated ${loadedCount} password overrides from Cloud Firestore.`);
+      }
+    }
+  } catch (err) {
+    console.warn("[AUTH Cloud Sync] Firestore cloud password sync notice:", err);
+  }
+}
+
 function savePasswordOverride(email: string, hash: string, isFirstLogin: number = 0) {
   const normEmail = email.toLowerCase().trim();
   globalPasswordOverrides[normEmail] = {
@@ -84,6 +144,29 @@ function savePasswordOverride(email: string, hash: string, isFirstLogin: number 
     console.log(`[AUTH] Password override saved persistently for: ${normEmail}`);
   } catch (err) {
     console.error("[AUTH] Failed to save password override file:", err);
+  }
+
+  // Push to Firestore Cloud asynchronously so changed passwords persist across container resets
+  if (firebaseProjectId && firebaseApiKey) {
+    const docId = normEmail.replace(/\//g, "_");
+    const url = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/user_password_overrides/${encodeURIComponent(docId)}?key=${firebaseApiKey}`;
+    fetch(url, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fields: {
+          email: { stringValue: normEmail },
+          hash: { stringValue: hash },
+          isFirstLogin: { integerValue: isFirstLogin },
+          updatedAt: { stringValue: new Date().toISOString() }
+        }
+      })
+    }).then(res => {
+      if (res.ok) console.log(`[AUTH Cloud Sync] Pushed password override to Firestore for: ${normEmail}`);
+      else console.warn(`[AUTH Cloud Sync] Firestore PATCH status: ${res.status}`);
+    }).catch(err => {
+      console.warn("[AUTH Cloud Sync] Error pushing to Firestore:", err);
+    });
   }
 }
 
@@ -207,6 +290,7 @@ function hashPassword(password: string): string {
 
 async function initDb() {
   loadPasswordOverridesFromFile();
+  await syncPasswordOverridesFromFirestoreCloud();
 
   const allowedEmails = new Set([
     ...defaultUsers.map(u => u.email.toLowerCase().trim()),
@@ -514,7 +598,9 @@ async function initDb() {
     for (const u of defaultUsers) {
       const emailNorm = u.email.toLowerCase().trim();
       const customPass = userPasswordOverrides[emailNorm];
-      const initialHash = customPass ? hashPassword(customPass) : defaultPasswordHash;
+      const override = globalPasswordOverrides[emailNorm];
+      const initialHash = override ? override.hash : (customPass ? hashPassword(customPass) : defaultPasswordHash);
+      const initialIsFirstLogin = override ? override.isFirstLogin : (customPass ? 0 : 1);
 
       if (!cleanData[emailNorm]) {
         const firstName = u.name.split(" ")[0];
@@ -523,14 +609,17 @@ async function initDb() {
           name: u.name,
           first_name: firstName,
           password_hash: initialHash,
-          is_first_login: 1,
+          is_first_login: initialIsFirstLogin,
           role: u.role,
           title: u.title || ""
         };
       } else {
         cleanData[emailNorm].role = u.role;
         cleanData[emailNorm].title = u.title || "";
-        if (customPass) {
+        if (override) {
+          cleanData[emailNorm].password_hash = override.hash;
+          cleanData[emailNorm].is_first_login = override.isFirstLogin;
+        } else if (customPass) {
           cleanData[emailNorm].password_hash = hashPassword(customPass);
         }
       }
@@ -921,6 +1010,7 @@ async function startServer() {
         success: true,
         message: "Password updated successfully and persisted to database.",
         email: normEmail,
+        hash: newHash,
         timestamp: new Date().toISOString()
       });
     }
@@ -928,6 +1018,18 @@ async function startServer() {
     console.error(`[AUTH] DATABASE UPDATE FAILED for: ${normEmail}`);
     logEvent(normEmail, "PASSWORD_CHANGE_FAILURE", "Database write failure during password update", "error");
     return res.status(500).json({ success: false, message: "Failed to update password in database" });
+  });
+
+  app.post("/api/auth/sync-password-overrides", (req, res) => {
+    const { overrides } = req.body;
+    if (Array.isArray(overrides)) {
+      for (const ov of overrides) {
+        if (ov.email && ov.hash) {
+          savePasswordOverride(ov.email, ov.hash, ov.isFirstLogin ?? 0);
+        }
+      }
+    }
+    return res.json({ success: true, count: Object.keys(globalPasswordOverrides).length });
   });
 
   app.get("/api/admin/password-logs", (req, res) => {
