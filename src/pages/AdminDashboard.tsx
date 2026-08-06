@@ -749,7 +749,7 @@ export default function AdminDashboard() {
               onClick={loadAllData}
               className="px-4 py-2.5 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-xl text-cream text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
             >
-              <RefreshCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Update Application Data
+              <RefreshCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Update Portal Data
             </button>
           </div>
         </div>

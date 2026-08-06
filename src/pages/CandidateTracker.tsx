@@ -355,7 +355,7 @@ export default function CandidateTracker() {
               className="flex items-center gap-2 bg-gold/20 hover:bg-gold/30 border border-gold/40 text-cream px-5 py-3 rounded-md font-bold uppercase tracking-widest transition-all cursor-pointer w-full md:w-auto justify-center whitespace-nowrap text-xs"
             >
               <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-              Update Application Data
+              Update Portal Data
             </button>
             {canAddCandidate && (
               <button

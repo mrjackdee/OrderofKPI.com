@@ -422,7 +422,7 @@ export default function CommitteeChairDashboard() {
               onClick={loadAllData}
               className="px-5 py-3 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-2xl text-cream text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
             >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Update Application Data
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Update Portal Data
             </button>
           </div>
         </div>

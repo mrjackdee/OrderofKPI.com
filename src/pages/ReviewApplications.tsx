@@ -175,7 +175,7 @@ export default function ReviewApplications() {
             className="px-5 py-3.5 bg-ivy text-cream hover:bg-ivy/90 border border-gold/30 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-soft whitespace-nowrap"
           >
             <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
-            Update Application Data
+            Update Portal Data
           </button>
           <select 
             value={statusFilter}

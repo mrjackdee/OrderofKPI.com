@@ -211,7 +211,7 @@ export default function DeanAuditLogDashboard() {
               disabled={isSyncing}
               className="bg-[#1E3F20]/10 hover:bg-[#1E3F20]/20 text-[#1E3F20] border border-[#B8860B]/40 px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer"
             >
-              <RefreshCw size={14} className={isSyncing ? 'animate-spin text-[#B8860B]' : 'text-[#B8860B]'} /> Update Application Data
+              <RefreshCw size={14} className={isSyncing ? 'animate-spin text-[#B8860B]' : 'text-[#B8860B]'} /> Update Portal Data
             </button>
             <button
               onClick={exportAuditPDF}
