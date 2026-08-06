@@ -12,3 +12,11 @@
 - **Header Title**: The login screen must be titled **"Application Portal"**.
 - **No Self-Registration**: Public self-registration is strictly disabled to prevent unauthorized account creation. Candidates are pre-provisioned via the official roster.
 - **Clean UI**: Maintain a focused, uncluttered login interface without extra promotional text or unnecessary cross-links to member portals.
+
+## 3. Database Sync & Multi-Environment Persistence Rules
+- **Cloud & Local Dual-Write**: Application submissions (`saveApplication`) MUST write to both local server storage (`/api/applications/save` & `./data/applications.json`) AND Cloud Firestore (`membership_applications` collection).
+- **Auto-Sync Across Code Updates & Deploys**: In containerized or static deployments (e.g. Cloud Run, GitHub syncs) where local DB files are reset:
+  1. Data fetching methods (`fetchAllApplications`, `fetchApplication`, dashboard initialization) MUST execute background sync (`syncApplicationsFromFirestore`) to re-hydrate the database from Firestore.
+  2. Roster candidates with submitted applications MUST have their status automatically upgraded from `"Inquiry"` to `"Applied"` in the database without requiring candidate or user intervention.
+- **On-Demand Admin Fallback**: All administrative dashboards (`AdminDashboard`, `CommitteeChairDashboard`, `CandidateTracker`, `ReviewApplications`) MUST maintain the **"Update Application Data"** action button to force an instant multi-cloud data sync on demand.
+- **Zero Data-Loss Client Fallback**: Client application portals MUST check both server APIs and Firestore/localStorage cache so candidates can always view their completed PDF and submission status even during deployment cold-starts.

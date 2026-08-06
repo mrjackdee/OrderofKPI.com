@@ -623,7 +623,7 @@ export async function fetchAllApplications() {
   const fbFetch = (async () => {
     try {
       const fbRes = await firebaseFetchAllApplications();
-      if (fbRes.success && Array.isArray(fbRes.applications)) {
+      if (fbRes.success && 'applications' in fbRes && Array.isArray(fbRes.applications)) {
         return fbRes.applications;
       }
     } catch (err) {
