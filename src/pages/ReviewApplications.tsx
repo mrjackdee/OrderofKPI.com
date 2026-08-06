@@ -12,7 +12,8 @@ import {
   Mail,
   ChevronRight,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { fetchAllApplications, syncApplicationsFromFirestore } from '../lib/memberDb';
 import { generateApplicationPDF } from '../utils/pdfGenerator';
@@ -33,6 +34,21 @@ export default function ReviewApplications() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'submitted'>('all');
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncData = async () => {
+    setIsSyncing(true);
+    try {
+      await syncApplicationsFromFirestore();
+    } catch (e) {
+      console.warn('Sync from Firestore skipped or failed:', e);
+    }
+    const res = await fetchAllApplications();
+    if (res.success) {
+      setApplications(res.applications);
+    }
+    setIsSyncing(false);
+  };
 
   const currentUserEmail = sessionStorage.getItem('userEmail') || 'committee_member@orderofkpi.org';
 
@@ -153,6 +169,14 @@ export default function ReviewApplications() {
               className="pl-12 pr-6 py-3.5 bg-white border border-gold/20 rounded-2xl text-ivy text-sm focus:outline-none focus:border-gold focus:ring-4 focus:ring-gold/5 transition-all w-full md:w-80 shadow-soft"
             />
           </div>
+          <button
+            onClick={handleSyncData}
+            disabled={isSyncing}
+            className="px-5 py-3.5 bg-ivy text-cream hover:bg-ivy/90 border border-gold/30 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-soft whitespace-nowrap"
+          >
+            <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+            Update Application Data
+          </button>
           <select 
             value={statusFilter}
             onChange={(e: any) => setStatusFilter(e.target.value)}

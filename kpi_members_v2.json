@@ -331,5 +331,14 @@
     "is_first_login": 1,
     "role": "member",
     "title": ""
+  },
+  "jackdee.sync@gmail.com": {
+    "email": "jackdee.sync@gmail.com",
+    "name": "Jack Tester",
+    "first_name": "Jack",
+    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
+    "is_first_login": 0,
+    "role": "prospective",
+    "title": "Candidate"
   }
 }

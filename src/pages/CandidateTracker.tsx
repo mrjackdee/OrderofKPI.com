@@ -20,7 +20,8 @@ import {
   Send,
   X,
   ShieldCheck,
-  CheckCircle
+  CheckCircle,
+  RefreshCw
 } from 'lucide-react';
 import { Candidate } from '../types';
 import { fetchAllApplications, prospectiveMembers, syncApplicationsFromFirestore } from '../lib/memberDb';
@@ -41,6 +42,21 @@ export default function CandidateTracker() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncData = async () => {
+    setIsSyncing(true);
+    try {
+      await syncApplicationsFromFirestore();
+    } catch (e) {
+      console.warn('Sync from Firestore skipped or failed:', e);
+    }
+    await Promise.all([
+      fetchCandidates(),
+      fetchApplications()
+    ]);
+    setIsSyncing(false);
+  };
 
   useEffect(() => {
     logPortalSectionAccess('Candidate Tracker');
@@ -332,15 +348,25 @@ export default function CandidateTracker() {
               </Link>
             </div>
           </div>
-          {canAddCandidate && (
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
             <button
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 bg-gold text-ivy px-6 py-3 rounded-md font-bold uppercase tracking-widest hover:brightness-110 transition-all shadow-lg w-full md:w-auto justify-center whitespace-nowrap"
+              onClick={handleSyncData}
+              disabled={isSyncing}
+              className="flex items-center gap-2 bg-gold/20 hover:bg-gold/30 border border-gold/40 text-cream px-5 py-3 rounded-md font-bold uppercase tracking-widest transition-all cursor-pointer w-full md:w-auto justify-center whitespace-nowrap text-xs"
             >
-              <UserPlus className="w-5 h-5" />
-              Add Candidate
+              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              Update Application Data
             </button>
-          )}
+            {canAddCandidate && (
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center gap-2 bg-gold text-ivy px-6 py-3 rounded-md font-bold uppercase tracking-widest hover:brightness-110 transition-all shadow-lg w-full md:w-auto justify-center whitespace-nowrap"
+              >
+                <UserPlus className="w-5 h-5" />
+                Add Candidate
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

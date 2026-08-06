@@ -22,7 +22,7 @@ import {
   Award
 } from 'lucide-react';
 import { Candidate, Member } from '../types';
-import { prospectiveMembers, fetchAllApplications } from '../lib/memberDb';
+import { prospectiveMembers, fetchAllApplications, syncApplicationsFromFirestore } from '../lib/memberDb';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 
 interface AuditLog {
@@ -74,6 +74,11 @@ export default function CommitteeChairDashboard() {
 
   const loadAllData = async () => {
     setLoading(true);
+    try {
+      await syncApplicationsFromFirestore();
+    } catch (e) {
+      console.warn('Sync applications error during loadAllData:', e);
+    }
     await Promise.all([
       fetchAuditLogs(),
       fetchCandidates(),
@@ -417,7 +422,7 @@ export default function CommitteeChairDashboard() {
               onClick={loadAllData}
               className="px-5 py-3 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-2xl text-cream text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
             >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh Data
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Update Application Data
             </button>
           </div>
         </div>

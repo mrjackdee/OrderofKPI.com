@@ -36,7 +36,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Member, Candidate } from '../types';
-import { prospectiveMembers, fetchAllApplications } from '../lib/memberDb';
+import { prospectiveMembers, fetchAllApplications, syncApplicationsFromFirestore } from '../lib/memberDb';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import { googleSignIn, getAccessToken } from '../lib/googleAuth';
 import { createGoogleForm, getGoogleForm, getGoogleFormResponses } from '../lib/googleWorkspace';
@@ -413,6 +413,11 @@ export default function AdminDashboard() {
 
   const loadAllData = async () => {
     setLoading(true);
+    try {
+      await syncApplicationsFromFirestore();
+    } catch (e) {
+      console.warn('Sync applications error during loadAllData:', e);
+    }
     await Promise.all([
       fetchMembers(),
       fetchCandidates(),
@@ -744,7 +749,7 @@ export default function AdminDashboard() {
               onClick={loadAllData}
               className="px-4 py-2.5 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-xl text-cream text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
             >
-              <RefreshCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Sync Console
+              <RefreshCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Update Application Data
             </button>
           </div>
         </div>
