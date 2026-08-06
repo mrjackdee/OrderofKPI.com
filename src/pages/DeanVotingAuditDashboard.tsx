@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, Navigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
-import { ShieldCheck, Download, ArrowLeft, Trash2, Edit2, CheckCircle2, AlertCircle, Search, Calendar, User } from 'lucide-react';
+import { ShieldCheck, Download, ArrowLeft, Trash2, Edit2, CheckCircle2, AlertCircle, Search, Calendar, User, RefreshCw } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
+import { syncApplicationsFromFirestore } from '../lib/memberDb';
 
 interface AdminVoteItem {
   id: string;
@@ -24,10 +25,24 @@ export default function DeanVotingAuditDashboard() {
   const [editNomineeName, setEditNomineeName] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncData = async () => {
+    setIsSyncing(true);
+    try {
+      await syncApplicationsFromFirestore();
+    } catch (e) {
+      console.warn('Sync error:', e);
+    }
+    await fetchAdminVotes();
+    setIsSyncing(false);
+  };
 
   useEffect(() => {
     if (isAdmin) {
-      fetchAdminVotes();
+      syncApplicationsFromFirestore().catch(() => {}).finally(() => {
+        fetchAdminVotes();
+      });
     }
   }, [isAdmin]);
 
@@ -176,12 +191,21 @@ export default function DeanVotingAuditDashboard() {
             <ArrowLeft size={16} /> Return to Member Portal
           </Link>
 
-          <button
-            onClick={exportAuditPDF}
-            className="bg-[#1E3F20] hover:bg-[#B8860B] text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 shadow-md transition-colors cursor-pointer"
-          >
-            <Download size={14} /> Export Audit PDF
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleSyncData}
+              disabled={isSyncing}
+              className="bg-[#1E3F20]/10 hover:bg-[#1E3F20]/20 text-[#1E3F20] border border-[#B8860B]/40 px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer"
+            >
+              <RefreshCw size={14} className={isSyncing ? 'animate-spin text-[#B8860B]' : 'text-[#B8860B]'} /> Update Application Data
+            </button>
+            <button
+              onClick={exportAuditPDF}
+              className="bg-[#1E3F20] hover:bg-[#B8860B] text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 shadow-md transition-colors cursor-pointer"
+            >
+              <Download size={14} /> Export Audit PDF
+            </button>
+          </div>
         </div>
 
         {/* Header */}

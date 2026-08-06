@@ -21,9 +21,10 @@ import {
   Save,
   Settings,
   Mail,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
-import { fetchApplication, performHybridPasswordChange, changeApplicantEmail } from '../lib/memberDb';
+import { fetchApplication, performHybridPasswordChange, changeApplicantEmail, syncApplicationsFromFirestore } from '../lib/memberDb';
 import Application from './Application';
 
 export default function ApplicantPortal() {
@@ -83,6 +84,21 @@ export default function ApplicantPortal() {
   const [settingsPwdLoading, setSettingsPwdLoading] = useState(false);
 
   useEffect(() => {
+    // Background sync application data on load
+    if (userEmail) {
+      syncApplicationsFromFirestore().catch(() => {}).then(async () => {
+        const res = await fetchApplication(userEmail);
+        if (res) {
+          if (res.candidateStatus) setCandidateStatus(res.candidateStatus);
+          if (res.application?.status === 'submitted' || res.candidateStatus === 'Applied') {
+            setAppStatus('submitted');
+          } else if (res.application) {
+            setAppStatus(res.application.status || 'draft');
+          }
+        }
+      }).catch(() => {});
+    }
+
     // Check if user is logging in for the first time
     const isFirst = sessionStorage.getItem('userIsFirstLogin') === 'true';
     const pwdChangedLocally = localStorage.getItem(`kpi_password_changed_${userEmail}`) === 'true';
@@ -561,6 +577,7 @@ export default function ApplicantPortal() {
             <Settings size={16} className={activeTab === 'account' ? 'text-gold' : 'text-ivy/60'} />
             Account Settings
           </button>
+
         </div>
 
         {/* Tab Content */}

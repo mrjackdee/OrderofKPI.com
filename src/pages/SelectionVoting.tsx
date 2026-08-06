@@ -10,9 +10,11 @@ import {
   Clock,
   AlertTriangle,
   ChevronRight,
-  FileText
+  FileText,
+  RefreshCw
 } from 'lucide-react';
 import { Candidate, Vote } from '../types';
+import { syncApplicationsFromFirestore } from '../lib/memberDb';
 
 export default function SelectionVoting() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -20,13 +22,14 @@ export default function SelectionVoting() {
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string>('');
   const [submitting, setSubmitting] = useState<string | null>(null);
-
   useEffect(() => {
     const email = sessionStorage.getItem('userEmail');
     if (email) {
       setUserEmail(email);
     }
-    fetchData();
+    syncApplicationsFromFirestore().catch(() => {}).finally(() => {
+      fetchData();
+    });
   }, []);
 
   const fetchData = async () => {

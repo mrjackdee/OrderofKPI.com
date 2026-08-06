@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, Navigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
-import { Award, ShieldCheck, Download, Users, ArrowLeft, BarChart3, FileText, CheckCircle2 } from 'lucide-react';
+import { Award, ShieldCheck, Download, Users, ArrowLeft, BarChart3, FileText, CheckCircle2, RefreshCw } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
+import { syncApplicationsFromFirestore } from '../lib/memberDb';
 
 interface NominationItem {
   id: string;
@@ -32,10 +33,11 @@ export default function DeanNominationDashboard() {
 
   const [nominations, setNominations] = useState<NominationItem[]>([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     if (canAccess) {
-      fetchNominations();
+      syncApplicationsFromFirestore().catch(() => {}).finally(() => {
+        fetchNominations();
+      });
     }
   }, [canAccess]);
 

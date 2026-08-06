@@ -14,10 +14,12 @@ import {
   CheckCircle2,
   XCircle,
   ExternalLink,
-  Camera
+  Camera,
+  RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Member } from '../types';
+import { syncApplicationsFromFirestore } from '../lib/memberDb';
 
 export default function MemberDirectory() {
   const navigate = useNavigate();
@@ -26,14 +28,15 @@ export default function MemberDirectory() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('all');
   const [selectedClass, setSelectedClass] = useState<string>('all');
-
   useEffect(() => {
     const role = sessionStorage.getItem('userRole');
     if (!role || role === 'applicant' || role === 'prospective') {
       navigate(role ? '/applicant-portal' : '/login', { replace: true });
       return;
     }
-    fetchMembers();
+    syncApplicationsFromFirestore().catch(() => {}).finally(() => {
+      fetchMembers();
+    });
   }, [navigate]);
 
   const isOfficer = (member: Member): boolean => {

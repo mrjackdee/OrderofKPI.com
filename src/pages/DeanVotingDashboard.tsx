@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, Navigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
-import { Award, Download, ArrowLeft, ShieldCheck, Users, BarChart2 } from 'lucide-react';
+import { Award, Download, ArrowLeft, ShieldCheck, Users, BarChart2, RefreshCw } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
+import { syncApplicationsFromFirestore } from '../lib/memberDb';
 
 interface VoteTally {
   nominee_name: string;
@@ -24,10 +25,11 @@ export default function DeanVotingDashboard() {
   const [tallies, setTallies] = useState<VoteTally[]>([]);
   const [totalVotes, setTotalVotes] = useState(0);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     if (isAuthorizedCommittee) {
-      fetchVotingResults();
+      syncApplicationsFromFirestore().catch(() => {}).finally(() => {
+        fetchVotingResults();
+      });
     }
   }, [isAuthorizedCommittee]);
 

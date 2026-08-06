@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 import { Member } from '../types';
+import { syncApplicationsFromFirestore } from '../lib/memberDb';
 
 export default function FinancialRoster() {
   const navigate = useNavigate();
@@ -23,14 +24,15 @@ export default function FinancialRoster() {
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-
   useEffect(() => {
     const role = sessionStorage.getItem('userRole');
     if (!role || role === 'applicant' || role === 'prospective') {
       navigate(role ? '/applicant-portal' : '/login', { replace: true });
       return;
     }
-    fetchMembers();
+    syncApplicationsFromFirestore().catch(() => {}).finally(() => {
+      fetchMembers();
+    });
   }, [navigate]);
 
   const isOfficer = (member: Member): boolean => {

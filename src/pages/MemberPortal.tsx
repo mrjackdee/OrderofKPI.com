@@ -10,10 +10,12 @@ import {
   Settings,
   LayoutGrid,
   ChevronRight,
-  GraduationCap
+  GraduationCap,
+  RefreshCw
 } from 'lucide-react';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import MemberHeader from '../components/MemberHeader';
+import { syncApplicationsFromFirestore } from '../lib/memberDb';
 
 export default function MemberPortal() {
   const userRole = sessionStorage.getItem('userRole');
@@ -31,9 +33,9 @@ export default function MemberPortal() {
   const isChair = userEmail?.toLowerCase() === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair' || normalizedRole.includes('chair') || isAdmin;
   const isBrian = userEmail?.toLowerCase() === 'brian.johnson@orderofkpi.org';
   const isMembershipCommittee = userRole === 'Membership Committee' || normalizedRole.includes('membership committee') || normalizedRole.includes('committee') || isChair || isAdmin;
-
   React.useEffect(() => {
     logPortalSectionAccess('Member Portal');
+    syncApplicationsFromFirestore().catch(() => {});
   }, []);
 
   const containerVariants = {
