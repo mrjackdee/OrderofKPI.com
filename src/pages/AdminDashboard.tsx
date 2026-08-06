@@ -310,7 +310,8 @@ export default function AdminDashboard() {
         const safeDocId = email.replace(/[^a-zA-Z0-9]/g, '_');
 
         const appRef = doc(db, 'applications', safeDocId);
-        await setDoc(appRef, {
+        const appRef2 = doc(db, 'membership_applications', safeDocId);
+        const applicationData = {
           email,
           firstName,
           lastName,
@@ -318,11 +319,13 @@ export default function AdminDashboard() {
           essay1,
           essay2,
           essay3,
-          status: 'submitted',
+          status: 'submitted' as const,
           submittedAt: new Date().toISOString(),
           lastSavedAt: new Date().toISOString(),
           source: 'Google Forms'
-        }, { merge: true });
+        };
+        await setDoc(appRef, applicationData, { merge: true });
+        await setDoc(appRef2, applicationData, { merge: true });
 
         const candidateDocRef = doc(db, 'candidate_accounts', email);
         await setDoc(candidateDocRef, {

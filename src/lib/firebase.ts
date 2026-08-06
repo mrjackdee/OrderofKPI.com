@@ -329,6 +329,7 @@ export async function firebaseSaveApplication(email: string, data: any, status: 
   const saveAction = async () => {
     try {
       const appRef = doc(db, 'applications', safeDocId);
+      const appRef2 = doc(db, 'membership_applications', safeDocId);
       const now = new Date().toISOString();
 
       const payload: any = {
@@ -382,6 +383,7 @@ export async function firebaseSaveApplication(email: string, data: any, status: 
       }
 
       await setDoc(appRef, payload, { merge: true });
+      await setDoc(appRef2, payload, { merge: true });
 
       return {
         success: true,
@@ -412,16 +414,24 @@ export async function firebaseFetchApplication(email: string) {
 
   const fetchAction = async () => {
     try {
-      const appRef = doc(db, 'applications', safeDocId);
-      const snapshot = await getDoc(appRef);
-
-      if (snapshot.exists()) {
-        const docData = snapshot.data();
+      const appRef1 = doc(db, 'membership_applications', safeDocId);
+      const snapshot1 = await getDoc(appRef1);
+      if (snapshot1.exists()) {
         return {
           success: true,
-          application: docData
+          application: snapshot1.data()
         };
       }
+
+      const appRef2 = doc(db, 'applications', safeDocId);
+      const snapshot2 = await getDoc(appRef2);
+      if (snapshot2.exists()) {
+        return {
+          success: true,
+          application: snapshot2.data()
+        };
+      }
+
       return { success: false, message: 'No application found in Firestore' };
     } catch (err: any) {
       console.error('Error fetching application from Firestore:', err);
@@ -442,11 +452,38 @@ export async function firebaseFetchApplication(email: string) {
 export async function firebaseFetchAllApplications() {
   try {
     const fetchPromise = (async () => {
-      const querySnapshot = await getDocs(collection(db, 'applications'));
       const list: any[] = [];
-      querySnapshot.forEach((docSnapshot) => {
-        list.push(docSnapshot.data());
-      });
+      const seenEmails = new Set<string>();
+
+      try {
+        const querySnapshot1 = await getDocs(collection(db, 'membership_applications'));
+        querySnapshot1.forEach((docSnapshot) => {
+          const appData = docSnapshot.data();
+          if (appData && appData.email) {
+            list.push(appData);
+            seenEmails.add(appData.email.toLowerCase().trim());
+          }
+        });
+      } catch (err) {
+        console.warn('Could not load membership_applications collection:', err);
+      }
+
+      try {
+        const querySnapshot2 = await getDocs(collection(db, 'applications'));
+        querySnapshot2.forEach((docSnapshot) => {
+          const appData = docSnapshot.data();
+          if (appData && appData.email) {
+            const normEmail = appData.email.toLowerCase().trim();
+            if (!seenEmails.has(normEmail)) {
+              list.push(appData);
+              seenEmails.add(normEmail);
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('Could not load applications collection:', err);
+      }
+
       return { success: true, applications: list };
     })();
 
