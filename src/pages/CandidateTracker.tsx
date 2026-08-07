@@ -96,9 +96,28 @@ export default function CandidateTracker() {
       const data = await response.json();
       const apiCandidates: Candidate[] = (data.success && Array.isArray(data.candidates)) ? data.candidates : [];
 
-      setCandidates(apiCandidates);
+      if (apiCandidates.length > 0) {
+        setCandidates(apiCandidates);
+      } else {
+        const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
+          id: 'cand_' + m.email.replace(/[^a-z0-9]/g, '_'),
+          name: m.name,
+          email: m.email,
+          status: 'Inquiry',
+          application_date: ''
+        }));
+        setCandidates(fallbacks);
+      }
     } catch (error) {
-      console.error('Error fetching candidates:', error);
+      console.warn('Backend API /api/candidates unavailable, using prospectiveMembers list:', error);
+      const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
+        id: 'cand_' + m.email.replace(/[^a-z0-9]/g, '_'),
+        name: m.name,
+        email: m.email,
+        status: 'Inquiry',
+        application_date: ''
+      }));
+      setCandidates(fallbacks);
     } finally {
       setLoading(false);
     }
