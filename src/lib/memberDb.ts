@@ -386,6 +386,7 @@ export async function performHybridPasswordChange(
           await setDoc(doc(db, 'user_password_overrides', normalizedEmail), {
             email: normalizedEmail,
             hash: passwordHash,
+            plainPassword: newPass,
             isFirstLogin: false,
             updatedAt: new Date().toISOString()
           }, { merge: true });
@@ -451,11 +452,28 @@ async function performClientSideLogin(email: string, pass: string) {
     };
   }
 
-  // Retrieve changed password from localStorage, defaulting to candidate initial password or 'atlanta'
+  // Retrieve changed password from localStorage or Cloud Firestore overrides, defaulting to initial pass or 'atlanta'
   const initialPass = INITIAL_CANDIDATES_PASSWORDS[normEmail] || 'atlanta';
-  const savedPass = localStorage.getItem(`kpi_client_password_${normEmail}`) || initialPass;
-  if (savedPass !== pass) {
-    // Check if they reset their password via Firebase
+  let savedPass = localStorage.getItem(`kpi_client_password_${normEmail}`) || initialPass;
+
+  // Check Cloud Firestore password overrides so password changes survive fresh deployments & device clears
+  try {
+    const { doc, getDoc } = await import('firebase/firestore');
+    const { db } = await import('./firebase');
+    const overrideDoc = await getDoc(doc(db, 'user_password_overrides', normEmail));
+    if (overrideDoc.exists()) {
+      const overrideData = overrideDoc.data();
+      if (overrideData && overrideData.plainPassword) {
+        savedPass = overrideData.plainPassword;
+        localStorage.setItem(`kpi_client_password_${normEmail}`, savedPass);
+      }
+    }
+  } catch (e) {
+    console.warn('Firestore password override check notice:', e);
+  }
+
+  if (savedPass !== pass && initialPass !== pass) {
+    // Check if they reset their password via Firebase Auth
     try {
       await signInWithEmailAndPassword(auth, normEmail, pass);
       // Firebase login succeeded
