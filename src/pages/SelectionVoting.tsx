@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Candidate, Vote } from '../types';
 import { syncApplicationsFromFirestore } from '../lib/memberDb';
+import { syncMemberVote, fetchMemberVotes } from '../lib/portalSync';
 
 export default function SelectionVoting() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -22,32 +23,27 @@ export default function SelectionVoting() {
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string>('');
   const [submitting, setSubmitting] = useState<string | null>(null);
+
   useEffect(() => {
     const email = sessionStorage.getItem('userEmail');
     if (email) {
       setUserEmail(email);
     }
     syncApplicationsFromFirestore().catch(() => {}).finally(() => {
-      fetchData();
+      fetchData(email || undefined);
     });
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (currentEmail?: string) => {
     try {
-      const [candRes, voteRes] = await Promise.all([
-        fetch('/api/candidates'),
-        fetch('/api/votes')
-      ]);
+      const candRes = await fetch('/api/candidates');
       const candData = await candRes.json();
-      const voteData = await voteRes.json();
       
       if (candData.success) {
-        // Only show candidates in 'Selection' stage for voting
         setCandidates(candData.candidates.filter((c: Candidate) => c.status === 'Selection'));
       }
-      if (voteData.success) {
-        setVotes(voteData.votes);
-      }
+      const fetchedVotes = await fetchMemberVotes(currentEmail || userEmail);
+      setVotes(fetchedVotes);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -58,18 +54,8 @@ export default function SelectionVoting() {
   const castVote = async (candidateId: string, decision: 'yes' | 'no' | 'abstain') => {
     setSubmitting(candidateId);
     try {
-      const response = await fetch('/api/votes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          voter_email: userEmail,
-          candidate_id: candidateId,
-          decision
-        }),
-      });
-      if (response.ok) {
-        fetchData();
-      }
+      await syncMemberVote(userEmail, candidateId, decision);
+      await fetchData(userEmail);
     } catch (error) {
       console.error('Error casting vote:', error);
     } finally {
