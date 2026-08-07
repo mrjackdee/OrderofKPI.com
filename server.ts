@@ -30,14 +30,12 @@ const passwordOverridesPath = path.join(process.cwd(), "user_password_overrides.
 
 let firebaseProjectId = process.env.VITE_FIREBASE_PROJECT_ID || "";
 let firebaseApiKey = process.env.VITE_FIREBASE_API_KEY || "";
-let firebaseDatabaseId = "ai-studio-orderofkpiocomint-87b8a669-8698-4f66-8799-ff9b38422e20";
 try {
   const cfgPath = path.join(process.cwd(), "firebase-applet-config.json");
   if (fs.existsSync(cfgPath)) {
     const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf-8"));
     if (!firebaseProjectId) firebaseProjectId = cfg.projectId || "";
     if (!firebaseApiKey) firebaseApiKey = cfg.apiKey || "";
-    if (cfg.firestoreDatabaseId) firebaseDatabaseId = cfg.firestoreDatabaseId;
   }
 } catch (e) {}
 
@@ -748,36 +746,6 @@ function findUser(email: string): UserRecord | null {
         title: defaultU.title
       };
     }
-  }
-
-  // Dynamic QA/Test account generation to enable flawless E2E testing
-  if (!userRecord && (normEmail.startsWith("qa.") || normEmail.startsWith("test."))) {
-    let role = "prospective";
-    let name = "QA Candidate";
-    let title = "Candidate";
-
-    if (normEmail.includes("admin")) {
-      role = "admin";
-      name = "QA Admin";
-      title = "Administrator";
-    } else if (normEmail.includes("chair")) {
-      role = "Membership Committee Chair";
-      name = "QA Committee Chair";
-      title = "Committee Chair";
-    } else if (normEmail.includes("member")) {
-      role = "member";
-      name = "QA Member";
-    }
-
-    userRecord = {
-      email: normEmail,
-      name,
-      first_name: name.split(" ")[0],
-      password_hash: hashPassword("2012"), // E2E tests can use "2012"
-      is_first_login: 0,
-      role,
-      title
-    };
   }
 
   // Apply persistent password override if recorded!
@@ -1588,12 +1556,6 @@ async function startServer() {
         }
       }
 
-      // Filter out test accounts
-      apps = apps.filter(a => {
-        const email = (a.email || "").toLowerCase().trim();
-        return email !== 'candidate@gmail.com' && email !== 'dennis@gmail.com';
-      });
-
       res.json({ success: true, applications: apps });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
@@ -1784,7 +1746,6 @@ async function startServer() {
             for (const app of applications) {
               const email = (app.email || "").toLowerCase().trim();
               if (!email) continue;
-              if (email === 'candidate@gmail.com' || email === 'dennis@gmail.com') continue;
 
               const status = app.status || "draft";
               const data = app.data || app; // Handle either format
@@ -1847,7 +1808,6 @@ async function startServer() {
       for (const app of applications) {
         const email = (app.email || "").toLowerCase().trim();
         if (!email) continue;
-        if (email === 'candidate@gmail.com' || email === 'dennis@gmail.com') continue;
 
         const status = app.status || "draft";
         const data = app.data || app;
@@ -2020,12 +1980,11 @@ async function startServer() {
         }
       }
 
-      // Filter out deleted candidates across all sources, as well as test/purged accounts
+      // Filter out deleted candidates across all sources
       candidates = candidates.filter(c => {
         const cId = (c.id || "").toLowerCase().trim();
         const cEmail = (c.email || "").toLowerCase().trim();
-        const isDummy = cEmail === 'candidate@gmail.com' || cEmail === 'dennis@gmail.com';
-        return !deletedSet.has(cId) && !deletedSet.has(cEmail) && !isDummy;
+        return !deletedSet.has(cId) && !deletedSet.has(cEmail);
       });
 
       res.json({ success: true, candidates });
@@ -2191,34 +2150,6 @@ async function startServer() {
     }
   });
 
-  async function deleteFirestoreCandidateApplication(email: string) {
-    if (!firebaseProjectId || !firebaseApiKey || !email) return;
-    const normEmail = email.toLowerCase().trim();
-    const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
-    
-    const dbId = firebaseDatabaseId || "ai-studio-orderofkpiocomint-87b8a669-8698-4f66-8799-ff9b38422e20";
-    
-    const urls = [
-      `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/applications/${encodeURIComponent(safeDocId)}?key=${firebaseApiKey}`,
-      `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/membership_applications/${encodeURIComponent(safeDocId)}?key=${firebaseApiKey}`,
-      `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/candidates/${encodeURIComponent(normEmail)}?key=${firebaseApiKey}`
-    ];
-
-    for (const url of urls) {
-      try {
-        const res = await fetch(url, { method: "DELETE" });
-        if (res.ok) {
-          console.log(`[FIRESTORE DELETE] Successfully deleted document: ${url}`);
-        } else {
-          const text = await res.text();
-          console.warn(`[FIRESTORE DELETE] Warning deleting document: ${url}. Status: ${res.status}. Response: ${text}`);
-        }
-      } catch (err) {
-        console.error(`[FIRESTORE DELETE] Error deleting document: ${url}`, err);
-      }
-    }
-  }
-
   app.delete("/api/candidates/:id", (req, res) => {
     try {
       const rawId = req.params.id;
@@ -2235,9 +2166,6 @@ async function startServer() {
           targetCandEmail = cand.email;
         }
         sqliteDb.prepare("DELETE FROM candidates WHERE LOWER(id) = ? OR LOWER(email) = ?").run(normId, normId);
-        if (targetCandEmail) {
-          sqliteDb.prepare("DELETE FROM membership_applications WHERE LOWER(email) = ?").run(targetCandEmail.toLowerCase().trim());
-        }
       }
 
       // Also search fallback candidates list
@@ -2248,36 +2176,9 @@ async function startServer() {
         if (targetCandName === "Candidate") targetCandName = matchInFallback.name;
       }
 
-      // Trigger background Firestore cleanup
-      const emailToDel = (targetCandEmail || (normId.includes("@") ? normId : "")).toLowerCase().trim();
-      if (emailToDel) {
-        deleteFirestoreCandidateApplication(emailToDel).catch(err => {
-          console.error("[FIRESTORE DELETE] Background delete failed:", err);
-        });
-      }
-
       // Remove from fallback list and save
       const newFallback = fallbackList.filter(c => (c.id || "").toLowerCase() !== normId && (c.email || "").toLowerCase() !== normId);
       saveFallbackCandidates(newFallback);
-
-      // Also delete from fallback applications.json
-      const appsJsonFile = path.join(process.cwd(), "data", "applications.json");
-      if (fs.existsSync(appsJsonFile)) {
-        try {
-          const jsonStore = JSON.parse(fs.readFileSync(appsJsonFile, "utf-8"));
-          let deletedAny = false;
-          Object.keys(jsonStore).forEach(e => {
-            const normE = e.toLowerCase().trim();
-            if (normE === normId || (emailToDel && normE === emailToDel)) {
-              delete jsonStore[e];
-              deletedAny = true;
-            }
-          });
-          if (deletedAny) {
-            fs.writeFileSync(appsJsonFile, JSON.stringify(jsonStore, null, 2));
-          }
-        } catch(e) {}
-      }
 
       // Record in persistent deleted candidates set
       recordDeletedCandidate(normId, targetCandEmail);

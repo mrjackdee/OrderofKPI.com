@@ -24,7 +24,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { Candidate } from '../types';
-import { fetchAllApplications, prospectiveMembers, syncApplicationsFromFirestore } from '../lib/memberDb';
+import { fetchAllApplications, prospectiveMembers, syncApplicationsFromFirestore, isQAAccount } from '../lib/memberDb';
 import { generateApplicationPDF } from '../utils/pdfGenerator';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 
@@ -96,9 +96,28 @@ export default function CandidateTracker() {
       const data = await response.json();
       const apiCandidates: Candidate[] = (data.success && Array.isArray(data.candidates)) ? data.candidates : [];
 
-      setCandidates(apiCandidates);
+      if (apiCandidates.length > 0) {
+        setCandidates(apiCandidates);
+      } else {
+        const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
+          id: 'cand_' + m.email.replace(/[^a-z0-9]/g, '_'),
+          name: m.name,
+          email: m.email,
+          status: 'Inquiry',
+          application_date: ''
+        }));
+        setCandidates(fallbacks);
+      }
     } catch (error) {
-      console.error('Error fetching candidates:', error);
+      console.warn('Backend API /api/candidates unavailable, using prospectiveMembers list:', error);
+      const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
+        id: 'cand_' + m.email.replace(/[^a-z0-9]/g, '_'),
+        name: m.name,
+        email: m.email,
+        status: 'Inquiry',
+        application_date: ''
+      }));
+      setCandidates(fallbacks);
     } finally {
       setLoading(false);
     }
@@ -167,28 +186,10 @@ export default function CandidateTracker() {
   const handleRemoveCandidate = async (id: string, name: string) => {
     if (!window.confirm(`Are you sure you want to permanently remove candidate "${name}" from the tracker?`)) return;
 
-    // Find candidate email for cleanup
-    const targetCand = candidates.find(c => c.id === id || c.email?.toLowerCase().trim() === id.toLowerCase().trim());
-    const targetEmail = targetCand?.email;
-
     // Optimistically remove from state so the UI updates immediately
     setCandidates(prev => prev.filter(c => c.id !== id && c.email?.toLowerCase().trim() !== id.toLowerCase().trim()));
-    if (targetEmail) {
-      setApplications(prev => prev.filter(app => app.email?.toLowerCase().trim() !== targetEmail.toLowerCase().trim()));
-    }
 
     try {
-      // 1. Delete application from Firestore if email is available
-      if (targetEmail) {
-        try {
-          const { deleteApplication } = await import('../lib/memberDb');
-          await deleteApplication(targetEmail);
-        } catch (fsErr) {
-          console.warn('Error deleting application from Firestore:', fsErr);
-        }
-      }
-
-      // 2. Delete candidate and local application records from the backend
       const res = await fetch(`/api/candidates/${encodeURIComponent(id)}?chairEmail=${encodeURIComponent(currentUserEmail)}`, {
         method: 'DELETE',
       });
@@ -207,18 +208,43 @@ export default function CandidateTracker() {
 
   const mergedCandidates = useMemo(() => {
     const submittedAppsMap = new Map<string, any>();
+    const submittedAppsByNameMap = new Map<string, any>();
+
     applications.forEach(app => {
-      if (app && (app.status === 'submitted' || app.submitted_at || app.submittedAt)) {
-        if (app.email) submittedAppsMap.set(app.email.toLowerCase().trim(), app);
+      if (!app) return;
+      // Extract email robustly
+      let email = (app.email || app.data?.email || '').toLowerCase().trim();
+      if (!email && app.id && app.id.includes('_')) {
+        const parts = app.id.split('_');
+        if (parts.length >= 3) {
+          const domainExt = parts.pop();
+          const domainName = parts.pop();
+          email = `${parts.join('.')}@${domainName}.${domainExt}`.toLowerCase().trim();
+        }
+      }
+
+      if (email) {
+        submittedAppsMap.set(email, app);
+      }
+
+      // Also map by full name for resilient fallback matching
+      const firstName = app.data?.firstName || app.firstName || '';
+      const lastName = app.data?.lastName || app.lastName || '';
+      const fullName = `${firstName} ${lastName}`.toLowerCase().trim();
+      if (fullName && fullName.length > 2) {
+        submittedAppsByNameMap.set(fullName, app);
       }
     });
 
     const seenEmails = new Set<string>();
     const updated = candidates.map(c => {
       const normEmail = (c.email || '').toLowerCase().trim();
+      const normName = (c.name || '').toLowerCase().trim();
       if (normEmail) seenEmails.add(normEmail);
-      if (normEmail && submittedAppsMap.has(normEmail)) {
-        const app = submittedAppsMap.get(normEmail);
+
+      const app = (normEmail ? submittedAppsMap.get(normEmail) : null) || (normName ? submittedAppsByNameMap.get(normName) : null);
+
+      if (app) {
         const appPhone = app?.data?.phone || app?.phone || c.phone || '';
         const appDate = (app?.submitted_at || app?.submittedAt || app?.last_saved_at || app?.lastSavedAt || '').split('T')[0];
         return {
@@ -282,8 +308,9 @@ export default function CandidateTracker() {
   };
 
   const filteredCandidates = mergedCandidates.filter(c => 
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.email.toLowerCase().includes(searchQuery.toLowerCase())
+    !isQAAccount(c.email) &&
+    (c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+     c.email.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const getStatusBadgeConfig = (status: string) => {
