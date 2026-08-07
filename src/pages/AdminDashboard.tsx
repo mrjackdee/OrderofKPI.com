@@ -36,7 +36,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Member, Candidate } from '../types';
-import { prospectiveMembers, fetchAllApplications, syncApplicationsFromFirestore } from '../lib/memberDb';
+import { prospectiveMembers, fetchAllApplications, syncApplicationsFromFirestore, isQAAccount } from '../lib/memberDb';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import { googleSignIn, getAccessToken } from '../lib/googleAuth';
 import { createGoogleForm, getGoogleForm, getGoogleFormResponses } from '../lib/googleWorkspace';
@@ -738,6 +738,7 @@ export default function AdminDashboard() {
   }, [candidates, applications]);
 
   const filteredCandidates = mergedCandidates.filter(c => {
+    if (isQAAccount(c.email)) return false;
     const matchesSearch = c.name.toLowerCase().includes(candidateSearch.toLowerCase()) || c.email.toLowerCase().includes(candidateSearch.toLowerCase());
     const matchesStage = candidateStageFilter === 'all' || c.status === candidateStageFilter;
     return matchesSearch && matchesStage;

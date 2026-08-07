@@ -24,7 +24,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { Candidate } from '../types';
-import { fetchAllApplications, prospectiveMembers, syncApplicationsFromFirestore } from '../lib/memberDb';
+import { fetchAllApplications, prospectiveMembers, syncApplicationsFromFirestore, isQAAccount } from '../lib/memberDb';
 import { generateApplicationPDF } from '../utils/pdfGenerator';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 
@@ -308,8 +308,9 @@ export default function CandidateTracker() {
   };
 
   const filteredCandidates = mergedCandidates.filter(c => 
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.email.toLowerCase().includes(searchQuery.toLowerCase())
+    !isQAAccount(c.email) &&
+    (c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+     c.email.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const getStatusBadgeConfig = (status: string) => {

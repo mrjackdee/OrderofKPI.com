@@ -22,7 +22,7 @@ import {
   Award
 } from 'lucide-react';
 import { Candidate, Member } from '../types';
-import { prospectiveMembers, fetchAllApplications, syncApplicationsFromFirestore } from '../lib/memberDb';
+import { prospectiveMembers, fetchAllApplications, syncApplicationsFromFirestore, isQAAccount } from '../lib/memberDb';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 
 interface AuditLog {
@@ -392,11 +392,12 @@ export default function CommitteeChairDashboard() {
       }
     });
 
-    return updated;
+return updated;
   }, [candidates, applications]);
 
   // Filtered Candidates
   const filteredCandidates = mergedCandidates.filter(cand => {
+    if (isQAAccount(cand.email)) return false;
     const matchesSearch = 
       cand.name.toLowerCase().includes(candidateSearch.toLowerCase()) ||
       cand.email.toLowerCase().includes(candidateSearch.toLowerCase());

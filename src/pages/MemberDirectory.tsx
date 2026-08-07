@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Member } from '../types';
-import { syncApplicationsFromFirestore } from '../lib/memberDb';
+import { syncApplicationsFromFirestore, isQAAccount } from '../lib/memberDb';
 
 export default function MemberDirectory() {
   const navigate = useNavigate();
@@ -67,6 +67,7 @@ export default function MemberDirectory() {
   };
 
   const filteredMembers = members.filter(member => {
+    if (isQAAccount(member.email)) return false;
     const name = member.name || '';
     const email = member.email || '';
     const title = member.title || '';

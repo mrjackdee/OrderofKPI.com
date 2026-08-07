@@ -9,12 +9,18 @@ import {
   auth
 } from './firebase';
 
-export interface MemberUser {
-  name: string;
-  email: string;
-  role: 'admin' | 'member' | 'officer' | 'prospective' | 'applicant' | 'Membership Committee' | 'Membership Committee Chair';
-  title?: string;
+export function isQAAccount(email?: string): boolean {
+  if (!email) return false;
+  const lower = email.toLowerCase().trim();
+  return lower.startsWith('qa.') || lower.includes('@qa.') || lower.startsWith('qa_') || lower.includes('qa-agent');
 }
+
+export const getActiveDefaultMembers = (): MemberUser[] => 
+  defaultMembers.filter(m => !isQAAccount(m.email));
+
+export const getActiveProspectiveMembers = (): MemberUser[] => 
+  prospectiveMembers.filter(m => !isQAAccount(m.email));
+
 
 export const defaultMembers: MemberUser[] = [
   { name: "Admin User", email: "admin@orderofkpi.org", role: "admin", title: "Administrator" },
