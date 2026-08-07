@@ -352,7 +352,7 @@ export async function firebaseResetApplicantPassword(email: string) {
  * Helper to normalize application schema retrieved from Firestore.
  * Handles both flat (top-level) schemas and nested schemas seamlessly.
  */
-export function normalizeApplication(app: any): any {
+export function normalizeApplication(app: any, fallbackId?: string): any {
   if (!app) return null;
   
   let dataObj = app.data;
@@ -366,9 +366,9 @@ export function normalizeApplication(app: any): any {
 
   if (!dataObj || typeof dataObj !== 'object') {
     dataObj = {
-      firstName: app.firstName || app.first_name || '',
+      firstName: app.firstName || app.first_name || app.name?.split(' ')[0] || '',
       middleName: app.middleName || app.middle_name || '',
-      lastName: app.lastName || app.last_name || '',
+      lastName: app.lastName || app.last_name || app.name?.split(' ').slice(1).join(' ') || '',
       dateOfBirth: app.dateOfBirth || app.date_of_birth || '',
       phone: app.phone || '',
       address: app.address || '',
@@ -393,9 +393,9 @@ export function normalizeApplication(app: any): any {
     };
   } else {
     dataObj = {
-      firstName: dataObj.firstName || app.firstName || '',
-      middleName: dataObj.middleName || app.middleName || '',
-      lastName: dataObj.lastName || app.lastName || '',
+      firstName: dataObj.firstName || app.firstName || app.first_name || '',
+      middleName: dataObj.middleName || app.middleName || app.middle_name || '',
+      lastName: dataObj.lastName || app.lastName || app.last_name || '',
       dateOfBirth: dataObj.dateOfBirth || app.dateOfBirth || '',
       phone: dataObj.phone || app.phone || '',
       address: dataObj.address || app.address || '',
@@ -420,15 +420,30 @@ export function normalizeApplication(app: any): any {
     };
   }
 
-  const email = (app.email || '').toLowerCase().trim();
+  // Robust email extraction: check app.email -> app.data.email -> fallbackId -> document id
+  let email = app.email || (app.data && typeof app.data === 'object' ? app.data.email : '');
+  if (!email && fallbackId && fallbackId.includes('@')) {
+    email = fallbackId;
+  } else if (!email && fallbackId && fallbackId.includes('_')) {
+    // e.g. "admin_orderofkpi_org" or "john_doe_gmail_com" -> try best effort reconstruction
+    const parts = fallbackId.split('_');
+    if (parts.length >= 3) {
+      const domainExt = parts.pop();
+      const domainName = parts.pop();
+      const userPart = parts.join('.');
+      email = `${userPart}@${domainName}.${domainExt}`;
+    }
+  }
+  email = (email || '').toLowerCase().trim();
+
   return {
-    id: app.id || 'app_' + email.replace(/[^a-zA-Z0-9]/g, '_'),
+    id: app.id || fallbackId || 'app_' + email.replace(/[^a-zA-Z0-9]/g, '_'),
     email: email,
     status: app.status || 'draft',
     lastSavedAt: app.lastSavedAt || app.last_saved_at || new Date().toISOString(),
     last_saved_at: app.last_saved_at || app.lastSavedAt || new Date().toISOString(),
-    submittedAt: app.submittedAt || app.submitted_at || null,
-    submitted_at: app.submitted_at || app.submittedAt || null,
+    submittedAt: app.submittedAt || app.submitted_at || new Date().toISOString(),
+    submitted_at: app.submitted_at || app.submittedAt || new Date().toISOString(),
     data: dataObj
   };
 }
@@ -438,134 +453,82 @@ export function normalizeApplication(app: any): any {
  */
 export async function firebaseSaveApplication(email: string, data: any, status: 'draft' | 'submitted') {
   const normEmail = email.toLowerCase().trim();
-  const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
+  const appId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
+  const now = new Date().toISOString();
 
-  const saveAction = async () => {
-    try {
-      const appRef = doc(db, 'applications', safeDocId);
-      const appRef2 = doc(db, 'membership_applications', safeDocId);
-      const now = new Date().toISOString();
-
-      const payload: any = {
-        email: normEmail,
-        firstName: data.firstName || '',
-        middleName: data.middleName || '',
-        lastName: data.lastName || '',
-        dateOfBirth: data.dateOfBirth || '',
-        phone: data.phone || '',
-        address: data.address || '',
-        employment: data.employment || '',
-        position: data.position || '',
-        degrees: data.degrees || '',
-        honors: data.honors || '',
-        organizations: data.organizations || '',
-        priorKnowledge: data.priorKnowledge || '',
-        essay1: data.essay1 || '',
-        essay2: data.essay2 || '',
-        essay3: data.essay3 || '',
-        essay4: data.essay4 || '',
-        essay5: data.essay5 || '',
-        isFraternityMember: data.isFraternityMember === 'yes',
-        fraternityDetails: data.fraternityDetails || '',
-        hasAkaFamily: data.hasAkaFamily === 'yes',
-        akaFamilyDetails: data.akaFamilyDetails || '',
-        previousApplied: data.previousApplied === 'yes',
-        previousAppliedDetails: data.previousAppliedDetails || '',
-        socialUrls: data.socialUrls || '',
-        status,
-        lastSavedAt: now
-      };
-
-      if (status === 'submitted') {
-        payload.submittedAt = now;
-        payload.appliedDate = now;
-        payload.dateApplied = now;
-        payload.applicationDate = now;
-
-        try {
-          const candRef = doc(db, 'candidates', normEmail);
-          setDoc(candRef, {
-            email: normEmail,
-            status: 'Applied',
-            applicationDate: now,
-            appliedDate: now,
-            submittedAt: now
-          }, { merge: true }).catch(cErr => console.warn('Candidate setDoc async notice:', cErr));
-        } catch (cErr) {
-          console.warn('Could not sync candidate doc in Firestore:', cErr);
-        }
-      }
-
-      await setDoc(appRef, payload, { merge: true });
-      await setDoc(appRef2, payload, { merge: true });
-
-      return {
-        success: true,
-        message: status === 'submitted' ? 'Application submitted successfully' : 'Draft saved successfully'
-      };
-    } catch (err: any) {
-      console.error('Error saving to Firestore:', err);
-      return {
-        success: false,
-        message: err.message || 'Failed to save to Firestore'
-      };
-    }
+  const appDoc = {
+    id: appId,
+    email: normEmail,
+    status,
+    lastSavedAt: now,
+    last_saved_at: now,
+    submittedAt: status === 'submitted' ? now : null,
+    submitted_at: status === 'submitted' ? now : null,
+    data
   };
 
-  const timeoutPromise = new Promise<{ success: boolean; message: string }>((resolve) => {
-    setTimeout(() => resolve({ success: true, message: 'Firestore save queued in background' }), 2500);
-  });
+  try {
+    const savePromise = (async () => {
+      // Save in applications collection
+      await setDoc(doc(db, 'applications', appId), appDoc, { merge: true });
+      // Also dual-write to membership_applications for backwards compatibility
+      await setDoc(doc(db, 'membership_applications', appId), appDoc, { merge: true });
+      return { success: true, message: 'Application saved to Cloud Firestore database.' };
+    })();
 
-  return await Promise.race([saveAction(), timeoutPromise]);
+    const timeoutPromise = new Promise<{ success: boolean; message: string }>((resolve) => {
+      setTimeout(() => resolve({ success: false, message: 'Firestore save operation timed out' }), 3500);
+    });
+
+    return await Promise.race([savePromise, timeoutPromise]);
+  } catch (err: any) {
+    console.error('Error saving application to Firestore:', err);
+    return { success: false, message: err.message || 'Failed to save application to Firestore' };
+  }
 }
 
 /**
- * Fetches candidate application from Firebase Firestore.
+ * Fetches candidate application for a specific email address from Firebase Firestore.
  */
 export async function firebaseFetchApplication(email: string) {
   const normEmail = email.toLowerCase().trim();
-  const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
+  const appId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
 
-  const fetchAction = async () => {
-    try {
-      const appRef1 = doc(db, 'membership_applications', safeDocId);
-      const snapshot1 = await getDoc(appRef1);
-      if (snapshot1.exists()) {
-        const rawData1 = snapshot1.data();
-        debugLogRawDoc(`firebaseFetchApplication [membership_applications/${safeDocId}]`, rawData1);
-        return {
-          success: true,
-          application: normalizeApplication(rawData1)
-        };
+  try {
+    const fetchPromise = (async () => {
+      // Try applications collection first
+      let docRef = doc(db, 'applications', appId);
+      let docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        // Fallback to membership_applications collection
+        docRef = doc(db, 'membership_applications', appId);
+        docSnap = await getDoc(docRef);
       }
 
-      const appRef2 = doc(db, 'applications', safeDocId);
-      const snapshot2 = await getDoc(appRef2);
-      if (snapshot2.exists()) {
-        const rawData2 = snapshot2.data();
-        debugLogRawDoc(`firebaseFetchApplication [applications/${safeDocId}]`, rawData2);
-        return {
-          success: true,
-          application: normalizeApplication(rawData2)
-        };
+      if (docSnap.exists()) {
+        const rawData = docSnap.data();
+        debugLogRawDoc(`firebaseFetchApplication [${docSnap.id}]`, rawData);
+        const normalized = normalizeApplication(rawData, docSnap.id);
+        return { success: true, application: normalized };
       }
 
-      return { success: false, message: 'No application found in Firestore' };
-    } catch (err: any) {
-      console.error('Error fetching application from Firestore:', err);
-      return { success: false, message: 'Firestore fetch failed' };
-    }
-  };
+      return { success: false, message: 'No application found for this email address.' };
+    })();
 
-  const timeoutPromise = new Promise<{ success: boolean; application?: any; message?: string }>((resolve) => {
-    setTimeout(() => resolve({ success: false, message: 'Firestore fetch timed out' }), 2500);
-  });
+    const timeoutPromise = new Promise<{ success: boolean; message: string }>((resolve) => {
+      setTimeout(() => resolve({ success: false, message: 'Firestore fetch operation timed out' }), 3000);
+    });
 
-  return await Promise.race([fetchAction(), timeoutPromise]);
+    return await Promise.race([fetchPromise, timeoutPromise]);
+  } catch (err: any) {
+    console.error('Error fetching application from Firestore:', err);
+    return { success: false, message: err.message || 'Failed to fetch application from Firestore' };
+  }
 }
 
 /**
- * Fetches all candidate applications from Firebase Firestore.
+ * Fetches all submitted applications across Firestore collections for Admin / Reviewers.
  */
 export async function firebaseFetchAllApplications() {
   try {
@@ -573,48 +536,32 @@ export async function firebaseFetchAllApplications() {
       const list: any[] = [];
       const seenEmails = new Set<string>();
 
-      try {
-        const querySnapshot1 = await getDocs(collection(db, 'membership_applications'));
-        querySnapshot1.forEach((docSnapshot) => {
-          const appData = docSnapshot.data();
-          debugLogRawDoc(`firebaseFetchAllApplications [membership_applications/${docSnapshot.id}]`, appData);
-          if (appData && appData.email) {
-            const normalized = normalizeApplication(appData);
-            if (normalized) {
-              list.push(normalized);
-              seenEmails.add(normalized.email);
-            }
-          }
-        });
-      } catch (err) {
-        console.warn('Could not load membership_applications collection:', err);
-      }
+      const collectionsToScan = ['applications', 'membership_applications', 'candidate_accounts', 'candidates'];
 
-      try {
-        const querySnapshot2 = await getDocs(collection(db, 'applications'));
-        querySnapshot2.forEach((docSnapshot) => {
-          const appData = docSnapshot.data();
-          debugLogRawDoc(`firebaseFetchAllApplications [applications/${docSnapshot.id}]`, appData);
-          if (appData && appData.email) {
-            const normEmail = appData.email.toLowerCase().trim();
-            if (!seenEmails.has(normEmail)) {
-              const normalized = normalizeApplication(appData);
-              if (normalized) {
+      for (const colName of collectionsToScan) {
+        try {
+          const querySnapshot = await getDocs(collection(db, colName));
+          querySnapshot.forEach((docSnapshot) => {
+            const appData = docSnapshot.data();
+            debugLogRawDoc(`firebaseFetchAllApplications [${colName}/${docSnapshot.id}]`, appData);
+            if (appData) {
+              const normalized = normalizeApplication(appData, docSnapshot.id);
+              if (normalized && normalized.email && !seenEmails.has(normalized.email)) {
                 list.push(normalized);
-                seenEmails.add(normEmail);
+                seenEmails.add(normalized.email);
               }
             }
-          }
-        });
-      } catch (err) {
-        console.warn('Could not load applications collection:', err);
+          });
+        } catch (err) {
+          console.warn(`Could not load ${colName} collection:`, err);
+        }
       }
 
       return { success: true, applications: list };
     })();
 
     const timeoutPromise = new Promise<{ success: boolean; message: string }>((resolve) => {
-      setTimeout(() => resolve({ success: false, message: 'Firestore query timed out' }), 3500);
+      setTimeout(() => resolve({ success: false, message: 'Firestore query timed out' }), 5000);
     });
 
     return await Promise.race([fetchPromise, timeoutPromise]);
@@ -623,4 +570,3 @@ export async function firebaseFetchAllApplications() {
     return { success: false, message: err.message || 'Failed to fetch all applications from Firestore' };
   }
 }
-
