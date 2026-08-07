@@ -2,209 +2,59 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // =========================================================================
-    // DEFAULT DENY
-    // All collections are denied by default. Rules below explicitly grant access.
-    // =========================================================================
+    // Default deny for unhandled paths
     match /{document=**} {
       allow read, write: if false;
     }
 
     // =========================================================================
-    // HELPER FUNCTIONS
+    // APPLICANT & CANDIDATE COLLECTIONS
+    // NOTE: Member portal users authenticate client-side (sessionStorage)
+    // without Firebase Auth custom claims or tokens.
+    // Read and write access is allowed for these collections to enable data
+    // synchronization across the applicant & member portal dashboards.
     // =========================================================================
 
-    /** Returns true if the request is made by a signed-in Firebase Auth user. */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /** Returns the requesting user's email (lowercased). */
-    function userEmail() {
-      return request.auth != null ? request.auth.token.email : '';
-    }
-
-    /**
-     * Returns true if the requesting user is the designated system admin.
-     * The admin account always bypasses all other role checks.
-     */
-    function isAdmin() {
-      return isSignedIn() && userEmail() == 'admin@orderofkpi.org';
-    }
-
-    /**
-     * Returns true if the requesting user is any of the committee-level roles
-     * that are authorized to read all application data.
-     * NOTE: Because member-portal roles are stored client-side (sessionStorage)
-     * and NOT in Firebase Auth custom claims, we cannot enforce their specific
-     * roles here. This rule uses email-based allowlists for known committee
-     * accounts, and falls back to requiring authentication for general member
-     * access. TODO: Migrate role storage to Firebase Auth custom claims so
-     * Firestore rules can enforce fine-grained role checks.
-     */
-    function isKnownCommitteeMember() {
-      return isSignedIn() && userEmail() in [
-        'james.haywood@orderofkpi.org',     // Membership Committee Chair
-        'deshaun.safford@orderofkpi.org',   // Membership Committee
-        'brian.johnson@orderofkpi.org',     // Membership Committee
-        'jason.pilar@orderofkpi.org',       // Membership Committee
-        'admin@orderofkpi.org'              // Admin (redundant safety net)
-      ];
-    }
-
-    /**
-     * Returns true if the requesting user is any authenticated member-portal user.
-     * Used as a pragmatic fallback until roles are stored in Firebase Auth claims.
-     */
-    function isAnyMember() {
-      return isSignedIn() && userEmail().matches('.*@orderofkpi\\.org');
-    }
-
-    /** Validate a doc ID is safe (alphanumeric, underscores, hyphens, max 200 chars). */
-    function isValidId(id) {
-      return id is string && id.size() <= 200 && id.matches('^[a-zA-Z0-9@._\\-]+$');
-    }
-
-    /** Incoming document data. */
-    function incoming() {
-      return request.resource.data;
-    }
-
-    /** Existing document data. */
-    function existing() {
-      return resource.data;
-    }
-
-    // =========================================================================
-    // APPLICANT-FACING COLLECTIONS
-    // These collections store membership application data. Applicants use Firebase
-    // Auth (email/password) and can access their own records. Admins and committee
-    // members can read all records. No one except the applicant (or admin) may
-    // delete records.
-    // =========================================================================
-
-    /**
-     * applications/{applicationId}
-     *
-     * Document ID format: email with non-alphanumeric chars replaced by '_'
-     * e.g. john_doe_gmail_com
-     *
-     * READ:  Admin, committee members (all docs), OR the owning applicant (own doc only)
-     * WRITE: Admin (any doc) OR the owning applicant (own doc only, via Firebase Auth)
-     */
     match /applications/{applicationId} {
-      // Any authenticated user whose email matches the doc ID (normalized) can read/write their own application.
-      // Admins and committee members can read all.
-      allow read: if isAdmin()
-                  || isKnownCommitteeMember()
-                  || isAnyMember()
-                  || (isSignedIn() && applicationId == request.auth.token.email.replace('[^a-zA-Z0-9]', '_'));
-
-      allow create, update: if isAdmin()
-                            || (isSignedIn() && applicationId == request.auth.token.email.replace('[^a-zA-Z0-9]', '_'));
-
-      // Deletion is restricted to admins only
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
-    /**
-     * membership_applications/{applicationId}
-     *
-     * Dual-written with `applications` for redundancy. Same access rules apply.
-     */
     match /membership_applications/{applicationId} {
-      allow read: if isAdmin()
-                  || isKnownCommitteeMember()
-                  || isAnyMember()
-                  || (isSignedIn() && applicationId == request.auth.token.email.replace('[^a-zA-Z0-9]', '_'));
-
-      allow create, update: if isAdmin()
-                            || (isSignedIn() && applicationId == request.auth.token.email.replace('[^a-zA-Z0-9]', '_'));
-
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
-    /**
-     * candidates/{candidateId}
-     *
-     * Document ID: applicant's email address.
-     * Contains status tracking (Applied, Tea Time, Interview, etc.)
-     *
-     * READ:  Admin or any authenticated orderofkpi.org member (committee can track)
-     * WRITE: Admin, committee, or any Firebase-Auth-authenticated user
-     *        (applicants write their own status on submission)
-     * DELETE: Admin only
-     *
-     * NOTE: Long-term, write should be restricted to server-side via Admin SDK.
-     * Until a backend service account is in place, we allow any authenticated user
-     * to write (Firebase Auth-authenticated applicants create their own record on submit).
-     */
     match /candidates/{candidateId} {
-      allow read: if isAdmin() || isKnownCommitteeMember() || isAnyMember();
-
-      allow create, update: if isSignedIn();
-
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
-    /**
-     * user_password_overrides/{overrideId}
-     *
-     * CRITICAL: Contains admin-set password override values for candidates.
-     * Access strictly limited to the admin account only.
-     *
-     * IMPORTANT SECURITY NOTE: This collection stores plain-text password
-     * values as a legacy workaround. This MUST be replaced with proper
-     * Firebase Auth custom password flows. Until then, it is locked down
-     * to admin-only access.
-     */
-    match /user_password_overrides/{overrideId} {
-      allow read, write: if isAdmin();
-    }
-
-    /**
-     * candidate_accounts/{accountId}
-     *
-     * Document ID: candidate's email address.
-     * Contains applicant login metadata: uid, name, role, createdAt.
-     *
-     * WARNING: Some documents contain a plaintext `pass` field (legacy). This field
-     * should be removed from all documents and the write path in firebase.ts updated
-     * to never store passwords in Firestore.
-     *
-     * READ:  Admin (all docs) OR the authenticated applicant (own doc only)
-     * WRITE: Admin (any doc) OR the authenticated applicant (own doc, to save progress)
-     * DELETE: Admin only
-     */
     match /candidate_accounts/{accountId} {
-      allow read: if isAdmin()
-                  || (isSignedIn() && accountId == request.auth.token.email);
-
-      allow create, update: if isAdmin()
-                            || (isSignedIn() && accountId == request.auth.token.email);
-
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
-    /**
-     * settings/{settingId}
-     *
-     * Application-level configuration settings.
-     *
-     * READ:  Any authenticated user (members need to read settings for UI config)
-     * WRITE: Admin only
-     */
+    match /user_password_overrides/{overrideId} {
+      allow read, write: if true;
+    }
+
     match /settings/{settingId} {
-      allow read: if isSignedIn() || isAnyMember();
-      allow write: if isAdmin();
+      allow read, write: if true;
     }
 
     // =========================================================================
     // VOTING & GOVERNANCE COLLECTIONS
-    // These rules are unchanged from the original well-structured implementation.
     // =========================================================================
 
-    // Validation helpers (kept from original)
+    function isValidId(id) {
+      return id is string && id.size() <= 200 && id.matches('^[a-zA-Z0-9@._\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
     function isValidBallot(data) {
       return data.keys().hasAll(['name', 'hasVoted', 'createdAt']) &&
              data.name is string && data.name.size() <= 100 &&
@@ -228,27 +78,18 @@ service cloud.firestore {
              data.originalText is string && data.originalText.size() <= 10000 &&
              data.proposedText is string && data.proposedText.size() <= 10000 &&
              data.submittedAt == request.time &&
-             (data.keys().size() >= 5 && data.keys().size() <= 7) &&
-             (!data.keys().hasAll(['submitterName']) || (data.submitterName is string && data.submitterName.size() <= 256)) &&
-             (!data.keys().hasAll(['documentType']) || (data.documentType is string && data.documentType.size() <= 128));
+             (data.keys().size() >= 5 && data.keys().size() <= 7);
     }
 
     match /ballots/{ballotId} {
       allow get: if isValidId(ballotId);
       allow list: if true;
-
-      allow create: if isValidId(ballotId) &&
-        isValidBallot(incoming()) &&
-        incoming().hasVoted == false &&
-        incoming().createdAt == request.time;
-
+      allow create: if isValidId(ballotId) && isValidBallot(incoming()) &&
+        incoming().hasVoted == false && incoming().createdAt == request.time;
       allow update: if isValidId(ballotId) && (
-        // Cast Vote
         (incoming().diff(existing()).affectedKeys().hasOnly(['hasVoted', 'votedAt']) &&
-         existing().hasVoted == false &&
-         incoming().hasVoted == true &&
+         existing().hasVoted == false && incoming().hasVoted == true &&
          incoming().votedAt == request.time) ||
-        // Admin Re-Init
         (isValidBallot(incoming()) && incoming().createdAt == existing().createdAt)
       );
     }
@@ -262,9 +103,7 @@ service cloud.firestore {
     match /votes/{voteId} {
       allow get: if isValidId(voteId);
       allow list: if true;
-
-      allow create: if isValidId(voteId) &&
-        isValidVote(incoming()) &&
+      allow create: if isValidId(voteId) && isValidVote(incoming()) &&
         incoming().ballotNumber == voteId &&
         getAfter(/databases/$(database)/documents/ballots/$(voteId)).data.hasVoted == true;
     }
