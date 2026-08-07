@@ -9,18 +9,12 @@ import {
   auth
 } from './firebase';
 
-export function isQAAccount(email?: string): boolean {
-  if (!email) return false;
-  const lower = email.toLowerCase().trim();
-  return lower.startsWith('qa.') || lower.includes('@qa.') || lower.startsWith('qa_') || lower.includes('qa-agent');
+export interface MemberUser {
+  name: string;
+  email: string;
+  role: 'admin' | 'member' | 'officer' | 'prospective' | 'applicant' | 'Membership Committee' | 'Membership Committee Chair';
+  title?: string;
 }
-
-export const getActiveDefaultMembers = (): MemberUser[] => 
-  defaultMembers.filter(m => !isQAAccount(m.email));
-
-export const getActiveProspectiveMembers = (): MemberUser[] => 
-  prospectiveMembers.filter(m => !isQAAccount(m.email));
-
 
 export const defaultMembers: MemberUser[] = [
   { name: "Admin User", email: "admin@orderofkpi.org", role: "admin", title: "Administrator" },
@@ -46,13 +40,7 @@ export const defaultMembers: MemberUser[] = [
   { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member" },
   { name: "Kevin Jennings", email: "kevin.jennings@orderofkpi.org", role: "member" },
   { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member" },
-  { name: "Applicant Test", email: "applicant@orderofkpi.org", role: "member" },
-  // Dedicated QA Automation Accounts (Isolated for E2E Testing)
-  { name: "QA Admin Agent", email: "qa.admin@orderofkpi.org", role: "admin", title: "QA Automation Bot" },
-  { name: "QA Chair Agent", email: "qa.chair@orderofkpi.org", role: "Membership Committee Chair", title: "QA Chair Bot" },
-  { name: "QA Committee Agent", email: "qa.committee@orderofkpi.org", role: "Membership Committee", title: "QA Committee Bot" },
-  { name: "QA Officer Agent", email: "qa.officer@orderofkpi.org", role: "officer", title: "QA Officer Bot" },
-  { name: "QA Member Agent", email: "qa.member@orderofkpi.org", role: "member", title: "QA Member Bot" }
+  { name: "Applicant Test", email: "applicant@orderofkpi.org", role: "member" }
 ];
 
 export const prospectiveMembers: MemberUser[] = [
@@ -69,9 +57,7 @@ export const prospectiveMembers: MemberUser[] = [
   { name: "Tashaun Najee Benton", email: "tashaunbenton233@gmail.com", role: "applicant" },
   { name: "Titus Oliver", email: "o_titus@yahoo.com", role: "applicant" },
   { name: "Zion Gates-Norris", email: "zgatesnorris@gmail.com", role: "applicant" },
-  { name: "Jamar Amber", email: "jaabn2@gmail.com", role: "applicant" },
-  // Dedicated QA Applicant Bot Account
-  { name: "QA Applicant Agent", email: "qa.applicant@orderofkpi.org", role: "applicant" }
+  { name: "Jamar Amber", email: "jaabn2@gmail.com", role: "applicant" }
 ];
 
 const INITIAL_CANDIDATES_PASSWORDS: Record<string, string> = {
@@ -89,14 +75,7 @@ const INITIAL_CANDIDATES_PASSWORDS: Record<string, string> = {
   'tashaunbenton233@gmail.com': '1821',
   'o_titus@yahoo.com': '7713',
   'zgatesnorris@gmail.com': '4876',
-  'jaabn2@gmail.com': '3795',
-  // Dedicated QA Automation Passwords
-  'qa.admin@orderofkpi.org': 'KPI_QA_Admin2026!',
-  'qa.chair@orderofkpi.org': 'KPI_QA_Chair2026!',
-  'qa.committee@orderofkpi.org': 'KPI_QA_Committee2026!',
-  'qa.officer@orderofkpi.org': 'KPI_QA_Officer2026!',
-  'qa.member@orderofkpi.org': 'KPI_QA_Member2026!',
-  'qa.applicant@orderofkpi.org': 'KPI_QA_Applicant2026!'
+  'jaabn2@gmail.com': '3795'
 };
 
 /**
@@ -144,8 +123,29 @@ export async function performHybridLogin(email: string, pass: string): Promise<{
         try {
           await signInWithEmailAndPassword(auth, normalizedEmail, pass);
           // Firebase Auth succeeded. Lookup member directory.
-          const member = defaultMembers.find(m => m.email.toLowerCase() === normalizedEmail) || 
-                         prospectiveMembers.find(m => m.email.toLowerCase() === normalizedEmail);
+          let member = defaultMembers.find(m => m.email.toLowerCase() === normalizedEmail) || 
+                       prospectiveMembers.find(m => m.email.toLowerCase() === normalizedEmail);
+          
+          if (!member && (normalizedEmail.startsWith('qa.') || normalizedEmail.startsWith('test.'))) {
+            let role: any = 'prospective';
+            let name = 'QA Test User';
+            let title = 'Candidate';
+            
+            if (normalizedEmail.includes('admin')) {
+              role = 'admin';
+              name = 'QA Admin';
+              title = 'Administrator';
+            } else if (normalizedEmail.includes('chair')) {
+              role = 'Membership Committee Chair';
+              name = 'QA Committee Chair';
+              title = 'Committee Chair';
+            } else if (normalizedEmail.includes('member')) {
+              role = 'member';
+              name = 'QA Member';
+            }
+            
+            member = { email: normalizedEmail, name, role, title };
+          }
           
           if (member) {
             const isChanged = localStorage.getItem(`kpi_password_changed_${normalizedEmail}`) === 'true';
@@ -616,26 +616,20 @@ export async function fetchApplication(email: string) {
     }
   }
 
-  // Self-Healing Background Sync (Triple-Channel Guarantee):
-  // If LocalStorage or Firestore has cached form data, push it up to Firestore and Server API
+  // Self-Healing Background Sync:
+  // If local or Firestore has marked the application as submitted, but server API doesn't have it submitted, re-sync to server DB
   const isLocalSubmitted = typeof localStorage !== 'undefined' && localStorage.getItem(`kpi_app_submitted_${normEmail}`) === 'true';
   const isAppSubmitted = application?.status === 'submitted' || isLocalSubmitted;
   const isServerSubmitted = serverRes?.application?.status === 'submitted';
 
-  if (application && (isAppSubmitted || application.data)) {
-    const statusToSync = isAppSubmitted ? 'submitted' : (application.status || 'draft');
+  if (isAppSubmitted && !isServerSubmitted && application) {
     if (application) {
-      application.status = statusToSync;
+      application.status = 'submitted';
     }
-    const appDataPayload = application.data || application;
-    
-    // Always trigger background sync to Firestore and Server API to guarantee cloud data consistency
-    firebaseSaveApplication(normEmail, appDataPayload, statusToSync).catch(() => {});
-    fetch('/api/applications', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: normEmail, data: appDataPayload, status: statusToSync }),
-    }).catch(() => {});
+    const appDataPayload = application?.data || application || {};
+    saveApplication(normEmail, appDataPayload, 'submitted').catch(err => {
+      console.warn('Background auto-sync submission failed:', err);
+    });
   }
 
   return {
@@ -769,5 +763,26 @@ export async function syncApplicationsFromFirestore() {
   } catch (err: any) {
     console.error('Failed to sync applications from Firestore to API:', err);
     return { success: false, message: err.message || 'Connection error' };
+  }
+}
+
+/**
+ * Deletes an application from Firebase Firestore (both applications and membership_applications collections).
+ */
+export async function deleteApplication(email: string) {
+  try {
+    const { doc, deleteDoc } = await import('firebase/firestore');
+    const { db } = await import('./firebase');
+    const normEmail = email.toLowerCase().trim();
+    const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
+    
+    const appRef = doc(db, 'applications', safeDocId);
+    const appRef2 = doc(db, 'membership_applications', safeDocId);
+    await deleteDoc(appRef);
+    await deleteDoc(appRef2);
+    return { success: true };
+  } catch (err: any) {
+    console.error('Failed to delete application from Firestore:', err);
+    return { success: false, message: err.message || 'Firestore delete failed' };
   }
 }

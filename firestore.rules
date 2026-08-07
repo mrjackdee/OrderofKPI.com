@@ -1,60 +1,26 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Default deny for unhandled paths
+    // Default deny
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // =========================================================================
-    // APPLICANT & CANDIDATE COLLECTIONS
-    // NOTE: Member portal users authenticate client-side (sessionStorage)
-    // without Firebase Auth custom claims or tokens.
-    // Read and write access is allowed for these collections to enable data
-    // synchronization across the applicant & member portal dashboards.
-    // =========================================================================
-
-    match /applications/{applicationId} {
-      allow read, write: if true;
+    // Helper functions
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
     }
-
-    match /membership_applications/{applicationId} {
-      allow read, write: if true;
+    function isSignedIn() { 
+      return request.auth != null; 
     }
-
-    match /candidates/{candidateId} {
-      allow read, write: if true;
-    }
-
-    match /candidate_accounts/{accountId} {
-      allow read, write: if true;
-    }
-
-    match /user_password_overrides/{overrideId} {
-      allow read, write: if true;
-    }
-
-    match /settings/{settingId} {
-      allow read, write: if true;
-    }
-
-    // =========================================================================
-    // VOTING & GOVERNANCE COLLECTIONS
-    // =========================================================================
-
-    function isValidId(id) {
-      return id is string && id.size() <= 200 && id.matches('^[a-zA-Z0-9@._\\-]+$');
-    }
-
     function incoming() {
       return request.resource.data;
     }
-
     function existing() {
       return resource.data;
     }
 
+    // Validation functions
     function isValidBallot(data) {
       return data.keys().hasAll(['name', 'hasVoted', 'createdAt']) &&
              data.name is string && data.name.size() <= 100 &&
@@ -78,18 +44,27 @@ service cloud.firestore {
              data.originalText is string && data.originalText.size() <= 10000 &&
              data.proposedText is string && data.proposedText.size() <= 10000 &&
              data.submittedAt == request.time &&
-             (data.keys().size() >= 5 && data.keys().size() <= 7);
+             (data.keys().size() >= 5 && data.keys().size() <= 7) &&
+             (!data.keys().hasAll(['submitterName']) || (data.submitterName is string && data.submitterName.size() <= 256)) &&
+             (!data.keys().hasAll(['documentType']) || (data.documentType is string && data.documentType.size() <= 128));
     }
 
     match /ballots/{ballotId} {
       allow get: if isValidId(ballotId);
       allow list: if true;
-      allow create: if isValidId(ballotId) && isValidBallot(incoming()) &&
-        incoming().hasVoted == false && incoming().createdAt == request.time;
+      
+      allow create: if isValidId(ballotId) && 
+        isValidBallot(incoming()) && 
+        incoming().hasVoted == false &&
+        incoming().createdAt == request.time;
+      
       allow update: if isValidId(ballotId) && (
+        // Action: Cast Vote
         (incoming().diff(existing()).affectedKeys().hasOnly(['hasVoted', 'votedAt']) &&
-         existing().hasVoted == false && incoming().hasVoted == true &&
+         existing().hasVoted == false &&
+         incoming().hasVoted == true &&
          incoming().votedAt == request.time) ||
+        // Action: Admin Re-Init (unprotected for now as we don't have auth, but validated)
         (isValidBallot(incoming()) && incoming().createdAt == existing().createdAt)
       );
     }
@@ -103,7 +78,9 @@ service cloud.firestore {
     match /votes/{voteId} {
       allow get: if isValidId(voteId);
       allow list: if true;
-      allow create: if isValidId(voteId) && isValidVote(incoming()) &&
+
+      allow create: if isValidId(voteId) && 
+        isValidVote(incoming()) &&
         incoming().ballotNumber == voteId &&
         getAfter(/databases/$(database)/documents/ballots/$(voteId)).data.hasVoted == true;
     }
@@ -121,6 +98,30 @@ service cloud.firestore {
       allow list: if true;
       allow create: if isValidId(archiveId);
       allow delete: if isValidId(archiveId);
+    }
+
+    match /applications/{applicationId} {
+      allow read, write: if true;
+    }
+
+    match /membership_applications/{applicationId} {
+      allow read, write: if true;
+    }
+
+    match /candidates/{candidateId} {
+      allow read, write: if true;
+    }
+
+    match /user_password_overrides/{overrideId} {
+      allow read, write: if true;
+    }
+
+    match /candidate_accounts/{accountId} {
+      allow read, write: if true;
+    }
+
+    match /settings/{settingId} {
+      allow read, write: if true;
     }
   }
 }
