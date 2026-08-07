@@ -448,11 +448,14 @@ export default function AdminDashboard() {
     try {
       const response = await fetch('/api/members');
       const data = await response.json();
-      if (data.success) {
+      if (data.success && Array.isArray(data.members) && data.members.length > 0) {
         setMembers(data.members);
+      } else {
+        setMembers(defaultMembers as any);
       }
     } catch (error) {
-      console.error('Error fetching members:', error);
+      console.warn('Backend API /api/members unavailable, using defaultMembers roster:', error);
+      setMembers(defaultMembers as any);
     }
   };
 
@@ -1097,7 +1100,16 @@ export default function AdminDashboard() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredCandidates.map((candidate) => {
-                const matchingApp = applications.find(a => a.email.toLowerCase() === candidate.email.toLowerCase());
+                const cEmail = (candidate.email || '').toLowerCase().trim();
+                const cName = (candidate.name || '').toLowerCase().trim();
+
+                const matchingApp = applications.find(a => {
+                  const aEmail = (a.email || a.data?.email || '').toLowerCase().trim();
+                  const firstName = a.data?.firstName || a.firstName || '';
+                  const lastName = a.data?.lastName || a.lastName || '';
+                  const aName = `${firstName} ${lastName}`.toLowerCase().trim();
+                  return (cEmail && aEmail && cEmail === aEmail) || (cName && aName && cName === aName);
+                });
                 return (
                 <div 
                   key={candidate.id}
