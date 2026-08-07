@@ -616,20 +616,26 @@ export async function fetchApplication(email: string) {
     }
   }
 
-  // Self-Healing Background Sync:
-  // If local or Firestore has marked the application as submitted, but server API doesn't have it submitted, re-sync to server DB
+  // Self-Healing Background Sync (Triple-Channel Guarantee):
+  // If LocalStorage or Firestore has cached form data, push it up to Firestore and Server API
   const isLocalSubmitted = typeof localStorage !== 'undefined' && localStorage.getItem(`kpi_app_submitted_${normEmail}`) === 'true';
   const isAppSubmitted = application?.status === 'submitted' || isLocalSubmitted;
   const isServerSubmitted = serverRes?.application?.status === 'submitted';
 
-  if (isAppSubmitted && !isServerSubmitted && application) {
+  if (application && (isAppSubmitted || application.data)) {
+    const statusToSync = isAppSubmitted ? 'submitted' : (application.status || 'draft');
     if (application) {
-      application.status = 'submitted';
+      application.status = statusToSync;
     }
-    const appDataPayload = application?.data || application || {};
-    saveApplication(normEmail, appDataPayload, 'submitted').catch(err => {
-      console.warn('Background auto-sync submission failed:', err);
-    });
+    const appDataPayload = application.data || application;
+    
+    // Always trigger background sync to Firestore and Server API to guarantee cloud data consistency
+    firebaseSaveApplication(normEmail, appDataPayload, statusToSync).catch(() => {});
+    fetch('/api/applications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: normEmail, data: appDataPayload, status: statusToSync }),
+    }).catch(() => {});
   }
 
   return {
