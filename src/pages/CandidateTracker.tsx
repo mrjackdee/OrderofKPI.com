@@ -208,18 +208,43 @@ export default function CandidateTracker() {
 
   const mergedCandidates = useMemo(() => {
     const submittedAppsMap = new Map<string, any>();
+    const submittedAppsByNameMap = new Map<string, any>();
+
     applications.forEach(app => {
-      if (app && (app.status === 'submitted' || app.submitted_at || app.submittedAt)) {
-        if (app.email) submittedAppsMap.set(app.email.toLowerCase().trim(), app);
+      if (!app) return;
+      // Extract email robustly
+      let email = (app.email || app.data?.email || '').toLowerCase().trim();
+      if (!email && app.id && app.id.includes('_')) {
+        const parts = app.id.split('_');
+        if (parts.length >= 3) {
+          const domainExt = parts.pop();
+          const domainName = parts.pop();
+          email = `${parts.join('.')}@${domainName}.${domainExt}`.toLowerCase().trim();
+        }
+      }
+
+      if (email) {
+        submittedAppsMap.set(email, app);
+      }
+
+      // Also map by full name for resilient fallback matching
+      const firstName = app.data?.firstName || app.firstName || '';
+      const lastName = app.data?.lastName || app.lastName || '';
+      const fullName = `${firstName} ${lastName}`.toLowerCase().trim();
+      if (fullName && fullName.length > 2) {
+        submittedAppsByNameMap.set(fullName, app);
       }
     });
 
     const seenEmails = new Set<string>();
     const updated = candidates.map(c => {
       const normEmail = (c.email || '').toLowerCase().trim();
+      const normName = (c.name || '').toLowerCase().trim();
       if (normEmail) seenEmails.add(normEmail);
-      if (normEmail && submittedAppsMap.has(normEmail)) {
-        const app = submittedAppsMap.get(normEmail);
+
+      const app = (normEmail ? submittedAppsMap.get(normEmail) : null) || (normName ? submittedAppsByNameMap.get(normName) : null);
+
+      if (app) {
         const appPhone = app?.data?.phone || app?.phone || c.phone || '';
         const appDate = (app?.submitted_at || app?.submittedAt || app?.last_saved_at || app?.lastSavedAt || '').split('T')[0];
         return {
