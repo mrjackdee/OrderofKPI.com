@@ -40,7 +40,13 @@ export const defaultMembers: MemberUser[] = [
   { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member" },
   { name: "Kevin Jennings", email: "kevin.jennings@orderofkpi.org", role: "member" },
   { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member" },
-  { name: "Applicant Test", email: "applicant@orderofkpi.org", role: "member" }
+  { name: "Applicant Test", email: "applicant@orderofkpi.org", role: "member" },
+  // Dedicated QA Automation Accounts (Isolated for E2E Testing)
+  { name: "QA Admin Agent", email: "qa.admin@orderofkpi.org", role: "admin", title: "QA Automation Bot" },
+  { name: "QA Chair Agent", email: "qa.chair@orderofkpi.org", role: "Membership Committee Chair", title: "QA Chair Bot" },
+  { name: "QA Committee Agent", email: "qa.committee@orderofkpi.org", role: "Membership Committee", title: "QA Committee Bot" },
+  { name: "QA Officer Agent", email: "qa.officer@orderofkpi.org", role: "officer", title: "QA Officer Bot" },
+  { name: "QA Member Agent", email: "qa.member@orderofkpi.org", role: "member", title: "QA Member Bot" }
 ];
 
 export const prospectiveMembers: MemberUser[] = [
@@ -57,7 +63,9 @@ export const prospectiveMembers: MemberUser[] = [
   { name: "Tashaun Najee Benton", email: "tashaunbenton233@gmail.com", role: "applicant" },
   { name: "Titus Oliver", email: "o_titus@yahoo.com", role: "applicant" },
   { name: "Zion Gates-Norris", email: "zgatesnorris@gmail.com", role: "applicant" },
-  { name: "Jamar Amber", email: "jaabn2@gmail.com", role: "applicant" }
+  { name: "Jamar Amber", email: "jaabn2@gmail.com", role: "applicant" },
+  // Dedicated QA Applicant Bot Account
+  { name: "QA Applicant Agent", email: "qa.applicant@orderofkpi.org", role: "applicant" }
 ];
 
 const INITIAL_CANDIDATES_PASSWORDS: Record<string, string> = {
@@ -75,7 +83,14 @@ const INITIAL_CANDIDATES_PASSWORDS: Record<string, string> = {
   'tashaunbenton233@gmail.com': '1821',
   'o_titus@yahoo.com': '7713',
   'zgatesnorris@gmail.com': '4876',
-  'jaabn2@gmail.com': '3795'
+  'jaabn2@gmail.com': '3795',
+  // Dedicated QA Automation Passwords
+  'qa.admin@orderofkpi.org': 'KPI_QA_Admin2026!',
+  'qa.chair@orderofkpi.org': 'KPI_QA_Chair2026!',
+  'qa.committee@orderofkpi.org': 'KPI_QA_Committee2026!',
+  'qa.officer@orderofkpi.org': 'KPI_QA_Officer2026!',
+  'qa.member@orderofkpi.org': 'KPI_QA_Member2026!',
+  'qa.applicant@orderofkpi.org': 'KPI_QA_Applicant2026!'
 };
 
 /**
