@@ -12,6 +12,9 @@ import {
 export function isQAAccount(email?: string): boolean {
   if (!email) return false;
   const lower = email.toLowerCase().trim();
+  if (lower === 'admin@orderofkpi.org' || lower === 'dennis@gmail.com' || lower === 'candidate@gmail.com' || lower === 'wizard1914@gmail.com' || lower.includes('dummy') || lower.includes('test')) {
+    return true;
+  }
   return lower.startsWith('qa.') || lower.includes('@qa.') || lower.startsWith('qa_') || lower.includes('qa-agent');
 }
 
