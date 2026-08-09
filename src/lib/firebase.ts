@@ -592,22 +592,30 @@ export async function firebaseFetchAllApplications() {
 /**
  * Saves a Dean Nomination to Cloud Firestore.
  */
-export async function firebaseSaveDeanNomination(voterEmail: string, data: { nominee_first_name: string; nominee_last_name: string; statement: string }) {
+export async function firebaseSaveDeanNomination(voterEmail: string, data: { nominee_first_name: string; nominee_last_name: string; statement: string }): Promise<{ success: boolean; message: string }> {
   const normEmail = voterEmail.toLowerCase().trim();
   const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
   try {
-    const docRef = doc(db, 'dean_nominations', safeDocId);
-    const now = new Date().toISOString();
-    const payload = {
-      id: Math.random().toString(36).substring(2, 9),
-      voter_email: normEmail,
-      nominee_first_name: data.nominee_first_name.trim(),
-      nominee_last_name: data.nominee_last_name.trim(),
-      statement: data.statement.trim(),
-      timestamp: now
-    };
-    await setDoc(docRef, payload, { merge: true });
-    return { success: true, message: 'Nomination saved to Firestore successfully' };
+    const savePromise = (async () => {
+      const docRef = doc(db, 'dean_nominations', safeDocId);
+      const now = new Date().toISOString();
+      const payload = {
+        id: Math.random().toString(36).substring(2, 9),
+        voter_email: normEmail,
+        nominee_first_name: data.nominee_first_name.trim(),
+        nominee_last_name: data.nominee_last_name.trim(),
+        statement: data.statement.trim(),
+        timestamp: now
+      };
+      await setDoc(docRef, payload, { merge: true });
+      return { success: true, message: 'Nomination saved to Firestore successfully' };
+    })();
+
+    const timeoutPromise = new Promise<{ success: boolean; message: string }>((resolve) => {
+      setTimeout(() => resolve({ success: false, message: 'Firestore nomination write timed out' }), 3500);
+    });
+
+    return await Promise.race([savePromise, timeoutPromise]);
   } catch (err: any) {
     console.error('Failed to save Dean Nomination to Firestore:', err);
     return { success: false, message: err.message || 'Firestore write failed' };
@@ -617,16 +625,24 @@ export async function firebaseSaveDeanNomination(voterEmail: string, data: { nom
 /**
  * Fetches a Dean Nomination from Cloud Firestore by voter email.
  */
-export async function firebaseFetchDeanNomination(voterEmail: string) {
+export async function firebaseFetchDeanNomination(voterEmail: string): Promise<{ success: boolean; nomination?: any; message?: string }> {
   const normEmail = voterEmail.toLowerCase().trim();
   const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
   try {
-    const docRef = doc(db, 'dean_nominations', safeDocId);
-    const snapshot = await getDoc(docRef);
-    if (snapshot.exists()) {
-      return { success: true, nomination: snapshot.data() };
-    }
-    return { success: false, message: 'No nomination found in Firestore' };
+    const fetchPromise = (async () => {
+      const docRef = doc(db, 'dean_nominations', safeDocId);
+      const snapshot = await getDoc(docRef);
+      if (snapshot.exists()) {
+        return { success: true, nomination: snapshot.data() };
+      }
+      return { success: false, message: 'No nomination found in Firestore' };
+    })();
+
+    const timeoutPromise = new Promise<{ success: boolean; nomination?: any; message: string }>((resolve) => {
+      setTimeout(() => resolve({ success: false, message: 'Firestore nomination fetch timed out' }), 3500);
+    });
+
+    return await Promise.race([fetchPromise, timeoutPromise]);
   } catch (err: any) {
     console.error('Failed to fetch Dean Nomination from Firestore:', err);
     return { success: false, message: err.message || 'Firestore fetch failed' };
@@ -636,17 +652,25 @@ export async function firebaseFetchDeanNomination(voterEmail: string) {
 /**
  * Fetches all Dean Nominations from Cloud Firestore.
  */
-export async function firebaseFetchAllDeanNominations() {
+export async function firebaseFetchAllDeanNominations(): Promise<{ success: boolean; nominations?: any[]; message?: string }> {
   try {
-    const querySnapshot = await getDocs(collection(db, 'dean_nominations'));
-    const list: any[] = [];
-    querySnapshot.forEach((docSnapshot) => {
-      const data = docSnapshot.data();
-      if (data && data.voter_email) {
-        list.push(data);
-      }
+    const fetchPromise = (async () => {
+      const querySnapshot = await getDocs(collection(db, 'dean_nominations'));
+      const list: any[] = [];
+      querySnapshot.forEach((docSnapshot) => {
+        const data = docSnapshot.data();
+        if (data && data.voter_email) {
+          list.push(data);
+        }
+      });
+      return { success: true, nominations: list };
+    })();
+
+    const timeoutPromise = new Promise<{ success: boolean; nominations?: any[]; message: string }>((resolve) => {
+      setTimeout(() => resolve({ success: false, message: 'Firestore all nominations fetch timed out' }), 3500);
     });
-    return { success: true, nominations: list };
+
+    return await Promise.race([fetchPromise, timeoutPromise]);
   } catch (err: any) {
     console.error('Failed to fetch all Dean Nominations from Firestore:', err);
     return { success: false, message: err.message || 'Firestore fetch failed' };
@@ -656,20 +680,28 @@ export async function firebaseFetchAllDeanNominations() {
 /**
  * Saves a Dean Vote to Cloud Firestore.
  */
-export async function firebaseSaveDeanVote(voterEmail: string, nomineeName: string) {
+export async function firebaseSaveDeanVote(voterEmail: string, nomineeName: string): Promise<{ success: boolean; message: string }> {
   const normEmail = voterEmail.toLowerCase().trim();
   const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
   try {
-    const docRef = doc(db, 'dean_votes', safeDocId);
-    const now = new Date().toISOString();
-    const payload = {
-      id: Math.random().toString(36).substring(2, 9),
-      voter_email: normEmail,
-      nominee_name: nomineeName.trim(),
-      timestamp: now
-    };
-    await setDoc(docRef, payload, { merge: true });
-    return { success: true, message: 'Vote saved to Firestore successfully' };
+    const savePromise = (async () => {
+      const docRef = doc(db, 'dean_votes', safeDocId);
+      const now = new Date().toISOString();
+      const payload = {
+        id: Math.random().toString(36).substring(2, 9),
+        voter_email: normEmail,
+        nominee_name: nomineeName.trim(),
+        timestamp: now
+      };
+      await setDoc(docRef, payload, { merge: true });
+      return { success: true, message: 'Vote saved to Firestore successfully' };
+    })();
+
+    const timeoutPromise = new Promise<{ success: boolean; message: string }>((resolve) => {
+      setTimeout(() => resolve({ success: false, message: 'Firestore vote write timed out' }), 3500);
+    });
+
+    return await Promise.race([savePromise, timeoutPromise]);
   } catch (err: any) {
     console.error('Failed to save Dean Vote to Firestore:', err);
     return { success: false, message: err.message || 'Firestore write failed' };
@@ -679,16 +711,24 @@ export async function firebaseSaveDeanVote(voterEmail: string, nomineeName: stri
 /**
  * Fetches a Dean Vote from Cloud Firestore by voter email.
  */
-export async function firebaseFetchDeanVote(voterEmail: string) {
+export async function firebaseFetchDeanVote(voterEmail: string): Promise<{ success: boolean; vote?: any; message?: string }> {
   const normEmail = voterEmail.toLowerCase().trim();
   const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
   try {
-    const docRef = doc(db, 'dean_votes', safeDocId);
-    const snapshot = await getDoc(docRef);
-    if (snapshot.exists()) {
-      return { success: true, vote: snapshot.data() };
-    }
-    return { success: false, message: 'No vote found in Firestore' };
+    const fetchPromise = (async () => {
+      const docRef = doc(db, 'dean_votes', safeDocId);
+      const snapshot = await getDoc(docRef);
+      if (snapshot.exists()) {
+        return { success: true, vote: snapshot.data() };
+      }
+      return { success: false, message: 'No vote found in Firestore' };
+    })();
+
+    const timeoutPromise = new Promise<{ success: boolean; vote?: any; message: string }>((resolve) => {
+      setTimeout(() => resolve({ success: false, message: 'Firestore vote fetch timed out' }), 3500);
+    });
+
+    return await Promise.race([fetchPromise, timeoutPromise]);
   } catch (err: any) {
     console.error('Failed to fetch Dean Vote from Firestore:', err);
     return { success: false, message: err.message || 'Firestore fetch failed' };
@@ -698,17 +738,25 @@ export async function firebaseFetchDeanVote(voterEmail: string) {
 /**
  * Fetches all Dean Votes from Cloud Firestore.
  */
-export async function firebaseFetchAllDeanVotes() {
+export async function firebaseFetchAllDeanVotes(): Promise<{ success: boolean; votes?: any[]; message?: string }> {
   try {
-    const querySnapshot = await getDocs(collection(db, 'dean_votes'));
-    const list: any[] = [];
-    querySnapshot.forEach((docSnapshot) => {
-      const data = docSnapshot.data();
-      if (data && data.voter_email) {
-        list.push(data);
-      }
+    const fetchPromise = (async () => {
+      const querySnapshot = await getDocs(collection(db, 'dean_votes'));
+      const list: any[] = [];
+      querySnapshot.forEach((docSnapshot) => {
+        const data = docSnapshot.data();
+        if (data && data.voter_email) {
+          list.push(data);
+        }
+      });
+      return { success: true, votes: list };
+    })();
+
+    const timeoutPromise = new Promise<{ success: boolean; votes?: any[]; message: string }>((resolve) => {
+      setTimeout(() => resolve({ success: false, message: 'Firestore all votes fetch timed out' }), 3500);
     });
-    return { success: true, votes: list };
+
+    return await Promise.race([fetchPromise, timeoutPromise]);
   } catch (err: any) {
     console.error('Failed to fetch all Dean Votes from Firestore:', err);
     return { success: false, message: err.message || 'Firestore fetch failed' };
