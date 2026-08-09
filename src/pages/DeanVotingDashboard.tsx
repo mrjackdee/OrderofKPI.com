@@ -19,9 +19,8 @@ export default function DeanVotingDashboard() {
   const normalizedRole = (userRole || '').toLowerCase();
   
   const isAdmin = normEmail === 'admin@orderofkpi.org' || userRole === 'admin';
-  const isChair = normEmail === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair' || normalizedRole.includes('chair') || isAdmin;
-  const isBrian = normEmail === 'brian.johnson@orderofkpi.org';
-  const isAuthorizedCommittee = userRole === 'Membership Committee' || normalizedRole.includes('membership committee') || normalizedRole.includes('committee') || isChair || isBrian || isAdmin;
+  const isChair = normEmail === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair' || isAdmin;
+  const isAuthorizedCommittee = userRole === 'Membership Committee' || isChair || isAdmin;
 
   const [tallies, setTallies] = useState<VoteTally[]>([]);
   const [totalVotes, setTotalVotes] = useState(0);
@@ -43,46 +42,78 @@ export default function DeanVotingDashboard() {
 
   const fetchVotingResults = async () => {
     try {
-      let serverVotes: any[] = [];
+      // 1. Fetch server votes immediately to render UI instantly
+      try {
+        const serverRes = await fetch('/api/dean-votes').then(r => r.json());
+        if (serverRes && serverRes.success && Array.isArray(serverRes.votes)) {
+          const map = new Map<string, any>();
+          for (const item of serverRes.votes) {
+            if (!item || !item.nominee_name) continue;
+            const key = (item.voter_email || item.id || Math.random().toString()).toLowerCase().trim();
+            map.set(key, item);
+          }
+          const mergedVotes = Array.from(map.values());
+          const countMap: Record<string, number> = {};
+          let total = 0;
+          mergedVotes.forEach((v: any) => {
+            const name = v.nominee_name;
+            if (!name) return;
+            countMap[name] = (countMap[name] || 0) + 1;
+            total += 1;
+          });
+          const list = Object.keys(countMap).map((nominee_name) => ({
+            nominee_name,
+            votes: countMap[nominee_name]
+          })).sort((a, b) => b.votes - a.votes);
+
+          setTallies(list);
+          setTotalVotes(total);
+          setLoading(false); // Set loading false immediately when server data is ready!
+        }
+      } catch (e) {
+        console.warn('Server fetch votes failed:', e);
+      }
+
+      // 2. Fetch Firestore votes in parallel/background to augment
       let firestoreVotes: any[] = [];
-
-      const [serverRes, fsRes] = await Promise.allSettled([
-        fetch('/api/dean-votes').then(r => r.json()),
-        firebaseFetchAllDeanVotes()
-      ]);
-
-      if (serverRes.status === 'fulfilled' && serverRes.value?.success && Array.isArray(serverRes.value.votes)) {
-        serverVotes = serverRes.value.votes;
+      try {
+        const fsRes = await firebaseFetchAllDeanVotes();
+        if (fsRes && fsRes.success && Array.isArray(fsRes.votes)) {
+          firestoreVotes = fsRes.votes;
+        }
+      } catch (e) {
+        console.warn('Firestore fetch votes failed:', e);
       }
 
-      if (fsRes.status === 'fulfilled' && fsRes.value?.success && Array.isArray(fsRes.value.votes)) {
-        firestoreVotes = fsRes.value.votes;
+      if (firestoreVotes.length > 0) {
+        const serverRes = await fetch('/api/dean-votes').then(r => r.json()).catch(() => ({ success: true, votes: [] }));
+        const serverVotes = serverRes.success && Array.isArray(serverRes.votes) ? serverRes.votes : [];
+
+        const map = new Map<string, any>();
+        for (const item of [...firestoreVotes, ...serverVotes]) {
+          if (!item || !item.nominee_name) continue;
+          const key = (item.voter_email || item.id || Math.random().toString()).toLowerCase().trim();
+          map.set(key, item);
+        }
+
+        const mergedVotes = Array.from(map.values());
+        const countMap: Record<string, number> = {};
+        let total = 0;
+        mergedVotes.forEach((v: any) => {
+          const name = v.nominee_name;
+          if (!name) return;
+          countMap[name] = (countMap[name] || 0) + 1;
+          total += 1;
+        });
+
+        const list = Object.keys(countMap).map((nominee_name) => ({
+          nominee_name,
+          votes: countMap[nominee_name]
+        })).sort((a, b) => b.votes - a.votes);
+
+        setTallies(list);
+        setTotalVotes(total);
       }
-
-      const map = new Map<string, any>();
-      for (const item of [...firestoreVotes, ...serverVotes]) {
-        if (!item || !item.nominee_name) continue;
-        const key = (item.voter_email || item.id || Math.random().toString()).toLowerCase().trim();
-        map.set(key, item);
-      }
-
-      const mergedVotes = Array.from(map.values());
-      const countMap: Record<string, number> = {};
-      let total = 0;
-      mergedVotes.forEach((v: any) => {
-        const name = v.nominee_name;
-        if (!name) return;
-        countMap[name] = (countMap[name] || 0) + 1;
-        total += 1;
-      });
-
-      const list = Object.keys(countMap).map((nominee_name) => ({
-        nominee_name,
-        votes: countMap[nominee_name]
-      })).sort((a, b) => b.votes - a.votes);
-
-      setTallies(list);
-      setTotalVotes(total);
     } catch (err) {
       console.error('Error fetching dean voting results:', err);
     } finally {

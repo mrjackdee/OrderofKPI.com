@@ -79,13 +79,13 @@ export default function App() {
           <Route path="member-directory" element={<ProtectedRoute><MemberDirectory /></ProtectedRoute>} />
           <Route path="membership-application" element={<ProtectedRoute><Application /></ProtectedRoute>} />
           <Route path="standalone-application" element={<StandaloneApplication />} />
-          <Route path="review-applications" element={<ProtectedRoute allowedRoles={['admin', 'officer', 'Membership Committee', 'Membership Committee Chair']}><ReviewApplications /></ProtectedRoute>} />
+          <Route path="review-applications" element={<ProtectedRoute allowedRoles={['admin', 'Membership Committee', 'Membership Committee Chair']}><ReviewApplications /></ProtectedRoute>} />
           <Route path="chair-dashboard" element={<ProtectedRoute allowedRoles={['admin', 'officer', 'Membership Committee Chair']}><CommitteeChairDashboard /></ProtectedRoute>} />
           <Route path="dean-nomination" element={<ProtectedRoute><DeanNominationForm /></ProtectedRoute>} />
-          <Route path="dean-nomination-dashboard" element={<ProtectedRoute><DeanNominationDashboard /></ProtectedRoute>} />
+          <Route path="dean-nomination-dashboard" element={<ProtectedRoute allowedRoles={['admin', 'Membership Committee', 'Membership Committee Chair']}><DeanNominationDashboard /></ProtectedRoute>} />
           <Route path="dean-audit-dashboard" element={<ProtectedRoute allowedRoles={['admin']}><DeanAuditLogDashboard /></ProtectedRoute>} />
           <Route path="dean-voting" element={<ProtectedRoute><DeanVotingForm /></ProtectedRoute>} />
-          <Route path="dean-voting-dashboard" element={<ProtectedRoute><DeanVotingDashboard /></ProtectedRoute>} />
+          <Route path="dean-voting-dashboard" element={<ProtectedRoute allowedRoles={['admin', 'Membership Committee', 'Membership Committee Chair']}><DeanVotingDashboard /></ProtectedRoute>} />
           <Route path="dean-voting-audit" element={<ProtectedRoute allowedRoles={['admin']}><DeanVotingAuditDashboard /></ProtectedRoute>} />
           <Route path="privacy-policy" element={<PrivacyPolicy />} />
           <Route path="terms-of-service" element={<TermsOfService />} />

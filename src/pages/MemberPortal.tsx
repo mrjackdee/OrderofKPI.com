@@ -190,7 +190,7 @@ export default function MemberPortal() {
                   icon: ClipboardCheck, 
                   path: '/review-applications',
                   color: 'bg-ivy text-cream',
-                  roles: ['admin', 'officer', 'Membership Committee', 'Membership Committee Chair']
+                  roles: ['admin', 'Membership Committee', 'Membership Committee Chair']
                 },
                 { 
                   title: 'Membership Chair Portal', 
@@ -206,7 +206,7 @@ export default function MemberPortal() {
                   icon: Award, 
                   path: '/dean-nomination-dashboard',
                   color: 'bg-ivy text-cream',
-                  roles: ['admin', 'officer', 'Membership Committee Chair', 'Membership Committee', 'brian']
+                  roles: ['admin', 'Membership Committee Chair', 'Membership Committee']
                 },
                 { 
                   title: 'Dean Audit & Management', 
@@ -222,7 +222,7 @@ export default function MemberPortal() {
                   icon: Award, 
                   path: '/dean-voting-dashboard',
                   color: 'bg-ivy text-cream',
-                  roles: ['admin', 'officer', 'Membership Committee Chair', 'Membership Committee', 'brian']
+                  roles: ['admin', 'Membership Committee Chair', 'Membership Committee']
                 },
                 { 
                   title: 'Dean Voting Audit & Mgmt', 

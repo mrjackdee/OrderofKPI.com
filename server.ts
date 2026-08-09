@@ -30,14 +30,16 @@ const passwordOverridesPath = path.join(process.cwd(), "user_password_overrides.
 
 let firebaseProjectId = process.env.VITE_FIREBASE_PROJECT_ID || "";
 let firebaseApiKey = process.env.VITE_FIREBASE_API_KEY || "";
-let firebaseDatabaseId = "ai-studio-orderofkpiocomint-87b8a669-8698-4f66-8799-ff9b38422e20";
+let firebaseDatabaseId = process.env.VITE_FIREBASE_DATABASE_ID || "ai-studio-orderofkpicomint-87b8a669-8698-4f66-8799-ff9b38422e20";
 try {
   const cfgPath = path.join(process.cwd(), "firebase-applet-config.json");
   if (fs.existsSync(cfgPath)) {
     const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf-8"));
     if (!firebaseProjectId) firebaseProjectId = cfg.projectId || "";
     if (!firebaseApiKey) firebaseApiKey = cfg.apiKey || "";
-    if (cfg.firestoreDatabaseId) firebaseDatabaseId = cfg.firestoreDatabaseId;
+    if (!process.env.VITE_FIREBASE_DATABASE_ID && cfg.firestoreDatabaseId) {
+      firebaseDatabaseId = cfg.firestoreDatabaseId;
+    }
   }
 } catch (e) {}
 
@@ -316,6 +318,7 @@ async function initDb() {
   const defaultPasswordHash = hashPassword("atlanta");
   const userPasswordOverrides: Record<string, string> = {
     "james.haywood@orderofkpi.org": "2012",
+    "admin@orderofkpi.org": "2012",
     "jackdee.sync@gmail.com": "atlanta"
   };
   const testUsers = ["admin@orderofkpi.org", "jack@orderofkpi.org"];
@@ -477,6 +480,9 @@ async function initDb() {
       } else if (emailNorm === "james.haywood@orderofkpi.org") {
         targetPasswordHash = hashPassword("2012");
         targetIsFirstLogin = 0;
+      } else if (emailNorm === "admin@orderofkpi.org") {
+        targetPasswordHash = hashPassword("2012");
+        targetIsFirstLogin = 1;
       }
 
       if (existingUser) {
@@ -761,7 +767,7 @@ function findUser(email: string): UserRecord | null {
         email: normEmail,
         name: defaultU.name,
         first_name: defaultU.name.split(" ")[0],
-        password_hash: hashPassword("atlanta"),
+        password_hash: (normEmail === "admin@orderofkpi.org" || normEmail === "james.haywood@orderofkpi.org") ? hashPassword("2012") : hashPassword("atlanta"),
         is_first_login: normEmail === "james.haywood@orderofkpi.org" ? 0 : 1,
         role: defaultU.role,
         title: defaultU.title

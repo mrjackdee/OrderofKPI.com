@@ -476,13 +476,18 @@ async function performClientSideLogin(email: string, pass: string) {
     };
   }
 
+  const isChanged = localStorage.getItem(`kpi_password_changed_${normEmail}`) === 'true';
+
   // Retrieve changed password from localStorage, defaulting to initial account password
   const initialPass = getInitialPasswordForAccount(normEmail);
   const savedPass = localStorage.getItem(`kpi_client_password_${normEmail}`) || initialPass;
   const isQaOrTest = normEmail.startsWith('qa.') || normEmail.startsWith('test.');
   const isDefaultQa = isQaOrTest && (pass === '2012' || pass === 'atlanta');
 
-  if (savedPass !== pass && initialPass !== pass && !isDefaultQa) {
+  // If password was changed, we must NOT allow the initial password anymore.
+  const isPasswordValid = isChanged ? (pass === savedPass) : (pass === initialPass || pass === savedPass);
+
+  if (!isPasswordValid && !isDefaultQa) {
     // Check if they reset their password via Firebase
     try {
       await signInWithEmailAndPassword(auth, normEmail, pass);
@@ -495,7 +500,6 @@ async function performClientSideLogin(email: string, pass: string) {
     }
   }
 
-  const isChanged = localStorage.getItem(`kpi_password_changed_${normEmail}`) === 'true';
   const firstName = member.name.split(' ')[0];
 
   return {
@@ -520,11 +524,14 @@ function performClientSidePasswordChange(email: string, currentPass: string, new
     return { success: false, message: 'Candidate or Member account not found.' };
   }
 
+  const isChanged = localStorage.getItem(`kpi_password_changed_${normEmail}`) === 'true';
   const initialPass = getInitialPasswordForAccount(normEmail);
   const savedPass = localStorage.getItem(`kpi_client_password_${normEmail}`) || initialPass;
 
   // Validate current password if provided
-  if (currentPass && currentPass !== savedPass && currentPass !== initialPass && currentPass !== 'atlanta') {
+  const isCurrentPassValid = isChanged ? (currentPass === savedPass) : (currentPass === savedPass || currentPass === initialPass);
+
+  if (currentPass && !isCurrentPassValid && currentPass !== 'atlanta') {
     return { success: false, message: 'Current password provided is incorrect.' };
   }
 

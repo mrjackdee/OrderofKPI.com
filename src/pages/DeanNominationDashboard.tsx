@@ -28,10 +28,10 @@ export default function DeanNominationDashboard() {
 
   const normEmail = userEmail.toLowerCase().trim();
   const isAdmin = userRole === 'admin' || normEmail === 'admin@orderofkpi.org';
-  const isChair = normEmail === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair' || userRole.toLowerCase().includes('chair');
+  const isChair = normEmail === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair';
   const isBrian = normEmail === 'brian.johnson@orderofkpi.org';
 
-  const canAccess = isAdmin || isChair || isBrian || userRole === 'Membership Committee';
+  const canAccess = isAdmin || isChair || userRole === 'Membership Committee';
 
   const [nominations, setNominations] = useState<NominationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,33 +52,41 @@ export default function DeanNominationDashboard() {
 
   const fetchNominations = async () => {
     try {
-      let serverNoms: NominationItem[] = [];
-      let firestoreNoms: NominationItem[] = [];
-
-      const [serverRes, fsRes] = await Promise.allSettled([
-        fetch('/api/dean-nominations').then(r => r.json()),
-        firebaseFetchAllDeanNominations()
-      ]);
-
-      if (serverRes.status === 'fulfilled' && serverRes.value?.success && Array.isArray(serverRes.value.nominations)) {
-        serverNoms = serverRes.value.nominations;
-      }
-
-      if (fsRes.status === 'fulfilled' && fsRes.value?.success && Array.isArray(fsRes.value.nominations)) {
-        firestoreNoms = fsRes.value.nominations;
-      }
-
-      const map = new Map<string, NominationItem>();
-
-      for (const item of [...firestoreNoms, ...serverNoms]) {
-        if (!item) continue;
-        const key = (item.voter_email || item.id || Math.random().toString()).toLowerCase().trim();
-        if (!map.has(key) || (item.timestamp && map.get(key)?.timestamp && new Date(item.timestamp) > new Date(map.get(key)!.timestamp))) {
-          map.set(key, item);
+      // 1. Fetch server nominations immediately to render UI instantly
+      try {
+        const serverRes = await fetch('/api/dean-nominations').then(r => r.json());
+        if (serverRes && serverRes.success && Array.isArray(serverRes.nominations)) {
+          setNominations(serverRes.nominations);
+          setLoading(false); // Set loading false immediately when server data is ready!
         }
+      } catch (e) {
+        console.warn('Server fetch nominations failed:', e);
       }
 
-      setNominations(Array.from(map.values()));
+      // 2. Fetch Firestore nominations in parallel/background to augment
+      let firestoreNoms: NominationItem[] = [];
+      try {
+        const fsRes = await firebaseFetchAllDeanNominations();
+        if (fsRes && fsRes.success && Array.isArray(fsRes.nominations)) {
+          firestoreNoms = fsRes.nominations;
+        }
+      } catch (e) {
+        console.warn('Firestore fetch nominations failed:', e);
+      }
+
+      if (firestoreNoms.length > 0) {
+        setNominations((prev) => {
+          const map = new Map<string, NominationItem>();
+          for (const item of [...firestoreNoms, ...prev]) {
+            if (!item) continue;
+            const key = (item.voter_email || item.id || Math.random().toString()).toLowerCase().trim();
+            if (!map.has(key) || (item.timestamp && map.get(key)?.timestamp && new Date(item.timestamp) > new Date(map.get(key)!.timestamp))) {
+              map.set(key, item);
+            }
+          }
+          return Array.from(map.values());
+        });
+      }
     } catch (err) {
       console.error('Error fetching dean nominations:', err);
     } finally {
