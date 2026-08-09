@@ -121,6 +121,12 @@ test.describe('Order of KPI Dedicated QA Credentials & Security Suite', () => {
 
     await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
 
+    // Dismiss first login modal if open
+    const remLater = page.locator('button:has-text("Remind Me Later")');
+    if (await remLater.isVisible()) {
+      await remLater.click();
+    }
+
     await page.goto('/dean-nomination');
     await expect(page.locator('h1')).toContainText('Intake Dean Nomination');
 
@@ -129,7 +135,7 @@ test.describe('Order of KPI Dedicated QA Credentials & Security Suite', () => {
     await page.fill('input[placeholder="e.g. Garvey"]', 'Haywood');
     await page.fill('textarea', 'QA Automated Test Nomination for Intake Dean with full triple-channel self-healing sync.');
 
-    await page.click('button[type="submit"]');
+    await page.click('button:has-text("Submit Nomination")');
 
     // Verify success banner or active nomination message
     await expect(page.locator('body')).toContainText('recorded');
