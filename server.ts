@@ -174,7 +174,20 @@ function savePasswordOverride(email: string, hash: string, isFirstLogin: number 
   }
 }
 
+const QA_EXPLICIT_CREDENTIALS: Record<string, { name: string; role: string; title: string; pass: string }> = {
+  'qa.admin@orderofkpi.org': { name: 'QA Admin Agent', role: 'admin', title: 'Administrator', pass: 'KPI_QA_Admin2026!' },
+  'qa.chair@orderofkpi.org': { name: 'QA Chair Agent', role: 'Membership Committee Chair', title: '2nd Anti-Basileus / Committee Chair', pass: 'KPI_QA_Chair2026!' },
+  'qa.committee@orderofkpi.org': { name: 'QA Committee Agent', role: 'Membership Committee', title: 'Grammateus / Committee Member', pass: 'KPI_QA_Committee2026!' },
+  'qa.officer@orderofkpi.org': { name: 'QA Officer Agent', role: 'officer', title: '1st Anti-Basileus', pass: 'KPI_QA_Officer2026!' },
+  'qa.member@orderofkpi.org': { name: 'QA Member Agent', role: 'member', title: 'Member', pass: 'KPI_QA_Member2026!' }
+};
+
 const defaultUsers = [
+  { name: "QA Admin Agent", email: "qa.admin@orderofkpi.org", role: "admin", title: "Administrator", intake_class: "", financial_status: "active", industry: "QA Testing" },
+  { name: "QA Chair Agent", email: "qa.chair@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", intake_class: "", financial_status: "active", industry: "QA Testing" },
+  { name: "QA Committee Agent", email: "qa.committee@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member", intake_class: "", financial_status: "active", industry: "QA Testing" },
+  { name: "QA Officer Agent", email: "qa.officer@orderofkpi.org", role: "officer", title: "1st Anti-Basileus", intake_class: "", financial_status: "active", industry: "QA Testing" },
+  { name: "QA Member Agent", email: "qa.member@orderofkpi.org", role: "member", title: "Member", intake_class: "", financial_status: "active", industry: "QA Testing" },
   { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator", intake_class: "", financial_status: "active", industry: "Technology" },
   { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", intake_class: "", financial_status: "active", industry: "Leadership" },
   { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "member", intake_class: "", financial_status: "active", industry: "Consulting" },
@@ -757,7 +770,18 @@ function findUser(email: string): UserRecord | null {
   }
 
   // Dynamic QA/Test account generation to enable flawless E2E testing
-  if (!userRecord && (normEmail.startsWith("qa.") || normEmail.startsWith("test."))) {
+  if (!userRecord && QA_EXPLICIT_CREDENTIALS[normEmail]) {
+    const qa = QA_EXPLICIT_CREDENTIALS[normEmail];
+    userRecord = {
+      email: normEmail,
+      name: qa.name,
+      first_name: qa.name.split(" ")[0],
+      password_hash: hashPassword(qa.pass),
+      is_first_login: 0,
+      role: qa.role,
+      title: qa.title
+    };
+  } else if (!userRecord && (normEmail.startsWith("qa.") || normEmail.startsWith("test."))) {
     let role = "prospective";
     let name = "QA Candidate";
     let title = "Candidate";
@@ -921,8 +945,10 @@ async function startServer() {
     const hashedInput = hashPassword(password);
     const isQaOrTest = normEmail.startsWith("qa.") || normEmail.startsWith("test.");
     const isDefaultQaPassword = isQaOrTest && password === "2012";
+    const explicitQa = QA_EXPLICIT_CREDENTIALS[normEmail];
+    const isExplicitQaPassword = explicitQa && password === explicitQa.pass;
 
-    if (user.password_hash === hashedInput || isDefaultQaPassword) {
+    if (user.password_hash === hashedInput || isDefaultQaPassword || isExplicitQaPassword) {
       if (isDefaultQaPassword && globalPasswordOverrides[normEmail]) {
         // Clear override from memory and save
         delete globalPasswordOverrides[normEmail];
@@ -2711,6 +2737,62 @@ async function startServer() {
     }
   });
 
+  app.post("/api/dean-votes/sync-bulk", (req, res) => {
+    try {
+      const { votes } = req.body;
+      if (!Array.isArray(votes)) {
+        return res.status(400).json({ success: false, message: "Votes list required as array." });
+      }
+
+      const list = getFallbackDeanVotes();
+
+      for (const v of votes) {
+        if (!v.voter_email || !v.nominee_name) continue;
+        const emailNorm = v.voter_email.toLowerCase().trim();
+        const id = v.id || Math.random().toString(36).substring(2, 9);
+        const timestamp = v.timestamp || new Date().toISOString();
+
+        if (useSqlite && sqliteDb) {
+          try {
+            const existing = sqliteDb.prepare("SELECT id FROM dean_votes WHERE LOWER(voter_email) = ?").get(emailNorm) as any;
+            if (existing) {
+              sqliteDb.prepare(`
+                UPDATE dean_votes 
+                SET nominee_name = ?, timestamp = ?
+                WHERE LOWER(voter_email) = ?
+              `).run(v.nominee_name.trim(), timestamp, emailNorm);
+            } else {
+              sqliteDb.prepare(`
+                INSERT INTO dean_votes (id, voter_email, nominee_name, timestamp)
+                VALUES (?, ?, ?, ?)
+              `).run(id, emailNorm, v.nominee_name.trim(), timestamp);
+            }
+          } catch (dbErr) {
+            console.error("SQLite bulk sync dean votes error:", dbErr);
+          }
+        }
+
+        const idx = list.findIndex(item => (item.voter_email || "").toLowerCase().trim() === emailNorm);
+        const entry = {
+          id: idx >= 0 ? list[idx].id : id,
+          voter_email: emailNorm,
+          nominee_name: v.nominee_name.trim(),
+          timestamp
+        };
+        if (idx >= 0) {
+          list[idx] = entry;
+        } else {
+          list.push(entry);
+        }
+      }
+
+      saveFallbackDeanVotes(list);
+      res.json({ success: true, message: "Votes bulk sync completed successfully." });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
   app.get("/api/admin/dean-nominations", (req, res) => {
     try {
       let nominations: any[] = [];
@@ -2912,6 +2994,64 @@ async function startServer() {
       logEvent(emailNorm, "DEAN_NOMINATION_SUBMITTED", `Submitted nomination for Intake Dean: ${nominee_first_name} ${nominee_last_name}`);
 
       res.json({ success: true, message: "Nomination successfully recorded." });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.post("/api/dean-nominations/sync-bulk", (req, res) => {
+    try {
+      const { nominations } = req.body;
+      if (!Array.isArray(nominations)) {
+        return res.status(400).json({ success: false, message: "Nominations list required as array." });
+      }
+
+      const list = getFallbackDeanNominations();
+
+      for (const n of nominations) {
+        if (!n.voter_email || !n.nominee_first_name || !n.nominee_last_name || !n.statement) continue;
+        const emailNorm = n.voter_email.toLowerCase().trim();
+        const id = n.id || Math.random().toString(36).substring(2, 9);
+        const timestamp = n.timestamp || new Date().toISOString();
+
+        if (useSqlite && sqliteDb) {
+          try {
+            const existing = sqliteDb.prepare("SELECT id FROM dean_nominations WHERE LOWER(voter_email) = ?").get(emailNorm) as any;
+            if (existing) {
+              sqliteDb.prepare(`
+                UPDATE dean_nominations 
+                SET nominee_first_name = ?, nominee_last_name = ?, statement = ?, timestamp = ?
+                WHERE LOWER(voter_email) = ?
+              `).run(n.nominee_first_name.trim(), n.nominee_last_name.trim(), n.statement.trim(), timestamp, emailNorm);
+            } else {
+              sqliteDb.prepare(`
+                INSERT INTO dean_nominations (id, voter_email, nominee_first_name, nominee_last_name, statement, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?)
+              `).run(id, emailNorm, n.nominee_first_name.trim(), n.nominee_last_name.trim(), n.statement.trim(), timestamp);
+            }
+          } catch (dbErr) {
+            console.error("SQLite bulk sync dean nominations error:", dbErr);
+          }
+        }
+
+        const idx = list.findIndex(item => (item.voter_email || "").toLowerCase().trim() === emailNorm);
+        const entry = {
+          id: idx >= 0 ? list[idx].id : id,
+          voter_email: emailNorm,
+          nominee_first_name: n.nominee_first_name.trim(),
+          nominee_last_name: n.nominee_last_name.trim(),
+          statement: n.statement.trim(),
+          timestamp
+        };
+        if (idx >= 0) {
+          list[idx] = entry;
+        } else {
+          list.push(entry);
+        }
+      }
+
+      saveFallbackDeanNominations(list);
+      res.json({ success: true, message: "Nominations bulk sync completed successfully." });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }

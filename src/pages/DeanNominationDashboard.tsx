@@ -5,6 +5,7 @@ import { jsPDF } from 'jspdf';
 import { Award, ShieldCheck, Download, Users, ArrowLeft, BarChart3, FileText, CheckCircle2, RefreshCw } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 import { syncApplicationsFromFirestore } from '../lib/memberDb';
+import { syncDeanDataFromFirestore } from '../lib/firebase';
 
 interface NominationItem {
   id: string;
@@ -35,7 +36,10 @@ export default function DeanNominationDashboard() {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     if (canAccess) {
-      syncApplicationsFromFirestore().catch(() => {}).finally(() => {
+      Promise.all([
+        syncApplicationsFromFirestore().catch(() => {}),
+        syncDeanDataFromFirestore().catch(() => {})
+      ]).finally(() => {
         fetchNominations();
       });
     }

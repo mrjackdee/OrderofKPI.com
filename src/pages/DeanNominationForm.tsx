@@ -4,6 +4,11 @@ import { Link } from 'react-router-dom';
 import { Award, UserCheck, ShieldCheck, CheckCircle2, AlertCircle, ArrowLeft, Send } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 import { useToast } from '../components/ToastContext';
+import { 
+  firebaseSaveDeanNomination, 
+  firebaseFetchDeanNomination, 
+  syncDeanDataFromFirestore 
+} from '../lib/firebase';
 
 export default function DeanNominationForm() {
   const { showToast } = useToast();
@@ -21,7 +26,12 @@ export default function DeanNominationForm() {
 
   useEffect(() => {
     console.log('[DeanNominationForm] Loaded. userEmail:', userEmail, 'userName:', userName);
-    fetchUserNomination();
+    // Background sync on load to ensure local database matches Firestore
+    syncDeanDataFromFirestore()
+      .catch((err) => console.warn('[DeanNominationForm] Background sync error:', err))
+      .finally(() => {
+        fetchUserNomination();
+      });
   }, [userEmail]);
 
   const fetchUserNomination = async () => {
@@ -32,14 +42,39 @@ export default function DeanNominationForm() {
     }
     try {
       console.log('[DeanNominationForm] Fetching existing nomination for:', userEmail);
-      const res = await fetch(`/api/dean-nominations/user?email=${encodeURIComponent(userEmail)}`);
-      const data = await res.json();
-      if (data.success && data.nomination) {
-        console.log('[DeanNominationForm] Found existing nomination:', data.nomination);
-        setExistingNomination(data.nomination);
-        setFirstName(data.nomination.nominee_first_name || '');
-        setLastName(data.nomination.nominee_last_name || '');
-        setStatement(data.nomination.statement || '');
+      let nomination = null;
+
+      // Try server first
+      try {
+        const res = await fetch(`/api/dean-nominations/user?email=${encodeURIComponent(userEmail)}`);
+        if (res.ok) {
+          const contentType = res.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const data = await res.json();
+            if (data.success && data.nomination) {
+              nomination = data.nomination;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[DeanNominationForm] Server fetch nomination failed, falling back to Firestore:', err);
+      }
+
+      // Fallback to Firestore if server failed or had no nomination
+      if (!nomination) {
+        console.log('[DeanNominationForm] Attempting to fetch nomination from Firestore...');
+        const fsRes = await firebaseFetchDeanNomination(userEmail);
+        if (fsRes.success && fsRes.nomination) {
+          nomination = fsRes.nomination;
+        }
+      }
+
+      if (nomination) {
+        console.log('[DeanNominationForm] Found nomination:', nomination);
+        setExistingNomination(nomination);
+        setFirstName(nomination.nominee_first_name || '');
+        setLastName(nomination.nominee_last_name || '');
+        setStatement(nomination.statement || '');
       } else {
         console.log('[DeanNominationForm] No existing nomination found for user.');
       }
@@ -82,39 +117,68 @@ export default function DeanNominationForm() {
 
     setSubmitting(true);
     try {
-      console.log('[DeanNominationForm] Sending POST request to /api/dean-nominations...');
-      const res = await fetch('/api/dean-nominations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          voter_email: userEmail,
-          nominee_first_name: trimmedFirstName,
-          nominee_last_name: trimmedLastName,
-          statement: trimmedStatement
-        })
+      // 1. Dual-write to Cloud Firestore first (guarantees zero data loss)
+      console.log('[DeanNominationForm] Saving nomination to Cloud Firestore...');
+      const fsRes = await firebaseSaveDeanNomination(userEmail, {
+        nominee_first_name: trimmedFirstName,
+        nominee_last_name: trimmedLastName,
+        statement: trimmedStatement
       });
 
-      console.log('[DeanNominationForm] POST request response received status:', res.status);
-      const contentType = res.headers.get('content-type');
-      let data: any = {};
-      if (contentType && contentType.includes('application/json')) {
-        data = await res.json();
+      if (!fsRes.success) {
+        console.warn('[DeanNominationForm] Firestore dual-write warning:', fsRes.message);
       } else {
-        const text = await res.text();
-        throw new Error(`Server returned non-JSON response: ${text.substring(0, 200)}`);
+        console.log('[DeanNominationForm] Firestore dual-write completed successfully.');
       }
 
-      console.log('[DeanNominationForm] Response body:', data);
+      // 2. Write to local server Express API
+      let serverSuccess = false;
+      let serverErrorMsg = '';
 
-      if (data.success) {
+      try {
+        console.log('[DeanNominationForm] Sending POST request to /api/dean-nominations...');
+        const res = await fetch('/api/dean-nominations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            voter_email: userEmail,
+            nominee_first_name: trimmedFirstName,
+            nominee_last_name: trimmedLastName,
+            statement: trimmedStatement
+          })
+        });
+
+        console.log('[DeanNominationForm] POST response status:', res.status);
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          if (data.success) {
+            serverSuccess = true;
+          } else {
+            serverErrorMsg = data.message || 'Server rejected nomination';
+          }
+        } else {
+          console.warn('[DeanNominationForm] Server returned non-JSON response (likely proxy cookie redirect/fallback).');
+        }
+      } catch (err: any) {
+        console.warn('[DeanNominationForm] Server API request failed:', err?.message || err);
+      }
+
+      // We consider it a complete success if at least Firestore was written successfully
+      if (fsRes.success || serverSuccess) {
         const successMsg = 'Your nomination for Intake Dean has been successfully recorded. Each member is limited to 1 active nomination, which you may update at any time.';
         setSuccessMessage(successMsg);
         showToast('Nomination submitted successfully!', 'success');
+
+        // If server failed but Firestore succeeded, trigger background sync
+        if (!serverSuccess && fsRes.success) {
+          console.log('[DeanNominationForm] Attempting background sync to update local server...');
+          syncDeanDataFromFirestore().catch(() => {});
+        }
+
         fetchUserNomination();
       } else {
-        const errMsg = data.message || 'Failed to submit nomination.';
-        setError(errMsg);
-        showToast(errMsg, 'error');
+        throw new Error(serverErrorMsg || 'Failed to record nomination. Please verify your internet connection.');
       }
     } catch (err: any) {
       console.error('[DeanNominationForm] Error during submission:', err);

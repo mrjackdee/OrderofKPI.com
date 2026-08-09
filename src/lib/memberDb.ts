@@ -17,6 +17,11 @@ export interface MemberUser {
 }
 
 export const defaultMembers: MemberUser[] = [
+  { name: "QA Admin Agent", email: "qa.admin@orderofkpi.org", role: "admin", title: "Administrator" },
+  { name: "QA Chair Agent", email: "qa.chair@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair" },
+  { name: "QA Committee Agent", email: "qa.committee@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member" },
+  { name: "QA Officer Agent", email: "qa.officer@orderofkpi.org", role: "officer", title: "1st Anti-Basileus" },
+  { name: "QA Member Agent", email: "qa.member@orderofkpi.org", role: "member", title: "Member" },
   { name: "Admin User", email: "admin@orderofkpi.org", role: "admin", title: "Administrator" },
   { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "Membership Committee" },
   { name: "Jack Dee", email: "jack@orderofkpi.org", role: "Membership Committee" },
@@ -60,8 +65,18 @@ export const prospectiveMembers: MemberUser[] = [
   { name: "Jamar Amber", email: "jaabn2@gmail.com", role: "applicant" }
 ];
 
-const INITIAL_CANDIDATES_PASSWORDS: Record<string, string> = {
+const MEMBER_INITIAL_PASSWORDS: Record<string, string> = {
+  'qa.admin@orderofkpi.org': 'KPI_QA_Admin2026!',
+  'qa.chair@orderofkpi.org': 'KPI_QA_Chair2026!',
+  'qa.committee@orderofkpi.org': 'KPI_QA_Committee2026!',
+  'qa.officer@orderofkpi.org': 'KPI_QA_Officer2026!',
+  'qa.member@orderofkpi.org': 'KPI_QA_Member2026!',
   'james.haywood@orderofkpi.org': '2012',
+  'admin@orderofkpi.org': '2012'
+};
+
+const CANDIDATE_INITIAL_PASSWORDS: Record<string, string> = {
+  'candidate@gmail.com': '2012',
   'jackdee.sync@gmail.com': 'atlanta',
   'averyt16@gmail.com': '0784',
   'hupirate90@me.com': '9348',
@@ -77,6 +92,16 @@ const INITIAL_CANDIDATES_PASSWORDS: Record<string, string> = {
   'zgatesnorris@gmail.com': '4876',
   'jaabn2@gmail.com': '3795'
 };
+
+function getInitialPasswordForAccount(normEmail: string): string {
+  if (MEMBER_INITIAL_PASSWORDS[normEmail]) {
+    return MEMBER_INITIAL_PASSWORDS[normEmail];
+  }
+  if (CANDIDATE_INITIAL_PASSWORDS[normEmail]) {
+    return CANDIDATE_INITIAL_PASSWORDS[normEmail];
+  }
+  return 'atlanta';
+}
 
 /**
  * Perform a hybrid login. 
@@ -451,10 +476,13 @@ async function performClientSideLogin(email: string, pass: string) {
     };
   }
 
-  // Retrieve changed password from localStorage, defaulting to candidate initial password or 'atlanta'
-  const initialPass = INITIAL_CANDIDATES_PASSWORDS[normEmail] || 'atlanta';
+  // Retrieve changed password from localStorage, defaulting to initial account password
+  const initialPass = getInitialPasswordForAccount(normEmail);
   const savedPass = localStorage.getItem(`kpi_client_password_${normEmail}`) || initialPass;
-  if (savedPass !== pass) {
+  const isQaOrTest = normEmail.startsWith('qa.') || normEmail.startsWith('test.');
+  const isDefaultQa = isQaOrTest && (pass === '2012' || pass === 'atlanta');
+
+  if (savedPass !== pass && initialPass !== pass && !isDefaultQa) {
     // Check if they reset their password via Firebase
     try {
       await signInWithEmailAndPassword(auth, normEmail, pass);
@@ -492,7 +520,7 @@ function performClientSidePasswordChange(email: string, currentPass: string, new
     return { success: false, message: 'Candidate or Member account not found.' };
   }
 
-  const initialPass = INITIAL_CANDIDATES_PASSWORDS[normEmail] || 'atlanta';
+  const initialPass = getInitialPasswordForAccount(normEmail);
   const savedPass = localStorage.getItem(`kpi_client_password_${normEmail}`) || initialPass;
 
   // Validate current password if provided

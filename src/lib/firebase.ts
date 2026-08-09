@@ -589,3 +589,163 @@ export async function firebaseFetchAllApplications() {
   }
 }
 
+/**
+ * Saves a Dean Nomination to Cloud Firestore.
+ */
+export async function firebaseSaveDeanNomination(voterEmail: string, data: { nominee_first_name: string; nominee_last_name: string; statement: string }) {
+  const normEmail = voterEmail.toLowerCase().trim();
+  const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
+  try {
+    const docRef = doc(db, 'dean_nominations', safeDocId);
+    const now = new Date().toISOString();
+    const payload = {
+      id: Math.random().toString(36).substring(2, 9),
+      voter_email: normEmail,
+      nominee_first_name: data.nominee_first_name.trim(),
+      nominee_last_name: data.nominee_last_name.trim(),
+      statement: data.statement.trim(),
+      timestamp: now
+    };
+    await setDoc(docRef, payload, { merge: true });
+    return { success: true, message: 'Nomination saved to Firestore successfully' };
+  } catch (err: any) {
+    console.error('Failed to save Dean Nomination to Firestore:', err);
+    return { success: false, message: err.message || 'Firestore write failed' };
+  }
+}
+
+/**
+ * Fetches a Dean Nomination from Cloud Firestore by voter email.
+ */
+export async function firebaseFetchDeanNomination(voterEmail: string) {
+  const normEmail = voterEmail.toLowerCase().trim();
+  const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
+  try {
+    const docRef = doc(db, 'dean_nominations', safeDocId);
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) {
+      return { success: true, nomination: snapshot.data() };
+    }
+    return { success: false, message: 'No nomination found in Firestore' };
+  } catch (err: any) {
+    console.error('Failed to fetch Dean Nomination from Firestore:', err);
+    return { success: false, message: err.message || 'Firestore fetch failed' };
+  }
+}
+
+/**
+ * Fetches all Dean Nominations from Cloud Firestore.
+ */
+export async function firebaseFetchAllDeanNominations() {
+  try {
+    const querySnapshot = await getDocs(collection(db, 'dean_nominations'));
+    const list: any[] = [];
+    querySnapshot.forEach((docSnapshot) => {
+      const data = docSnapshot.data();
+      if (data && data.voter_email) {
+        list.push(data);
+      }
+    });
+    return { success: true, nominations: list };
+  } catch (err: any) {
+    console.error('Failed to fetch all Dean Nominations from Firestore:', err);
+    return { success: false, message: err.message || 'Firestore fetch failed' };
+  }
+}
+
+/**
+ * Saves a Dean Vote to Cloud Firestore.
+ */
+export async function firebaseSaveDeanVote(voterEmail: string, nomineeName: string) {
+  const normEmail = voterEmail.toLowerCase().trim();
+  const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
+  try {
+    const docRef = doc(db, 'dean_votes', safeDocId);
+    const now = new Date().toISOString();
+    const payload = {
+      id: Math.random().toString(36).substring(2, 9),
+      voter_email: normEmail,
+      nominee_name: nomineeName.trim(),
+      timestamp: now
+    };
+    await setDoc(docRef, payload, { merge: true });
+    return { success: true, message: 'Vote saved to Firestore successfully' };
+  } catch (err: any) {
+    console.error('Failed to save Dean Vote to Firestore:', err);
+    return { success: false, message: err.message || 'Firestore write failed' };
+  }
+}
+
+/**
+ * Fetches a Dean Vote from Cloud Firestore by voter email.
+ */
+export async function firebaseFetchDeanVote(voterEmail: string) {
+  const normEmail = voterEmail.toLowerCase().trim();
+  const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
+  try {
+    const docRef = doc(db, 'dean_votes', safeDocId);
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) {
+      return { success: true, vote: snapshot.data() };
+    }
+    return { success: false, message: 'No vote found in Firestore' };
+  } catch (err: any) {
+    console.error('Failed to fetch Dean Vote from Firestore:', err);
+    return { success: false, message: err.message || 'Firestore fetch failed' };
+  }
+}
+
+/**
+ * Fetches all Dean Votes from Cloud Firestore.
+ */
+export async function firebaseFetchAllDeanVotes() {
+  try {
+    const querySnapshot = await getDocs(collection(db, 'dean_votes'));
+    const list: any[] = [];
+    querySnapshot.forEach((docSnapshot) => {
+      const data = docSnapshot.data();
+      if (data && data.voter_email) {
+        list.push(data);
+      }
+    });
+    return { success: true, votes: list };
+  } catch (err: any) {
+    console.error('Failed to fetch all Dean Votes from Firestore:', err);
+    return { success: false, message: err.message || 'Firestore fetch failed' };
+  }
+}
+
+/**
+ * Performs background sync of Dean Nominations and Votes from Cloud Firestore to local Express storage.
+ * Runs on form or dashboard load.
+ */
+export async function syncDeanDataFromFirestore() {
+  try {
+    // 1. Sync Nominations
+    const nominationsRes = await firebaseFetchAllDeanNominations();
+    if (nominationsRes.success && nominationsRes.nominations) {
+      await fetch('/api/dean-nominations/sync-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nominations: nominationsRes.nominations })
+      }).catch((e) => console.warn('Sync bulk nominations server notice:', e));
+    }
+
+    // 2. Sync Votes
+    const votesRes = await firebaseFetchAllDeanVotes();
+    if (votesRes.success && votesRes.votes) {
+      await fetch('/api/dean-votes/sync-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ votes: votesRes.votes })
+      }).catch((e) => console.warn('Sync bulk votes server notice:', e));
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('Failed to perform Dean Firestore sync:', err);
+    return { success: false, message: err?.message };
+  }
+}
+
+

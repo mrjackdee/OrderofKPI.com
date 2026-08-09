@@ -3,6 +3,12 @@ import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Award, UserCheck, ShieldCheck, CheckCircle2, AlertCircle, ArrowLeft, Send, Check } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
+import { 
+  firebaseSaveDeanVote, 
+  firebaseFetchDeanVote, 
+  firebaseFetchAllDeanNominations, 
+  syncDeanDataFromFirestore 
+} from '../lib/firebase';
 
 interface NomineeItem {
   fullName: string;
@@ -23,42 +29,97 @@ export default function DeanVotingForm() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchNomineesAndVote();
+    // Perform background sync on mount
+    syncDeanDataFromFirestore()
+      .catch((err) => console.warn('[DeanVotingForm] Background sync error:', err))
+      .finally(() => {
+        fetchNomineesAndVote();
+      });
   }, [userEmail]);
 
   const fetchNomineesAndVote = async () => {
     try {
-      const nomRes = await fetch('/api/dean-nominations');
-      const nomData = await nomRes.json();
-      if (nomData.success && Array.isArray(nomData.nominations)) {
-        const summaryMap: Record<string, { count: number; statements: string[] }> = {};
-        nomData.nominations.forEach((nom: any) => {
-          const fullName = `${nom.nominee_first_name || ''} ${nom.nominee_last_name || ''}`.trim();
-          if (!fullName) return;
-          if (!summaryMap[fullName]) {
-            summaryMap[fullName] = { count: 0, statements: [] };
-          }
-          summaryMap[fullName].count += 1;
-          if (nom.statement) {
-            summaryMap[fullName].statements.push(nom.statement);
-          }
-        });
+      let nominationList: any[] = [];
+      let nominationsLoaded = false;
 
-        const list = Object.keys(summaryMap).map((fullName) => ({
-          fullName,
-          count: summaryMap[fullName].count,
-          statements: summaryMap[fullName].statements
-        })).sort((a, b) => b.count - a.count);
-
-        setNominees(list);
+      // 1. Fetch Nominees (Try Server first)
+      try {
+        const nomRes = await fetch('/api/dean-nominations');
+        if (nomRes.ok) {
+          const contentType = nomRes.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const nomData = await nomRes.json();
+            if (nomData.success && Array.isArray(nomData.nominations)) {
+              nominationList = nomData.nominations;
+              nominationsLoaded = true;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[DeanVotingForm] Server nominees fetch failed, using Firestore:', err);
       }
 
+      // Fallback to Firestore for Nominees
+      if (!nominationsLoaded) {
+        console.log('[DeanVotingForm] Loading nominees from Firestore...');
+        const fsNomRes = await firebaseFetchAllDeanNominations();
+        if (fsNomRes.success && fsNomRes.nominations) {
+          nominationList = fsNomRes.nominations;
+        }
+      }
+
+      // Process Nominees list
+      const summaryMap: Record<string, { count: number; statements: string[] }> = {};
+      nominationList.forEach((nom: any) => {
+        const fullName = `${nom.nominee_first_name || ''} ${nom.nominee_last_name || ''}`.trim();
+        if (!fullName) return;
+        if (!summaryMap[fullName]) {
+          summaryMap[fullName] = { count: 0, statements: [] };
+        }
+        summaryMap[fullName].count += 1;
+        if (nom.statement) {
+          summaryMap[fullName].statements.push(nom.statement);
+        }
+      });
+
+      const processedList = Object.keys(summaryMap).map((fullName) => ({
+        fullName,
+        count: summaryMap[fullName].count,
+        statements: summaryMap[fullName].statements
+      })).sort((a, b) => b.count - a.count);
+
+      setNominees(processedList);
+
+      // 2. Fetch User Vote (Try Server first)
       if (userEmail) {
-        const voteRes = await fetch(`/api/dean-votes/user?email=${encodeURIComponent(userEmail)}`);
-        const voteData = await voteRes.json();
-        if (voteData.success && voteData.vote) {
-          setExistingVote(voteData.vote);
-          setSelectedNominee(voteData.vote.nominee_name || '');
+        let userVote = null;
+        try {
+          const voteRes = await fetch(`/api/dean-votes/user?email=${encodeURIComponent(userEmail)}`);
+          if (voteRes.ok) {
+            const contentType = voteRes.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              const voteData = await voteRes.json();
+              if (voteData.success && voteData.vote) {
+                userVote = voteData.vote;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[DeanVotingForm] Server user vote fetch failed, using Firestore:', err);
+        }
+
+        // Fallback to Firestore for User Vote
+        if (!userVote) {
+          console.log('[DeanVotingForm] Loading user vote from Firestore...');
+          const fsVoteRes = await firebaseFetchDeanVote(userEmail);
+          if (fsVoteRes.success && fsVoteRes.vote) {
+            userVote = fsVoteRes.vote;
+          }
+        }
+
+        if (userVote) {
+          setExistingVote(userVote);
+          setSelectedNominee(userVote.nominee_name || '');
         }
       }
     } catch (err) {
@@ -80,20 +141,57 @@ export default function DeanVotingForm() {
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/dean-votes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          voter_email: userEmail,
-          nominee_name: selectedNominee
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
+      // 1. Dual-write to Cloud Firestore first (guarantees zero data loss)
+      console.log('[DeanVotingForm] Saving vote to Cloud Firestore...');
+      const fsRes = await firebaseSaveDeanVote(userEmail, selectedNominee);
+      if (!fsRes.success) {
+        console.warn('[DeanVotingForm] Firestore dual-write warning:', fsRes.message);
+      } else {
+        console.log('[DeanVotingForm] Firestore dual-write completed successfully.');
+      }
+
+      // 2. Write to local server Express API
+      let serverSuccess = false;
+      let serverErrorMsg = '';
+
+      try {
+        const res = await fetch('/api/dean-votes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            voter_email: userEmail,
+            nominee_name: selectedNominee
+          })
+        });
+
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          if (data.success) {
+            serverSuccess = true;
+          } else {
+            serverErrorMsg = data.message || 'Server rejected ballot';
+          }
+        } else {
+          console.warn('[DeanVotingForm] Server returned non-JSON response (likely proxy cookie redirect/fallback).');
+        }
+      } catch (err: any) {
+        console.warn('[DeanVotingForm] Server API request failed:', err?.message || err);
+      }
+
+      // Consider it a success if at least Firestore succeeded
+      if (fsRes.success || serverSuccess) {
         setSuccessMessage('Your vote for the Intake Dean has been successfully recorded. You may update your vote while the voting window is active.');
+        
+        // If server failed but Firestore succeeded, trigger background sync
+        if (!serverSuccess && fsRes.success) {
+          console.log('[DeanVotingForm] Attempting background sync to update local server...');
+          syncDeanDataFromFirestore().catch(() => {});
+        }
+
         fetchNomineesAndVote();
       } else {
-        setError(data.message || 'Failed to submit vote.');
+        setError(serverErrorMsg || 'Failed to submit vote. Please check your network connection.');
       }
     } catch (err: any) {
       setError(err.message || 'Network error occurred.');

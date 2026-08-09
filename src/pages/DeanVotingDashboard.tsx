@@ -5,6 +5,7 @@ import { jsPDF } from 'jspdf';
 import { Award, Download, ArrowLeft, ShieldCheck, Users, BarChart2, RefreshCw } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 import { syncApplicationsFromFirestore } from '../lib/memberDb';
+import { syncDeanDataFromFirestore } from '../lib/firebase';
 
 interface VoteTally {
   nominee_name: string;
@@ -27,7 +28,10 @@ export default function DeanVotingDashboard() {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     if (isAuthorizedCommittee) {
-      syncApplicationsFromFirestore().catch(() => {}).finally(() => {
+      Promise.all([
+        syncApplicationsFromFirestore().catch(() => {}),
+        syncDeanDataFromFirestore().catch(() => {})
+      ]).finally(() => {
         fetchVotingResults();
       });
     }
