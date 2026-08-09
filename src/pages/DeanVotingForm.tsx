@@ -37,6 +37,19 @@ export default function DeanVotingForm() {
       });
   }, [userEmail]);
 
+  const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 4000) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timer);
+      return res;
+    } catch (err) {
+      clearTimeout(timer);
+      throw err;
+    }
+  };
+
   const fetchNomineesAndVote = async () => {
     try {
       let nominationList: any[] = [];
@@ -44,7 +57,7 @@ export default function DeanVotingForm() {
 
       // 1. Fetch Nominees (Try Server first)
       try {
-        const nomRes = await fetch('/api/dean-nominations');
+        const nomRes = await fetchWithTimeout('/api/dean-nominations', {}, 4000);
         if (nomRes.ok) {
           const contentType = nomRes.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
@@ -94,7 +107,7 @@ export default function DeanVotingForm() {
       if (userEmail) {
         let userVote = null;
         try {
-          const voteRes = await fetch(`/api/dean-votes/user?email=${encodeURIComponent(userEmail)}`);
+          const voteRes = await fetchWithTimeout(`/api/dean-votes/user?email=${encodeURIComponent(userEmail)}`, {}, 4000);
           if (voteRes.ok) {
             const contentType = voteRes.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
@@ -143,14 +156,14 @@ export default function DeanVotingForm() {
     try {
       console.log('[DeanVotingForm] Submitting vote concurrently to Server API and Cloud Firestore...');
 
-      const serverTask = fetch('/api/dean-votes', {
+      const serverTask = fetchWithTimeout('/api/dean-votes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           voter_email: userEmail,
           nominee_name: selectedNominee
         })
-      }).then(async (res) => {
+      }, 4000).then(async (res) => {
         const contentType = res.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const data = await res.json();
@@ -177,7 +190,11 @@ export default function DeanVotingForm() {
           syncDeanDataFromFirestore().catch(() => {});
         }
 
-        await fetchNomineesAndVote();
+        try {
+          await fetchNomineesAndVote();
+        } catch (fetchErr) {
+          console.warn('[DeanVotingForm] Post-submit fetch error ignored:', fetchErr);
+        }
       } else {
         const serverError = serverResult.status === 'rejected' ? serverResult.reason?.message : 'Server write failed';
         const fsError = fsResult.status === 'rejected' ? fsResult.reason?.message : fsResult.value?.message;

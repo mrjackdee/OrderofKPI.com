@@ -34,6 +34,19 @@ export default function DeanNominationForm() {
       });
   }, [userEmail]);
 
+  const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 4000) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timer);
+      return res;
+    } catch (err) {
+      clearTimeout(timer);
+      throw err;
+    }
+  };
+
   const fetchUserNomination = async () => {
     if (!userEmail) {
       console.warn('[DeanNominationForm] No userEmail found in sessionStorage.');
@@ -44,9 +57,9 @@ export default function DeanNominationForm() {
       console.log('[DeanNominationForm] Fetching existing nomination for:', userEmail);
       let nomination = null;
 
-      // Try server first
+      // Try server first with timeout
       try {
-        const res = await fetch(`/api/dean-nominations/user?email=${encodeURIComponent(userEmail)}`);
+        const res = await fetchWithTimeout(`/api/dean-nominations/user?email=${encodeURIComponent(userEmail)}`, {}, 4000);
         if (res.ok) {
           const contentType = res.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
@@ -57,7 +70,7 @@ export default function DeanNominationForm() {
           }
         }
       } catch (err) {
-        console.warn('[DeanNominationForm] Server fetch nomination failed, falling back to Firestore:', err);
+        console.warn('[DeanNominationForm] Server fetch nomination failed/timed out, falling back to Firestore:', err);
       }
 
       // Fallback to Firestore if server failed or had no nomination
@@ -119,7 +132,7 @@ export default function DeanNominationForm() {
     try {
       console.log('[DeanNominationForm] Submitting nomination concurrently to Server API and Cloud Firestore...');
       
-      const serverTask = fetch('/api/dean-nominations', {
+      const serverTask = fetchWithTimeout('/api/dean-nominations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -128,7 +141,7 @@ export default function DeanNominationForm() {
           nominee_last_name: trimmedLastName,
           statement: trimmedStatement
         })
-      }).then(async (res) => {
+      }, 4000).then(async (res) => {
         const contentType = res.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const data = await res.json();
@@ -161,7 +174,11 @@ export default function DeanNominationForm() {
           syncDeanDataFromFirestore().catch(() => {});
         }
 
-        await fetchUserNomination();
+        try {
+          await fetchUserNomination();
+        } catch (fetchErr) {
+          console.warn('[DeanNominationForm] Post-submit fetch error ignored:', fetchErr);
+        }
       } else {
         const serverError = serverResult.status === 'rejected' ? serverResult.reason?.message : 'Server write failed';
         const fsError = fsResult.status === 'rejected' ? fsResult.reason?.message : fsResult.value?.message;
