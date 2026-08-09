@@ -108,4 +108,31 @@ test.describe('Order of KPI Dedicated QA Credentials & Security Suite', () => {
     await expect(page.locator('body')).toContainText('Applicant');
   });
 
+  // ---------------------------------------------------------------------------
+  // 7. INTAKE DEAN NOMINATION E2E FLOW (Multi-Channel Self-Healing Persistence)
+  // ---------------------------------------------------------------------------
+  test('PROCESS: Intake Dean Nomination Submission & Persistence', async ({ page }) => {
+    const cred = QA_ROLE_CREDENTIALS.member;
+
+    await page.goto('/login');
+    await page.fill('input[type="email"]', cred.email);
+    await page.fill('input[type="password"]', cred.password);
+    await page.click('button[type="submit"]');
+
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
+
+    await page.goto('/dean-nomination');
+    await expect(page.locator('h1')).toContainText('Intake Dean Nomination');
+
+    // Fill out form
+    await page.fill('input[placeholder="First Name"]', 'James');
+    await page.fill('input[placeholder="Last Name"]', 'Haywood');
+    await page.fill('textarea', 'QA Automated Test Nomination for Intake Dean with full triple-channel self-healing sync.');
+
+    await page.click('button[type="submit"]');
+
+    // Verify success banner or active nomination message
+    await expect(page.locator('body')).toContainText('recorded');
+  });
+
 });

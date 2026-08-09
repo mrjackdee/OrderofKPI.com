@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { Award, UserCheck, ShieldCheck, CheckCircle2, AlertCircle, ArrowLeft, Send } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 
+import { syncDeanNomination } from '../lib/portalSync';
+
 export default function DeanNominationForm() {
   const userEmail = sessionStorage.getItem('userEmail') || '';
   const userName = sessionStorage.getItem('userName') || '';
@@ -34,6 +36,16 @@ export default function DeanNominationForm() {
         setFirstName(data.nomination.nominee_first_name || '');
         setLastName(data.nomination.nominee_last_name || '');
         setStatement(data.nomination.statement || '');
+      } else {
+        // Fallback to LocalStorage or Cloud Firestore
+        const localNom = localStorage.getItem(`kpi_dean_nomination_${userEmail.toLowerCase().trim()}`);
+        if (localNom) {
+          const parsed = JSON.parse(localNom);
+          setExistingNomination(parsed);
+          setFirstName(parsed.nominee_first_name || '');
+          setLastName(parsed.nominee_last_name || '');
+          setStatement(parsed.statement || '');
+        }
       }
     } catch (err) {
       console.error('Error fetching nomination:', err);
@@ -54,25 +66,11 @@ export default function DeanNominationForm() {
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/dean-nominations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          voter_email: userEmail,
-          nominee_first_name: firstName.trim(),
-          nominee_last_name: lastName.trim(),
-          statement: statement.trim()
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSuccessMessage('Your nomination for Intake Dean has been successfully recorded. Each member is limited to 1 active nomination, which you may update at any time.');
-        fetchUserNomination();
-      } else {
-        setError(data.message || 'Failed to submit nomination.');
-      }
+      await syncDeanNomination(userEmail, firstName.trim(), lastName.trim(), statement.trim());
+      setSuccessMessage('Your nomination for Intake Dean has been successfully recorded. Each member is limited to 1 active nomination, which you may update at any time.');
+      fetchUserNomination();
     } catch (err: any) {
-      setError(err.message || 'Network error occurred.');
+      setError(err.message || 'Error occurred while saving nomination.');
     } finally {
       setSubmitting(false);
     }
