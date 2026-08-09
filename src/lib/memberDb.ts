@@ -49,6 +49,7 @@ export const defaultMembers: MemberUser[] = [
   { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member" },
   { name: "Kevin Jennings", email: "kevin.jennings@orderofkpi.org", role: "member" },
   { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member" },
+  { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member" },
   { name: "Applicant Test", email: "applicant@orderofkpi.org", role: "member" },
   // Dedicated QA Automation Accounts (Isolated for E2E Testing)
   { name: "QA Admin Agent", email: "qa.admin@orderofkpi.org", role: "admin", title: "QA Automation Bot" },
@@ -79,6 +80,7 @@ export const prospectiveMembers: MemberUser[] = [
 
 const INITIAL_CANDIDATES_PASSWORDS: Record<string, string> = {
   'james.haywood@orderofkpi.org': '2012',
+  'donald.mitchell@orderofkpi.org': 'atlanta',
   'jackdee.sync@gmail.com': 'atlanta',
   'averyt16@gmail.com': '0784',
   'hupirate90@me.com': '9348',
