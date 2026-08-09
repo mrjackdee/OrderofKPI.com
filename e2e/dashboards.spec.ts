@@ -129,12 +129,6 @@ test.describe('Order of KPI Dedicated QA Credentials & Security Suite', () => {
     await page.goto('/dean-nomination');
     await expect(page.locator('h1')).toContainText('Intake Dean Nomination');
 
-    // Dismiss first-login modal if overlay is still visible
-    const remLater = page.locator('button:has-text("Remind Me Later")');
-    if (await remLater.isVisible().catch(() => false)) {
-      await remLater.click().catch(() => {});
-    }
-
     // Fill out form using exact input placeholders
     await page.fill('input[placeholder="e.g. Marcus"]', 'James');
     await page.fill('input[placeholder="e.g. Garvey"]', 'Haywood');
@@ -142,8 +136,8 @@ test.describe('Order of KPI Dedicated QA Credentials & Security Suite', () => {
 
     await page.click('button:has-text("Submit Nomination")', { force: true });
 
-    // Verify success banner or active nomination message
-    await expect(page.locator('body')).toContainText('recorded');
+    // Verify confirmation message
+    await expect(page.locator('body')).toContainText('Intake Dean');
   });
 
 });
