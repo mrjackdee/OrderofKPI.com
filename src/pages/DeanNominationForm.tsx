@@ -117,68 +117,55 @@ export default function DeanNominationForm() {
 
     setSubmitting(true);
     try {
-      // 1. Dual-write to Cloud Firestore first (guarantees zero data loss)
-      console.log('[DeanNominationForm] Saving nomination to Cloud Firestore...');
-      const fsRes = await firebaseSaveDeanNomination(userEmail, {
+      console.log('[DeanNominationForm] Submitting nomination concurrently to Server API and Cloud Firestore...');
+      
+      const serverTask = fetch('/api/dean-nominations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          voter_email: userEmail,
+          nominee_first_name: trimmedFirstName,
+          nominee_last_name: trimmedLastName,
+          statement: trimmedStatement
+        })
+      }).then(async (res) => {
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          if (data.success) return data;
+          throw new Error(data.message || 'Server rejected nomination');
+        }
+        throw new Error('Server response was not JSON');
+      });
+
+      const fsTask = firebaseSaveDeanNomination(userEmail, {
         nominee_first_name: trimmedFirstName,
         nominee_last_name: trimmedLastName,
         statement: trimmedStatement
       });
 
-      if (!fsRes.success) {
-        console.warn('[DeanNominationForm] Firestore dual-write warning:', fsRes.message);
-      } else {
-        console.log('[DeanNominationForm] Firestore dual-write completed successfully.');
-      }
+      const [serverResult, fsResult] = await Promise.allSettled([serverTask, fsTask]);
 
-      // 2. Write to local server Express API
-      let serverSuccess = false;
-      let serverErrorMsg = '';
+      const serverSuccess = serverResult.status === 'fulfilled';
+      const fsSuccess = fsResult.status === 'fulfilled' && fsResult.value?.success;
 
-      try {
-        console.log('[DeanNominationForm] Sending POST request to /api/dean-nominations...');
-        const res = await fetch('/api/dean-nominations', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            voter_email: userEmail,
-            nominee_first_name: trimmedFirstName,
-            nominee_last_name: trimmedLastName,
-            statement: trimmedStatement
-          })
-        });
+      console.log('[DeanNominationForm] Write results:', { serverSuccess, fsSuccess });
 
-        console.log('[DeanNominationForm] POST response status:', res.status);
-        const contentType = res.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const data = await res.json();
-          if (data.success) {
-            serverSuccess = true;
-          } else {
-            serverErrorMsg = data.message || 'Server rejected nomination';
-          }
-        } else {
-          console.warn('[DeanNominationForm] Server returned non-JSON response (likely proxy cookie redirect/fallback).');
-        }
-      } catch (err: any) {
-        console.warn('[DeanNominationForm] Server API request failed:', err?.message || err);
-      }
-
-      // We consider it a complete success if at least Firestore was written successfully
-      if (fsRes.success || serverSuccess) {
+      if (serverSuccess || fsSuccess) {
         const successMsg = 'Your nomination for Intake Dean has been successfully recorded. Each member is limited to 1 active nomination, which you may update at any time.';
         setSuccessMessage(successMsg);
         showToast('Nomination submitted successfully!', 'success');
 
-        // If server failed but Firestore succeeded, trigger background sync
-        if (!serverSuccess && fsRes.success) {
-          console.log('[DeanNominationForm] Attempting background sync to update local server...');
+        if (!serverSuccess && fsSuccess) {
+          console.log('[DeanNominationForm] Triggering background sync because server write failed...');
           syncDeanDataFromFirestore().catch(() => {});
         }
 
-        fetchUserNomination();
+        await fetchUserNomination();
       } else {
-        throw new Error(serverErrorMsg || 'Failed to record nomination. Please verify your internet connection.');
+        const serverError = serverResult.status === 'rejected' ? serverResult.reason?.message : 'Server write failed';
+        const fsError = fsResult.status === 'rejected' ? fsResult.reason?.message : fsResult.value?.message;
+        throw new Error(serverError || fsError || 'Failed to record nomination. Please verify your connection.');
       }
     } catch (err: any) {
       console.error('[DeanNominationForm] Error during submission:', err);

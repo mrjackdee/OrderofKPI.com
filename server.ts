@@ -2795,17 +2795,19 @@ async function startServer() {
 
   app.get("/api/admin/dean-nominations", (req, res) => {
     try {
-      let nominations: any[] = [];
+      const fallbackList = getFallbackDeanNominations();
+      let sqliteList: any[] = [];
       if (useSqlite && sqliteDb) {
         try {
-          nominations = sqliteDb.prepare("SELECT id, voter_email, nominee_first_name, nominee_last_name, statement, timestamp FROM dean_nominations").all();
-        } catch (dbErr) {
-          nominations = getFallbackDeanNominations();
-        }
-      } else {
-        nominations = getFallbackDeanNominations();
+          sqliteList = sqliteDb.prepare("SELECT id, voter_email, nominee_first_name, nominee_last_name, statement, timestamp FROM dean_nominations").all();
+        } catch (dbErr) {}
       }
-      res.json({ success: true, nominations });
+      const map = new Map<string, any>();
+      for (const item of [...fallbackList, ...sqliteList]) {
+        if (!item || !item.voter_email) continue;
+        map.set(item.voter_email.toLowerCase().trim(), item);
+      }
+      res.json({ success: true, nominations: Array.from(map.values()) });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -2873,29 +2875,27 @@ async function startServer() {
 
   app.get("/api/dean-nominations", (req, res) => {
     try {
-      let nominations: any[] = [];
+      const fallbackList = getFallbackDeanNominations();
+      let sqliteList: any[] = [];
       if (useSqlite && sqliteDb) {
         try {
-          nominations = sqliteDb.prepare("SELECT id, nominee_first_name, nominee_last_name, statement, timestamp FROM dean_nominations").all();
-        } catch (dbErr) {
-          nominations = getFallbackDeanNominations().map(n => ({
-            id: n.id,
-            nominee_first_name: n.nominee_first_name,
-            nominee_last_name: n.nominee_last_name,
-            statement: n.statement,
-            timestamp: n.timestamp
-          }));
-        }
-      } else {
-        nominations = getFallbackDeanNominations().map(n => ({
-          id: n.id,
-          nominee_first_name: n.nominee_first_name,
-          nominee_last_name: n.nominee_last_name,
-          statement: n.statement,
-          timestamp: n.timestamp
-        }));
+          sqliteList = sqliteDb.prepare("SELECT id, voter_email, nominee_first_name, nominee_last_name, statement, timestamp FROM dean_nominations").all();
+        } catch (dbErr) {}
       }
-      res.json({ success: true, nominations });
+      const map = new Map<string, any>();
+      for (const item of [...fallbackList, ...sqliteList]) {
+        if (!item) continue;
+        const key = (item.voter_email || item.id || Math.random().toString()).toLowerCase().trim();
+        map.set(key, {
+          id: item.id,
+          voter_email: item.voter_email,
+          nominee_first_name: item.nominee_first_name,
+          nominee_last_name: item.nominee_last_name,
+          statement: item.statement,
+          timestamp: item.timestamp
+        });
+      }
+      res.json({ success: true, nominations: Array.from(map.values()) });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }

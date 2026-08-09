@@ -141,57 +141,47 @@ export default function DeanVotingForm() {
 
     setSubmitting(true);
     try {
-      // 1. Dual-write to Cloud Firestore first (guarantees zero data loss)
-      console.log('[DeanVotingForm] Saving vote to Cloud Firestore...');
-      const fsRes = await firebaseSaveDeanVote(userEmail, selectedNominee);
-      if (!fsRes.success) {
-        console.warn('[DeanVotingForm] Firestore dual-write warning:', fsRes.message);
-      } else {
-        console.log('[DeanVotingForm] Firestore dual-write completed successfully.');
-      }
+      console.log('[DeanVotingForm] Submitting vote concurrently to Server API and Cloud Firestore...');
 
-      // 2. Write to local server Express API
-      let serverSuccess = false;
-      let serverErrorMsg = '';
-
-      try {
-        const res = await fetch('/api/dean-votes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            voter_email: userEmail,
-            nominee_name: selectedNominee
-          })
-        });
-
+      const serverTask = fetch('/api/dean-votes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          voter_email: userEmail,
+          nominee_name: selectedNominee
+        })
+      }).then(async (res) => {
         const contentType = res.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const data = await res.json();
-          if (data.success) {
-            serverSuccess = true;
-          } else {
-            serverErrorMsg = data.message || 'Server rejected ballot';
-          }
-        } else {
-          console.warn('[DeanVotingForm] Server returned non-JSON response (likely proxy cookie redirect/fallback).');
+          if (data.success) return data;
+          throw new Error(data.message || 'Server rejected ballot');
         }
-      } catch (err: any) {
-        console.warn('[DeanVotingForm] Server API request failed:', err?.message || err);
-      }
+        throw new Error('Server response was not JSON');
+      });
 
-      // Consider it a success if at least Firestore succeeded
-      if (fsRes.success || serverSuccess) {
+      const fsTask = firebaseSaveDeanVote(userEmail, selectedNominee);
+
+      const [serverResult, fsResult] = await Promise.allSettled([serverTask, fsTask]);
+
+      const serverSuccess = serverResult.status === 'fulfilled';
+      const fsSuccess = fsResult.status === 'fulfilled' && fsResult.value?.success;
+
+      console.log('[DeanVotingForm] Write results:', { serverSuccess, fsSuccess });
+
+      if (serverSuccess || fsSuccess) {
         setSuccessMessage('Your vote for the Intake Dean has been successfully recorded. You may update your vote while the voting window is active.');
         
-        // If server failed but Firestore succeeded, trigger background sync
-        if (!serverSuccess && fsRes.success) {
-          console.log('[DeanVotingForm] Attempting background sync to update local server...');
+        if (!serverSuccess && fsSuccess) {
+          console.log('[DeanVotingForm] Triggering background sync because server write failed...');
           syncDeanDataFromFirestore().catch(() => {});
         }
 
-        fetchNomineesAndVote();
+        await fetchNomineesAndVote();
       } else {
-        setError(serverErrorMsg || 'Failed to submit vote. Please check your network connection.');
+        const serverError = serverResult.status === 'rejected' ? serverResult.reason?.message : 'Server write failed';
+        const fsError = fsResult.status === 'rejected' ? fsResult.reason?.message : fsResult.value?.message;
+        throw new Error(serverError || fsError || 'Failed to submit vote. Please check your network connection.');
       }
     } catch (err: any) {
       setError(err.message || 'Network error occurred.');
