@@ -67,7 +67,7 @@ export default function App() {
           <Route path="voting-portal" element={<ProtectedRoute><VotingPortal /></ProtectedRoute>} />
           <Route path="admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
           <Route path="candidate-tracker" element={<ProtectedRoute allowedRoles={['admin', 'officer', 'Membership Committee', 'Membership Committee Chair']}><CandidateTracker /></ProtectedRoute>} />
-          <Route path="selection-voting" element={<ProtectedRoute><SelectionVoting /></ProtectedRoute>} />
+          <Route path="selection-voting" element={<ProtectedRoute allowedRoles={['admin']}><SelectionVoting /></ProtectedRoute>} />
           <Route path="constitution" element={<ProtectedRoute><Constitution /></ProtectedRoute>} />
           <Route path="intake-calendar" element={<ProtectedRoute><IntakeCalendar /></ProtectedRoute>} />
           <Route path="classroom-portal" element={<ProtectedRoute><ClassroomPortal /></ProtectedRoute>} />

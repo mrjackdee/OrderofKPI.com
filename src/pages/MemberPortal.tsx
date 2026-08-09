@@ -114,18 +114,20 @@ export default function MemberPortal() {
             </div>
           </Link>
 
-          <Link
-            to="/selection-voting"
-            className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
-          >
-            <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
-              <Award size={28} />
-            </div>
-            <div>
-              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Voting Portal</h4>
-              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Selection Committee</p>
-            </div>
-          </Link>
+          {isAdmin && (
+            <Link
+              to="/selection-voting"
+              className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
+            >
+              <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
+                <Award size={28} />
+              </div>
+              <div>
+                <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Voting Portal</h4>
+                <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Selection Committee</p>
+              </div>
+            </Link>
+          )}
 
           <Link
             to="/dean-nomination"
