@@ -677,7 +677,11 @@ function logEvent(email: string, event_type: string, message: string, severity: 
 
   // Broadcast to SSE clients
   sseClients.forEach(client => {
-    client.res.write(`data: ${JSON.stringify(logEntry)}\n\n`);
+    try {
+      client.res.write(`data: ${JSON.stringify(logEntry)}\n\n`);
+    } catch (writeErr) {
+      console.warn(`[SSE LOG ERROR] Failed to write to client ${client.id}:`, writeErr);
+    }
   });
 }
 

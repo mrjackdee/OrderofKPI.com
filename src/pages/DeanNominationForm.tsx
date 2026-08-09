@@ -3,8 +3,10 @@ import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Award, UserCheck, ShieldCheck, CheckCircle2, AlertCircle, ArrowLeft, Send } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
+import { useToast } from '../components/ToastContext';
 
 export default function DeanNominationForm() {
+  const { showToast } = useToast();
   const userEmail = sessionStorage.getItem('userEmail') || '';
   const userName = sessionStorage.getItem('userName') || '';
 
@@ -18,25 +20,31 @@ export default function DeanNominationForm() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    console.log('[DeanNominationForm] Loaded. userEmail:', userEmail, 'userName:', userName);
     fetchUserNomination();
   }, [userEmail]);
 
   const fetchUserNomination = async () => {
     if (!userEmail) {
+      console.warn('[DeanNominationForm] No userEmail found in sessionStorage.');
       setLoading(false);
       return;
     }
     try {
+      console.log('[DeanNominationForm] Fetching existing nomination for:', userEmail);
       const res = await fetch(`/api/dean-nominations/user?email=${encodeURIComponent(userEmail)}`);
       const data = await res.json();
       if (data.success && data.nomination) {
+        console.log('[DeanNominationForm] Found existing nomination:', data.nomination);
         setExistingNomination(data.nomination);
         setFirstName(data.nomination.nominee_first_name || '');
         setLastName(data.nomination.nominee_last_name || '');
         setStatement(data.nomination.statement || '');
+      } else {
+        console.log('[DeanNominationForm] No existing nomination found for user.');
       }
     } catch (err) {
-      console.error('Error fetching nomination:', err);
+      console.error('[DeanNominationForm] Error fetching nomination:', err);
     } finally {
       setLoading(false);
     }
@@ -47,34 +55,75 @@ export default function DeanNominationForm() {
     setError('');
     setSuccessMessage('');
 
-    if (!firstName.trim() || !lastName.trim() || !statement.trim()) {
-      setError('Please provide nominee first name, last name, and a nomination statement.');
+    const trimmedFirstName = (firstName || '').trim();
+    const trimmedLastName = (lastName || '').trim();
+    const trimmedStatement = (statement || '').trim();
+
+    console.log('[DeanNominationForm] handleSubmit triggered.', {
+      voter_email: userEmail,
+      nominee_first_name: trimmedFirstName,
+      nominee_last_name: trimmedLastName,
+      statementLength: trimmedStatement.length
+    });
+
+    if (!trimmedFirstName || !trimmedLastName || !trimmedStatement) {
+      const errMsg = 'Please provide nominee first name, last name, and a nomination statement.';
+      setError(errMsg);
+      showToast(errMsg, 'error');
+      return;
+    }
+
+    if (!userEmail) {
+      const errMsg = 'Your session has expired. Please log in again.';
+      setError(errMsg);
+      showToast(errMsg, 'error');
       return;
     }
 
     setSubmitting(true);
     try {
+      console.log('[DeanNominationForm] Sending POST request to /api/dean-nominations...');
       const res = await fetch('/api/dean-nominations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           voter_email: userEmail,
-          nominee_first_name: firstName.trim(),
-          nominee_last_name: lastName.trim(),
-          statement: statement.trim()
+          nominee_first_name: trimmedFirstName,
+          nominee_last_name: trimmedLastName,
+          statement: trimmedStatement
         })
       });
-      const data = await res.json();
+
+      console.log('[DeanNominationForm] POST request response received status:', res.status);
+      const contentType = res.headers.get('content-type');
+      let data: any = {};
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(`Server returned non-JSON response: ${text.substring(0, 200)}`);
+      }
+
+      console.log('[DeanNominationForm] Response body:', data);
+
       if (data.success) {
-        setSuccessMessage('Your nomination for Intake Dean has been successfully recorded. Each member is limited to 1 active nomination, which you may update at any time.');
+        const successMsg = 'Your nomination for Intake Dean has been successfully recorded. Each member is limited to 1 active nomination, which you may update at any time.';
+        setSuccessMessage(successMsg);
+        showToast('Nomination submitted successfully!', 'success');
         fetchUserNomination();
       } else {
-        setError(data.message || 'Failed to submit nomination.');
+        const errMsg = data.message || 'Failed to submit nomination.';
+        setError(errMsg);
+        showToast(errMsg, 'error');
       }
     } catch (err: any) {
-      setError(err.message || 'Network error occurred.');
+      console.error('[DeanNominationForm] Error during submission:', err);
+      const errMsg = err.message || 'Network error occurred.';
+      setError(errMsg);
+      showToast(errMsg, 'error');
     } finally {
       setSubmitting(false);
+      console.log('[DeanNominationForm] Submission process completed.');
     }
   };
 
