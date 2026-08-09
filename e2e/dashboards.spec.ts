@@ -124,9 +124,9 @@ test.describe('Order of KPI Dedicated QA Credentials & Security Suite', () => {
     await page.goto('/dean-nomination');
     await expect(page.locator('h1')).toContainText('Intake Dean Nomination');
 
-    // Fill out form
-    await page.fill('input[placeholder="First Name"]', 'James');
-    await page.fill('input[placeholder="Last Name"]', 'Haywood');
+    // Fill out form using exact input placeholders
+    await page.fill('input[placeholder="e.g. Marcus"]', 'James');
+    await page.fill('input[placeholder="e.g. Garvey"]', 'Haywood');
     await page.fill('textarea', 'QA Automated Test Nomination for Intake Dean with full triple-channel self-healing sync.');
 
     await page.click('button[type="submit"]');
