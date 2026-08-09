@@ -5,6 +5,7 @@ import { jsPDF } from 'jspdf';
 import { ShieldCheck, Download, ArrowLeft, Trash2, Edit2, CheckCircle2, AlertCircle, Search, Calendar, User, RefreshCw } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 import { syncApplicationsFromFirestore } from '../lib/memberDb';
+import { firebaseFetchAllDeanVotes, syncDeanDataFromFirestore } from '../lib/firebase';
 
 interface AdminVoteItem {
   id: string;
@@ -30,7 +31,10 @@ export default function DeanVotingAuditDashboard() {
   const handleSyncData = async () => {
     setIsSyncing(true);
     try {
-      await syncApplicationsFromFirestore();
+      await Promise.all([
+        syncApplicationsFromFirestore().catch(() => {}),
+        syncDeanDataFromFirestore().catch(() => {})
+      ]);
     } catch (e) {
       console.warn('Sync error:', e);
     }
@@ -40,7 +44,14 @@ export default function DeanVotingAuditDashboard() {
 
   useEffect(() => {
     if (isAdmin) {
-      syncApplicationsFromFirestore().catch(() => {}).finally(() => {
+      // Fetch immediately so UI loads instantly
+      fetchAdminVotes();
+
+      // Run background syncs
+      Promise.all([
+        syncApplicationsFromFirestore().catch(() => {}),
+        syncDeanDataFromFirestore().catch(() => {})
+      ]).then(() => {
         fetchAdminVotes();
       });
     }
@@ -48,11 +59,30 @@ export default function DeanVotingAuditDashboard() {
 
   const fetchAdminVotes = async () => {
     try {
-      const res = await fetch('/api/admin/dean-votes');
-      const data = await res.json();
-      if (data.success && Array.isArray(data.votes)) {
-        setVotes(data.votes);
+      let serverVotes: AdminVoteItem[] = [];
+      let firestoreVotes: AdminVoteItem[] = [];
+
+      const [serverRes, fsRes] = await Promise.allSettled([
+        fetch('/api/admin/dean-votes').then(r => r.json()),
+        firebaseFetchAllDeanVotes()
+      ]);
+
+      if (serverRes.status === 'fulfilled' && serverRes.value?.success && Array.isArray(serverRes.value.votes)) {
+        serverVotes = serverRes.value.votes;
       }
+
+      if (fsRes.status === 'fulfilled' && fsRes.value?.success && Array.isArray(fsRes.value.votes)) {
+        firestoreVotes = fsRes.value.votes;
+      }
+
+      const map = new Map<string, AdminVoteItem>();
+      for (const item of [...firestoreVotes, ...serverVotes]) {
+        if (!item) continue;
+        const key = (item.voter_email || item.id || Math.random().toString()).toLowerCase().trim();
+        map.set(key, item);
+      }
+
+      setVotes(Array.from(map.values()));
     } catch (err) {
       console.error('Error fetching admin votes:', err);
     } finally {

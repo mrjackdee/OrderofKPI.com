@@ -5,7 +5,7 @@ import { jsPDF } from 'jspdf';
 import { Award, Download, ArrowLeft, ShieldCheck, Users, BarChart2, RefreshCw } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 import { syncApplicationsFromFirestore } from '../lib/memberDb';
-import { syncDeanDataFromFirestore } from '../lib/firebase';
+import { syncDeanDataFromFirestore, firebaseFetchAllDeanVotes } from '../lib/firebase';
 
 interface VoteTally {
   nominee_name: string;
@@ -28,10 +28,14 @@ export default function DeanVotingDashboard() {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     if (isAuthorizedCommittee) {
+      // Fetch immediately so UI loads instantly
+      fetchVotingResults();
+
+      // Trigger background syncs asynchronously
       Promise.all([
         syncApplicationsFromFirestore().catch(() => {}),
         syncDeanDataFromFirestore().catch(() => {})
-      ]).finally(() => {
+      ]).then(() => {
         fetchVotingResults();
       });
     }
@@ -39,26 +43,46 @@ export default function DeanVotingDashboard() {
 
   const fetchVotingResults = async () => {
     try {
-      const res = await fetch('/api/dean-votes');
-      const data = await res.json();
-      if (data.success && Array.isArray(data.votes)) {
-        const countMap: Record<string, number> = {};
-        let total = 0;
-        data.votes.forEach((v: any) => {
-          const name = v.nominee_name;
-          if (!name) return;
-          countMap[name] = (countMap[name] || 0) + 1;
-          total += 1;
-        });
+      let serverVotes: any[] = [];
+      let firestoreVotes: any[] = [];
 
-        const list = Object.keys(countMap).map((nominee_name) => ({
-          nominee_name,
-          votes: countMap[nominee_name]
-        })).sort((a, b) => b.votes - a.votes);
+      const [serverRes, fsRes] = await Promise.allSettled([
+        fetch('/api/dean-votes').then(r => r.json()),
+        firebaseFetchAllDeanVotes()
+      ]);
 
-        setTallies(list);
-        setTotalVotes(total);
+      if (serverRes.status === 'fulfilled' && serverRes.value?.success && Array.isArray(serverRes.value.votes)) {
+        serverVotes = serverRes.value.votes;
       }
+
+      if (fsRes.status === 'fulfilled' && fsRes.value?.success && Array.isArray(fsRes.value.votes)) {
+        firestoreVotes = fsRes.value.votes;
+      }
+
+      const map = new Map<string, any>();
+      for (const item of [...firestoreVotes, ...serverVotes]) {
+        if (!item || !item.nominee_name) continue;
+        const key = (item.voter_email || item.id || Math.random().toString()).toLowerCase().trim();
+        map.set(key, item);
+      }
+
+      const mergedVotes = Array.from(map.values());
+      const countMap: Record<string, number> = {};
+      let total = 0;
+      mergedVotes.forEach((v: any) => {
+        const name = v.nominee_name;
+        if (!name) return;
+        countMap[name] = (countMap[name] || 0) + 1;
+        total += 1;
+      });
+
+      const list = Object.keys(countMap).map((nominee_name) => ({
+        nominee_name,
+        votes: countMap[nominee_name]
+      })).sort((a, b) => b.votes - a.votes);
+
+      setTallies(list);
+      setTotalVotes(total);
     } catch (err) {
       console.error('Error fetching dean voting results:', err);
     } finally {

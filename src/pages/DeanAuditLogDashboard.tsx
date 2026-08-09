@@ -5,6 +5,7 @@ import { jsPDF } from 'jspdf';
 import { ShieldCheck, Download, ArrowLeft, Trash2, Edit2, CheckCircle2, AlertCircle, Search, Calendar, User, RefreshCw } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 import { syncApplicationsFromFirestore } from '../lib/memberDb';
+import { firebaseFetchAllDeanNominations, syncDeanDataFromFirestore } from '../lib/firebase';
 
 interface AdminNominationItem {
   id: string;
@@ -34,7 +35,10 @@ export default function DeanAuditLogDashboard() {
   const handleSyncData = async () => {
     setIsSyncing(true);
     try {
-      await syncApplicationsFromFirestore();
+      await Promise.all([
+        syncApplicationsFromFirestore().catch(() => {}),
+        syncDeanDataFromFirestore().catch(() => {})
+      ]);
     } catch (e) {
       console.warn('Sync error:', e);
     }
@@ -44,7 +48,14 @@ export default function DeanAuditLogDashboard() {
 
   useEffect(() => {
     if (isAdmin) {
-      syncApplicationsFromFirestore().catch(() => {}).finally(() => {
+      // Fetch immediately so UI loads instantly
+      fetchAdminNominations();
+
+      // Run background syncs
+      Promise.all([
+        syncApplicationsFromFirestore().catch(() => {}),
+        syncDeanDataFromFirestore().catch(() => {})
+      ]).then(() => {
         fetchAdminNominations();
       });
     }
@@ -52,11 +63,30 @@ export default function DeanAuditLogDashboard() {
 
   const fetchAdminNominations = async () => {
     try {
-      const res = await fetch('/api/admin/dean-nominations');
-      const data = await res.json();
-      if (data.success && Array.isArray(data.nominations)) {
-        setNominations(data.nominations);
+      let serverNoms: AdminNominationItem[] = [];
+      let firestoreNoms: AdminNominationItem[] = [];
+
+      const [serverRes, fsRes] = await Promise.allSettled([
+        fetch('/api/admin/dean-nominations').then(r => r.json()),
+        firebaseFetchAllDeanNominations()
+      ]);
+
+      if (serverRes.status === 'fulfilled' && serverRes.value?.success && Array.isArray(serverRes.value.nominations)) {
+        serverNoms = serverRes.value.nominations;
       }
+
+      if (fsRes.status === 'fulfilled' && fsRes.value?.success && Array.isArray(fsRes.value.nominations)) {
+        firestoreNoms = fsRes.value.nominations;
+      }
+
+      const map = new Map<string, AdminNominationItem>();
+      for (const item of [...firestoreNoms, ...serverNoms]) {
+        if (!item) continue;
+        const key = (item.voter_email || item.id || Math.random().toString()).toLowerCase().trim();
+        map.set(key, item);
+      }
+
+      setNominations(Array.from(map.values()));
     } catch (err) {
       console.error('Error fetching admin dean nominations:', err);
     } finally {

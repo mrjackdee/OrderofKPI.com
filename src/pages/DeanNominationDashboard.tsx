@@ -5,10 +5,11 @@ import { jsPDF } from 'jspdf';
 import { Award, ShieldCheck, Download, Users, ArrowLeft, BarChart3, FileText, CheckCircle2, RefreshCw } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 import { syncApplicationsFromFirestore } from '../lib/memberDb';
-import { syncDeanDataFromFirestore } from '../lib/firebase';
+import { syncDeanDataFromFirestore, firebaseFetchAllDeanNominations } from '../lib/firebase';
 
 interface NominationItem {
   id: string;
+  voter_email?: string;
   nominee_first_name: string;
   nominee_last_name: string;
   statement: string;
@@ -36,10 +37,14 @@ export default function DeanNominationDashboard() {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     if (canAccess) {
+      // Fetch immediately so UI loads instantly
+      fetchNominations();
+
+      // Trigger background syncs asynchronously
       Promise.all([
         syncApplicationsFromFirestore().catch(() => {}),
         syncDeanDataFromFirestore().catch(() => {})
-      ]).finally(() => {
+      ]).then(() => {
         fetchNominations();
       });
     }
@@ -47,11 +52,33 @@ export default function DeanNominationDashboard() {
 
   const fetchNominations = async () => {
     try {
-      const res = await fetch('/api/dean-nominations');
-      const data = await res.json();
-      if (data.success && Array.isArray(data.nominations)) {
-        setNominations(data.nominations);
+      let serverNoms: NominationItem[] = [];
+      let firestoreNoms: NominationItem[] = [];
+
+      const [serverRes, fsRes] = await Promise.allSettled([
+        fetch('/api/dean-nominations').then(r => r.json()),
+        firebaseFetchAllDeanNominations()
+      ]);
+
+      if (serverRes.status === 'fulfilled' && serverRes.value?.success && Array.isArray(serverRes.value.nominations)) {
+        serverNoms = serverRes.value.nominations;
       }
+
+      if (fsRes.status === 'fulfilled' && fsRes.value?.success && Array.isArray(fsRes.value.nominations)) {
+        firestoreNoms = fsRes.value.nominations;
+      }
+
+      const map = new Map<string, NominationItem>();
+
+      for (const item of [...firestoreNoms, ...serverNoms]) {
+        if (!item) continue;
+        const key = (item.voter_email || item.id || Math.random().toString()).toLowerCase().trim();
+        if (!map.has(key) || (item.timestamp && map.get(key)?.timestamp && new Date(item.timestamp) > new Date(map.get(key)!.timestamp))) {
+          map.set(key, item);
+        }
+      }
+
+      setNominations(Array.from(map.values()));
     } catch (err) {
       console.error('Error fetching dean nominations:', err);
     } finally {
