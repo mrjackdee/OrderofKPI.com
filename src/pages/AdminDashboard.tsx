@@ -36,7 +36,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Member, Candidate } from '../types';
-import { prospectiveMembers, fetchAllApplications, syncApplicationsFromFirestore, isQAAccount } from '../lib/memberDb';
+import { prospectiveMembers, fetchAllApplications, syncApplicationsFromFirestore } from '../lib/memberDb';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import { googleSignIn, getAccessToken } from '../lib/googleAuth';
 import { createGoogleForm, getGoogleForm, getGoogleFormResponses } from '../lib/googleWorkspace';
@@ -448,14 +448,11 @@ export default function AdminDashboard() {
     try {
       const response = await fetch('/api/members');
       const data = await response.json();
-      if (data.success && Array.isArray(data.members) && data.members.length > 0) {
+      if (data.success) {
         setMembers(data.members);
-      } else {
-        setMembers(defaultMembers as any);
       }
     } catch (error) {
-      console.warn('Backend API /api/members unavailable, using defaultMembers roster:', error);
-      setMembers(defaultMembers as any);
+      console.error('Error fetching members:', error);
     }
   };
 
@@ -478,15 +475,7 @@ export default function AdminDashboard() {
         setCandidates(fallbacks);
       }
     } catch (error) {
-      console.warn('Backend API /api/candidates unavailable, using prospectiveMembers list:', error);
-      const fallbacks: Candidate[] = prospectiveMembers.map(m => ({
-        id: 'cand_' + m.email.replace(/[^a-z0-9]/g, '_'),
-        name: m.name,
-        email: m.email,
-        status: 'Inquiry',
-        application_date: ''
-      }));
-      setCandidates(fallbacks);
+      console.error('Error fetching candidates:', error);
     }
   };
 
@@ -664,41 +653,18 @@ export default function AdminDashboard() {
 
   const mergedCandidates = useMemo(() => {
     const submittedAppsMap = new Map<string, any>();
-    const submittedAppsByNameMap = new Map<string, any>();
-
     applications.forEach(app => {
-      if (!app) return;
-      let email = (app.email || app.data?.email || '').toLowerCase().trim();
-      if (!email && app.id && app.id.includes('_')) {
-        const parts = app.id.split('_');
-        if (parts.length >= 3) {
-          const domainExt = parts.pop();
-          const domainName = parts.pop();
-          email = `${parts.join('.')}@${domainName}.${domainExt}`.toLowerCase().trim();
-        }
-      }
-
-      if (email) {
-        submittedAppsMap.set(email, app);
-      }
-
-      const firstName = app.data?.firstName || app.firstName || '';
-      const lastName = app.data?.lastName || app.lastName || '';
-      const fullName = `${firstName} ${lastName}`.toLowerCase().trim();
-      if (fullName && fullName.length > 2) {
-        submittedAppsByNameMap.set(fullName, app);
+      if (app && (app.status === 'submitted' || app.submitted_at || app.submittedAt)) {
+        if (app.email) submittedAppsMap.set(app.email.toLowerCase().trim(), app);
       }
     });
 
     const seenEmails = new Set<string>();
     const updated = candidates.map(c => {
       const normEmail = (c.email || '').toLowerCase().trim();
-      const normName = (c.name || '').toLowerCase().trim();
       if (normEmail) seenEmails.add(normEmail);
-
-      const app = (normEmail ? submittedAppsMap.get(normEmail) : null) || (normName ? submittedAppsByNameMap.get(normName) : null);
-
-      if (app) {
+      if (normEmail && submittedAppsMap.has(normEmail)) {
+        const app = submittedAppsMap.get(normEmail);
         const appPhone = app?.data?.phone || app?.phone || c.phone || '';
         const appDate = (app?.submitted_at || app?.submittedAt || app?.last_saved_at || app?.lastSavedAt || '').split('T')[0];
         return {
@@ -738,7 +704,6 @@ export default function AdminDashboard() {
   }, [candidates, applications]);
 
   const filteredCandidates = mergedCandidates.filter(c => {
-    if (isQAAccount(c.email)) return false;
     const matchesSearch = c.name.toLowerCase().includes(candidateSearch.toLowerCase()) || c.email.toLowerCase().includes(candidateSearch.toLowerCase());
     const matchesStage = candidateStageFilter === 'all' || c.status === candidateStageFilter;
     return matchesSearch && matchesStage;
@@ -1101,16 +1066,7 @@ export default function AdminDashboard() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredCandidates.map((candidate) => {
-                const cEmail = (candidate.email || '').toLowerCase().trim();
-                const cName = (candidate.name || '').toLowerCase().trim();
-
-                const matchingApp = applications.find(a => {
-                  const aEmail = (a.email || a.data?.email || '').toLowerCase().trim();
-                  const firstName = a.data?.firstName || a.firstName || '';
-                  const lastName = a.data?.lastName || a.lastName || '';
-                  const aName = `${firstName} ${lastName}`.toLowerCase().trim();
-                  return (cEmail && aEmail && cEmail === aEmail) || (cName && aName && cName === aName);
-                });
+                const matchingApp = applications.find(a => a.email.toLowerCase() === candidate.email.toLowerCase());
                 return (
                 <div 
                   key={candidate.id}

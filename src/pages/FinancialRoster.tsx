@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 import { Member } from '../types';
-import { syncApplicationsFromFirestore, isQAAccount } from '../lib/memberDb';
+import { syncApplicationsFromFirestore } from '../lib/memberDb';
 
 export default function FinancialRoster() {
   const navigate = useNavigate();
@@ -152,7 +152,6 @@ export default function FinancialRoster() {
   };
 
   const filteredRoster = members.filter(member => 
-    !isQAAccount(member.email) &&
     member.name.toLowerCase().includes(searchTerm.toLowerCase())
   ).sort((a, b) => {
     if (sortBy === 'lastName') {
