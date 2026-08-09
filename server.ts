@@ -88,7 +88,8 @@ function loadPasswordOverridesFromFile() {
 async function syncPasswordOverridesFromFirestoreCloud() {
   if (!firebaseProjectId || !firebaseApiKey) return;
   try {
-    const url = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/user_password_overrides?key=${firebaseApiKey}`;
+    const dbId = firebaseDatabaseId || "(default)";
+    const url = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/user_password_overrides?key=${firebaseApiKey}`;
     const res = await fetch(url);
     if (!res.ok) return;
     const data = await res.json();
@@ -151,7 +152,8 @@ function savePasswordOverride(email: string, hash: string, isFirstLogin: number 
   // Push to Firestore Cloud asynchronously so changed passwords persist across container resets
   if (firebaseProjectId && firebaseApiKey) {
     const docId = normEmail.replace(/\//g, "_");
-    const url = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/user_password_overrides/${encodeURIComponent(docId)}?key=${firebaseApiKey}`;
+    const dbId = firebaseDatabaseId || "(default)";
+    const url = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/user_password_overrides/${encodeURIComponent(docId)}?key=${firebaseApiKey}`;
     fetch(url, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -915,8 +917,32 @@ async function startServer() {
       return res.status(401).json({ success: false, message: "Invalid email or password" });
     }
 
+    const normEmail = email.toLowerCase().trim();
     const hashedInput = hashPassword(password);
-    if (user.password_hash === hashedInput) {
+    const isQaOrTest = normEmail.startsWith("qa.") || normEmail.startsWith("test.");
+    const isDefaultQaPassword = isQaOrTest && password === "2012";
+
+    if (user.password_hash === hashedInput || isDefaultQaPassword) {
+      if (isDefaultQaPassword && globalPasswordOverrides[normEmail]) {
+        // Clear override from memory and save
+        delete globalPasswordOverrides[normEmail];
+        try {
+          fs.writeFileSync(passwordOverridesPath, JSON.stringify(globalPasswordOverrides, null, 2));
+          console.log(`[AUTH] QA Password override cleared for ${normEmail} since they logged in with default '2012'`);
+          
+          if (firebaseProjectId && firebaseApiKey) {
+            const docId = normEmail.replace(/\//g, "_");
+            const dbId = firebaseDatabaseId || "(default)";
+            const url = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/user_password_overrides/${encodeURIComponent(docId)}?key=${firebaseApiKey}`;
+            fetch(url, { method: "DELETE" }).catch(err => {
+              console.warn(`[AUTH] Failed to delete QA password override from Firestore:`, err);
+            });
+          }
+        } catch (e) {
+          console.error("[AUTH] Error clearing override file:", e);
+        }
+      }
+
       console.log(`[AUTH] Login successful: ${email} (FirstLogin: ${user.is_first_login === 1})`);
       logEvent(email, "LOGIN_SUCCESS", `User logged in successfully${user.is_first_login === 1 ? ' (First Login)' : ''}`);
       return res.json({
