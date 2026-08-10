@@ -4,6 +4,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Lock, Mail, User, ArrowRight, ShieldCheck, Loader2, FileText, CheckCircle, KeyRound, RefreshCw } from 'lucide-react';
 import { performApplicantLogin, performApplicantRegister, requestApplicantPasswordReset } from '../lib/memberDb';
 import { useToast } from '../components/ToastContext';
+import { getFriendlyError } from '../lib/utils';
 
 export default function ApplicantLogin() {
   const [mode, setMode] = useState<'login' | 'reset'>('login');
@@ -55,9 +56,7 @@ export default function ApplicantLogin() {
         }
       }
     } catch (err: any) {
-      const friendlyMsg = err.name === 'AbortError' || err.message?.includes('aborted') || err.message?.includes('network') || err.message?.includes('Failed to fetch')
-        ? 'The request took longer than expected or the system is busy. Please try again or contact info@orderofkpi.org for support.'
-        : (err.message || 'Unable to complete your sign in. Please check your credentials or contact info@orderofkpi.org.');
+      const friendlyMsg = getFriendlyError(err, 'Unable to complete your sign in. Please check your credentials or contact info@orderofkpi.org.');
       setError(friendlyMsg);
       showToast(friendlyMsg, 'error');
     } finally {

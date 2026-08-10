@@ -9,6 +9,7 @@ import {
   firebaseFetchAllDeanNominations, 
   syncDeanDataFromFirestore 
 } from '../lib/firebase';
+import { getFriendlyError } from '../lib/utils';
 
 interface NomineeItem {
   fullName: string;
@@ -201,7 +202,7 @@ export default function DeanVotingForm() {
         throw new Error(serverError || fsError || 'Failed to submit vote. Please check your network connection.');
       }
     } catch (err: any) {
-      setError(err.message || 'Network error occurred.');
+      setError(getFriendlyError(err, 'Failed to submit vote. Please try again.'));
     } finally {
       setSubmitting(false);
     }

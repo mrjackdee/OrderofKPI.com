@@ -4,6 +4,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Lock, Mail, ArrowRight, ShieldCheck, Loader2, RefreshCw, CheckCircle } from 'lucide-react';
 import { performHybridLogin, requestApplicantPasswordReset } from '../lib/memberDb';
 import { useToast } from '../components/ToastContext';
+import { getFriendlyError } from '../lib/utils';
 
 export default function Login() {
   const [mode, setMode] = useState<'login' | 'reset'>('login');
@@ -76,10 +77,7 @@ export default function Login() {
         const defaultPath = isApplicant ? '/membership-application' : '/member-portal';
         navigate(locationFrom || defaultPath, { replace: true });
       } catch (err: any) {
-        const isTechnical = err.message.includes('JSON') || err.message.includes('token') || err.message.includes('fetch');
-        const friendlyMsg = isTechnical 
-          ? 'The authentication service is temporarily busy or unavailable. Please check your connection or contact info@orderofkpi.org.'
-          : (err.message || 'Unable to sign in. Please check your credentials or contact info@orderofkpi.org.');
+        const friendlyMsg = getFriendlyError(err, 'Unable to sign in. Please check your credentials or contact info@orderofkpi.org.');
         setError(friendlyMsg);
         showToast(friendlyMsg, 'error');
       } finally {
@@ -94,7 +92,7 @@ export default function Login() {
           throw new Error(result.message);
         }
       } catch (err: any) {
-        const friendlyMsg = err.message || 'Unable to process your request at this time. Please contact info@orderofkpi.org.';
+        const friendlyMsg = getFriendlyError(err, 'Unable to process your request at this time. Please contact info@orderofkpi.org.');
         setError(friendlyMsg);
         showToast(friendlyMsg, 'error');
       } finally {

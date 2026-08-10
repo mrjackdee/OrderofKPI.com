@@ -6,6 +6,7 @@ import { ShieldCheck, Download, ArrowLeft, Trash2, Edit2, CheckCircle2, AlertCir
 import MemberHeader from '../components/MemberHeader';
 import { syncApplicationsFromFirestore } from '../lib/memberDb';
 import { firebaseFetchAllDeanNominations, syncDeanDataFromFirestore } from '../lib/firebase';
+import { getFriendlyError } from '../lib/utils';
 
 interface AdminNominationItem {
   id: string;
@@ -112,7 +113,7 @@ export default function DeanAuditLogDashboard() {
         setError(data.message || 'Failed to delete nomination.');
       }
     } catch (err: any) {
-      setError(err.message || 'Network error.');
+      setError(getFriendlyError(err, 'An error occurred. Please try again.'));
     }
   };
 
@@ -145,7 +146,7 @@ export default function DeanAuditLogDashboard() {
         setError(data.message || 'Failed to update nomination.');
       }
     } catch (err: any) {
-      setError(err.message || 'Network error.');
+      setError(getFriendlyError(err, 'An error occurred while updating nomination.'));
     }
   };
 

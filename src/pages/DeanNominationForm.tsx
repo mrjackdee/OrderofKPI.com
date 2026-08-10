@@ -9,6 +9,7 @@ import {
   firebaseFetchDeanNomination, 
   syncDeanDataFromFirestore 
 } from '../lib/firebase';
+import { getFriendlyError } from '../lib/utils';
 
 export default function DeanNominationForm() {
   const { showToast } = useToast();
@@ -186,7 +187,7 @@ export default function DeanNominationForm() {
       }
     } catch (err: any) {
       console.error('[DeanNominationForm] Error during submission:', err);
-      const errMsg = err.message || 'Network error occurred.';
+      const errMsg = getFriendlyError(err, 'Failed to record nomination. Please verify your details and try again.');
       setError(errMsg);
       showToast(errMsg, 'error');
     } finally {
