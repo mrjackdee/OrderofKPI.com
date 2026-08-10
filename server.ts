@@ -482,7 +482,7 @@ async function initDb() {
         targetIsFirstLogin = 0;
       } else if (emailNorm === "admin@orderofkpi.org") {
         targetPasswordHash = hashPassword("2012");
-        targetIsFirstLogin = 1;
+        targetIsFirstLogin = 0;
       }
 
       if (existingUser) {
