@@ -127,7 +127,6 @@ export async function firebaseRegisterApplicant(name: string, email: string, pas
 }
 
 const INITIAL_CANDIDATES_LIST: Record<string, { name: string; pass: string }> = {
-  'jackdee.sync@gmail.com': { name: 'Jack Tester', pass: 'atlanta' },
   'averyt16@gmail.com': { name: 'Avery Torrence', pass: '0784' },
   'hupirate90@me.com': { name: 'Charles Edward Miller Jr', pass: '9348' },
   'quincyld86@gmail.com': { name: 'Dr. Quincy Dinnerson', pass: '1326' },
@@ -391,11 +390,12 @@ export function normalizeApplication(app: any): any {
     };
   }
 
-  const email = (app.email || '').toLowerCase().trim();
+  const email = (app.email || app.data?.email || '').toLowerCase().trim();
+  const rawStatus = (app.status || app.data?.status || 'draft').toString().toLowerCase().trim();
   return {
     id: app.id || 'app_' + email.replace(/[^a-zA-Z0-9]/g, '_'),
     email: email,
-    status: app.status || 'draft',
+    status: rawStatus === 'submitted' ? 'submitted' : rawStatus,
     lastSavedAt: app.lastSavedAt || app.last_saved_at || new Date().toISOString(),
     last_saved_at: app.last_saved_at || app.lastSavedAt || new Date().toISOString(),
     submittedAt: app.submittedAt || app.submitted_at || null,
@@ -540,37 +540,36 @@ export async function firebaseFetchAllApplications() {
       const list: any[] = [];
       const seenEmails = new Set<string>();
 
+      const processDoc = (docSnapshot: any) => {
+        const appData = docSnapshot.data();
+        if (!appData) return;
+        let emailCandidate = appData.email || appData.data?.email || '';
+        if (!emailCandidate && docSnapshot.id) {
+          if (docSnapshot.id.includes('@')) {
+            emailCandidate = docSnapshot.id;
+          }
+        }
+        const normEmail = emailCandidate.toLowerCase().trim();
+        if (normEmail === 'candidate@gmail.com' || normEmail === 'dennis@gmail.com' || normEmail === 'jackdee.sync@gmail.com') return;
+        if (normEmail && !seenEmails.has(normEmail)) {
+          const normalized = normalizeApplication({ ...appData, email: normEmail });
+          if (normalized && normalized.email) {
+            list.push(normalized);
+            seenEmails.add(normalized.email);
+          }
+        }
+      };
+
       try {
         const querySnapshot1 = await getDocs(collection(db, 'membership_applications'));
-        querySnapshot1.forEach((docSnapshot) => {
-          const appData = docSnapshot.data();
-          if (appData && appData.email) {
-            const normalized = normalizeApplication(appData);
-            if (normalized) {
-              list.push(normalized);
-              seenEmails.add(normalized.email);
-            }
-          }
-        });
+        querySnapshot1.forEach(processDoc);
       } catch (err) {
         console.warn('Could not load membership_applications collection:', err);
       }
 
       try {
         const querySnapshot2 = await getDocs(collection(db, 'applications'));
-        querySnapshot2.forEach((docSnapshot) => {
-          const appData = docSnapshot.data();
-          if (appData && appData.email) {
-            const normEmail = appData.email.toLowerCase().trim();
-            if (!seenEmails.has(normEmail)) {
-              const normalized = normalizeApplication(appData);
-              if (normalized) {
-                list.push(normalized);
-                seenEmails.add(normEmail);
-              }
-            }
-          }
-        });
+        querySnapshot2.forEach(processDoc);
       } catch (err) {
         console.warn('Could not load applications collection:', err);
       }
@@ -823,7 +822,10 @@ export async function firebaseFetchAllCandidates() {
     const list: any[] = [];
     const querySnapshot = await getDocs(collection(db, 'candidates'));
     querySnapshot.forEach((docSnap) => {
-      list.push(docSnap.data());
+      const data = docSnap.data();
+      const normEmail = (data?.email || docSnap.id || '').toLowerCase().trim();
+      if (normEmail === 'candidate@gmail.com' || normEmail === 'dennis@gmail.com' || normEmail === 'jackdee.sync@gmail.com') return;
+      list.push(data);
     });
     return { success: true, candidates: list };
   } catch (err: any) {

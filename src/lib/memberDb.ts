@@ -50,7 +50,6 @@ export const defaultMembers: MemberUser[] = [
 ];
 
 export const prospectiveMembers: MemberUser[] = [
-  { name: "Jack Tester", email: "jackdee.sync@gmail.com", role: "applicant" },
   { name: "Avery Torrence", email: "averyt16@gmail.com", role: "applicant" },
   { name: "Charles Miller", email: "hupirate90@me.com", role: "applicant" },
   { name: "Quincy Dinnerson", email: "quincyld86@gmail.com", role: "applicant" },
@@ -77,8 +76,6 @@ const MEMBER_INITIAL_PASSWORDS: Record<string, string> = {
 };
 
 const CANDIDATE_INITIAL_PASSWORDS: Record<string, string> = {
-  'candidate@gmail.com': '2012',
-  'jackdee.sync@gmail.com': 'atlanta',
   'averyt16@gmail.com': '0784',
   'hupirate90@me.com': '9348',
   'quincyld86@gmail.com': '1326',
@@ -728,8 +725,9 @@ export async function fetchAllApplications() {
       hasNewFromFb = true;
     } else {
       const existing = mergedMap.get(email);
-      // Upgrade if Firestore has 'submitted' and API didn't
-      if (fbApp.status === 'submitted' && existing.status !== 'submitted') {
+      const isFbSubmitted = (fbApp.status || '').toLowerCase() === 'submitted' || !!fbApp.submitted_at || !!fbApp.submittedAt;
+      const isExistSubmitted = (existing.status || '').toLowerCase() === 'submitted' || !!existing.submitted_at || !!existing.submittedAt;
+      if (isFbSubmitted && !isExistSubmitted) {
         mergedMap.set(email, { ...existing, ...fbApp, status: 'submitted' });
         hasNewFromFb = true;
       }

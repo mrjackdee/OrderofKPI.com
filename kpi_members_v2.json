@@ -251,15 +251,6 @@
     "role": "prospective",
     "title": "Candidate"
   },
-  "candidate@gmail.com": {
-    "email": "candidate@gmail.com",
-    "name": "John Candidate",
-    "first_name": "John",
-    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
-    "is_first_login": 0,
-    "role": "prospective",
-    "title": "Candidate"
-  },
   "anthony.jones@orderofkpi.org": {
     "email": "anthony.jones@orderofkpi.org",
     "name": "Anthony Jones",
@@ -331,15 +322,6 @@
     "is_first_login": 1,
     "role": "member",
     "title": ""
-  },
-  "jackdee.sync@gmail.com": {
-    "email": "jackdee.sync@gmail.com",
-    "name": "Jack Tester",
-    "first_name": "Jack",
-    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
-    "is_first_login": 0,
-    "role": "prospective",
-    "title": "Candidate"
   },
   "qa.admin@orderofkpi.org": {
     "email": "qa.admin@orderofkpi.org",

@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { Candidate } from '../types';
 import { fetchAllApplications, prospectiveMembers, syncApplicationsFromFirestore } from '../lib/memberDb';
-import { firebaseUpdateCandidateStatus } from '../lib/firebase';
+import { firebaseUpdateCandidateStatus, firebaseFetchAllCandidates } from '../lib/firebase';
 import { generateApplicationPDF } from '../utils/pdfGenerator';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 
@@ -93,11 +93,47 @@ export default function CandidateTracker() {
 
   const fetchCandidates = async () => {
     try {
-      const response = await fetch('/api/candidates');
-      const data = await response.json();
-      const apiCandidates: Candidate[] = (data.success && Array.isArray(data.candidates)) ? data.candidates : [];
+      const apiFetch = fetch('/api/candidates')
+        .then(res => res.json())
+        .catch(() => ({ success: false, candidates: [] }));
+      const fbFetch = firebaseFetchAllCandidates()
+        .catch(() => ({ success: false, candidates: [] }));
 
-      setCandidates(apiCandidates);
+      const [data, fbData] = await Promise.all([apiFetch, fbFetch]);
+
+      const apiCandidates: Candidate[] = (data && data.success && Array.isArray(data.candidates)) ? data.candidates : [];
+      const fbCandidates: Candidate[] = (fbData && fbData.success && Array.isArray(fbData.candidates)) ? fbData.candidates : [];
+
+      const candMap = new Map<string, Candidate>();
+      apiCandidates.forEach(c => {
+        const e = (c.email || '').toLowerCase().trim();
+        if (e) candMap.set(e, c);
+      });
+
+      fbCandidates.forEach(c => {
+        const e = (c.email || '').toLowerCase().trim();
+        if (!e) return;
+        if (!candMap.has(e)) {
+          candMap.set(e, {
+            id: c.id || 'cand_' + e.replace(/[^a-z0-9]/g, '_'),
+            name: c.name || e.split('@')[0],
+            email: e,
+            phone: c.phone || '',
+            status: (c.status || 'Applied') as Candidate['status'],
+            application_date: c.application_date || c.appliedDate || c.applicationDate || '',
+            scores: c.scores || {},
+            notes: c.notes || '',
+            document_vault: c.document_vault || []
+          });
+        } else {
+          const existing = candMap.get(e)!;
+          if (existing.status === 'Inquiry' && c.status && c.status !== 'Inquiry') {
+            existing.status = c.status as Candidate['status'];
+          }
+        }
+      });
+
+      setCandidates(Array.from(candMap.values()));
     } catch (error) {
       console.error('Error fetching candidates:', error);
     } finally {
@@ -209,8 +245,11 @@ export default function CandidateTracker() {
   const mergedCandidates = useMemo(() => {
     const submittedAppsMap = new Map<string, any>();
     applications.forEach(app => {
-      if (app && (app.status === 'submitted' || app.submitted_at || app.submittedAt)) {
-        if (app.email) submittedAppsMap.set(app.email.toLowerCase().trim(), app);
+      const appStatus = (app?.status || app?.data?.status || '').toString().toLowerCase().trim();
+      const isSubmitted = appStatus === 'submitted' || !!app?.submitted_at || !!app?.submittedAt;
+      if (app && isSubmitted) {
+        const appEmail = (app.email || app.data?.email || '').toLowerCase().trim();
+        if (appEmail) submittedAppsMap.set(appEmail, app);
       }
     });
 
@@ -221,11 +260,12 @@ export default function CandidateTracker() {
       if (normEmail && submittedAppsMap.has(normEmail)) {
         const app = submittedAppsMap.get(normEmail);
         const appPhone = app?.data?.phone || app?.phone || c.phone || '';
-        const appDate = (app?.submitted_at || app?.submittedAt || app?.last_saved_at || app?.lastSavedAt || '').split('T')[0];
+        const rawDate = app?.submitted_at || app?.submittedAt || app?.last_saved_at || app?.lastSavedAt || '';
+        const appDate = typeof rawDate === 'string' ? rawDate.split('T')[0] : '';
         return {
           ...c,
           status: (c.status === 'Inquiry' ? 'Applied' : c.status) as Candidate['status'],
-          phone: appPhone,
+          phone: appPhone || c.phone,
           application_date: c.application_date || appDate || ''
         };
       }
@@ -239,7 +279,8 @@ export default function CandidateTracker() {
         const lastName = app.data?.lastName || app.lastName || '';
         const name = `${firstName} ${lastName}`.trim();
         const appPhone = app.data?.phone || app.phone || '';
-        const appDate = (app.submitted_at || app.submittedAt || app.last_saved_at || app.lastSavedAt || new Date().toISOString()).split('T')[0];
+        const rawDate = app.submitted_at || app.submittedAt || app.last_saved_at || app.lastSavedAt || new Date().toISOString();
+        const appDate = typeof rawDate === 'string' ? rawDate.split('T')[0] : '';
         
         updated.push({
           id: 'cand_' + normEmail.replace(/[^a-z0-9]/g, '_'),
@@ -255,7 +296,10 @@ export default function CandidateTracker() {
       }
     });
 
-    return updated;
+    return updated.filter(c => {
+      const e = (c.email || '').toLowerCase().trim();
+      return e !== 'jackdee.sync@gmail.com' && e !== 'candidate@gmail.com' && e !== 'dennis@gmail.com';
+    });
   }, [candidates, applications]);
 
   const updateCandidateStatus = async (id: string, newStatus: Candidate['status']) => {

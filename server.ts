@@ -53,8 +53,7 @@ let globalPasswordOverrides: Record<string, PasswordOverrideRecord> = {};
 
 function loadPasswordOverridesFromFile() {
   globalPasswordOverrides = {
-    "james.haywood@orderofkpi.org": { hash: hashPassword("2012"), isFirstLogin: 0, updatedAt: new Date().toISOString() },
-    "jackdee.sync@gmail.com": { hash: hashPassword("atlanta"), isFirstLogin: 0, updatedAt: new Date().toISOString() }
+    "james.haywood@orderofkpi.org": { hash: hashPassword("2012"), isFirstLogin: 0, updatedAt: new Date().toISOString() }
   };
 
   if (fs.existsSync(passwordOverridesPath)) {
@@ -215,7 +214,6 @@ const defaultUsers = [
 ];
 
 const initialCandidates = [
-  { name: "Jack Tester", email: "jackdee.sync@gmail.com", phone: "404-555-0199", pass: "atlanta" },
   { name: "Avery Torrence", email: "averyt16@gmail.com", phone: "770-873-0784", pass: "0784" },
   { name: "Charles Miller", email: "hupirate90@me.com", phone: "301-602-9348", pass: "9348" },
   { name: "Quincy Dinnerson", email: "quincyld86@gmail.com", phone: "336-420-1326", pass: "1326" },
@@ -318,8 +316,7 @@ async function initDb() {
   const defaultPasswordHash = hashPassword("atlanta");
   const userPasswordOverrides: Record<string, string> = {
     "james.haywood@orderofkpi.org": "2012",
-    "admin@orderofkpi.org": "2012",
-    "jackdee.sync@gmail.com": "atlanta"
+    "admin@orderofkpi.org": "2012"
   };
   const testUsers = ["admin@orderofkpi.org", "jack@orderofkpi.org"];
 
@@ -436,11 +433,11 @@ async function initDb() {
       // Column already exists
     }
     
-    // Ensure legacy deshaun.stafford@orderofkpi.org, dennis@gmail.com, and candidate@gmail.com accounts are purged
+    // Ensure legacy deshaun.stafford@orderofkpi.org, dennis@gmail.com, jackdee.sync@gmail.com, and candidate@gmail.com accounts are purged
     try {
-      sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) IN ('deshaun.stafford@orderofkpi.org', 'candidate@orderofkpi.org', 'dennis@gmail.com', 'candidate@gmail.com')").run();
-      sqliteDb.prepare("DELETE FROM candidates WHERE LOWER(email) IN ('candidate@orderofkpi.org', 'dennis@gmail.com', 'candidate@gmail.com')").run();
-      sqliteDb.prepare("DELETE FROM membership_applications WHERE LOWER(email) IN ('dennis@gmail.com', 'candidate@gmail.com')").run();
+      sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) IN ('deshaun.stafford@orderofkpi.org', 'candidate@orderofkpi.org', 'dennis@gmail.com', 'candidate@gmail.com', 'jackdee.sync@gmail.com')").run();
+      sqliteDb.prepare("DELETE FROM candidates WHERE LOWER(email) IN ('candidate@orderofkpi.org', 'dennis@gmail.com', 'candidate@gmail.com', 'jackdee.sync@gmail.com')").run();
+      sqliteDb.prepare("DELETE FROM membership_applications WHERE LOWER(email) IN ('dennis@gmail.com', 'candidate@gmail.com', 'jackdee.sync@gmail.com')").run();
     } catch (e) {
       // Ignore
     }
@@ -1277,7 +1274,6 @@ async function startServer() {
     let defaultPass = "atlanta";
     const initialCandidates: Record<string, string> = {
       'james.haywood@orderofkpi.org': '2012',
-      'jackdee.sync@gmail.com': 'atlanta',
       'averyt16@gmail.com': '0784',
       'hupirate90@me.com': '9348',
       'quincyld86@gmail.com': '1326',
@@ -1653,7 +1649,7 @@ async function startServer() {
       // Filter out test accounts
       apps = apps.filter(a => {
         const email = (a.email || "").toLowerCase().trim();
-        return email !== 'candidate@gmail.com' && email !== 'dennis@gmail.com';
+        return email !== 'candidate@gmail.com' && email !== 'dennis@gmail.com' && email !== 'jackdee.sync@gmail.com';
       });
 
       res.json({ success: true, applications: apps });
@@ -1846,7 +1842,7 @@ async function startServer() {
             for (const app of applications) {
               const email = (app.email || "").toLowerCase().trim();
               if (!email) continue;
-              if (email === 'candidate@gmail.com' || email === 'dennis@gmail.com') continue;
+              if (email === 'candidate@gmail.com' || email === 'dennis@gmail.com' || email === 'jackdee.sync@gmail.com') continue;
 
               const status = app.status || "draft";
               const data = app.data || app; // Handle either format
@@ -1909,7 +1905,7 @@ async function startServer() {
       for (const app of applications) {
         const email = (app.email || "").toLowerCase().trim();
         if (!email) continue;
-        if (email === 'candidate@gmail.com' || email === 'dennis@gmail.com') continue;
+        if (email === 'candidate@gmail.com' || email === 'dennis@gmail.com' || email === 'jackdee.sync@gmail.com') continue;
 
         const status = app.status || "draft";
         const data = app.data || app;
@@ -1973,7 +1969,6 @@ async function startServer() {
     } catch (e) {}
     // Initial default fallback candidates
     return [
-      { id: 'cand_jackdee_sync_gmail_com', name: 'Jack Tester', email: 'jackdee.sync@gmail.com', phone: '404-555-0199', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
       { id: 'cand_averyt16_gmail_com', name: 'Avery Torrence', email: 'averyt16@gmail.com', phone: '770-873-0784', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
       { id: 'cand_hupirate90_me_com', name: 'Charles Miller', email: 'hupirate90@me.com', phone: '301-602-9348', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
       { id: 'cand_quincyld86_gmail_com', name: 'Dr. Quincy Dinnerson', email: 'quincyld86@gmail.com', phone: '336-420-1326', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
@@ -1994,7 +1989,7 @@ async function startServer() {
 
       if (useSqlite && sqliteDb) {
         try {
-          const submittedApps = sqliteDb.prepare("SELECT email, data, submitted_at, last_saved_at FROM membership_applications WHERE status = 'submitted'").all() as any[];
+          const submittedApps = sqliteDb.prepare("SELECT email, data, submitted_at, last_saved_at FROM membership_applications WHERE LOWER(status) = 'submitted' OR submitted_at IS NOT NULL").all() as any[];
           for (const app of submittedApps) {
             const normEmail = (app.email || "").toLowerCase().trim();
             if (!normEmail) continue;
@@ -2042,7 +2037,8 @@ async function startServer() {
           const jsonApps = JSON.parse(fs.readFileSync(appsJsonFile, "utf-8"));
           Object.keys(jsonApps).forEach((email) => {
             const app = jsonApps[email];
-            if (app && app.status === 'submitted') {
+            const appStatus = (app?.status || '').toString().toLowerCase();
+            if (app && (appStatus === 'submitted' || app.submitted_at || app.submittedAt)) {
               const normEmail = email.toLowerCase().trim();
               const foundCand = candidates.find(c => c.email.toLowerCase().trim() === normEmail);
               const dataObj = app.data || app;
@@ -2086,7 +2082,7 @@ async function startServer() {
       candidates = candidates.filter(c => {
         const cId = (c.id || "").toLowerCase().trim();
         const cEmail = (c.email || "").toLowerCase().trim();
-        const isDummy = cEmail === 'candidate@gmail.com' || cEmail === 'dennis@gmail.com';
+        const isDummy = cEmail === 'candidate@gmail.com' || cEmail === 'dennis@gmail.com' || cEmail === 'jackdee.sync@gmail.com';
         return !deletedSet.has(cId) && !deletedSet.has(cEmail) && !isDummy;
       });
 
@@ -2123,6 +2119,33 @@ async function startServer() {
           }
         })();
       }
+      
+      // Update JSON fallback
+      try {
+        const fallbackList = getFallbackCandidates();
+        let changed = false;
+        for (const cand of candidates) {
+          const emailNorm = (cand.email || "").toLowerCase().trim();
+          if (!emailNorm) continue;
+          const index = fallbackList.findIndex(c => c.email.toLowerCase() === emailNorm);
+          if (index >= 0) {
+            fallbackList[index] = { 
+              ...fallbackList[index], 
+              status: cand.status,
+              scores: cand.scores || {},
+              notes: cand.notes || "",
+              document_vault: cand.document_vault || []
+            };
+            changed = true;
+          }
+        }
+        if (changed) {
+          saveFallbackCandidates(fallbackList);
+        }
+      } catch (err) {
+        console.warn('Fallback sync failed:', err);
+      }
+      
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
@@ -2278,6 +2301,23 @@ async function startServer() {
             logEvent(reviewerEmail, "CANDIDATE_STATUS_CHANGE", `Updated candidate ${cand.name} status to ${status}`);
           }
         }
+      }
+
+      try {
+        const fallbackList = getFallbackCandidates();
+        const index = fallbackList.findIndex(c => c.id === id);
+        if (index >= 0) {
+          fallbackList[index] = { 
+            ...fallbackList[index], 
+            status, 
+            scores: scores || {}, 
+            notes: notes || "", 
+            document_vault: document_vault || [] 
+          };
+          saveFallbackCandidates(fallbackList);
+        }
+      } catch (err) {
+        console.warn('Fallback update failed:', err);
       }
 
       res.json({ success: true });

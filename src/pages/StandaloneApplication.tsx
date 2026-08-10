@@ -256,7 +256,7 @@ export default function StandaloneApplication() {
                     required
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    placeholder="e.g. jackdee.sync@gmail.com"
+                    placeholder="e.g. averyt16@gmail.com"
                     className="w-full bg-cream/40 border border-gold/20 rounded-xl py-3 px-4 text-ivy text-sm focus:outline-none focus:border-ivy"
                   />
                 </div>
