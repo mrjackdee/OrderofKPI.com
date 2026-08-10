@@ -142,7 +142,7 @@ export default function Login() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} noValidate className="space-y-5">
             <div className="space-y-1.5">
               <label className="text-[10px] text-silver/80 uppercase tracking-widest font-bold ml-1">Email Address</label>
               <div className="relative">

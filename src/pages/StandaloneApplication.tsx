@@ -178,7 +178,7 @@ export default function StandaloneApplication() {
             </div>
           </motion.div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={handleSubmit} noValidate className="space-y-8">
             {error && (
               <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-4 text-red-800 text-xs flex items-center gap-3">
                 <AlertCircle size={20} className="shrink-0 text-red-600" />

@@ -273,7 +273,7 @@ export default function DeanVotingForm() {
           ) : nominees.length === 0 ? (
             <div className="py-12 text-center text-gray-500 text-xs">No nominees are currently available for voting.</div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} noValidate className="space-y-6">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#1E3F20] mb-4">
                   Select Your Preferred Candidate <span className="text-red-500">*</span>

@@ -124,7 +124,7 @@ export default function ApplicantLogin() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-[10px] text-ivy/70 uppercase tracking-widest font-bold ml-1">Applicant Email</label>
               <div className="relative">
