@@ -17,14 +17,16 @@ export default function Login() {
   const location = useLocation();
   const { showToast } = useToast();
 
-  const from = (location.state as any)?.from?.pathname || '/intake-calendar';
+  const locationFrom = (location.state as any)?.from?.pathname;
 
   useEffect(() => {
     const isAuthenticated = !!sessionStorage.getItem('userEmail');
     if (isAuthenticated) {
-      navigate(from, { replace: true });
+      const role = sessionStorage.getItem('userRole');
+      const defaultPath = (role === 'applicant' || role === 'prospective') ? '/membership-application' : '/member-portal';
+      navigate(locationFrom || defaultPath, { replace: true });
     }
-  }, [navigate, from]);
+  }, [navigate, locationFrom]);
 
   useEffect(() => {
     const savedEmail = localStorage.getItem('kpi_saved_email');
@@ -70,7 +72,9 @@ export default function Login() {
         }
         sessionStorage.setItem('isFirstLogin', user.isFirstLogin ? 'true' : 'false');
 
-        navigate(from, { replace: true });
+        const isApplicant = user.role === 'applicant' || user.role === 'prospective';
+        const defaultPath = isApplicant ? '/membership-application' : '/member-portal';
+        navigate(locationFrom || defaultPath, { replace: true });
       } catch (err: any) {
         const isTechnical = err.message.includes('JSON') || err.message.includes('token') || err.message.includes('fetch');
         const friendlyMsg = isTechnical 
