@@ -6,6 +6,7 @@ import {
   firebaseSaveApplication, 
   firebaseFetchApplication,
   firebaseFetchAllApplications,
+  firebaseFetchAllCandidates,
   auth
 } from './firebase';
 
@@ -764,6 +765,15 @@ export async function syncApplicationsFromFirestore() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ applications: firestoreResult.applications }),
+      }).catch(() => {});
+    }
+
+    const candidatesResult = await firebaseFetchAllCandidates();
+    if (candidatesResult.success && candidatesResult.candidates) {
+      await fetch('/api/candidates/sync-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidates: candidatesResult.candidates }),
       }).catch(() => {});
     }
 

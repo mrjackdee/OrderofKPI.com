@@ -2096,6 +2096,39 @@ async function startServer() {
     }
   });
 
+  app.post("/api/candidates/sync-bulk", (req, res) => {
+    try {
+      const { candidates } = req.body;
+      if (!Array.isArray(candidates)) return res.status(400).json({ success: false });
+      
+      if (useSqlite && sqliteDb) {
+        sqliteDb.transaction(() => {
+          for (const cand of candidates) {
+            const email = (cand.email || "").toLowerCase().trim();
+            if (!email) continue;
+            const existing = sqliteDb.prepare("SELECT id FROM candidates WHERE LOWER(email) = ?").get(email) as any;
+            if (existing) {
+              sqliteDb.prepare(`
+                UPDATE candidates 
+                SET status = ?, scores = ?, notes = ?, document_vault = ?
+                WHERE id = ?
+              `).run(
+                cand.status,
+                JSON.stringify(cand.scores || {}),
+                cand.notes || "",
+                JSON.stringify(cand.document_vault || []),
+                existing.id
+              );
+            }
+          }
+        })();
+      }
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
   app.post("/api/candidates", (req, res) => {
     try {
       const { firstName: reqFirstName, lastName: reqLastName, name: reqName, email, phone, status, adminEmail } = req.body;

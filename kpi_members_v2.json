@@ -3,8 +3,8 @@
     "email": "admin@orderofkpi.org",
     "name": "Admin",
     "first_name": "Admin",
-    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
-    "is_first_login": 1,
+    "password_hash": "f6dcee407170f6a7ff4b541f6ff7838f00eb818281bfd853cf88d49e88f204d6",
+    "is_first_login": 0,
     "role": "admin",
     "title": "Administrator"
   },
@@ -13,7 +13,7 @@
     "name": "James Haywood Jr",
     "first_name": "James",
     "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
-    "is_first_login": 1,
+    "is_first_login": 0,
     "role": "Membership Committee Chair",
     "title": "2nd Anti-Basileus / Committee Chair"
   },
@@ -340,5 +340,50 @@
     "is_first_login": 0,
     "role": "prospective",
     "title": "Candidate"
+  },
+  "qa.admin@orderofkpi.org": {
+    "email": "qa.admin@orderofkpi.org",
+    "name": "QA Admin Agent",
+    "first_name": "QA",
+    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
+    "is_first_login": 1,
+    "role": "admin",
+    "title": "Administrator"
+  },
+  "qa.chair@orderofkpi.org": {
+    "email": "qa.chair@orderofkpi.org",
+    "name": "QA Chair Agent",
+    "first_name": "QA",
+    "password_hash": "f6dcee407170f6a7ff4b541f6ff7838f00eb818281bfd853cf88d49e88f204d6",
+    "is_first_login": 0,
+    "role": "Membership Committee Chair",
+    "title": "2nd Anti-Basileus / Committee Chair"
+  },
+  "qa.committee@orderofkpi.org": {
+    "email": "qa.committee@orderofkpi.org",
+    "name": "QA Committee Agent",
+    "first_name": "QA",
+    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
+    "is_first_login": 1,
+    "role": "Membership Committee",
+    "title": "Grammateus / Committee Member"
+  },
+  "qa.officer@orderofkpi.org": {
+    "email": "qa.officer@orderofkpi.org",
+    "name": "QA Officer Agent",
+    "first_name": "QA",
+    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
+    "is_first_login": 1,
+    "role": "officer",
+    "title": "1st Anti-Basileus"
+  },
+  "qa.member@orderofkpi.org": {
+    "email": "qa.member@orderofkpi.org",
+    "name": "QA Member Agent",
+    "first_name": "QA",
+    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
+    "is_first_login": 1,
+    "role": "member",
+    "title": "Member"
   }
 }

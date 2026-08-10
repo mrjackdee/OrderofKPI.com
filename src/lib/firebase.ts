@@ -797,3 +797,36 @@ export async function syncDeanDataFromFirestore() {
 }
 
 
+
+export async function firebaseUpdateCandidateStatus(email: string, status: string, scores: any = {}, notes: string = "", documentVault: any[] = []) {
+  try {
+    const normEmail = email.toLowerCase().trim();
+    const candRef = doc(db, 'candidates', normEmail);
+    const payload: any = {
+      email: normEmail,
+      status,
+      scores,
+      notes,
+      document_vault: documentVault,
+      updatedAt: new Date().toISOString()
+    };
+    await setDoc(candRef, payload, { merge: true });
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error updating candidate in Firestore:', err);
+    return { success: false, message: err.message };
+  }
+}
+
+export async function firebaseFetchAllCandidates() {
+  try {
+    const list: any[] = [];
+    const querySnapshot = await getDocs(collection(db, 'candidates'));
+    querySnapshot.forEach((docSnap) => {
+      list.push(docSnap.data());
+    });
+    return { success: true, candidates: list };
+  } catch (err: any) {
+    return { success: false, message: err.message };
+  }
+}

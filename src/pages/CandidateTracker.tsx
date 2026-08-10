@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Candidate } from '../types';
 import { fetchAllApplications, prospectiveMembers, syncApplicationsFromFirestore } from '../lib/memberDb';
+import { firebaseUpdateCandidateStatus } from '../lib/firebase';
 import { generateApplicationPDF } from '../utils/pdfGenerator';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 
@@ -265,6 +266,11 @@ export default function CandidateTracker() {
     setCandidates(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
 
     try {
+      // Async persist to Firebase
+      if (candidate.email) {
+        await firebaseUpdateCandidateStatus(candidate.email, newStatus, candidate.scores, candidate.notes, candidate.document_vault);
+      }
+      
       const response = await fetch(`/api/candidates/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
