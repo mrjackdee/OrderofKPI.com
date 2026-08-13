@@ -120,7 +120,7 @@ export default function CandidateTracker() {
             email: e,
             phone: c.phone || '',
             status: (c.status || 'Applied') as Candidate['status'],
-            application_date: c.application_date || c.appliedDate || c.applicationDate || '',
+            application_date: c.application_date || (c as any).appliedDate || (c as any).applicationDate || '',
             scores: c.scores || {},
             notes: c.notes || '',
             document_vault: c.document_vault || []

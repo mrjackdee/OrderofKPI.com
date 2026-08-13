@@ -137,8 +137,8 @@ export default function MemberPortal() {
               <Award size={28} />
             </div>
             <div>
-              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Nominate Intake Dean</h4>
-              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Member Nomination Form</p>
+              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Intake Dean Nominees</h4>
+              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Roster & Status (Closed)</p>
             </div>
           </Link>
 

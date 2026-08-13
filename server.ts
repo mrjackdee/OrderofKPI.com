@@ -3027,59 +3027,10 @@ async function startServer() {
   });
 
   app.post("/api/dean-nominations", (req, res) => {
-    try {
-      const { voter_email, nominee_first_name, nominee_last_name, statement } = req.body;
-      if (!voter_email || !nominee_first_name || !nominee_last_name || !statement) {
-        return res.status(400).json({ success: false, message: "All fields (voter email, nominee first name, last name, and statement) are required." });
-      }
-
-      const emailNorm = voter_email.toLowerCase().trim();
-      const id = Math.random().toString(36).substring(2, 9);
-      const timestamp = new Date().toISOString();
-
-      if (useSqlite && sqliteDb) {
-        try {
-          const existing = sqliteDb.prepare("SELECT id FROM dean_nominations WHERE LOWER(voter_email) = ?").get(emailNorm) as any;
-          if (existing) {
-            sqliteDb.prepare(`
-              UPDATE dean_nominations 
-              SET nominee_first_name = ?, nominee_last_name = ?, statement = ?, timestamp = ?
-              WHERE LOWER(voter_email) = ?
-            `).run(nominee_first_name.trim(), nominee_last_name.trim(), statement.trim(), timestamp, emailNorm);
-          } else {
-            sqliteDb.prepare(`
-              INSERT INTO dean_nominations (id, voter_email, nominee_first_name, nominee_last_name, statement, timestamp)
-              VALUES (?, ?, ?, ?, ?, ?)
-            `).run(id, emailNorm, nominee_first_name.trim(), nominee_last_name.trim(), statement.trim(), timestamp);
-          }
-        } catch (dbErr) {
-          console.error("SQLite dean nominations error:", dbErr);
-        }
-      }
-
-      const list = getFallbackDeanNominations();
-      const idx = list.findIndex(n => (n.voter_email || "").toLowerCase().trim() === emailNorm);
-      const entry = {
-        id: idx >= 0 ? list[idx].id : id,
-        voter_email: emailNorm,
-        nominee_first_name: nominee_first_name.trim(),
-        nominee_last_name: nominee_last_name.trim(),
-        statement: statement.trim(),
-        timestamp
-      };
-      if (idx >= 0) {
-        list[idx] = entry;
-      } else {
-        list.push(entry);
-      }
-      saveFallbackDeanNominations(list);
-
-      logEvent(emailNorm, "DEAN_NOMINATION_SUBMITTED", `Submitted nomination for Intake Dean: ${nominee_first_name} ${nominee_last_name}`);
-
-      res.json({ success: true, message: "Nomination successfully recorded." });
-    } catch (err: any) {
-      res.status(500).json({ success: false, message: err.message });
-    }
+    return res.status(403).json({ 
+      success: false, 
+      message: "The Intake Dean nomination period is formally closed. New nominations are no longer being accepted." 
+    });
   });
 
   app.post("/api/dean-nominations/sync-bulk", (req, res) => {
