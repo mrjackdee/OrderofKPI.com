@@ -367,5 +367,23 @@
     "is_first_login": 1,
     "role": "member",
     "title": "Member"
+  },
+  "donald.mitchell@orderofkpi.org": {
+    "email": "donald.mitchell@orderofkpi.org",
+    "name": "Donald Mitchell",
+    "first_name": "Donald",
+    "password_hash": "fb4a379d44cab4220bc5596ffa1f8eb9b169ba098d2c98b20d110881c92b9299",
+    "is_first_login": 0,
+    "role": "member",
+    "title": ""
+  },
+  "dmitchell02@gmail.com": {
+    "email": "dmitchell02@gmail.com",
+    "name": "Donald Mitchell",
+    "first_name": "Donald",
+    "password_hash": "fb4a379d44cab4220bc5596ffa1f8eb9b169ba098d2c98b20d110881c92b9299",
+    "is_first_login": 0,
+    "role": "member",
+    "title": ""
   }
 }

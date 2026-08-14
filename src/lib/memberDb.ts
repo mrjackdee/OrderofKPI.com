@@ -36,6 +36,8 @@ export const defaultMembers: MemberUser[] = [
   { name: "Dameone Ferguson", email: "dameone.ferguson@orderofkpi.org", role: "member" },
   { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus" },
   { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member" },
+  { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member" },
+  { name: "Donald Mitchell", email: "dmitchell02@gmail.com", role: "member" },
   { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member" },
   { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian" },
   { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus" },
@@ -72,7 +74,9 @@ const MEMBER_INITIAL_PASSWORDS: Record<string, string> = {
   'qa.officer@orderofkpi.org': 'KPI_QA_Officer2026!',
   'qa.member@orderofkpi.org': 'KPI_QA_Member2026!',
   'james.haywood@orderofkpi.org': '2012',
-  'admin@orderofkpi.org': '2012'
+  'admin@orderofkpi.org': '2012',
+  'donald.mitchell@orderofkpi.org': '1914',
+  'dmitchell02@gmail.com': '1914'
 };
 
 const CANDIDATE_INITIAL_PASSWORDS: Record<string, string> = {
@@ -470,7 +474,7 @@ async function performClientSideLogin(email: string, pass: string) {
   if (!member) {
     return {
       success: false,
-      message: 'This email address is not registered on the portal candidate directory.'
+      message: 'This email address is not registered in the member or candidate directory.'
     };
   }
 
@@ -485,9 +489,11 @@ async function performClientSideLogin(email: string, pass: string) {
   const isAdminPass = isAdmin && pass === 'K@mala2026';
   const isJames = normEmail === 'james.haywood@orderofkpi.org';
   const isJamesPass = isJames && (pass === '2012' || pass === 'atlanta');
+  const isDonald = normEmail === 'donald.mitchell@orderofkpi.org' || normEmail === 'dmitchell02@gmail.com';
+  const isDonaldPass = isDonald && (pass === '1914' || pass === 'atlanta' || pass === '2012');
 
   // If password was changed, we must NOT allow the initial password anymore.
-  const isPasswordValid = isAdminPass || isJamesPass || (isChanged ? (pass === savedPass) : (pass === initialPass || pass === savedPass));
+  const isPasswordValid = isAdminPass || isJamesPass || isDonaldPass || (isChanged ? (pass === savedPass) : (pass === initialPass || pass === savedPass));
 
   if (!isPasswordValid && !isDefaultQa) {
     // Check if they reset their password via Firebase
@@ -506,7 +512,7 @@ async function performClientSideLogin(email: string, pass: string) {
 
   return {
     success: true,
-    message: 'Login successful via Candidate Directory',
+    message: 'Login successful via Member Directory',
     user: {
       email: member.email,
       name: member.name,

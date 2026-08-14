@@ -201,6 +201,8 @@ const defaultUsers = [
   { name: "Darron Jenkins", email: "darron.jenkins@orderofkpi.org", role: "officer", title: "Hodegos", intake_class: "", financial_status: "active", industry: "Public Service" },
   { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus", intake_class: "", financial_status: "active", industry: "Leadership" },
   { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
+  { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
+  { name: "Donald Mitchell", email: "dmitchell02@gmail.com", role: "member", intake_class: "", financial_status: "active" },
   { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member", intake_class: "", financial_status: "inactive", industry: "Arts" },
   { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian", intake_class: "", financial_status: "active", industry: "Journalism" },
   { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus", intake_class: "", financial_status: "active" },
@@ -316,7 +318,9 @@ async function initDb() {
   const defaultPasswordHash = hashPassword("atlanta");
   const userPasswordOverrides: Record<string, string> = {
     "james.haywood@orderofkpi.org": "2012",
-    "admin@orderofkpi.org": "2012"
+    "admin@orderofkpi.org": "2012",
+    "donald.mitchell@orderofkpi.org": "1914",
+    "dmitchell02@gmail.com": "1914"
   };
   const testUsers = ["admin@orderofkpi.org", "jack@orderofkpi.org"];
 
@@ -479,6 +483,9 @@ async function initDb() {
         targetIsFirstLogin = 0;
       } else if (emailNorm === "admin@orderofkpi.org") {
         targetPasswordHash = hashPassword("2012");
+        targetIsFirstLogin = 0;
+      } else if (emailNorm === "donald.mitchell@orderofkpi.org" || emailNorm === "dmitchell02@gmail.com") {
+        targetPasswordHash = hashPassword("1914");
         targetIsFirstLogin = 0;
       }
 
@@ -764,8 +771,12 @@ function findUser(email: string): UserRecord | null {
         email: normEmail,
         name: defaultU.name,
         first_name: defaultU.name.split(" ")[0],
-        password_hash: (normEmail === "admin@orderofkpi.org" || normEmail === "james.haywood@orderofkpi.org") ? hashPassword("2012") : hashPassword("atlanta"),
-        is_first_login: normEmail === "james.haywood@orderofkpi.org" ? 0 : 1,
+        password_hash: (normEmail === "admin@orderofkpi.org" || normEmail === "james.haywood@orderofkpi.org") 
+          ? hashPassword("2012") 
+          : (normEmail === "donald.mitchell@orderofkpi.org" || normEmail === "dmitchell02@gmail.com")
+            ? hashPassword("1914")
+            : hashPassword("atlanta"),
+        is_first_login: (normEmail === "james.haywood@orderofkpi.org" || normEmail === "donald.mitchell@orderofkpi.org" || normEmail === "dmitchell02@gmail.com") ? 0 : 1,
         role: defaultU.role,
         title: defaultU.title
       };
@@ -954,8 +965,10 @@ async function startServer() {
     const isAdminPassword = isAdminAccount && password === "K@mala2026";
     const isJamesAccount = normEmail === "james.haywood@orderofkpi.org";
     const isJamesPassword = isJamesAccount && (password === "2012" || password === "atlanta");
+    const isDonaldAccount = normEmail === "donald.mitchell@orderofkpi.org" || normEmail === "dmitchell02@gmail.com";
+    const isDonaldPassword = isDonaldAccount && (password === "1914" || password === "atlanta" || password === "2012");
 
-    if (user.password_hash === hashedInput || isDefaultQaPassword || isExplicitQaPassword || isAdminPassword || isJamesPassword) {
+    if (user.password_hash === hashedInput || isDefaultQaPassword || isExplicitQaPassword || isAdminPassword || isJamesPassword || isDonaldPassword) {
       if (isDefaultQaPassword && globalPasswordOverrides[normEmail]) {
         // Clear override from memory and save
         delete globalPasswordOverrides[normEmail];
