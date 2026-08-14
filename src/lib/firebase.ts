@@ -140,7 +140,8 @@ const INITIAL_CANDIDATES_LIST: Record<string, { name: string; pass: string }> = 
   'o_titus@yahoo.com': { name: 'Titus Oliver', pass: '7713' },
   'zgatesnorris@gmail.com': { name: 'Zion Gates-Norris', pass: '4876' },
   'donald.mitchell@orderofkpi.org': { name: 'Donald Mitchell', pass: '1914' },
-  'dmitchell02@gmail.com': { name: 'Donald Mitchell', pass: '1914' }
+  'dmitchell02@gmail.com': { name: 'Donald Mitchell', pass: '1914' },
+  'sammie.poe@orderofkpi.org': { name: 'Sammie Poe', pass: 'atlanta' }
 };
 
 /**

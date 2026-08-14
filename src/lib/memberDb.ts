@@ -36,6 +36,7 @@ export const defaultMembers: MemberUser[] = [
   { name: "Dameone Ferguson", email: "dameone.ferguson@orderofkpi.org", role: "member" },
   { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus" },
   { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member" },
+  { name: "Sammie Poe", email: "sammie.poe@orderofkpi.org", role: "member" },
   { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member" },
   { name: "Donald Mitchell", email: "dmitchell02@gmail.com", role: "member" },
   { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member" },
@@ -76,7 +77,8 @@ const MEMBER_INITIAL_PASSWORDS: Record<string, string> = {
   'james.haywood@orderofkpi.org': '2012',
   'admin@orderofkpi.org': '2012',
   'donald.mitchell@orderofkpi.org': '1914',
-  'dmitchell02@gmail.com': '1914'
+  'dmitchell02@gmail.com': '1914',
+  'sammie.poe@orderofkpi.org': 'atlanta'
 };
 
 const CANDIDATE_INITIAL_PASSWORDS: Record<string, string> = {

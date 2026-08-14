@@ -201,6 +201,7 @@ const defaultUsers = [
   { name: "Darron Jenkins", email: "darron.jenkins@orderofkpi.org", role: "officer", title: "Hodegos", intake_class: "", financial_status: "active", industry: "Public Service" },
   { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus", intake_class: "", financial_status: "active", industry: "Leadership" },
   { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
+  { name: "Sammie Poe", email: "sammie.poe@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
   { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
   { name: "Donald Mitchell", email: "dmitchell02@gmail.com", role: "member", intake_class: "", financial_status: "active" },
   { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member", intake_class: "", financial_status: "inactive", industry: "Arts" },
@@ -320,7 +321,8 @@ async function initDb() {
     "james.haywood@orderofkpi.org": "2012",
     "admin@orderofkpi.org": "2012",
     "donald.mitchell@orderofkpi.org": "1914",
-    "dmitchell02@gmail.com": "1914"
+    "dmitchell02@gmail.com": "1914",
+    "sammie.poe@orderofkpi.org": "atlanta"
   };
   const testUsers = ["admin@orderofkpi.org", "jack@orderofkpi.org"];
 
@@ -486,6 +488,9 @@ async function initDb() {
         targetIsFirstLogin = 0;
       } else if (emailNorm === "donald.mitchell@orderofkpi.org" || emailNorm === "dmitchell02@gmail.com") {
         targetPasswordHash = hashPassword("1914");
+        targetIsFirstLogin = 0;
+      } else if (emailNorm === "sammie.poe@orderofkpi.org") {
+        targetPasswordHash = hashPassword("atlanta");
         targetIsFirstLogin = 0;
       }
 
@@ -776,7 +781,7 @@ function findUser(email: string): UserRecord | null {
           : (normEmail === "donald.mitchell@orderofkpi.org" || normEmail === "dmitchell02@gmail.com")
             ? hashPassword("1914")
             : hashPassword("atlanta"),
-        is_first_login: (normEmail === "james.haywood@orderofkpi.org" || normEmail === "donald.mitchell@orderofkpi.org" || normEmail === "dmitchell02@gmail.com") ? 0 : 1,
+        is_first_login: (normEmail === "james.haywood@orderofkpi.org" || normEmail === "donald.mitchell@orderofkpi.org" || normEmail === "dmitchell02@gmail.com" || normEmail === "sammie.poe@orderofkpi.org") ? 0 : 1,
         role: defaultU.role,
         title: defaultU.title
       };
@@ -967,8 +972,10 @@ async function startServer() {
     const isJamesPassword = isJamesAccount && (password === "2012" || password === "atlanta");
     const isDonaldAccount = normEmail === "donald.mitchell@orderofkpi.org" || normEmail === "dmitchell02@gmail.com";
     const isDonaldPassword = isDonaldAccount && (password === "1914" || password === "atlanta" || password === "2012");
+    const isSammieAccount = normEmail === "sammie.poe@orderofkpi.org";
+    const isSammiePassword = isSammieAccount && (password === "atlanta" || password === "2012");
 
-    if (user.password_hash === hashedInput || isDefaultQaPassword || isExplicitQaPassword || isAdminPassword || isJamesPassword || isDonaldPassword) {
+    if (user.password_hash === hashedInput || isDefaultQaPassword || isExplicitQaPassword || isAdminPassword || isJamesPassword || isDonaldPassword || isSammiePassword) {
       if (isDefaultQaPassword && globalPasswordOverrides[normEmail]) {
         // Clear override from memory and save
         delete globalPasswordOverrides[normEmail];

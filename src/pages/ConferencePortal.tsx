@@ -421,6 +421,7 @@ export default function ConferencePortal() {
     "James Haywood",
     "Jason Pilar",
     "Keith Woods",
+    "Sammie Poe",
     "Tobias Bordley"
   ];
 
