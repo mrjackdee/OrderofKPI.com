@@ -49,6 +49,8 @@ export const defaultMembers: MemberUser[] = [
   { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member" },
   { name: "Kevin Jennings", email: "kevin.jennings@orderofkpi.org", role: "member" },
   { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member" },
+  { name: "Brandon Hunter", email: "brandon.hunter@orderofkpi.org", role: "member", title: "Member" },
+  { name: "Terrell Singleton", email: "terrell.singleton@orderofkpi.org", role: "member", title: "Member" },
   { name: "Applicant Test", email: "applicant@orderofkpi.org", role: "member" }
 ];
 

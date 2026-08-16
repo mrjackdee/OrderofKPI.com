@@ -376,7 +376,9 @@ const defaultUsers = [
   { name: "Denzel Talley", email: "denzel.talley@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
   { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
   { name: "Kevin Jennings", email: "kevin.jennings@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
-  { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" }
+  { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
+  { name: "Brandon Hunter", email: "brandon.hunter@orderofkpi.org", role: "member", title: "Member", intake_class: "", financial_status: "active", industry: "" },
+  { name: "Terrell Singleton", email: "terrell.singleton@orderofkpi.org", role: "member", title: "Member", intake_class: "", financial_status: "active", industry: "" }
 ];
 
 const initialCandidates = [
@@ -872,6 +874,12 @@ async function initDb() {
 
     fs.writeFileSync(jsonDbPath, JSON.stringify(cleanData, null, 2));
     console.log("JSON database synchronized with official active roster.");
+
+    // Sync active roster members to Cloud Firestore in background
+    setTimeout(() => {
+      syncLocalMemberToFirestoreCloud("brandon.hunter@orderofkpi.org").catch(e => console.warn("Notice syncing Brandon Hunter to Firestore:", e));
+      syncLocalMemberToFirestoreCloud("terrell.singleton@orderofkpi.org").catch(e => console.warn("Notice syncing Terrell Singleton to Firestore:", e));
+    }, 1500);
   } catch (jsonErr) {
     console.error("JSON database sync failed:", jsonErr);
   }

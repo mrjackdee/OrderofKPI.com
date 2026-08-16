@@ -835,3 +835,37 @@ export async function firebaseFetchAllCandidates() {
     return { success: false, message: err.message };
   }
 }
+
+export async function firebaseSyncPortalMember(member: {
+  email: string;
+  name: string;
+  role: string;
+  title?: string;
+  intake_class?: string;
+  financial_status?: string;
+  industry?: string;
+}) {
+  try {
+    const normEmail = member.email.toLowerCase().trim();
+    const docId = normEmail.replace(/\//g, '_');
+    const memberRef = doc(db, 'portal_members', docId);
+    const payload = {
+      email: normEmail,
+      name: member.name,
+      first_name: member.name.split(' ')[0] || '',
+      last_name: member.name.split(' ').slice(1).join(' ') || '',
+      role: member.role,
+      title: member.title || '',
+      intake_class: member.intake_class || '',
+      financial_status: member.financial_status || 'active',
+      industry: member.industry || '',
+      updatedAt: new Date().toISOString()
+    };
+    await setDoc(memberRef, payload, { merge: true });
+    return { success: true };
+  } catch (err: any) {
+    console.warn('Notice syncing member to Firestore:', err);
+    return { success: false, message: err.message };
+  }
+}
+

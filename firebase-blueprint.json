@@ -101,6 +101,23 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["email", "name", "role"]
+    },
+    "portal_member": {
+      "title": "Portal Member",
+      "description": "Member directory and role records.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "first_name": { "type": "string" },
+        "last_name": { "type": "string" },
+        "role": { "type": "string" },
+        "title": { "type": "string" },
+        "intake_class": { "type": "string" },
+        "financial_status": { "type": "string" },
+        "industry": { "type": "string" }
+      },
+      "required": ["email", "name", "role"]
     }
   },
   "firestore": {
@@ -111,6 +128,10 @@
     "candidate_accounts/{accountId}": {
       "schema": "candidate_account",
       "description": "Candidate accounts and credential metadata."
+    },
+    "portal_members/{memberId}": {
+      "schema": "portal_member",
+      "description": "Member roster records."
     },
     "ballots/{ballotId}": {
       "schema": "ballot",
