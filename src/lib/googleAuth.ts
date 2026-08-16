@@ -3,6 +3,8 @@ import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'f
 
 const provider = new GoogleAuthProvider();
 // Request Workspace scopes
+provider.addScope('https://www.googleapis.com/auth/calendar');
+provider.addScope('https://www.googleapis.com/auth/calendar.events');
 provider.addScope('https://www.googleapis.com/auth/drive.file');
 provider.addScope('https://www.googleapis.com/auth/drive.metadata.readonly');
 provider.addScope('https://www.googleapis.com/auth/meetings.space.created');

@@ -407,14 +407,6 @@ export default function CandidateTracker() {
           <div>
             <h1 className="text-3xl font-display text-cream mb-2 break-words">Candidate Tracker</h1>
             <p className="text-cream/70 font-body mb-2 break-words">Manage and monitor the FY27 Membership Intake Process.</p>
-            <div>
-              <Link 
-                to="/standalone-application" 
-                className="text-xs font-bold uppercase tracking-widest text-gold hover:text-white transition-colors inline-flex items-center gap-1.5 underline break-all"
-              >
-                <FileText size={14} /> Open Backup Manual Application Form &rarr;
-              </Link>
-            </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
             <button

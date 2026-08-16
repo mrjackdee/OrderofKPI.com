@@ -5,14 +5,15 @@ export interface Member {
   email: string;
   name: string;
   first_name?: string;
+  last_name?: string;
   role: UserRole;
   title?: string;
   is_first_login: boolean;
   intake_class?: string;
   financial_status?: 'active' | 'inactive';
   profile_photo?: string;
-  grad_year?: string;
   industry?: string;
+  is_test_credential?: boolean | number;
 }
 
 export interface Candidate {

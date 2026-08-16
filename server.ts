@@ -24,6 +24,7 @@ interface UserRecord {
   is_first_login: number;
   role: string;
   title?: string;
+  is_test_credential?: number;
 }
 
 const passwordOverridesPath = path.join(process.cwd(), "user_password_overrides.json");
@@ -175,6 +176,168 @@ function savePasswordOverride(email: string, hash: string, isFirstLogin: number 
   }
 }
 
+async function syncPortalMembersFromFirestoreCloud() {
+  if (!firebaseProjectId || !firebaseApiKey) return;
+  try {
+    const dbId = firebaseDatabaseId || "(default)";
+    const url = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/portal_members?key=${firebaseApiKey}`;
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && Array.isArray(data.documents)) {
+      let loadedCount = 0;
+      for (const doc of data.documents) {
+        const fields = doc.fields || {};
+        const email = fields.email?.stringValue || doc.name.split("/").pop() || "";
+        const normEmail = email.toLowerCase().trim();
+        const name = fields.name?.stringValue || "";
+        const first_name = fields.first_name?.stringValue || name.split(" ")[0] || "";
+        const last_name = fields.last_name?.stringValue || name.split(" ").slice(1).join(" ") || "";
+        const role = fields.role?.stringValue || "member";
+        const title = fields.title?.stringValue || "";
+        const intake_class = fields.intake_class?.stringValue || "";
+        const financial_status = fields.financial_status?.stringValue || "inactive";
+        const industry = fields.industry?.stringValue || "";
+        const profile_photo = fields.profile_photo?.stringValue || "";
+        const is_test_val = fields.is_test_credential?.booleanValue !== undefined ? (fields.is_test_credential.booleanValue ? 1 : 0) : ((normEmail.startsWith("qa.") || normEmail.startsWith("test.")) ? 1 : 0);
+
+        if (normEmail) {
+          loadedCount++;
+          
+          if (useSqlite && sqliteDb) {
+            try {
+              const existingUser = sqliteDb.prepare("SELECT email FROM users WHERE email = ?").get(normEmail);
+              if (existingUser) {
+                sqliteDb.prepare(`
+                  UPDATE users 
+                  SET name = ?, first_name = ?, last_name = ?, role = ?, title = ?, intake_class = ?, financial_status = ?, industry = ?, profile_photo = ?, is_test_credential = ?
+                  WHERE email = ?
+                `).run(name, first_name, last_name, role, title, intake_class, financial_status, industry, profile_photo, is_test_val, normEmail);
+              } else {
+                const defaultPasswordHash = hashPassword("atlanta");
+                sqliteDb.prepare(`
+                  INSERT INTO users (email, name, first_name, last_name, password_hash, is_first_login, role, title, intake_class, financial_status, industry, profile_photo, is_test_credential)
+                  VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
+                `).run(normEmail, name, first_name, last_name, defaultPasswordHash, role, title, intake_class, financial_status, industry, profile_photo, is_test_val);
+              }
+            } catch (e) {
+              console.error("[PORTAL MEMBERS Cloud Sync] SQLite sync err:", e);
+            }
+          }
+          if (fs.existsSync(jsonDbPath)) {
+            try {
+              const jsonUsers = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8")) as Record<string, any>;
+              if (!jsonUsers[normEmail]) {
+                const defaultPasswordHash = hashPassword("atlanta");
+                jsonUsers[normEmail] = {
+                  email: normEmail,
+                  name,
+                  first_name,
+                  last_name,
+                  password_hash: defaultPasswordHash,
+                  is_first_login: 1,
+                  role,
+                  title,
+                  intake_class,
+                  financial_status,
+                  industry,
+                  profile_photo,
+                  is_test_credential: is_test_val
+                };
+              } else {
+                jsonUsers[normEmail].name = name;
+                jsonUsers[normEmail].first_name = first_name;
+                jsonUsers[normEmail].last_name = last_name;
+                jsonUsers[normEmail].role = role;
+                jsonUsers[normEmail].title = title;
+                jsonUsers[normEmail].intake_class = intake_class;
+                jsonUsers[normEmail].financial_status = financial_status;
+                jsonUsers[normEmail].industry = industry;
+                jsonUsers[normEmail].profile_photo = profile_photo;
+                jsonUsers[normEmail].is_test_credential = is_test_val;
+              }
+              fs.writeFileSync(jsonDbPath, JSON.stringify(jsonUsers, null, 2));
+            } catch (e) {
+              console.error("[PORTAL MEMBERS Cloud Sync] JSON sync err:", e);
+            }
+          }
+        }
+      }
+      if (loadedCount > 0) {
+        console.log(`[PORTAL MEMBERS Cloud Sync] Hydrated ${loadedCount} custom members from Cloud Firestore.`);
+      }
+    }
+  } catch (err) {
+    console.warn("[PORTAL MEMBERS Cloud Sync] Firestore cloud members sync notice:", err);
+  }
+}
+
+async function syncLocalMemberToFirestoreCloud(email: string) {
+  if (!firebaseProjectId || !firebaseApiKey) return;
+  const normEmail = email.toLowerCase().trim();
+  let member: any = null;
+  if (useSqlite && sqliteDb) {
+    member = sqliteDb.prepare("SELECT * FROM users WHERE email = ?").get(normEmail);
+  } else if (fs.existsSync(jsonDbPath)) {
+    const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+    member = data[normEmail];
+  }
+  if (!member) return;
+
+  const docId = normEmail.replace(/\//g, "_");
+  const dbId = firebaseDatabaseId || "(default)";
+  const url = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/portal_members/${encodeURIComponent(docId)}?key=${firebaseApiKey}`;
+  
+  try {
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fields: {
+          email: { stringValue: normEmail },
+          name: { stringValue: member.name || "" },
+          first_name: { stringValue: member.first_name || "" },
+          last_name: { stringValue: member.last_name || "" },
+          role: { stringValue: member.role || "member" },
+          title: { stringValue: member.title || "" },
+          intake_class: { stringValue: member.intake_class || "" },
+          financial_status: { stringValue: member.financial_status || "inactive" },
+          industry: { stringValue: member.industry || "" },
+          profile_photo: { stringValue: member.profile_photo || "" },
+          is_test_credential: { booleanValue: !!(member.is_test_credential === 1 || member.is_test_credential === true) }
+        }
+      })
+    });
+    if (res.ok) {
+      console.log(`[PORTAL MEMBERS Cloud Sync] Pushed member to Firestore: ${normEmail}`);
+    } else {
+      console.warn(`[PORTAL MEMBERS Cloud Sync] Firestore PATCH status: ${res.status}`);
+    }
+  } catch (err) {
+    console.warn("[PORTAL MEMBERS Cloud Sync] Error pushing member to Firestore:", err);
+  }
+}
+
+async function deletePortalMemberFromFirestoreCloud(email: string) {
+  if (!firebaseProjectId || !firebaseApiKey) return;
+  const normEmail = email.toLowerCase().trim();
+  const docId = normEmail.replace(/\//g, "_");
+  const dbId = firebaseDatabaseId || "(default)";
+  const url = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/portal_members/${encodeURIComponent(docId)}?key=${firebaseApiKey}`;
+  try {
+    const res = await fetch(url, {
+      method: "DELETE"
+    });
+    if (res.ok) {
+      console.log(`[PORTAL MEMBERS Cloud Sync] Deleted member from Firestore: ${normEmail}`);
+    } else {
+      console.warn(`[PORTAL MEMBERS Cloud Sync] Firestore DELETE status: ${res.status}`);
+    }
+  } catch (err) {
+    console.warn("[PORTAL MEMBERS Cloud Sync] Error deleting member from Firestore:", err);
+  }
+}
+
 const QA_EXPLICIT_CREDENTIALS: Record<string, { name: string; role: string; title: string; pass: string }> = {
   'qa.admin@orderofkpi.org': { name: 'QA Admin Agent', role: 'admin', title: 'Administrator', pass: 'KPI_QA_Admin2026!' },
   'qa.chair@orderofkpi.org': { name: 'QA Chair Agent', role: 'Membership Committee Chair', title: '2nd Anti-Basileus / Committee Chair', pass: 'KPI_QA_Chair2026!' },
@@ -311,6 +474,7 @@ function hashPassword(password: string): string {
 async function initDb() {
   loadPasswordOverridesFromFile();
   await syncPasswordOverridesFromFirestoreCloud();
+  await syncPortalMembersFromFirestoreCloud();
 
   const allowedEmails = new Set([
     ...defaultUsers.map(u => u.email.toLowerCase().trim()),
@@ -336,6 +500,7 @@ async function initDb() {
         email TEXT PRIMARY KEY,
         name TEXT,
         first_name TEXT,
+        last_name TEXT,
         password_hash TEXT,
         is_first_login INTEGER DEFAULT 1,
         role TEXT,
@@ -343,10 +508,22 @@ async function initDb() {
         intake_class TEXT,
         financial_status TEXT DEFAULT 'inactive',
         profile_photo TEXT,
-        grad_year TEXT,
-        industry TEXT
+        industry TEXT,
+        is_test_credential INTEGER DEFAULT 0
       )
     `);
+
+    try {
+      sqliteDb.exec("ALTER TABLE users ADD COLUMN last_name TEXT");
+    } catch (e) {
+      // Column already exists
+    }
+
+    try {
+      sqliteDb.exec("ALTER TABLE users ADD COLUMN is_test_credential INTEGER DEFAULT 0");
+    } catch (e) {
+      // Column already exists
+    }
 
     sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS candidates (
@@ -468,6 +645,7 @@ async function initDb() {
     for (const u of defaultUsers) {
       const emailNorm = u.email.toLowerCase().trim();
       const firstName = u.name.split(" ")[0];
+      const isTestCred = (emailNorm.startsWith("qa.") || emailNorm.startsWith("test.")) ? 1 : 0;
       const existingUser = sqliteDb.prepare("SELECT password_hash, is_first_login FROM users WHERE email = ?").get(emailNorm) as any;
       
       const override = globalPasswordOverrides[emailNorm];
@@ -497,13 +675,15 @@ async function initDb() {
       if (existingUser) {
         sqliteDb.prepare(`
           UPDATE users 
-          SET name = ?, first_name = ?, role = ?, title = ?, 
+          SET name = ?, first_name = ?, last_name = ?, role = ?, title = ?, 
               intake_class = ?, 
-              financial_status = ?, industry = ?, password_hash = ?, is_first_login = ?
+              financial_status = ?, industry = ?, password_hash = ?, is_first_login = ?,
+              is_test_credential = ?
           WHERE email = ?
         `).run(
           u.name, 
           firstName, 
+          u.name.split(" ").slice(1).join(" ") || "",
           u.role, 
           u.title || "", 
           u.intake_class || null, 
@@ -511,27 +691,30 @@ async function initDb() {
           u.industry || null, 
           targetPasswordHash,
           targetIsFirstLogin,
+          isTestCred,
           emailNorm
         );
       } else {
         sqliteDb.prepare(`
           INSERT INTO users (
-            email, name, first_name, password_hash, is_first_login, 
+            email, name, first_name, last_name, password_hash, is_first_login, 
             role, title, intake_class, 
-            financial_status, industry
+            financial_status, industry, is_test_credential
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           emailNorm, 
           u.name, 
           firstName, 
+          u.name.split(" ").slice(1).join(" ") || "",
           targetPasswordHash, 
           targetIsFirstLogin,
           u.role, 
           u.title || "",
           u.intake_class || null,
           u.financial_status || "inactive",
-          u.industry || null
+          u.industry || null,
+          isTestCred
         );
       }
     }
@@ -546,6 +729,7 @@ async function initDb() {
       }
       const firstName = c.name.split(" ")[0];
       const passHash = hashPassword(c.pass);
+      const isTestCred = (emailNorm.startsWith("qa.") || emailNorm.startsWith("test.")) ? 1 : 0;
 
       const existingUser = sqliteDb.prepare("SELECT password_hash FROM users WHERE email = ?").get(emailNorm) as any;
       if (!existingUser) {
@@ -553,14 +737,14 @@ async function initDb() {
           INSERT INTO users (
             email, name, first_name, password_hash, is_first_login, 
             role, title, intake_class, 
-            financial_status
+            financial_status, is_test_credential
           )
-          VALUES (?, ?, ?, ?, 0, 'prospective', 'Candidate', '', 'inactive')
-        `).run(emailNorm, c.name, firstName, passHash);
+          VALUES (?, ?, ?, ?, 0, 'prospective', 'Candidate', '', 'inactive', ?)
+        `).run(emailNorm, c.name, firstName, passHash, isTestCred);
       } else {
         sqliteDb.prepare(`
-          UPDATE users SET role = 'prospective', name = ?, first_name = ? WHERE email = ?
-        `).run(c.name, firstName, emailNorm);
+          UPDATE users SET role = 'prospective', name = ?, first_name = ?, is_test_credential = ? WHERE email = ?
+        `).run(c.name, firstName, isTestCred, emailNorm);
       }
 
       // Also seed into candidates tracking table
@@ -633,6 +817,7 @@ async function initDb() {
       const override = globalPasswordOverrides[emailNorm];
       const initialHash = override ? override.hash : (customPass ? hashPassword(customPass) : defaultPasswordHash);
       const initialIsFirstLogin = override ? override.isFirstLogin : (customPass ? 0 : 1);
+      const isTestCred = (emailNorm.startsWith("qa.") || emailNorm.startsWith("test.")) ? 1 : 0;
 
       if (!cleanData[emailNorm]) {
         const firstName = u.name.split(" ")[0];
@@ -643,11 +828,13 @@ async function initDb() {
           password_hash: initialHash,
           is_first_login: initialIsFirstLogin,
           role: u.role,
-          title: u.title || ""
+          title: u.title || "",
+          is_test_credential: isTestCred
         };
       } else {
         cleanData[emailNorm].role = u.role;
         cleanData[emailNorm].title = u.title || "";
+        cleanData[emailNorm].is_test_credential = isTestCred;
         if (override) {
           cleanData[emailNorm].password_hash = override.hash;
           cleanData[emailNorm].is_first_login = override.isFirstLogin;
@@ -661,6 +848,7 @@ async function initDb() {
       const emailNorm = c.email.toLowerCase().trim();
       const firstName = c.name.split(" ")[0];
       const passHash = hashPassword(c.pass);
+      const isTestCred = (emailNorm.startsWith("qa.") || emailNorm.startsWith("test.")) ? 1 : 0;
 
       if (!cleanData[emailNorm]) {
         cleanData[emailNorm] = {
@@ -670,13 +858,15 @@ async function initDb() {
           password_hash: passHash,
           is_first_login: 0,
           role: "prospective",
-          title: "Candidate"
+          title: "Candidate",
+          is_test_credential: isTestCred
         };
       } else {
         cleanData[emailNorm].name = c.name;
         cleanData[emailNorm].first_name = firstName;
         cleanData[emailNorm].role = "prospective";
         cleanData[emailNorm].title = "Candidate";
+        cleanData[emailNorm].is_test_credential = isTestCred;
       }
     }
 
@@ -1446,13 +1636,14 @@ async function startServer() {
           email: u.email,
           name: u.name,
           first_name: u.first_name,
+          last_name: u.last_name || "",
           role: u.role,
           title: u.title || "",
           is_first_login: u.is_first_login,
           intake_class: u.intake_class || "",
           financial_status: u.financial_status || "inactive",
-          grad_year: u.grad_year || "",
-          industry: u.industry || ""
+          industry: u.industry || "",
+          is_test_credential: u.is_test_credential || 0
         }));
       } else {
         members = defaultUsers.map(u => ({
@@ -1461,7 +1652,8 @@ async function startServer() {
           first_name: u.name.split(" ")[0],
           role: u.role,
           title: u.title || "",
-          is_first_login: 1
+          is_first_login: 1,
+          is_test_credential: (u.email.toLowerCase().startsWith("qa.") || u.email.toLowerCase().startsWith("test.")) ? 1 : 0
         }));
       }
       // Sort members: officers first, then admin, then members, alphabetically by name
@@ -1481,14 +1673,22 @@ async function startServer() {
 
   // Add a new member
   app.post("/api/members", (req, res) => {
-    const { email, name, role, title, intake_class, financial_status, grad_year, industry, adminEmail } = req.body;
-    if (!email || !name || !role) {
-      return res.status(400).json({ success: false, message: "Email, name, and role are required" });
+    const { email, name, first_name, last_name, role, title, intake_class, financial_status, industry, adminEmail, is_test_credential } = req.body;
+    if (!email || !role) {
+      return res.status(400).json({ success: false, message: "Email and role are required" });
     }
 
     const normEmail = email.toLowerCase().trim();
-    const firstName = name.split(" ")[0];
+    const firstName = first_name || name?.split(" ")[0] || "";
+    const lastName = last_name || name?.split(" ").slice(1).join(" ") || "";
+    const fullName = name || `${firstName} ${lastName}`.trim();
+
+    if (!fullName) {
+      return res.status(400).json({ success: false, message: "Name is required" });
+    }
+
     const defaultPasswordHash = hashPassword("atlanta");
+    const isTestVal = is_test_credential !== undefined ? (is_test_credential ? 1 : 0) : ((normEmail.startsWith("qa.") || normEmail.startsWith("test.")) ? 1 : 0);
 
     try {
       // Check if user already exists
@@ -1508,9 +1708,9 @@ async function startServer() {
       // Insert to SQLite
       if (useSqlite && sqliteDb) {
         sqliteDb.prepare(`
-          INSERT INTO users (email, name, first_name, password_hash, is_first_login, role, title, intake_class, financial_status, grad_year, industry)
-          VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
-        `).run(normEmail, name, firstName, defaultPasswordHash, role, title || "", intake_class || "", financial_status || "inactive", grad_year || "", industry || "");
+          INSERT INTO users (email, name, first_name, last_name, password_hash, is_first_login, role, title, intake_class, financial_status, industry, is_test_credential)
+          VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
+        `).run(normEmail, fullName, firstName, lastName, defaultPasswordHash, role, title || "", intake_class || "", financial_status || "inactive", industry || "", isTestVal);
       }
 
       // Sync JSON
@@ -1524,20 +1724,24 @@ async function startServer() {
       }
       data[normEmail] = {
         email: normEmail,
-        name,
+        name: fullName,
         first_name: firstName,
+        last_name: lastName,
         password_hash: defaultPasswordHash,
         is_first_login: 1,
         role,
         title: title || "",
         intake_class: intake_class || "",
         financial_status: financial_status || "inactive",
-        grad_year: grad_year || "",
-        industry: industry || ""
+        industry: industry || "",
+        is_test_credential: isTestVal
       };
       fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
 
-      logEvent(adminEmail || "admin", "MEMBER_CREATED", `Added new member to directory: ${name} (${normEmail}) as ${role}`);
+      // Trigger 2-way cloud push to Firestore
+      syncLocalMemberToFirestoreCloud(normEmail);
+
+      logEvent(adminEmail || "admin", "MEMBER_CREATED", `Added new member to directory: ${fullName} (${normEmail}) as ${role}`);
       res.json({ success: true, message: "Member successfully added to the active directory." });
     } catch (err: any) {
       console.error("Error adding member:", err);
@@ -1548,13 +1752,16 @@ async function startServer() {
   // Edit a member
   app.put("/api/members/:email", (req, res) => {
     const { email } = req.params;
-    const { name, role, title, intake_class, financial_status, grad_year, industry, profile_photo, adminEmail } = req.body;
+    const { name, first_name, last_name, role, title, intake_class, financial_status, industry, profile_photo, adminEmail, is_test_credential } = req.body;
     if (!email) {
       return res.status(400).json({ success: false, message: "Email is required" });
     }
 
     const normEmail = email.toLowerCase().trim();
-    const firstName = name ? name.split(" ")[0] : "";
+    const resolvedFirstName = first_name || name?.split(" ")[0] || "";
+    const resolvedLastName = last_name || name?.split(" ").slice(1).join(" ") || "";
+    const resolvedFullName = name || `${resolvedFirstName} ${resolvedLastName}`.trim();
+    const isTestVal = is_test_credential !== undefined ? (is_test_credential ? 1 : 0) : null;
 
     try {
       // Update SQLite
@@ -1563,35 +1770,50 @@ async function startServer() {
           UPDATE users 
           SET name = COALESCE(?, name), 
               first_name = COALESCE(?, first_name), 
+              last_name = COALESCE(?, last_name), 
               role = COALESCE(?, role), 
               title = COALESCE(?, title),
               intake_class = COALESCE(?, intake_class),
               financial_status = COALESCE(?, financial_status),
-              grad_year = COALESCE(?, grad_year),
               industry = COALESCE(?, industry),
-              profile_photo = COALESCE(?, profile_photo)
+              profile_photo = COALESCE(?, profile_photo),
+              is_test_credential = COALESCE(?, is_test_credential)
           WHERE email = ?
-        `).run(name || null, firstName || null, role || null, title !== undefined ? title : null, intake_class || null, financial_status || null, grad_year || null, industry || null, profile_photo || null, normEmail);
+        `).run(
+          resolvedFullName || null, 
+          resolvedFirstName || null, 
+          resolvedLastName || null, 
+          role || null, 
+          title !== undefined ? title : null, 
+          intake_class !== undefined ? intake_class : null, 
+          financial_status || null, 
+          industry !== undefined ? industry : null, 
+          profile_photo || null, 
+          isTestVal,
+          normEmail
+        );
       }
 
       // Sync JSON
       if (fs.existsSync(jsonDbPath)) {
         const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
         if (data[normEmail]) {
-          if (name) {
-            data[normEmail].name = name;
-            data[normEmail].first_name = firstName;
-          }
+          if (resolvedFullName) data[normEmail].name = resolvedFullName;
+          if (resolvedFirstName) data[normEmail].first_name = resolvedFirstName;
+          if (resolvedLastName) data[normEmail].last_name = resolvedLastName;
           if (role) data[normEmail].role = role;
           if (title !== undefined) data[normEmail].title = title;
-          if (intake_class) data[normEmail].intake_class = intake_class;
+          if (intake_class !== undefined) data[normEmail].intake_class = intake_class;
           if (financial_status) data[normEmail].financial_status = financial_status;
-          if (grad_year) data[normEmail].grad_year = grad_year;
-          if (industry) data[normEmail].industry = industry;
+          if (industry !== undefined) data[normEmail].industry = industry;
           if (profile_photo) data[normEmail].profile_photo = profile_photo;
+          if (isTestVal !== null) data[normEmail].is_test_credential = isTestVal;
           fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
         }
       }
+
+      // Trigger 2-way cloud push to Firestore
+      syncLocalMemberToFirestoreCloud(normEmail);
 
       logEvent(adminEmail || "admin", "MEMBER_UPDATED", `Updated directory details for member: ${normEmail}`);
       res.json({ success: true, message: "Member record updated successfully." });
@@ -1624,6 +1846,17 @@ async function startServer() {
           delete data[normEmail];
           fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
         }
+      }
+
+      // Trigger 2-way cloud deletion from Firestore portal_members
+      deletePortalMemberFromFirestoreCloud(normEmail);
+
+      // Trigger deletion from Firestore user_password_overrides
+      if (firebaseProjectId && firebaseApiKey) {
+        const docId = normEmail.replace(/\//g, "_");
+        const dbId = firebaseDatabaseId || "(default)";
+        const url = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/user_password_overrides/${encodeURIComponent(docId)}?key=${firebaseApiKey}`;
+        fetch(url, { method: "DELETE" }).catch(() => {});
       }
 
       logEvent((adminEmail as string) || "admin", "MEMBER_DELETED", `Removed member from directory: ${normEmail}`);

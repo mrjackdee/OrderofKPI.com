@@ -25,7 +25,7 @@ const activeFirebaseConfig = {
   storageBucket: metaEnv.VITE_FIREBASE_STORAGE_BUCKET || staticFirebaseConfig.storageBucket,
   messagingSenderId: metaEnv.VITE_FIREBASE_MESSAGING_SENDER_ID || staticFirebaseConfig.messagingSenderId,
   appId: metaEnv.VITE_FIREBASE_APP_ID || staticFirebaseConfig.appId,
-  firestoreDatabaseId: metaEnv.VITE_FIREBASE_DATABASE_ID || staticFirebaseConfig.firestoreDatabaseId || "ai-studio-orderofkpicomint-87b8a669-8698-4f66-8799-ff9b38422e20"
+  firestoreDatabaseId: metaEnv.VITE_FIREBASE_DATABASE_ID || (staticFirebaseConfig as any).firestoreDatabaseId || "ai-studio-87b8a669-8698-4f66-8799-ff9b38422e20"
 };
 
 const app = getApps().length > 0 ? getApp() : initializeApp(activeFirebaseConfig);

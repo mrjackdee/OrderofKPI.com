@@ -5,9 +5,11 @@ import { jsPDF } from 'jspdf';
 import { 
   Users, Coffee, Edit3, ClipboardCheck, Mail, Video, 
   ThumbsUp, Star, Hand, Wallet, Shield, UserCheck, 
-  Leaf, Download, CalendarDays, LayoutList
+  Leaf, Download, CalendarDays, LayoutList, Calendar,
+  AlertTriangle, CheckCircle2, RefreshCw, LogOut, Plus
 } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
+import { initAuth, googleSignIn, getAccessToken, logout as googleLogout } from '../lib/googleAuth';
 
 const events = [
   { step: 1, title: 'Interest Meeting #1', date: '8/2/2026', time: '1:00 PM ET', category: 'Interest Meetings', icon: Users },
@@ -42,6 +44,224 @@ export default function IntakeCalendar() {
   const navigate = useNavigate();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  const [googleUser, setGoogleUser] = useState<any>(null);
+  const [googleToken, setGoogleToken] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Initialize Auth state
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (user, token) => {
+        setGoogleUser(user);
+        setGoogleToken(token);
+      },
+      () => {
+        setGoogleUser(null);
+        setGoogleToken(null);
+      }
+    );
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, []);
+
+  const handleConnectGoogle = async () => {
+    try {
+      const result = await googleSignIn();
+      if (result) {
+        setGoogleUser(result.user);
+        setGoogleToken(result.accessToken);
+        setSyncStatus({
+          type: 'success',
+          text: `Successfully connected to Google Account (${result.user.email || 'Workspace'}) and saved authentication session to the database!`
+        });
+        setTimeout(() => setSyncStatus(null), 5000);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setSyncStatus({
+        type: 'error',
+        text: 'We were unable to establish a secure connection with your Google account. Please verify your permissions and try again.'
+      });
+    }
+  };
+
+  const handleDisconnectGoogle = async () => {
+    try {
+      await googleLogout();
+      setGoogleUser(null);
+      setGoogleToken(null);
+      setSyncStatus({
+        type: 'success',
+        text: 'Successfully disconnected your Google account and cleared your authenticated session.'
+      });
+      setTimeout(() => setSyncStatus(null), 5000);
+    } catch (err) {
+      setSyncStatus({
+        type: 'error',
+        text: 'We encountered an error while disconnecting. Please try again.'
+      });
+    }
+  };
+
+  // Safe Date-Time Parser for Google Calendar Event Creation
+  const parseEventToGoogleCalendarSchema = (event: { title: string; date: string; time: string }) => {
+    // Extract first date from range if applicable: "8/12/2026 - 8/16/2026" -> "8/12/2026"
+    const datePart = event.date.split('-')[0].trim();
+    const dateMatch = datePart.match(/(\d+)\/(\d+)\/(\d+)/);
+    if (!dateMatch) {
+      // Return a standard placeholder date matching the August intake period if unparseable
+      return {
+        summary: `KPI MIP: ${event.title}`,
+        description: `MIP Schedule Event Details: ${event.time}`,
+        start: { date: '2026-08-04' },
+        end: { date: '2026-08-05' }
+      };
+    }
+    const month = dateMatch[1].padStart(2, '0');
+    const day = dateMatch[2].padStart(2, '0');
+    const year = dateMatch[3];
+    
+    // Parse time: e.g. "1:00 PM ET", "9:08 PM ET", "8:00 PM – 9:30 PM ET"
+    const timePart = event.time.split('–')[0].split('-')[0].trim();
+    const timeMatch = timePart.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (timeMatch) {
+      let hour = parseInt(timeMatch[1], 10);
+      const minute = timeMatch[2];
+      const ampm = timeMatch[3].toUpperCase();
+      if (ampm === 'PM' && hour < 12) hour += 12;
+      if (ampm === 'AM' && hour === 12) hour = 0;
+      const hourStr = hour.toString().padStart(2, '0');
+      
+      // Eastern Time is UTC-4 in August/September
+      const dateTimeStr = `${year}-${month}-${day}T${hourStr}:${minute}:00-04:00`;
+      const endHourStr = ((hour + 1) % 24).toString().padStart(2, '0');
+      const endDateTimeStr = `${year}-${month}-${day}T${endHourStr}:${minute}:00-04:00`;
+      
+      return {
+        summary: `KPI MIP: ${event.title}`,
+        description: `Official event on the Membership Intake Process schedule. Details: ${event.time}`,
+        start: { dateTime: dateTimeStr, timeZone: 'America/New_York' },
+        end: { dateTime: endDateTimeStr, timeZone: 'America/New_York' }
+      };
+    } else {
+      // Return all-day event
+      const isoDate = `${year}-${month}-${day}`;
+      const nextDay = new Date(parseInt(year), parseInt(month) - 1, parseInt(day) + 1);
+      const nextDayStr = `${nextDay.getFullYear()}-${(nextDay.getMonth() + 1).toString().padStart(2, '0')}-${nextDay.getDate().toString().padStart(2, '0')}`;
+      return {
+        summary: `KPI MIP: ${event.title}`,
+        description: `Official event on the Membership Intake Process schedule: ${event.time}`,
+        start: { date: isoDate },
+        end: { date: nextDayStr }
+      };
+    }
+  };
+
+  const addSingleEventToGoogleCalendar = async (ev: { title: string; date: string; time: string }) => {
+    if (!googleToken) {
+      setSyncStatus({
+        type: 'error',
+        text: 'Please connect to your Google account first to add events to your calendar.'
+      });
+      return;
+    }
+
+    const confirmed = window.confirm(`Are you sure you want to add "${ev.title}" on ${ev.date} to your Google Calendar?`);
+    if (!confirmed) return;
+
+    try {
+      const gEvent = parseEventToGoogleCalendarSchema(ev);
+      const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${googleToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(gEvent)
+      });
+
+      if (res.ok) {
+        setSyncStatus({
+          type: 'success',
+          text: `Successfully added "${ev.title}" to your Google Calendar and confirmed with Google servers!`
+        });
+        setTimeout(() => setSyncStatus(null), 5000);
+      } else {
+        const errorData = await res.json();
+        console.error(errorData);
+        setSyncStatus({
+          type: 'error',
+          text: 'We encountered an issue adding the event to Google Calendar. Please verify your connection permissions.'
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      setSyncStatus({
+        type: 'error',
+        text: 'We had trouble communicating with Google Calendar. Please check your internet connection.'
+      });
+    }
+  };
+
+  const syncAllEventsToCalendar = async (targetEvents: any[], label: string) => {
+    if (!googleToken) {
+      setSyncStatus({
+        type: 'error',
+        text: 'Please connect to your Google account first to sync events.'
+      });
+      return;
+    }
+
+    const confirmed = window.confirm(`Are you sure you want to bulk import all ${targetEvents.length} events from the "${label}" timeline directly into your Google Calendar?`);
+    if (!confirmed) return;
+
+    setIsSyncing(true);
+    setSyncStatus(null);
+    let successCount = 0;
+
+    try {
+      for (const ev of targetEvents) {
+        const gEvent = parseEventToGoogleCalendarSchema(ev);
+        const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${googleToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(gEvent)
+        });
+
+        if (res.ok) {
+          successCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        setSyncStatus({
+          type: 'success',
+          text: `Successfully added ${successCount} out of ${targetEvents.length} events to your Google Calendar and committed them to your schedule!`
+        });
+      } else {
+        setSyncStatus({
+          type: 'error',
+          text: 'We were unable to add the events to your Google Calendar. Please check your account permissions.'
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      setSyncStatus({
+        type: 'error',
+        text: 'We ran into a connection issue while syncing with Google Calendar. Please try again.'
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   useEffect(() => {
     const role = sessionStorage.getItem('userRole');
@@ -277,14 +497,95 @@ export default function IntakeCalendar() {
           </motion.div>
         </div>
 
-        {/* PDF Export */}
-        <div className="flex justify-center mb-10 px-4">
+        {/* PDF Export & Google Calendar Sign-In */}
+        <div className="flex flex-col items-center justify-center gap-4 mb-10 px-4">
           <button
             onClick={exportToPDF}
-            className="bg-[#B8860B] hover:bg-[#1E3F20] text-white px-6 py-3 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-md transition-colors cursor-pointer"
+            className="bg-[#B8860B] hover:bg-[#1E3F20] text-white px-6 py-3 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-md transition-all cursor-pointer hover:scale-105"
           >
             <Download size={14} /> Export to PDF
           </button>
+        </div>
+
+        {/* Google Calendar Integration Control Panel */}
+        <div className="max-w-4xl mx-auto px-4 mb-12">
+          <div className="bg-[#FFFFFF] border border-[#B8860B]/30 rounded-2xl p-6 md:p-8 shadow-[0_6px_24px_rgba(30,63,32,0.05)]">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-[#B8860B]/20">
+              <div className="flex items-start gap-4">
+                <div className="bg-[#B8860B]/10 p-3 rounded-xl text-[#B8860B]">
+                  <Calendar size={28} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold font-serif text-[#1E3F20]">Google Calendar Integration</h2>
+                  <p className="text-sm text-gray-500 mt-1">Sync intake processes and meeting timelines directly with your primary calendar.</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {!googleUser ? (
+                  <button
+                    onClick={handleConnectGoogle}
+                    className="bg-[#1E3F20] hover:bg-[#1E3F20]/90 text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-sm transition-all cursor-pointer hover:scale-105"
+                  >
+                    <Plus size={14} /> Connect Google Calendar
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleDisconnectGoogle}
+                    className="bg-red-50 hover:bg-red-100 text-red-700 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 border border-red-200 transition-colors cursor-pointer"
+                  >
+                    <LogOut size={14} /> Disconnect ({googleUser.email || 'Account'})
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {syncStatus && (
+              <div className={`mt-6 p-4 rounded-xl border flex items-start gap-3 text-sm leading-relaxed ${
+                syncStatus.type === 'success' 
+                  ? 'bg-green-50 border-green-200 text-green-800' 
+                  : 'bg-red-50 border-red-200 text-red-800'
+              }`}>
+                {syncStatus.type === 'success' ? (
+                  <CheckCircle2 size={18} className="shrink-0 mt-0.5 text-green-600" />
+                ) : (
+                  <AlertTriangle size={18} className="shrink-0 mt-0.5 text-red-600" />
+                )}
+                <span>{syncStatus.text}</span>
+              </div>
+            )}
+
+            {googleUser && (
+              <div className="mt-6">
+                <p className="text-xs font-semibold text-[#1E3F20] uppercase tracking-wider mb-4">Bulk Actions</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button
+                    onClick={() => syncAllEventsToCalendar(events, 'Membership Intake')}
+                    disabled={isSyncing}
+                    className="flex items-center justify-center gap-2 bg-[#B8860B]/10 hover:bg-[#B8860B]/20 text-[#1E3F20] border border-[#B8860B]/30 py-3 px-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSyncing ? (
+                      <RefreshCw size={14} className="animate-spin" />
+                    ) : (
+                      <Calendar size={14} />
+                    )}
+                    Sync Intake Events to Google Calendar
+                  </button>
+                  <button
+                    onClick={() => syncAllEventsToCalendar(deanEvents, 'Dean Process')}
+                    disabled={isSyncing}
+                    className="flex items-center justify-center gap-2 bg-[#B8860B]/10 hover:bg-[#B8860B]/20 text-[#1E3F20] border border-[#B8860B]/30 py-3 px-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSyncing ? (
+                      <RefreshCw size={14} className="animate-spin" />
+                    ) : (
+                      <Calendar size={14} />
+                    )}
+                    Sync Dean Timeline to Google Calendar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Interactive Grid & Section Breakdown Layout */}
@@ -339,13 +640,24 @@ export default function IntakeCalendar() {
                           </h3>
                         </div>
 
-                        <div className="mt-4 pt-3 border-t border-[#B8860B]/20">
-                          <p className="text-[#1E3F20] font-bold text-xs uppercase tracking-wider">
-                            {event.date}
-                          </p>
-                          <p className="text-[#B8860B] text-xs font-semibold mt-0.5">
-                            {event.time}
-                          </p>
+                        <div className="mt-4 pt-3 border-t border-[#B8860B]/20 flex items-end justify-between gap-2">
+                          <div>
+                            <p className="text-[#1E3F20] font-bold text-xs uppercase tracking-wider">
+                              {event.date}
+                            </p>
+                            <p className="text-[#B8860B] text-xs font-semibold mt-0.5">
+                              {event.time}
+                            </p>
+                          </div>
+                          {googleToken && (
+                            <button
+                              onClick={() => addSingleEventToGoogleCalendar(event)}
+                              title="Add to Google Calendar"
+                              className="bg-[#1E3F20] hover:bg-[#B8860B] text-white p-2 rounded-xl transition-all cursor-pointer hover:scale-105 shadow-sm shrink-0 flex items-center justify-center"
+                            >
+                              <Plus size={14} />
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -380,13 +692,24 @@ export default function IntakeCalendar() {
                       </h3>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-[#B8860B]/20">
-                      <p className="text-[#1E3F20] font-bold text-xs uppercase tracking-wider">
-                        {event.date}
-                      </p>
-                      <p className="text-[#B8860B] text-xs font-semibold mt-0.5">
-                        {event.time}
-                      </p>
+                    <div className="mt-4 pt-3 border-t border-[#B8860B]/20 flex items-end justify-between gap-2">
+                      <div>
+                        <p className="text-[#1E3F20] font-bold text-xs uppercase tracking-wider">
+                          {event.date}
+                        </p>
+                        <p className="text-[#B8860B] text-xs font-semibold mt-0.5">
+                          {event.time}
+                        </p>
+                      </div>
+                      {googleToken && (
+                        <button
+                          onClick={() => addSingleEventToGoogleCalendar(event)}
+                          title="Add to Google Calendar"
+                          className="bg-[#1E3F20] hover:bg-[#B8860B] text-white p-2 rounded-xl transition-all cursor-pointer hover:scale-105 shadow-sm shrink-0 flex items-center justify-center"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}

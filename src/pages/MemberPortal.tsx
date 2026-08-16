@@ -173,6 +173,14 @@ export default function MemberPortal() {
                   roles: ['admin']
                 },
                 { 
+                  title: 'Member Directory Administration', 
+                  desc: 'Provision member accounts, roles, and 2-way cloud sync.', 
+                  icon: Users, 
+                  path: '/admin-dashboard?tab=users',
+                  color: 'bg-gold text-ivy',
+                  roles: ['admin']
+                },
+                { 
                   title: 'Candidate Tracker', 
                   desc: 'Manage membership intake.', 
                   icon: Users, 

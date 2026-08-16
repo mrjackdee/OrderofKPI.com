@@ -20,7 +20,7 @@ import { syncApplicationsFromFirestore } from '../lib/memberDb';
 export default function FinancialRoster() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'lastName' | 'firstName' | 'paymentDate'>('lastName');
+  const [sortBy, setSortBy] = useState<'lastName' | 'firstName'>('lastName');
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -126,7 +126,6 @@ export default function FinancialRoster() {
             is_first_login: false,
             intake_class: matchedDirMember?.intake_class || 'Member',
             financial_status: 'active',
-            grad_year: matchedDirMember?.grad_year || '',
             profile_photo: matchedDirMember?.profile_photo || '',
             industry: matchedDirMember?.industry || ''
           });
@@ -160,8 +159,6 @@ export default function FinancialRoster() {
       return lastA.localeCompare(lastB);
     } else if (sortBy === 'firstName') {
       return a.name.localeCompare(b.name);
-    } else if (sortBy === 'paymentDate') {
-      return (a.grad_year || '').localeCompare(b.grad_year || '');
     }
     return 0;
   });
@@ -235,7 +232,6 @@ export default function FinancialRoster() {
         >
           <option value="lastName">Sort by Last Name</option>
           <option value="firstName">Sort by First Name</option>
-          <option value="paymentDate">Sort by Grad Year</option>
         </select>
       </div>
 

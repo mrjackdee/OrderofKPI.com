@@ -183,12 +183,14 @@ export default function CommitteeChairDashboard() {
         })
       });
       if (res.ok) {
-        showNotification('success', `Updated candidate stage to ${newStatus}`);
+        showNotification('success', `Successfully updated the candidate's intake stage to "${newStatus}" and committed changes to the database!`);
         fetchCandidates();
         fetchAuditLogs();
+      } else {
+        showNotification('error', 'We were unable to update the candidate status. Please try again.');
       }
     } catch (err) {
-      showNotification('error', 'Unable to update candidate status. Please try again.');
+      showNotification('error', 'We encountered an error updating the candidate\'s status. Please check your connection and try again.');
     }
   };
 
@@ -196,7 +198,7 @@ export default function CommitteeChairDashboard() {
   const handleAddCandidate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCandidate.firstName || !newCandidate.lastName || !newCandidate.email) {
-      showNotification('error', 'First Name, Last Name, and Email Address are required.');
+      showNotification('error', 'Please enter a first name, last name, and email address to proceed.');
       return;
     }
 
@@ -218,16 +220,16 @@ export default function CommitteeChairDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        showNotification('success', `Candidate ${fullName} added as an applicant account successfully.`);
+        showNotification('success', `Successfully registered candidate "${fullName}" and saved their applicant account in the database!`);
         setShowAddCandidateModal(false);
         setNewCandidate({ firstName: '', lastName: '', email: '', phone: '', status: 'Inquiry' });
         fetchCandidates();
         fetchAuditLogs();
       } else {
-        showNotification('error', data.message || 'Unable to add candidate. Please try again.');
+        showNotification('error', data.message || 'We could not add the candidate. Please make sure the email is not already registered and try again.');
       }
     } catch (err) {
-      showNotification('error', 'Error adding candidate. Please try again.');
+      showNotification('error', 'We had trouble adding this candidate. Please check your connection and try again.');
     }
   };
 
@@ -244,15 +246,15 @@ export default function CommitteeChairDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        showNotification('success', `Candidate ${name} was successfully removed.`);
+        showNotification('success', `Successfully removed candidate "${name}" from the intake roster and deleted their record from the database.`);
         fetchCandidates();
         fetchAuditLogs();
       } else {
-        showNotification('error', data.message || 'Unable to remove candidate. Please try again.');
+        showNotification('error', data.message || 'We were unable to remove this candidate from the database. Please try again.');
         fetchCandidates();
       }
     } catch (err) {
-      showNotification('error', 'Error removing candidate. Please try again.');
+      showNotification('error', 'We ran into a connection issue while removing the candidate from the database. Please try again.');
       fetchCandidates();
     }
   };
@@ -260,7 +262,7 @@ export default function CommitteeChairDashboard() {
   // Add Member to Membership Committee
   const handleAddCommitteeMember = async () => {
     if (!selectedMemberToAdd) {
-      showNotification('error', 'Please select a member to grant committee access.');
+      showNotification('error', 'Please select a directory user to grant committee permissions.');
       return;
     }
 
@@ -275,15 +277,15 @@ export default function CommitteeChairDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        showNotification('success', data.message || 'Member granted Membership Committee access.');
+        showNotification('success', `Successfully granted Membership Committee access to "${selectedMemberToAdd}" and updated the permissions database!`);
         setSelectedMemberToAdd('');
         fetchCommitteeMembers();
         fetchAllMembers();
       } else {
-        showNotification('error', data.message || 'Unable to add committee member. Please try again.');
+        showNotification('error', data.message || 'We were unable to add this member to the committee. Please try again.');
       }
     } catch (err) {
-      showNotification('error', 'Unable to update committee roster. Please try again.');
+      showNotification('error', 'We had trouble updating the committee roster. Please verify your connection and try again.');
     }
   };
 
@@ -297,14 +299,14 @@ export default function CommitteeChairDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        showNotification('success', `Revoked committee permissions for ${name}`);
+        showNotification('success', `Successfully revoked Membership Committee access for "${name}" and updated the permissions database.`);
         fetchCommitteeMembers();
         fetchAllMembers();
       } else {
-        showNotification('error', data.message || 'Unable to revoke permissions. Please try again.');
+        showNotification('error', data.message || 'We were unable to revoke committee permissions. Please try again.');
       }
     } catch (err) {
-      showNotification('error', 'Error modifying committee permissions. Please try again.');
+      showNotification('error', 'We encountered an error updating committee permissions. Please try again.');
     }
   };
 
@@ -406,12 +408,6 @@ export default function CommitteeChairDashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Link 
-              to="/standalone-application"
-              className="px-5 py-3 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-2xl text-cream text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
-            >
-              <FileText size={14} /> Open Backup Manual Application Form &rarr;
-            </Link>
             <Link 
               to="/candidate-tracker"
               className="px-5 py-3 bg-gold text-ivy hover:bg-gold-light border border-gold rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-md hover:scale-105"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { db } from '../lib/firebase';
 import { 
   collection, 
@@ -63,7 +63,23 @@ interface ApplicationAuditLog {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'users' | 'candidates' | 'audits' | 'intake' | 'revisions' | 'googleForms' | 'passwordLogs'>('users');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<'users' | 'candidates' | 'audits' | 'intake' | 'revisions' | 'googleForms' | 'passwordLogs'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab');
+    if (tabParam && ['users', 'candidates', 'audits', 'intake', 'revisions', 'googleForms', 'passwordLogs'].includes(tabParam)) {
+      return tabParam as any;
+    }
+    return 'users';
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (tabParam && ['users', 'candidates', 'audits', 'intake', 'revisions', 'googleForms', 'passwordLogs'].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+  }, [location.search]);
   const [passwordLogSearch, setPasswordLogSearch] = useState('');
   const [passwordLogFilter, setPasswordLogFilter] = useState<'all' | 'change' | 'failure'>('all');
   const [isPingingDb, setIsPingingDb] = useState(false);
@@ -516,14 +532,17 @@ export default function AdminDashboard() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        showToast('success', isNewMember ? `Added new user ${editingMember.name}` : `Updated user ${editingMember.email}`);
+        showToast('success', isNewMember 
+          ? `Successfully registered user "${editingMember.name}" and saved to the database!` 
+          : `Successfully updated settings for user "${editingMember.email}" and committed the changes to the database!`
+        );
         setShowMemberModal(false);
         fetchMembers();
       } else {
-        showToast('error', data.message || 'Unable to save member record. Please try again.');
+        showToast('error', data.message || 'We could not save the member settings. Please make sure all details are filled out correctly and try again.');
       }
     } catch (error) {
-      showToast('error', 'Error saving member record. Please try again.');
+      showToast('error', 'We had trouble saving the directory user. Please check your network connection and try again.');
     } finally {
       setActionLoading(false);
     }
@@ -540,13 +559,13 @@ export default function AdminDashboard() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        showToast('success', `Deleted user ${email} from system.`);
+        showToast('success', `Successfully deleted user "${email}" from the system and committed changes to the database.`);
         fetchMembers();
       } else {
-        showToast('error', data.message || 'Unable to delete user. Please try again.');
+        showToast('error', data.message || 'We were unable to remove this user. Please try again.');
       }
     } catch (error) {
-      showToast('error', 'Error deleting user. Please try again.');
+      showToast('error', 'We encountered a connection issue while removing this user. Please check your network connection and try again.');
     }
   };
 
@@ -578,16 +597,16 @@ export default function AdminDashboard() {
       const data = await response.json();
 
       if (data.success) {
-        showToast('success', `Added new candidate ${fullName} with applicant account`);
+        showToast('success', `Successfully registered candidate "${fullName}" and saved their applicant account in the database!`);
         setShowCandidateModal(false);
         setNewCandidate({ firstName: '', lastName: '', email: '', phone: '', status: 'Inquiry' });
         fetchCandidates();
         fetchAuditLogs();
       } else {
-        showToast('error', data.message || 'Unable to add candidate. Please try again.');
+        showToast('error', data.message || 'We could not add the candidate. Please verify their email is not already registered and try again.');
       }
     } catch (error) {
-      showToast('error', 'Error adding candidate. Please try again.');
+      showToast('error', 'We ran into an issue registering this candidate. Please check your connection and try again.');
     } finally {
       setActionLoading(false);
     }
@@ -606,14 +625,14 @@ export default function AdminDashboard() {
       });
 
       if (response.ok) {
-        showToast('success', `Updated candidate ${candidate.name} stage to ${newStatus}`);
+        showToast('success', `Successfully updated "${candidate.name}"'s intake stage to "${newStatus}" and committed changes to the database!`);
         fetchCandidates();
         fetchAuditLogs();
       } else {
-        showToast('error', 'Unable to update candidate status. Please try again.');
+        showToast('error', 'We were unable to change this candidate\'s status. Please try again.');
       }
     } catch (error) {
-      showToast('error', 'Error updating candidate status. Please try again.');
+      showToast('error', 'We encountered an error updating this candidate\'s status. Please check your connection and try again.');
     }
   };
 
@@ -630,15 +649,15 @@ export default function AdminDashboard() {
       const data = await response.json();
 
       if (data.success) {
-        showToast('success', `Removed candidate ${name} from intake roster.`);
+        showToast('success', `Successfully removed candidate "${name}" from the intake roster and deleted their record from the database.`);
         fetchCandidates();
         fetchAuditLogs();
       } else {
-        showToast('error', data.message || 'Unable to remove candidate. Please try again.');
+        showToast('error', data.message || 'We could not remove the candidate. Please try again.');
         fetchCandidates();
       }
     } catch (error) {
-      showToast('error', 'Error removing candidate. Please try again.');
+      showToast('error', 'We ran into a connection issue while removing the candidate. Please try again.');
       fetchCandidates();
     }
   };
@@ -742,12 +761,6 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Link
-              to="/standalone-application"
-              className="px-4 py-2.5 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-xl text-cream text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
-            >
-              <FileText className="w-3.5 h-3.5" /> Open Backup Manual Application Form &rarr;
-            </Link>
             <button
               onClick={loadAllData}
               className="px-4 py-2.5 bg-gold/20 hover:bg-gold/30 border border-gold/40 rounded-xl text-cream text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
@@ -926,7 +939,17 @@ export default function AdminDashboard() {
                 <button
                   onClick={() => {
                     setIsNewMember(true);
-                    setEditingMember({ role: 'member', financial_status: 'inactive' });
+                    setEditingMember({ 
+                      role: 'member', 
+                      financial_status: 'inactive',
+                      first_name: '',
+                      last_name: '',
+                      name: '',
+                      title: '',
+                      intake_class: '',
+                      industry: '',
+                      is_test_credential: 0
+                    });
                     setShowMemberModal(true);
                   }}
                   className="bg-ivy text-cream px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-ivy/90 transition-all shadow-md"
@@ -957,7 +980,14 @@ export default function AdminDashboard() {
                               {member.name ? member.name.charAt(0) : 'U'}
                             </div>
                             <div>
-                              <p className="font-bold text-ivy">{member.name}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold text-ivy">{member.name}</p>
+                                {(member.is_test_credential === 1 || member.is_test_credential === true || member.email.toLowerCase().startsWith('qa.') || member.email.toLowerCase().startsWith('test.')) && (
+                                  <span className="px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
+                                    Test Credential
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-[10px] text-ivy/50">{member.email}</p>
                             </div>
                           </div>
@@ -989,7 +1019,13 @@ export default function AdminDashboard() {
                             <button
                               onClick={() => {
                                 setIsNewMember(false);
-                                setEditingMember(member);
+                                const fName = member.first_name || member.name.split(' ')[0] || '';
+                                const lName = member.last_name || member.name.split(' ').slice(1).join(' ') || '';
+                                setEditingMember({
+                                  ...member,
+                                  first_name: fName,
+                                  last_name: lName
+                                });
                                 setShowMemberModal(true);
                               }}
                               className="p-2 text-ivy/60 hover:text-ivy hover:bg-gold/10 rounded-lg transition-colors"
@@ -1771,14 +1807,41 @@ export default function AdminDashboard() {
             <form onSubmit={handleSaveMember} className="p-8 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/60 mb-2">Full Name</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/60 mb-2">First Name</label>
                   <input
                     required
                     type="text"
-                    value={editingMember?.name || ''}
-                    onChange={e => setEditingMember({...editingMember!, name: e.target.value})}
+                    value={editingMember?.first_name || ''}
+                    onChange={e => {
+                      const f = e.target.value;
+                      const l = editingMember?.last_name || '';
+                      setEditingMember({
+                        ...editingMember!,
+                        first_name: f,
+                        name: `${f} ${l}`.trim()
+                      });
+                    }}
                     className="w-full px-4 py-2.5 border border-gold/20 rounded-xl focus:ring-2 focus:ring-gold/20 outline-none"
-                    placeholder="Enter full name"
+                    placeholder="First name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/60 mb-2">Last Name</label>
+                  <input
+                    required
+                    type="text"
+                    value={editingMember?.last_name || ''}
+                    onChange={e => {
+                      const l = e.target.value;
+                      const f = editingMember?.first_name || '';
+                      setEditingMember({
+                        ...editingMember!,
+                        last_name: l,
+                        name: `${f} ${l}`.trim()
+                      });
+                    }}
+                    className="w-full px-4 py-2.5 border border-gold/20 rounded-xl focus:ring-2 focus:ring-gold/20 outline-none"
+                    placeholder="Last name"
                   />
                 </div>
                 <div>
@@ -1788,7 +1851,15 @@ export default function AdminDashboard() {
                     disabled={!isNewMember}
                     type="email"
                     value={editingMember?.email || ''}
-                    onChange={e => setEditingMember({...editingMember!, email: e.target.value})}
+                    onChange={e => {
+                      const emailVal = e.target.value;
+                      const isTest = emailVal.toLowerCase().startsWith('qa.') || emailVal.toLowerCase().startsWith('test.');
+                      setEditingMember({
+                        ...editingMember!,
+                        email: emailVal,
+                        is_test_credential: isTest ? 1 : (editingMember?.is_test_credential || 0)
+                      });
+                    }}
                     className="w-full px-4 py-2.5 border border-gold/20 rounded-xl focus:ring-2 focus:ring-gold/20 outline-none disabled:bg-cream"
                     placeholder="user@orderofkpi.org"
                   />
@@ -1824,7 +1895,17 @@ export default function AdminDashboard() {
                     value={editingMember?.intake_class || ''}
                     onChange={e => setEditingMember({...editingMember!, intake_class: e.target.value})}
                     className="w-full px-4 py-2.5 border border-gold/20 rounded-xl focus:ring-2 focus:ring-gold/20 outline-none"
-                    placeholder="e.g. Member"
+                    placeholder="e.g. Spring 2026"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/60 mb-2">Industry</label>
+                  <input
+                    type="text"
+                    value={editingMember?.industry || ''}
+                    onChange={e => setEditingMember({...editingMember!, industry: e.target.value})}
+                    className="w-full px-4 py-2.5 border border-gold/20 rounded-xl focus:ring-2 focus:ring-gold/20 outline-none"
+                    placeholder="e.g. Technology"
                   />
                 </div>
                 <div>
@@ -1836,6 +1917,20 @@ export default function AdminDashboard() {
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/60 mb-2">Account Type</label>
+                  <select
+                    value={editingMember?.is_test_credential ? 'test' : 'regular'}
+                    onChange={e => setEditingMember({
+                      ...editingMember!,
+                      is_test_credential: e.target.value === 'test' ? 1 : 0
+                    })}
+                    className="w-full px-4 py-2.5 border border-gold/20 rounded-xl focus:ring-2 focus:ring-gold/20 outline-none bg-white cursor-pointer"
+                  >
+                    <option value="regular">Regular Account</option>
+                    <option value="test">Test Credential / QA</option>
                   </select>
                 </div>
               </div>

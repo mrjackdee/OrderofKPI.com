@@ -148,14 +148,6 @@ export default function ReviewApplications() {
           <p className="text-ivy/40 text-sm max-w-xl font-body">
             Reviewing new member submissions for the FY27 Intake Class. All information is sensitive and strictly for internal use.
           </p>
-          <div>
-            <Link 
-              to="/standalone-application" 
-              className="text-xs font-bold uppercase tracking-widest text-ivy hover:text-gold transition-colors inline-flex items-center gap-1.5 underline"
-            >
-              <FileText size={14} /> Open Backup Manual Application Form &rarr;
-            </Link>
-          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full md:w-auto">

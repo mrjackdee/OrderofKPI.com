@@ -167,6 +167,11 @@ export default function MemberDirectory() {
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-green-50 border border-green-200 text-[9px] font-black uppercase tracking-widest text-green-700">
                         <CheckCircle2 className="w-2.5 h-2.5" /> Member
                       </span>
+                      {(member.is_test_credential === 1 || member.is_test_credential === true || member.email?.toLowerCase().startsWith('qa.') || member.email?.toLowerCase().startsWith('test.')) && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-[9px] font-black uppercase tracking-widest text-amber-700">
+                          Test Credential
+                        </span>
+                      )}
                       {isOfficer(member) && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gold/10 border border-gold/20 text-[9px] font-black uppercase tracking-widest text-[#B8860B]">
                           Officer
