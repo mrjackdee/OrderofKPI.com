@@ -366,12 +366,10 @@ const defaultUsers = [
   { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
   { name: "Sammie Poe", email: "sammie.poe@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
   { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
-  { name: "Donald Mitchell", email: "dmitchell02@gmail.com", role: "member", intake_class: "", financial_status: "active" },
   { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member", intake_class: "", financial_status: "inactive", industry: "Arts" },
   { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian", intake_class: "", financial_status: "active", industry: "Journalism" },
   { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus", intake_class: "", financial_status: "active" },
   { name: "Alejandro Araujo", email: "alejandro.araujo@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
-  { name: "Brandon Addison", email: "brandon.addison@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
   { name: "Demetrist Thomas", email: "demetrist.thomas@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
   { name: "Denzel Talley", email: "denzel.talley@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
   { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
@@ -487,7 +485,6 @@ async function initDb() {
     "james.haywood@orderofkpi.org": "2012",
     "admin@orderofkpi.org": "2012",
     "donald.mitchell@orderofkpi.org": "1914",
-    "dmitchell02@gmail.com": "1914",
     "sammie.poe@orderofkpi.org": "atlanta"
   };
   const testUsers = ["admin@orderofkpi.org", "jack@orderofkpi.org"];
@@ -666,7 +663,7 @@ async function initDb() {
       } else if (emailNorm === "admin@orderofkpi.org") {
         targetPasswordHash = hashPassword("2012");
         targetIsFirstLogin = 0;
-      } else if (emailNorm === "donald.mitchell@orderofkpi.org" || emailNorm === "dmitchell02@gmail.com") {
+      } else if (emailNorm === "donald.mitchell@orderofkpi.org") {
         targetPasswordHash = hashPassword("1914");
         targetIsFirstLogin = 0;
       } else if (emailNorm === "sammie.poe@orderofkpi.org") {
@@ -872,13 +869,29 @@ async function initDb() {
       }
     }
 
+    // Ensure Brandon Addison and duplicate Donald Mitchell Gmail account are permanently purged
+    delete cleanData['brandon.addison@orderofkpi.org'];
+    delete cleanData['dmitchell02@gmail.com'];
+    if (useSqlite && sqliteDb) {
+      try {
+        sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'brandon.addison@orderofkpi.org'").run();
+        sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'dmitchell02@gmail.com'").run();
+      } catch (e) {}
+    }
+
     fs.writeFileSync(jsonDbPath, JSON.stringify(cleanData, null, 2));
     console.log("JSON database synchronized with official active roster.");
 
-    // Sync active roster members to Cloud Firestore in background
+    // Sync active roster members to Cloud Firestore in background and delete duplicate from Firestore
     setTimeout(() => {
       syncLocalMemberToFirestoreCloud("brandon.hunter@orderofkpi.org").catch(e => console.warn("Notice syncing Brandon Hunter to Firestore:", e));
       syncLocalMemberToFirestoreCloud("terrell.singleton@orderofkpi.org").catch(e => console.warn("Notice syncing Terrell Singleton to Firestore:", e));
+      
+      if (firebaseProjectId && firebaseApiKey) {
+        const dbId = firebaseDatabaseId || "(default)";
+        const url = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/members/dmitchell02_gmail_com?key=${firebaseApiKey}`;
+        fetch(url, { method: "DELETE" }).catch(e => console.warn("Notice purging dmitchell02 from Firestore:", e));
+      }
     }, 1500);
   } catch (jsonErr) {
     console.error("JSON database sync failed:", jsonErr);
@@ -976,10 +989,10 @@ function findUser(email: string): UserRecord | null {
         first_name: defaultU.name.split(" ")[0],
         password_hash: (normEmail === "admin@orderofkpi.org" || normEmail === "james.haywood@orderofkpi.org") 
           ? hashPassword("2012") 
-          : (normEmail === "donald.mitchell@orderofkpi.org" || normEmail === "dmitchell02@gmail.com")
+          : (normEmail === "donald.mitchell@orderofkpi.org")
             ? hashPassword("1914")
             : hashPassword("atlanta"),
-        is_first_login: (normEmail === "james.haywood@orderofkpi.org" || normEmail === "donald.mitchell@orderofkpi.org" || normEmail === "dmitchell02@gmail.com" || normEmail === "sammie.poe@orderofkpi.org") ? 0 : 1,
+        is_first_login: (normEmail === "james.haywood@orderofkpi.org" || normEmail === "donald.mitchell@orderofkpi.org" || normEmail === "sammie.poe@orderofkpi.org") ? 0 : 1,
         role: defaultU.role,
         title: defaultU.title
       };
@@ -1168,7 +1181,7 @@ async function startServer() {
     const isAdminPassword = isAdminAccount && password === "K@mala2026";
     const isJamesAccount = normEmail === "james.haywood@orderofkpi.org";
     const isJamesPassword = isJamesAccount && (password === "2012" || password === "atlanta");
-    const isDonaldAccount = normEmail === "donald.mitchell@orderofkpi.org" || normEmail === "dmitchell02@gmail.com";
+    const isDonaldAccount = normEmail === "donald.mitchell@orderofkpi.org";
     const isDonaldPassword = isDonaldAccount && (password === "1914" || password === "atlanta" || password === "2012");
     const isSammieAccount = normEmail === "sammie.poe@orderofkpi.org";
     const isSammiePassword = isSammieAccount && (password === "atlanta" || password === "2012");

@@ -627,7 +627,7 @@ export default function Elections() {
                 <span className="text-silver/20 group-hover:text-primary transition-colors">-</span>
                 <span className="text-white group-hover:text-primary transition-colors text-xs uppercase tracking-widest font-bold">Jack Dee</span>
               </a>
-              <a href="mailto:dmitchell02@gmail.com" className="group flex items-center gap-3">
+              <a href="mailto:donald.mitchell@orderofkpi.org" className="group flex items-center gap-3">
                 <span className="text-silver/20 group-hover:text-primary transition-colors">-</span>
                 <span className="text-white group-hover:text-primary transition-colors text-xs uppercase tracking-widest font-bold">Donald Mitchell</span>
               </a>

@@ -82,7 +82,15 @@ export default function FinancialRoster() {
         const response = await fetch('/api/members');
         const data = await response.json();
         if (data.success && Array.isArray(data.members)) {
-          dirMembers = data.members;
+          dirMembers = data.members.filter((m: Member) => {
+            // Filter out non-members (applicants/candidates/test credentials) and removed members
+            const email = (m.email || '').toLowerCase().trim();
+            const role = (m.role || '').toLowerCase();
+            const title = (m.title || '').toLowerCase();
+            if (email === 'brandon.addison@orderofkpi.org') return false;
+            if (role === 'applicant' || role === 'prospective' || role === 'candidate' || title === 'candidate') return false;
+            return true;
+          });
         }
       } catch (err) {
         console.warn('Could not fetch backend directory members:', err);
@@ -108,6 +116,8 @@ export default function FinancialRoster() {
         const kpiEmail = cols[7] || '';
         const email = (kpiEmail || personalEmail || `${firstName.toLowerCase()}.${lastName.toLowerCase()}@orderofkpi.org`).toLowerCase().trim();
 
+        if (email === 'brandon.addison@orderofkpi.org') continue;
+
         if (fy27Paid && (firstName || lastName)) {
           const fullName = `${firstName} ${lastName}`.trim();
 
@@ -132,7 +142,27 @@ export default function FinancialRoster() {
         }
       }
 
-      setMembers(activeFinancialMembers);
+      // Also merge any active members from directory that might not be in the spreadsheet yet (e.g. newly provisioned active members)
+      for (const dm of dirMembers) {
+        if ((dm.financial_status || '').toLowerCase() === 'active') {
+          const emailNorm = (dm.email || '').toLowerCase().trim();
+          if (emailNorm === 'brandon.addison@orderofkpi.org') continue;
+          if (!activeFinancialMembers.some(m => m.email.toLowerCase() === emailNorm)) {
+            activeFinancialMembers.push(dm);
+          }
+        }
+      }
+
+      // Enforce strict syntax logic: Membership = "Member" and Financial Status = "Active"
+      const finalRoster = activeFinancialMembers.filter(m => {
+        const role = (m.role || '').toLowerCase();
+        const title = (m.title || '').toLowerCase();
+        const isMem = role !== 'applicant' && role !== 'prospective' && role !== 'candidate' && title !== 'candidate';
+        const isFinActive = (m.financial_status || '').toLowerCase() === 'active';
+        return isMem && isFinActive;
+      });
+
+      setMembers(finalRoster);
     } catch (err: any) {
       console.error('Error fetching financial members:', err);
       // Fallback to active financial members in API directory
@@ -140,7 +170,12 @@ export default function FinancialRoster() {
         const response = await fetch('/api/members');
         const data = await response.json();
         if (data.success && Array.isArray(data.members)) {
-          setMembers(data.members.filter((m: Member) => m.financial_status === 'active'));
+          setMembers(data.members.filter((m: Member) => {
+            const role = (m.role || '').toLowerCase();
+            const title = (m.title || '').toLowerCase();
+            const isMem = role !== 'applicant' && role !== 'prospective' && role !== 'candidate' && title !== 'candidate';
+            return isMem && (m.financial_status || '').toLowerCase() === 'active' && m.email.toLowerCase() !== 'brandon.addison@orderofkpi.org';
+          }));
         }
       } catch (fallbackErr) {
         setError('Roster Data not yet available.');
@@ -183,13 +218,13 @@ export default function FinancialRoster() {
               <CalendarDays size={14} /> Intake Calendar
             </Link>
             <div className="px-5 py-2 rounded-full bg-[#1E3F20] text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-md">
-              <Users size={14} /> Financial Roster
+              <Users size={14} /> Financial Membership Roster
             </div>
             <Link to="/gantt-chart" className="px-5 py-2 rounded-full border border-[#B8860B]/30 text-[#1E3F20] text-xs font-bold uppercase tracking-widest hover:bg-[#B8860B]/10 transition-colors flex items-center gap-2">
               <LayoutList size={14} /> Intake Plan
             </Link>
             <Link to="/member-directory" className="px-5 py-2 rounded-full border border-[#B8860B]/30 text-[#1E3F20] text-xs font-bold uppercase tracking-widest hover:bg-[#B8860B]/10 transition-colors flex items-center gap-2">
-              <Users size={14} /> Member Directory
+              <Users size={14} /> Access Directory
             </Link>
           </div>
         </div>
@@ -207,8 +242,11 @@ export default function FinancialRoster() {
             <div className="h-px w-16 bg-[#B8860B]" />
           </div>
           <h1 className="text-4xl md:text-6xl font-display text-[#1E3F20] tracking-wider uppercase text-center max-w-4xl">
-            Financial Roster
+            Financial Membership Roster
           </h1>
+          <p className="text-[#1E3F20]/70 text-sm mt-3 max-w-xl font-medium">
+            Active Members in good financial standing (Membership = &ldquo;Member&rdquo; &amp; Financial Status = &ldquo;Active&rdquo;).
+          </p>
         </motion.div>
       </div>
 

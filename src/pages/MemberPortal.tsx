@@ -76,15 +76,15 @@ export default function MemberPortal() {
         {/* Core Member Tools Grid */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Link
-            to="/member-directory"
+            to="/financial-roster"
             className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
           >
             <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
               <Users size={28} />
             </div>
             <div>
-              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Membership Roster</h4>
-              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Member Directory</p>
+              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Financial Membership Roster</h4>
+              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Active Financial Members</p>
             </div>
           </Link>
 
@@ -102,15 +102,15 @@ export default function MemberPortal() {
           </Link>
 
           <Link
-            to="/financial-roster"
+            to="/member-directory"
             className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
           >
             <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
               <ClipboardCheck size={28} />
             </div>
             <div>
-              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Financial Status</h4>
-              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Dues Verification</p>
+              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Access Directory</h4>
+              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">All System Logins</p>
             </div>
           </Link>
 

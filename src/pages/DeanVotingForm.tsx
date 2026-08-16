@@ -11,18 +11,18 @@ import {
 } from '../lib/firebase';
 import { getFriendlyError } from '../lib/utils';
 
-interface NomineeItem {
-  fullName: string;
-  count: number;
-  statements: string[];
-}
+// Define the approved candidate slate once formal acceptances are received.
+// Currently empty pending confirmation and formal acceptances of nomination.
+const APPROVED_DEAN_CANDIDATES: string[] = [
+  // Approved candidates will be listed here in a future prompt once nominations are formally accepted.
+];
 
 export default function DeanVotingForm() {
   const userEmail = sessionStorage.getItem('userEmail') || '';
   const userName = sessionStorage.getItem('userName') || '';
 
-  const [nominees, setNominees] = useState<NomineeItem[]>([]);
-  const [selectedNominee, setSelectedNominee] = useState('');
+  const [candidates, setCandidates] = useState<string[]>(APPROVED_DEAN_CANDIDATES);
+  const [selectedCandidate, setSelectedCandidate] = useState('');
   const [existingVote, setExistingVote] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -34,7 +34,7 @@ export default function DeanVotingForm() {
     syncDeanDataFromFirestore()
       .catch((err) => console.warn('[DeanVotingForm] Background sync error:', err))
       .finally(() => {
-        fetchNomineesAndVote();
+        fetchUserVote();
       });
   }, [userEmail]);
 
@@ -51,62 +51,11 @@ export default function DeanVotingForm() {
     }
   };
 
-  const fetchNomineesAndVote = async () => {
+  const fetchUserVote = async () => {
     try {
-      let nominationList: any[] = [];
-      let nominationsLoaded = false;
-
-      // 1. Fetch Nominees (Try Server first)
-      try {
-        const nomRes = await fetchWithTimeout('/api/dean-nominations', {}, 4000);
-        if (nomRes.ok) {
-          const contentType = nomRes.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            const nomData = await nomRes.json();
-            if (nomData.success && Array.isArray(nomData.nominations)) {
-              nominationList = nomData.nominations;
-              nominationsLoaded = true;
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('[DeanVotingForm] Server nominees fetch failed, using Firestore:', err);
-      }
-
-      // Fallback to Firestore for Nominees
-      if (!nominationsLoaded) {
-        console.log('[DeanVotingForm] Loading nominees from Firestore...');
-        const fsNomRes = await firebaseFetchAllDeanNominations();
-        if (fsNomRes.success && fsNomRes.nominations) {
-          nominationList = fsNomRes.nominations;
-        }
-      }
-
-      // Process Nominees list
-      const summaryMap: Record<string, { count: number; statements: string[] }> = {};
-      nominationList.forEach((nom: any) => {
-        const fullName = `${nom.nominee_first_name || ''} ${nom.nominee_last_name || ''}`.trim();
-        if (!fullName) return;
-        if (!summaryMap[fullName]) {
-          summaryMap[fullName] = { count: 0, statements: [] };
-        }
-        summaryMap[fullName].count += 1;
-        if (nom.statement) {
-          summaryMap[fullName].statements.push(nom.statement);
-        }
-      });
-
-      const processedList = Object.keys(summaryMap).map((fullName) => ({
-        fullName,
-        count: summaryMap[fullName].count,
-        statements: summaryMap[fullName].statements
-      })).sort((a, b) => b.count - a.count);
-
-      setNominees(processedList);
-
-      // 2. Fetch User Vote (Try Server first)
       if (userEmail) {
         let userVote = null;
+        // 1. Fetch User Vote (Try Server first)
         try {
           const voteRes = await fetchWithTimeout(`/api/dean-votes/user?email=${encodeURIComponent(userEmail)}`, {}, 4000);
           if (voteRes.ok) {
@@ -133,7 +82,7 @@ export default function DeanVotingForm() {
 
         if (userVote) {
           setExistingVote(userVote);
-          setSelectedNominee(userVote.nominee_name || '');
+          setSelectedCandidate(userVote.nominee_name || '');
         }
       }
     } catch (err) {
@@ -148,7 +97,12 @@ export default function DeanVotingForm() {
     setError('');
     setSuccessMessage('');
 
-    if (!selectedNominee) {
+    if (candidates.length === 0) {
+      setError('Voting is not currently active. The approved candidate slate has not yet been published.');
+      return;
+    }
+
+    if (!selectedCandidate) {
       setError('Please select a candidate for Intake Dean.');
       return;
     }
@@ -162,7 +116,7 @@ export default function DeanVotingForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           voter_email: userEmail,
-          nominee_name: selectedNominee
+          nominee_name: selectedCandidate
         })
       }, 4000).then(async (res) => {
         const contentType = res.headers.get('content-type');
@@ -174,7 +128,7 @@ export default function DeanVotingForm() {
         throw new Error('Server response was not JSON');
       });
 
-      const fsTask = firebaseSaveDeanVote(userEmail, selectedNominee);
+      const fsTask = firebaseSaveDeanVote(userEmail, selectedCandidate);
 
       const [serverResult, fsResult] = await Promise.allSettled([serverTask, fsTask]);
 
@@ -192,7 +146,7 @@ export default function DeanVotingForm() {
         }
 
         try {
-          await fetchNomineesAndVote();
+          await fetchUserVote();
         } catch (fetchErr) {
           console.warn('[DeanVotingForm] Post-submit fetch error ignored:', fetchErr);
         }
@@ -228,12 +182,12 @@ export default function DeanVotingForm() {
             Intake Dean Team Voting
           </h1>
           <p className="text-gray-600 text-sm leading-relaxed max-w-2xl">
-            Cast your official ballot for the Intake Dean position from the verified nominee roster. Each financial member is restricted to a single active vote.
+            Cast your official ballot for the Intake Dean position. Each financial member is restricted to a single active vote.
           </p>
           <div className="bg-[#FDFCF0] border border-[#B8860B]/30 rounded-2xl p-5 space-y-2 mt-4 text-xs text-[#1E3F20]">
             <p className="font-bold uppercase tracking-wider text-[#B8860B]">Voting Period & Timeline</p>
             <p><strong>Period:</strong> Monday, August 17, 2026 to Wednesday, August 19, 2026.</p>
-            <p><strong>Guidelines:</strong> Members can cast a single vote for their preferred candidate. Ballots may be updated while voting is open.</p>
+            <p><strong>Guidelines:</strong> Members will cast a single vote for their preferred candidate. Ballots may be updated while voting is active.</p>
             <p className="pt-2 border-t border-[#B8860B]/20 text-gray-600">
               For questions regarding the voting process, please reach out to <a href="mailto:james.haywood@orderofkpi.org" className="font-bold text-[#1E3F20] underline">james.haywood@orderofkpi.org</a> (Membership Intake Chair).
             </p>
@@ -247,7 +201,7 @@ export default function DeanVotingForm() {
             <div>
               <h3 className="font-bold text-[#1E3F20] text-sm uppercase tracking-wider">Active Vote Recorded</h3>
               <p className="text-xs text-gray-600 mt-1">
-                You currently have an active ballot cast for <span className="font-bold text-[#1E3F20]">{existingVote.nominee_name}</span>. You may select a different nominee below to update your ballot.
+                You currently have an active ballot cast for <span className="font-bold text-[#1E3F20]">{existingVote.nominee_name}</span>.
               </p>
             </div>
           </div>
@@ -270,34 +224,46 @@ export default function DeanVotingForm() {
           )}
 
           {loading ? (
-            <div className="py-12 text-center text-gray-500 text-xs">Loading nominees roster...</div>
-          ) : nominees.length === 0 ? (
-            <div className="py-12 text-center text-gray-500 text-xs">No nominees are currently available for voting.</div>
+            <div className="py-12 text-center text-gray-500 text-xs">Loading voting portal...</div>
+          ) : candidates.length === 0 ? (
+            <div className="py-12 px-6 text-center space-y-4">
+              <div className="inline-flex p-4 rounded-full bg-[#B8860B]/10 text-[#B8860B] mb-2">
+                <Award size={36} />
+              </div>
+              <h3 className="font-serif font-bold text-xl text-[#1E3F20]">Candidate Slate Pending Formal Acceptance</h3>
+              <p className="text-xs text-gray-600 max-w-lg mx-auto leading-relaxed">
+                The Dean nomination period has formally concluded. Nominees are currently being contacted to confirm formal acceptance of their nomination. 
+              </p>
+              <p className="text-xs text-gray-500 max-w-md mx-auto">
+                The official approved candidate ballot will go live once candidate acceptances are confirmed and certified by the Membership Committee.
+              </p>
+              <div className="pt-4">
+                <span className="inline-block bg-[#FDFCF0] border border-[#B8860B]/30 px-4 py-2 rounded-full text-[11px] font-bold text-[#1E3F20] uppercase tracking-wider">
+                  Voting Window: August 17 – August 19, 2026
+                </span>
+              </div>
+            </div>
           ) : (
             <form onSubmit={handleSubmit} noValidate className="space-y-6">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#1E3F20] mb-4">
                   Select Your Preferred Candidate <span className="text-red-500">*</span>
                 </label>
-                <div className="space-y-4">
-                  {nominees.map((nom) => {
-                    const isSelected = selectedNominee === nom.fullName;
+                <div className="space-y-3">
+                  {candidates.map((candidateName) => {
+                    const isSelected = selectedCandidate === candidateName;
                     return (
                       <div
-                        key={nom.fullName}
-                        onClick={() => setSelectedNominee(nom.fullName)}
+                        key={candidateName}
+                        onClick={() => setSelectedCandidate(candidateName)}
                         className={`p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
                           isSelected 
                             ? 'bg-[#1E3F20]/5 border-[#1E3F20] shadow-sm' 
                             : 'bg-[#FDFCF0] border-[#B8860B]/30 hover:border-[#1E3F20]/50'
                         }`}
                       >
-                        <div className="space-y-1">
-                          <h4 className="font-serif font-bold text-base text-[#1E3F20]">{nom.fullName}</h4>
-                          <p className="text-xs text-gray-500">Endorsements: {nom.count} nomination(s)</p>
-                          {nom.statements.length > 0 && (
-                            <p className="text-xs text-gray-700 italic mt-2">"{nom.statements[0]}"</p>
-                          )}
+                        <div>
+                          <h4 className="font-serif font-bold text-base text-[#1E3F20]">{candidateName}</h4>
                         </div>
                         <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${
                           isSelected ? 'bg-[#1E3F20] border-[#1E3F20] text-white' : 'border-gray-300 bg-white'

@@ -38,13 +38,11 @@ export const defaultMembers: MemberUser[] = [
   { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member" },
   { name: "Sammie Poe", email: "sammie.poe@orderofkpi.org", role: "member" },
   { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member" },
-  { name: "Donald Mitchell", email: "dmitchell02@gmail.com", role: "member" },
   { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member" },
   { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian" },
   { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus" },
   { name: "Denzel Talley", email: "denzel.talley@orderofkpi.org", role: "member" },
   { name: "Alejandro Araujo", email: "alejandro.araujo@orderofkpi.org", role: "member" },
-  { name: "Brandon Addison", email: "brandon.addison@orderofkpi.org", role: "member" },
   { name: "Demetrist Thomas", email: "demetrist.thomas@orderofkpi.org", role: "member" },
   { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member" },
   { name: "Kevin Jennings", email: "kevin.jennings@orderofkpi.org", role: "member" },
@@ -79,7 +77,6 @@ const MEMBER_INITIAL_PASSWORDS: Record<string, string> = {
   'james.haywood@orderofkpi.org': '2012',
   'admin@orderofkpi.org': '2012',
   'donald.mitchell@orderofkpi.org': '1914',
-  'dmitchell02@gmail.com': '1914',
   'sammie.poe@orderofkpi.org': 'atlanta'
 };
 
@@ -493,7 +490,7 @@ async function performClientSideLogin(email: string, pass: string) {
   const isAdminPass = isAdmin && pass === 'K@mala2026';
   const isJames = normEmail === 'james.haywood@orderofkpi.org';
   const isJamesPass = isJames && (pass === '2012' || pass === 'atlanta');
-  const isDonald = normEmail === 'donald.mitchell@orderofkpi.org' || normEmail === 'dmitchell02@gmail.com';
+  const isDonald = normEmail === 'donald.mitchell@orderofkpi.org';
   const isDonaldPass = isDonald && (pass === '1914' || pass === 'atlanta' || pass === '2012');
 
   // If password was changed, we must NOT allow the initial password anymore.

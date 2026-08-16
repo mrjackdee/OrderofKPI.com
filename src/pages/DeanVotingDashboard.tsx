@@ -152,7 +152,7 @@ export default function DeanVotingDashboard() {
     y += 10;
 
     doc.text('Rank', 14, y);
-    doc.text('Nominee Name', 35, y);
+    doc.text('Intake Dean Candidate Name', 35, y);
     doc.text('Total Votes', 160, y, { align: 'right' });
     y += 4;
 
@@ -210,7 +210,7 @@ export default function DeanVotingDashboard() {
             Intake Dean Voting Results
           </h1>
           <p className="text-gray-600 text-sm leading-relaxed max-w-3xl">
-            Aggregated ranking of nominees for the Intake Dean position based on member ballots. Voter identities are completely anonymous to ensure impartial evaluation and compliance with organizational governance standards.
+            Aggregated ranking of candidates for the Intake Dean position based on member ballots. Voter identities are completely anonymous to ensure impartial evaluation and compliance with organizational governance standards.
           </p>
           <div className="bg-[#FDFCF0] border border-[#B8860B]/30 rounded-2xl p-5 space-y-2 mt-4 text-xs text-[#1E3F20]">
             <p className="font-bold uppercase tracking-wider text-[#B8860B]">Timeline & Governance</p>
@@ -238,7 +238,7 @@ export default function DeanVotingDashboard() {
               <Award size={28} />
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Qualified Nominees</p>
+              <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Qualified Intake Dean Candidates</p>
               <h3 className="text-3xl font-serif font-bold text-[#1E3F20] mt-1">{tallies.length}</h3>
             </div>
           </div>
@@ -248,7 +248,7 @@ export default function DeanVotingDashboard() {
         <div className="bg-white border border-[#B8860B]/30 rounded-3xl p-8 md:p-12 shadow-[0_8px_30px_rgba(30,63,32,0.06)] space-y-6">
           <h2 className="text-xl font-serif font-bold text-[#1E3F20] flex items-center gap-2">
             <BarChart2 size={20} className="text-[#B8860B]" />
-            <span>Nominee Tallies & Rankings</span>
+            <span>Intake Dean Candidate Tallies & Rankings</span>
           </h2>
 
           {loading ? (
