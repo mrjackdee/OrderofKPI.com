@@ -40,7 +40,7 @@ import { prospectiveMembers, fetchAllApplications, syncApplicationsFromFirestore
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import { googleSignIn, getAccessToken } from '../lib/googleAuth';
 import { createGoogleForm, getGoogleForm, getGoogleFormResponses } from '../lib/googleWorkspace';
-import { Chrome, ArrowDownToLine, Check, Database, Key, Lock, RefreshCw } from 'lucide-react';
+import { Chrome, ArrowDownToLine, Check, Database, Key, Lock, RefreshCw, Mail, Send, Inbox } from 'lucide-react';
 
 interface SystemLog {
   id?: number;
@@ -84,7 +84,7 @@ export default function AdminDashboard() {
   const [passwordLogFilter, setPasswordLogFilter] = useState<'all' | 'change' | 'failure'>('all');
   const [isPingingDb, setIsPingingDb] = useState(false);
   
-  // Google Forms Integration State
+  // Google Forms & Gmail Integration State
   const [googleAuthToken, setGoogleAuthToken] = useState<string | null>(null);
   const [googleFormId, setGoogleFormId] = useState('');
   const [inputFormId, setInputFormId] = useState('');
@@ -93,6 +93,12 @@ export default function AdminDashboard() {
   const [formResponses, setFormResponses] = useState<any[]>([]);
   const [formsLoading, setFormsLoading] = useState(false);
   const [importedCount, setImportedCount] = useState<number | null>(null);
+
+  // Gmail Console State
+  const [gmailRecipient, setGmailRecipient] = useState('');
+  const [gmailSubject, setGmailSubject] = useState('');
+  const [gmailBody, setGmailBody] = useState('');
+  const [gmailSending, setGmailSending] = useState(false);
 
   // Members State
   const [members, setMembers] = useState<Member[]>([]);
@@ -248,6 +254,56 @@ export default function AdminDashboard() {
       setNotification({ type: 'error', text: 'Invalid Form ID or insufficient permissions. Verify your Google Auth.' });
     } finally {
       setFormsLoading(false);
+    }
+  };
+
+  const handleSendGmail = async () => {
+    if (!gmailRecipient.trim() || !gmailSubject.trim() || !gmailBody.trim()) {
+      setNotification({ type: 'error', text: 'Please fill out recipient email, subject, and message body.' });
+      return;
+    }
+    setGmailSending(true);
+    try {
+      if (googleAuthToken) {
+        const utf8Subject = `=?utf-8?B?${btoa(unescape(encodeURIComponent(gmailSubject.trim())))}?=`;
+        const messageParts = [
+          `To: ${gmailRecipient.trim()}`,
+          'Content-Type: text/plain; charset="UTF-8"',
+          'MIME-Version: 1.0',
+          `Subject: ${utf8Subject}`,
+          '',
+          gmailBody
+        ];
+        const message = messageParts.join('\r\n');
+        const encodedMessage = btoa(unescape(encodeURIComponent(message)))
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
+
+        const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${googleAuthToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ raw: encodedMessage })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error?.message || 'Failed to dispatch email via Gmail API.');
+        }
+
+        setNotification({ type: 'success', text: `Email successfully sent via Gmail API to ${gmailRecipient}!` });
+        setGmailSubject('');
+        setGmailBody('');
+      } else {
+        setNotification({ type: 'error', text: 'Please authorize with Google Workspace first to use Gmail API.' });
+      }
+    } catch (err: any) {
+      setNotification({ type: 'error', text: err.message || 'Gmail dispatch failed.' });
+    } finally {
+      setGmailSending(false);
     }
   };
 
@@ -898,7 +954,7 @@ export default function AdminDashboard() {
               activeTab === 'googleForms' ? 'bg-ivy text-cream shadow-md border border-gold/30' : 'bg-white text-ivy/70 hover:bg-gold/10'
             }`}
           >
-            <Chrome className="w-4 h-4 text-gold" /> Google Forms ({formResponses.length})
+            <Mail className="w-4 h-4 text-gold" /> Workspace & Gmail Console ({formResponses.length})
           </button>
 
           <button
@@ -1370,17 +1426,18 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 6: GOOGLE FORMS INTEGRATION */}
+        {/* TAB 6: GOOGLE WORKSPACE & GMAIL INTEGRATION */}
         {activeTab === 'googleForms' && (
           <div className="space-y-6">
             <div className="bg-white p-6 md:p-8 rounded-3xl border border-gold/20 shadow-soft space-y-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gold/10 pb-4">
                 <div>
-                  <h2 className="text-xl font-display font-bold text-ivy uppercase italic">
-                    Google Forms <span className="text-gold">Integration Console</span>
+                  <h2 className="text-xl font-display font-bold text-ivy uppercase italic flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-gold" />
+                    Google Workspace & Gmail <span className="text-gold">Integration Console</span>
                   </h2>
                   <p className="text-ivy/60 text-xs mt-1">
-                    Design or link official Google Forms and import prospective candidate applications directly into Firebase.
+                    Manage Google Workspace OAuth, dispatch official notifications via Gmail API, and synchronize Google Forms into Firebase.
                   </p>
                 </div>
                 <div>
@@ -1394,7 +1451,7 @@ export default function AdminDashboard() {
                   ) : (
                     <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 text-green-800 rounded-xl text-xs font-bold">
                       <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                      Google API Connected
+                      Google & Gmail API Connected
                     </div>
                   )}
                 </div>
@@ -1403,23 +1460,91 @@ export default function AdminDashboard() {
               {!googleAuthToken ? (
                 <div className="p-6 bg-[#FAF9F5] border border-gold/20 rounded-2xl text-center space-y-4">
                   <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center mx-auto">
-                    <Chrome className="w-6 h-6 text-gold" />
+                    <Mail className="w-6 h-6 text-gold" />
                   </div>
                   <div className="max-w-md mx-auto space-y-2">
-                    <h3 className="font-display font-bold text-ivy text-sm uppercase">Google Authentication Required</h3>
+                    <h3 className="font-display font-bold text-ivy text-sm uppercase">Google Workspace & Gmail Authentication</h3>
                     <p className="text-xs text-ivy/60 leading-relaxed">
-                      To create and sync official Google Forms, please sign in using your Google Workspace administration account.
+                      To access Gmail API email dispatching and official Google Forms synchronization, please sign in with your Google Workspace administrative account.
                     </p>
                   </div>
                   <button
                     onClick={handleAuthorizeGoogle}
                     className="px-6 py-2.5 bg-ivy text-cream hover:bg-ivy/90 rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
                   >
-                    Authenticate Now &rarr;
+                    Authenticate Workspace & Gmail &rarr;
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="space-y-6">
+                  {/* GMAIL API DIRECT DISPATCH CONSOLE */}
+                  <div className="p-6 bg-[#FAF9F5] border border-gold/20 rounded-2xl space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gold/10 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 bg-gold/10 rounded-lg text-gold">
+                          <Mail className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-display font-bold text-ivy text-sm uppercase tracking-wider">
+                            Gmail Direct Dispatch Console
+                          </h3>
+                          <p className="text-[11px] text-ivy/60">
+                            Dispatch official candidate notifications, invitations, or member communications directly via Google Workspace Gmail API.
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold uppercase bg-green-100 text-green-800 px-2.5 py-1 rounded-full border border-green-200 flex items-center gap-1">
+                        <Check className="w-3 h-3 text-green-600" /> Gmail API Active
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-ivy/60 mb-1">Recipient Email Address</label>
+                        <input
+                          type="email"
+                          value={gmailRecipient}
+                          onChange={(e) => setGmailRecipient(e.target.value)}
+                          placeholder="e.g. candidate@gmail.com or info@kpi2012.org"
+                          className="w-full px-4 py-2.5 rounded-xl border border-gold/20 text-xs font-body focus:outline-none focus:ring-2 focus:ring-gold/30 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-ivy/60 mb-1">Subject Line</label>
+                        <input
+                          type="text"
+                          value={gmailSubject}
+                          onChange={(e) => setGmailSubject(e.target.value)}
+                          placeholder="e.g. Order of KPI - Membership Intake Notification"
+                          className="w-full px-4 py-2.5 rounded-xl border border-gold/20 text-xs font-body focus:outline-none focus:ring-2 focus:ring-gold/30 bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-ivy/60 mb-1">Message Body</label>
+                      <textarea
+                        rows={4}
+                        value={gmailBody}
+                        onChange={(e) => setGmailBody(e.target.value)}
+                        placeholder="Type your official message here..."
+                        className="w-full px-4 py-2.5 rounded-xl border border-gold/20 text-xs font-body focus:outline-none focus:ring-2 focus:ring-gold/30 bg-white resize-y"
+                      />
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                      <button
+                        onClick={handleSendGmail}
+                        disabled={gmailSending}
+                        className="px-6 py-2.5 bg-ivy text-cream hover:bg-ivy/90 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-md disabled:opacity-50"
+                      >
+                        <Send className="w-4 h-4 text-gold" />
+                        {gmailSending ? 'Dispatching Message...' : 'Dispatch Email via Gmail API'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                   {/* Left Column: Form Configuration */}
                   <div className="lg:col-span-5 space-y-6">
                     {/* Create New Form Section */}
@@ -1589,6 +1714,7 @@ export default function AdminDashboard() {
                     )}
                   </div>
                 </div>
+              </div>
               )}
             </div>
           </div>

@@ -3133,28 +3133,45 @@ async function startServer() {
     }
   });
 
-  app.put("/api/admin/dean-votes/:id", (req, res) => {
+  // Support both PUT with path parameter AND PUT with query parameter
+  const handleDeanVotePut = (req: express.Request, res: express.Response) => {
     try {
-      const { id } = req.params;
+      const id = (req.params.id || req.query.id as string || "").trim();
+      const email = (req.query.email as string || "").toLowerCase().trim();
       const { nominee_name } = req.body;
       if (!nominee_name) {
         return res.status(400).json({ success: false, message: "Nominee name is required." });
       }
+      if (!id && !email) {
+        return res.status(400).json({ success: false, message: "ID or email is required to update vote." });
+      }
 
       if (useSqlite && sqliteDb) {
         try {
-          sqliteDb.prepare(`
-            UPDATE dean_votes 
-            SET nominee_name = ?
-            WHERE id = ?
-          `).run(nominee_name.trim(), id);
+          if (id) {
+            sqliteDb.prepare(`
+              UPDATE dean_votes 
+              SET nominee_name = ?
+              WHERE id = ? OR LOWER(voter_email) = ?
+            `).run(nominee_name.trim(), id, id.toLowerCase());
+          }
+          if (email) {
+            sqliteDb.prepare(`
+              UPDATE dean_votes 
+              SET nominee_name = ?
+              WHERE LOWER(voter_email) = ?
+            `).run(nominee_name.trim(), email);
+          }
         } catch (dbErr) {
           console.error("SQLite update dean vote error:", dbErr);
         }
       }
 
       const list = getFallbackDeanVotes();
-      const idx = list.findIndex(v => v.id === id);
+      const idx = list.findIndex(v => 
+        (id && (v.id === id || (v.voter_email || "").toLowerCase().trim() === id.toLowerCase().trim())) ||
+        (email && (v.voter_email || "").toLowerCase().trim() === email)
+      );
       if (idx >= 0) {
         list[idx] = {
           ...list[idx],
@@ -3167,36 +3184,60 @@ async function startServer() {
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
-  });
+  };
 
-  app.delete("/api/admin/dean-votes/:id", async (req, res) => {
+  app.put("/api/admin/dean-votes/:id", handleDeanVotePut);
+  app.put("/api/admin/dean-votes", handleDeanVotePut);
+
+  // Support both DELETE with path parameter AND DELETE with query/body
+  const handleDeanVoteDelete = async (req: express.Request, res: express.Response) => {
     try {
-      const { id } = req.params;
+      const id = (req.params.id || req.query.id as string || req.body.id as string || "").trim();
+      const email = (req.query.email as string || req.body.email as string || "").toLowerCase().trim();
+      
+      if (!id && !email) {
+        return res.status(400).json({ success: false, message: "ID or email is required to delete vote." });
+      }
+
       const cleanId = id.toLowerCase().trim();
 
       if (useSqlite && sqliteDb) {
         try {
-          sqliteDb.prepare("DELETE FROM dean_votes WHERE id = ? OR LOWER(voter_email) = ?").run(id, cleanId);
+          if (id) {
+            sqliteDb.prepare("DELETE FROM dean_votes WHERE id = ? OR LOWER(voter_email) = ?").run(id, cleanId);
+          }
+          if (email) {
+            sqliteDb.prepare("DELETE FROM dean_votes WHERE LOWER(voter_email) = ?").run(email);
+          }
         } catch (dbErr) {
           console.error("SQLite delete dean vote error:", dbErr);
         }
       }
 
       let list = getFallbackDeanVotes();
-      const target = list.find(v => v.id === id || (v.voter_email || "").toLowerCase().trim() === cleanId);
-      const emailToClean = target?.voter_email || (cleanId.includes("@") ? cleanId : "");
+      const target = list.find(v => 
+        (id && (v.id === id || (v.voter_email || "").toLowerCase().trim() === cleanId)) ||
+        (email && (v.voter_email || "").toLowerCase().trim() === email)
+      );
+      const emailToClean = target?.voter_email || email || (cleanId.includes("@") ? cleanId : "");
 
-      list = list.filter(v => v.id !== id && (v.voter_email || "").toLowerCase().trim() !== cleanId);
+      list = list.filter(v => 
+        !(id && (v.id === id || (v.voter_email || "").toLowerCase().trim() === cleanId)) &&
+        !(email && (v.voter_email || "").toLowerCase().trim() === email)
+      );
       saveFallbackDeanVotes(list);
 
       // Delete from Cloud Firestore if configured
       if (firebaseProjectId && firebaseApiKey) {
         const dbId = firebaseDatabaseId || "(default)";
-        const docKeys = [id, cleanId, emailToClean].filter(Boolean);
+        const docKeys = [id, cleanId, emailToClean, email].filter(Boolean);
         for (const k of docKeys) {
           const safeDocId = k.replace(/[^a-zA-Z0-9]/g, '_');
           const url = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/dean_votes/${encodeURIComponent(safeDocId)}?key=${firebaseApiKey}`;
           fetch(url, { method: "DELETE" }).catch(() => {});
+          
+          const urlDev = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/dean_votes_dev/${encodeURIComponent(safeDocId)}?key=${firebaseApiKey}`;
+          fetch(urlDev, { method: "DELETE" }).catch(() => {});
         }
       }
 
@@ -3204,7 +3245,10 @@ async function startServer() {
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
-  });
+  };
+
+  app.delete("/api/admin/dean-votes/:id", handleDeanVoteDelete);
+  app.delete("/api/admin/dean-votes", handleDeanVoteDelete);
 
   app.get("/api/dean-votes", (req, res) => {
     try {

@@ -12,7 +12,8 @@ import {
   getDoc, 
   getDocFromServer,
   collection,
-  getDocs
+  getDocs,
+  deleteDoc
 } from 'firebase/firestore';
 import staticFirebaseConfig from '../../firebase-applet-config.json';
 
@@ -588,15 +589,26 @@ export async function firebaseFetchAllApplications() {
   }
 }
 
+const isDevEnvironment = () => {
+  if (typeof window !== 'undefined') {
+    return window.location.hostname.includes('ais-dev') || window.location.hostname.includes('localhost') || window.location.hostname === '127.0.0.1';
+  }
+  return (import.meta as any).env?.DEV;
+};
+
+const getVotesCollectionName = () => isDevEnvironment() ? 'dean_votes_dev' : 'dean_votes';
+const getNominationsCollectionName = () => isDevEnvironment() ? 'dean_nominations_dev' : 'dean_nominations';
+
 /**
  * Saves a Dean Nomination to Cloud Firestore.
  */
 export async function firebaseSaveDeanNomination(voterEmail: string, data: { nominee_first_name: string; nominee_last_name: string; statement: string }): Promise<{ success: boolean; message: string }> {
   const normEmail = voterEmail.toLowerCase().trim();
   const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
+  const targetCol = getNominationsCollectionName();
   try {
     const savePromise = (async () => {
-      const docRef = doc(db, 'dean_nominations', safeDocId);
+      const docRef = doc(db, targetCol, safeDocId);
       const now = new Date().toISOString();
       const payload = {
         id: Math.random().toString(36).substring(2, 9),
@@ -604,7 +616,8 @@ export async function firebaseSaveDeanNomination(voterEmail: string, data: { nom
         nominee_first_name: data.nominee_first_name.trim(),
         nominee_last_name: data.nominee_last_name.trim(),
         statement: data.statement.trim(),
-        timestamp: now
+        timestamp: now,
+        is_dev: isDevEnvironment()
       };
       await setDoc(docRef, payload, { merge: true });
       return { success: true, message: 'Nomination saved to Firestore successfully' };
@@ -627,9 +640,10 @@ export async function firebaseSaveDeanNomination(voterEmail: string, data: { nom
 export async function firebaseFetchDeanNomination(voterEmail: string): Promise<{ success: boolean; nomination?: any; message?: string }> {
   const normEmail = voterEmail.toLowerCase().trim();
   const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
+  const targetCol = getNominationsCollectionName();
   try {
     const fetchPromise = (async () => {
-      const docRef = doc(db, 'dean_nominations', safeDocId);
+      const docRef = doc(db, targetCol, safeDocId);
       const snapshot = await getDoc(docRef);
       if (snapshot.exists()) {
         return { success: true, nomination: snapshot.data() };
@@ -652,9 +666,10 @@ export async function firebaseFetchDeanNomination(voterEmail: string): Promise<{
  * Fetches all Dean Nominations from Cloud Firestore.
  */
 export async function firebaseFetchAllDeanNominations(): Promise<{ success: boolean; nominations?: any[]; message?: string }> {
+  const targetCol = getNominationsCollectionName();
   try {
     const fetchPromise = (async () => {
-      const querySnapshot = await getDocs(collection(db, 'dean_nominations'));
+      const querySnapshot = await getDocs(collection(db, targetCol));
       const list: any[] = [];
       querySnapshot.forEach((docSnapshot) => {
         const data = docSnapshot.data();
@@ -682,15 +697,17 @@ export async function firebaseFetchAllDeanNominations(): Promise<{ success: bool
 export async function firebaseSaveDeanVote(voterEmail: string, nomineeName: string): Promise<{ success: boolean; message: string }> {
   const normEmail = voterEmail.toLowerCase().trim();
   const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
+  const targetCol = getVotesCollectionName();
   try {
     const savePromise = (async () => {
-      const docRef = doc(db, 'dean_votes', safeDocId);
+      const docRef = doc(db, targetCol, safeDocId);
       const now = new Date().toISOString();
       const payload = {
         id: Math.random().toString(36).substring(2, 9),
         voter_email: normEmail,
         nominee_name: nomineeName.trim(),
-        timestamp: now
+        timestamp: now,
+        is_dev: isDevEnvironment()
       };
       await setDoc(docRef, payload, { merge: true });
       return { success: true, message: 'Vote saved to Firestore successfully' };
@@ -713,9 +730,10 @@ export async function firebaseSaveDeanVote(voterEmail: string, nomineeName: stri
 export async function firebaseFetchDeanVote(voterEmail: string): Promise<{ success: boolean; vote?: any; message?: string }> {
   const normEmail = voterEmail.toLowerCase().trim();
   const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
+  const targetCol = getVotesCollectionName();
   try {
     const fetchPromise = (async () => {
-      const docRef = doc(db, 'dean_votes', safeDocId);
+      const docRef = doc(db, targetCol, safeDocId);
       const snapshot = await getDoc(docRef);
       if (snapshot.exists()) {
         return { success: true, vote: snapshot.data() };
@@ -738,9 +756,10 @@ export async function firebaseFetchDeanVote(voterEmail: string): Promise<{ succe
  * Fetches all Dean Votes from Cloud Firestore.
  */
 export async function firebaseFetchAllDeanVotes(): Promise<{ success: boolean; votes?: any[]; message?: string }> {
+  const targetCol = getVotesCollectionName();
   try {
     const fetchPromise = (async () => {
-      const querySnapshot = await getDocs(collection(db, 'dean_votes'));
+      const querySnapshot = await getDocs(collection(db, targetCol));
       const list: any[] = [];
       querySnapshot.forEach((docSnapshot) => {
         const data = docSnapshot.data();
@@ -759,6 +778,60 @@ export async function firebaseFetchAllDeanVotes(): Promise<{ success: boolean; v
   } catch (err: any) {
     console.error('Failed to fetch all Dean Votes from Firestore:', err);
     return { success: false, message: err.message || 'Firestore fetch failed' };
+  }
+}
+
+/**
+ * Deletes a Dean Vote record from Cloud Firestore (deletes from both production and dev collections).
+ */
+export async function firebaseDeleteDeanVote(idOrEmail: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    const norm = idOrEmail.toLowerCase().trim();
+    const safeDocId = norm.replace(/[^a-zA-Z0-9]/g, '_');
+    const docKeys = Array.from(new Set([idOrEmail, norm, safeDocId])).filter(Boolean);
+
+    const collections = ['dean_votes', 'dean_votes_dev'];
+
+    for (const colName of collections) {
+      for (const k of docKeys) {
+        try {
+          const docRef = doc(db, colName, k);
+          await deleteDoc(docRef);
+        } catch (e) {}
+      }
+    }
+
+    return { success: true, message: 'Vote deleted from Firestore successfully' };
+  } catch (err: any) {
+    console.error('Failed to delete Dean vote from Firestore:', err);
+    return { success: false, message: err.message };
+  }
+}
+
+/**
+ * Deletes a Dean Nomination record from Cloud Firestore.
+ */
+export async function firebaseDeleteDeanNomination(idOrEmail: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    const norm = idOrEmail.toLowerCase().trim();
+    const safeDocId = norm.replace(/[^a-zA-Z0-9]/g, '_');
+    const docKeys = Array.from(new Set([idOrEmail, norm, safeDocId])).filter(Boolean);
+
+    const collections = ['dean_nominations', 'dean_nominations_dev'];
+
+    for (const colName of collections) {
+      for (const k of docKeys) {
+        try {
+          const docRef = doc(db, colName, k);
+          await deleteDoc(docRef);
+        } catch (e) {}
+      }
+    }
+
+    return { success: true, message: 'Nomination deleted from Firestore successfully' };
+  } catch (err: any) {
+    console.error('Failed to delete Dean nomination from Firestore:', err);
+    return { success: false, message: err.message };
   }
 }
 
