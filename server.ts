@@ -5,6 +5,7 @@ import crypto from "crypto";
 import fs from "fs";
 import { GoogleGenAI } from "@google/genai";
 import { google } from "googleapis";
+import nodemailer from "nodemailer";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -3271,6 +3272,88 @@ async function startServer() {
     }
   });
 
+  async function sendDeanVoteNotification(voterEmail: string, nomineeName: string, totalVotesCast: number) {
+    const targetEmail = process.env.NOTIFICATION_EMAIL || "info@kpi2012.org";
+    
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpPort = parseInt(process.env.SMTP_PORT || "587", 10);
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const smtpFrom = process.env.SMTP_FROM || `"Order of KPI Portal" <${smtpUser || "no-reply@orderofkpi.org"}>`;
+
+    const isLocal = process.env.NODE_ENV !== "production";
+    const subjectPrefix = isLocal ? "[TEST] " : "";
+    const subject = `${subjectPrefix}[Intake Dean Election] New Vote Cast for ${nomineeName}`;
+    const textContent = `${isLocal ? "[TEST / LOCAL ENVIRONMENT NOTIFICATION]\n\n" : ""}A new vote has been cast for the Intake Team Dean election.
+
+Details:
+• Vote Cast For: ${nomineeName}
+• Total Votes Cast To Date: ${totalVotesCast}
+
+Logged: ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })} EST
+Order of KPI Application Portal`;
+
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #fcfbf4;">
+        ${isLocal ? `<div style="background-color: #d97706; color: #ffffff; padding: 8px 12px; text-align: center; font-weight: bold; font-size: 12px; border-radius: 6px 6px 0 0; letter-spacing: 1px; text-transform: uppercase;">⚠️ TEST / LOCAL ENVIRONMENT NOTIFICATION</div>` : ''}
+        <div style="background-color: #1E3F20; color: #FFFFFF; padding: 20px; text-align: center; border-radius: ${isLocal ? '0' : '8px 8px 0 0'};">
+          <h2 style="margin: 0; font-size: 20px;">Intake Team Dean Election Alert</h2>
+          <p style="margin: 5px 0 0 0; font-size: 13px; color: #D4AF37;">Order of KPI Application Portal</p>
+        </div>
+        <div style="padding: 24px; background-color: #ffffff; color: #333333; line-height: 1.6;">
+          <p style="font-size: 16px; margin-top: 0;">A new vote has been cast in the <strong>Intake Team Dean</strong> election.</p>
+          
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #f9f8f0; border-radius: 8px; overflow: hidden;">
+            <tr style="border-bottom: 1px solid #e2dfd2;">
+              <td style="padding: 12px 16px; font-weight: bold; color: #1E3F20; width: 45%;">Candidate Voted For:</td>
+              <td style="padding: 12px 16px; font-weight: bold; color: #B8860B; font-size: 16px;">${nomineeName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 16px; font-weight: bold; color: #1E3F20;">Total Ballots Cast To Date:</td>
+              <td style="padding: 12px 16px; font-weight: bold; color: #1E3F20; font-size: 16px;">${totalVotesCast}</td>
+            </tr>
+          </table>
+
+          <p style="font-size: 12px; color: #666666; margin-bottom: 0;">
+            Logged on ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })} EST
+          </p>
+        </div>
+        <div style="text-align: center; padding: 12px; font-size: 11px; color: #888888; border-top: 1px solid #eaeaea;">
+          This is an automated notification from the Order of KPI Portal.
+        </div>
+      </div>
+    `;
+
+    if (!smtpHost || !smtpUser) {
+      console.log(`[Dean Vote Email Logged] To: ${targetEmail} | Vote Cast For: ${nomineeName} | Total Votes Cast: ${totalVotesCast} (SMTP_HOST/SMTP_USER not provided in env yet)`);
+      return;
+    }
+
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: {
+          user: smtpUser,
+          pass: smtpPass
+        }
+      });
+
+      const info = await transporter.sendMail({
+        from: smtpFrom,
+        to: targetEmail,
+        subject: subject,
+        text: textContent,
+        html: htmlContent
+      });
+
+      console.log(`[Dean Vote Email Sent] Successfully sent vote notification to ${targetEmail} (Message ID: ${info.messageId})`);
+    } catch (err) {
+      console.error(`[Dean Vote Email Failed] Could not send email to ${targetEmail}:`, err);
+    }
+  }
+
   app.post("/api/dean-votes", (req, res) => {
     try {
       const { voter_email, nominee_name } = req.body;
@@ -3317,7 +3400,21 @@ async function startServer() {
       }
       saveFallbackDeanVotes(list);
 
+      // Determine total number of votes cast
+      let totalVotesCast = list.length;
+      if (useSqlite && sqliteDb) {
+        try {
+          const row = sqliteDb.prepare("SELECT COUNT(*) as cnt FROM dean_votes").get() as any;
+          if (row && row.cnt) totalVotesCast = row.cnt;
+        } catch (cntErr) {}
+      }
+
       logEvent(emailNorm, "DEAN_VOTE_SUBMITTED", `Cast vote for Intake Dean: ${nominee_name}`);
+
+      // Dispatch email notification asynchronously
+      sendDeanVoteNotification(emailNorm, nominee_name.trim(), totalVotesCast).catch(err => {
+        console.error("Dean vote notification trigger error:", err);
+      });
 
       res.json({ success: true, message: "Vote successfully recorded." });
     } catch (err: any) {

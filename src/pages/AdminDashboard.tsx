@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { db } from '../lib/firebase';
+import { db, firebaseUpdateCandidateStatus } from '../lib/firebase';
 import { 
   collection, 
   query, 
@@ -614,6 +614,17 @@ export default function AdminDashboard() {
 
   const handleUpdateCandidateStatus = async (id: string, candidate: Candidate, newStatus: Candidate['status']) => {
     try {
+      if (candidate.email) {
+        await firebaseUpdateCandidateStatus(
+          candidate.email,
+          newStatus,
+          candidate.scores,
+          candidate.notes,
+          candidate.document_vault,
+          candidate.name,
+          candidate.phone
+        );
+      }
       const response = await fetch(`/api/candidates/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

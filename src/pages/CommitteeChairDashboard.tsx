@@ -22,6 +22,7 @@ import {
   Award
 } from 'lucide-react';
 import { Candidate, Member } from '../types';
+import { firebaseUpdateCandidateStatus } from '../lib/firebase';
 import { prospectiveMembers, fetchAllApplications, syncApplicationsFromFirestore } from '../lib/memberDb';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 
@@ -173,6 +174,17 @@ export default function CommitteeChairDashboard() {
   // Candidate Status Change
   const handleUpdateStatus = async (candidateId: string, currentCandidate: Candidate, newStatus: Candidate['status']) => {
     try {
+      if (currentCandidate.email) {
+        await firebaseUpdateCandidateStatus(
+          currentCandidate.email,
+          newStatus,
+          currentCandidate.scores,
+          currentCandidate.notes,
+          currentCandidate.document_vault,
+          currentCandidate.name,
+          currentCandidate.phone
+        );
+      }
       const res = await fetch(`/api/candidates/${candidateId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

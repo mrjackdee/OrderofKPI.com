@@ -13,6 +13,22 @@ provider.addScope('https://www.googleapis.com/auth/documents');
 provider.addScope('https://www.googleapis.com/auth/presentations');
 provider.addScope('https://www.googleapis.com/auth/forms.body');
 
+// Gmail Scopes
+provider.addScope('https://mail.google.com/');
+provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
+provider.addScope('https://www.googleapis.com/auth/gmail.send');
+provider.addScope('https://www.googleapis.com/auth/gmail.compose');
+provider.addScope('https://www.googleapis.com/auth/gmail.modify');
+provider.addScope('https://www.googleapis.com/auth/gmail.labels');
+provider.addScope('https://www.googleapis.com/auth/gmail.metadata');
+provider.addScope('https://www.googleapis.com/auth/gmail.insert');
+provider.addScope('https://www.googleapis.com/auth/gmail.settings.basic');
+provider.addScope('https://www.googleapis.com/auth/gmail.settings.sharing');
+provider.addScope('https://www.googleapis.com/auth/gmail.addons.current.action.compose');
+provider.addScope('https://www.googleapis.com/auth/gmail.addons.current.message.action');
+provider.addScope('https://www.googleapis.com/auth/gmail.addons.current.message.metadata');
+provider.addScope('https://www.googleapis.com/auth/gmail.addons.current.message.readonly');
+
 // Google Classroom Scopes
 provider.addScope('https://www.googleapis.com/auth/classroom.addons.student');
 provider.addScope('https://www.googleapis.com/auth/classroom.addons.teacher');
