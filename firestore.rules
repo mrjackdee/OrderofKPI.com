@@ -120,7 +120,15 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /dean_nominations_dev/{nominationId} {
+      allow read, write: if true;
+    }
+
     match /dean_votes/{voteId} {
+      allow read, write: if true;
+    }
+
+    match /dean_votes_dev/{voteId} {
       allow read, write: if true;
     }
 
