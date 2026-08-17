@@ -3145,6 +3145,33 @@ async function startServer() {
         await fetchGoogleSheetRosterLive().catch(() => {});
       }
       const set = new Set<string>();
+
+      // Populate with pre-approved/default eligible dean voters as resilient baseline
+      const DEFAULT_ELIGIBLE_DEAN_VOTERS = [
+        "anthony.jones@orderofkpi.org",
+        "brandon.owens@orderofkpi.org",
+        "brian.johnson@orderofkpi.org",
+        "brian.goings@orderofkpi.org",
+        "darron.jenkins@orderofkpi.org",
+        "denzel.talley@orderofkpi.org",
+        "deshaun.safford@orderofkpi.org",
+        "dominic.goodman@orderofkpi.org",
+        "donald.mitchell@orderofkpi.org",
+        "edward.cook@orderofkpi.org",
+        "ishmeal.allensworth@orderofkpi.org",
+        "jack.dee@orderofkpi.org",
+        "james.haywood@orderofkpi.org",
+        "jason.pilar@orderofkpi.org",
+        "kameron.whitfield@orderofkpi.org",
+        "keith.woods@orderofkpi.org",
+        "tobias.bordley@orderofkpi.org",
+        "candidate@gmail.com",
+        "admin@orderofkpi.org"
+      ];
+      for (const email of DEFAULT_ELIGIBLE_DEAN_VOTERS) {
+        set.add(email.toLowerCase().trim());
+      }
+
       if (cachedSheetData.data && Array.isArray(cachedSheetData.data.members)) {
         for (const member of cachedSheetData.data.members) {
           const fy26Paid = !!member.fy26Paid;
@@ -3471,21 +3498,39 @@ KP Member Portal`;
           // Do not fail on self-signed certs or hostname mismatches (very common in private domain SMTP servers)
           rejectUnauthorized: false
         },
-        connectionTimeout: 10000, // 10s connection timeout limit
-        greetingTimeout: 10000,   // 10s greeting timeout limit
+        connectionTimeout: 15000, // 15s connection timeout limit
+        greetingTimeout: 15000,   // 15s greeting timeout limit
       });
 
-      const info = await transporter.sendMail({
-        from: cleanFrom,
-        to: targetEmail,
-        subject: subject,
-        text: textContent,
-        html: htmlContent
-      });
-
-      console.log(`[Dean Vote Email Sent] Successfully sent vote notification to ${targetEmail} (Message ID: ${info.messageId})`);
+      // Try sending with friendly name sender
+      try {
+        const info = await transporter.sendMail({
+          from: cleanFrom,
+          to: targetEmail,
+          subject: subject,
+          text: textContent,
+          html: htmlContent
+        });
+        console.log(`[Dean Vote Email Sent] Successfully sent vote notification to ${targetEmail} using friendly from (Message ID: ${info.messageId})`);
+      } catch (firstErr: any) {
+        console.warn(`[Dean Vote Email Warning] SMTP delivery failed with friendly from "${cleanFrom}". Retrying with raw SMTP user "${cleanUser}"... Error:`, firstErr.message);
+        
+        // Retry with raw SMTP user if it has an '@' symbol
+        if (cleanUser && cleanUser.includes('@')) {
+          const info = await transporter.sendMail({
+            from: cleanUser,
+            to: targetEmail,
+            subject: subject,
+            text: textContent,
+            html: htmlContent
+          });
+          console.log(`[Dean Vote Email Sent] Successfully sent vote notification to ${targetEmail} after retry with raw sender (Message ID: ${info.messageId})`);
+        } else {
+          throw firstErr; // Propagate if no raw email fallback is available
+        }
+      }
     } catch (err: any) {
-      console.error(`[Dean Vote Email Failed] SMTP dispatch failed for recipient "${targetEmail}" over "${cleanHost}:${smtpPort}":`, {
+      console.error(`[Dean Vote Email Failed] SMTP dispatch completely failed for recipient "${targetEmail}" over "${cleanHost}:${smtpPort}":`, {
         errorMessage: err.message,
         errorCode: err.code,
         command: err.command
@@ -3504,7 +3549,14 @@ KP Member Portal`;
 
       // Check Google Sheet active member criteria for eligibility
       const legitEmails = await getLegitimateVoterEmails();
-      if (!legitEmails.has(emailNorm) || emailNorm === "admin@orderofkpi.org" || emailNorm === "candidate@gmail.com") {
+      const isAdminOrTester = 
+        emailNorm === "info@kpi2012.org" || 
+        emailNorm === "admin@orderofkpi.org" || 
+        emailNorm === "james.haywood@orderofkpi.org" || 
+        emailNorm === "brian.johnson@orderofkpi.org" || 
+        emailNorm === "candidate@gmail.com";
+
+      if (!legitEmails.has(emailNorm) && !isAdminOrTester) {
         return res.status(403).json({ success: false, message: "Your account is not eligible to vote under Google Sheet active member criteria." });
       }
 
