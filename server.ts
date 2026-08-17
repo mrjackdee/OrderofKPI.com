@@ -380,8 +380,7 @@ const defaultUsers = [
   { name: "QA Member Agent", email: "qa.member@orderofkpi.org", role: "member", title: "Member", intake_class: "", financial_status: "active", industry: "QA Testing" },
   { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator", intake_class: "", financial_status: "active", industry: "Technology" },
   { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", intake_class: "", financial_status: "active", industry: "Leadership" },
-  { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "member", intake_class: "", financial_status: "active", industry: "Consulting" },
-  { name: "Jack Dee", email: "jack@orderofkpi.org", role: "member", intake_class: "", financial_status: "active", industry: "Consulting" },
+  { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "Membership Committee", intake_class: "", financial_status: "active", industry: "Consulting" },
   { name: "DeShaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee", intake_class: "", financial_status: "active", industry: "Education" },
   { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member", intake_class: "", financial_status: "active", industry: "Engineering" },
   { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "Membership Committee", intake_class: "", financial_status: "active", industry: "Management" },
@@ -513,7 +512,7 @@ async function initDb() {
     "donald.mitchell@orderofkpi.org": "1914",
     "sammie.poe@orderofkpi.org": "atlanta"
   };
-  const testUsers = ["admin@orderofkpi.org", "jack@orderofkpi.org"];
+  const testUsers = ["admin@orderofkpi.org"];
 
   const setupSqliteDb = async () => {
     const { default: Database } = await import("better-sqlite3");
@@ -899,11 +898,15 @@ async function initDb() {
     delete cleanData['brandon.addison@orderofkpi.org'];
     delete cleanData['dmitchell02@gmail.com'];
     delete cleanData['ishmael.allensworth@orderofkpi.org'];
+    delete cleanData['terrell.singleton@gmail.com'];
+    delete cleanData['jack@orderofkpi.org'];
     if (useSqlite && sqliteDb) {
       try {
         sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'brandon.addison@orderofkpi.org'").run();
         sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'dmitchell02@gmail.com'").run();
         sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'ishmael.allensworth@orderofkpi.org'").run();
+        sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'terrell.singleton@gmail.com'").run();
+        sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'jack@orderofkpi.org'").run();
       } catch (e) {}
     }
 
@@ -915,6 +918,7 @@ async function initDb() {
       syncLocalMemberToFirestoreCloud("brandon.hunter@orderofkpi.org").catch(e => console.warn("Notice syncing Brandon Hunter to Firestore:", e));
       syncLocalMemberToFirestoreCloud("terrell.singleton@orderofkpi.org").catch(e => console.warn("Notice syncing Terrell Singleton to Firestore:", e));
       syncLocalMemberToFirestoreCloud("ishmeal.allensworth@orderofkpi.org").catch(e => console.warn("Notice syncing Ishmeal Allensworth to Firestore:", e));
+      syncLocalMemberToFirestoreCloud("jack.dee@orderofkpi.org").catch(e => console.warn("Notice syncing Jack Dee to Firestore:", e));
       
       if (firebaseProjectId && firebaseApiKey) {
         const dbId = firebaseDatabaseId || "(default)";
@@ -922,6 +926,18 @@ async function initDb() {
         fetch(urlDmitchell, { method: "DELETE" }).catch(e => console.warn("Notice purging dmitchell02 from Firestore:", e));
         const urlIshmael = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/members/ishmael_allensworth_orderofkpi_org?key=${firebaseApiKey}`;
         fetch(urlIshmael, { method: "DELETE" }).catch(e => console.warn("Notice purging ishmael from Firestore:", e));
+        const urlTerrellGmail1 = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/members/terrell_singleton_gmail_com?key=${firebaseApiKey}`;
+        fetch(urlTerrellGmail1, { method: "DELETE" }).catch(e => console.warn("Notice purging terrell gmail from members Firestore:", e));
+        const urlTerrellGmail2 = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/portal_members/terrell.singleton@gmail.com?key=${firebaseApiKey}`;
+        fetch(urlTerrellGmail2, { method: "DELETE" }).catch(e => console.warn("Notice purging terrell gmail from portal_members Firestore:", e));
+        const urlTerrellGmail3 = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/user_password_overrides/terrell.singleton@gmail.com?key=${firebaseApiKey}`;
+        fetch(urlTerrellGmail3, { method: "DELETE" }).catch(e => console.warn("Notice purging terrell gmail from user_password_overrides Firestore:", e));
+        const urlJackShort1 = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/members/jack_orderofkpi_org?key=${firebaseApiKey}`;
+        fetch(urlJackShort1, { method: "DELETE" }).catch(e => console.warn("Notice purging jack short email from members Firestore:", e));
+        const urlJackShort2 = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/portal_members/jack@orderofkpi.org?key=${firebaseApiKey}`;
+        fetch(urlJackShort2, { method: "DELETE" }).catch(e => console.warn("Notice purging jack short email from portal_members Firestore:", e));
+        const urlJackShort3 = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/user_password_overrides/jack@orderofkpi.org?key=${firebaseApiKey}`;
+        fetch(urlJackShort3, { method: "DELETE" }).catch(e => console.warn("Notice purging jack short email from user_password_overrides Firestore:", e));
       }
     }, 1500);
   } catch (jsonErr) {

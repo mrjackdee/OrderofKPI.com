@@ -76,21 +76,24 @@ export default function FinancialRoster() {
     setIsLoading(true);
     setError('');
     try {
+      // Helper to check if a member is Admin or a Test Credential
+      const isExcludedUser = (m: Partial<Member>): boolean => {
+        const email = (m.email || '').toLowerCase().trim();
+        const role = (m.role || '').toLowerCase();
+        const title = (m.title || '').toLowerCase();
+        const isTest = m.is_test_credential === 1 || m.is_test_credential === true || email.startsWith('qa.') || email.startsWith('test.');
+        const isAdmin = role === 'admin' || title === 'administrator' || email === 'admin@orderofkpi.org';
+        const isApplicantOrCandidate = role === 'applicant' || role === 'prospective' || role === 'candidate' || title === 'candidate';
+        return isTest || isAdmin || isApplicantOrCandidate || email === 'brandon.addison@orderofkpi.org';
+      };
+
       // 1. Fetch directory members from backend API for metadata (role, title, profile_photo, intake_class)
       let dirMembers: Member[] = [];
       try {
         const response = await fetch('/api/members');
         const data = await response.json();
         if (data.success && Array.isArray(data.members)) {
-          dirMembers = data.members.filter((m: Member) => {
-            // Filter out non-members (applicants/candidates/test credentials) and removed members
-            const email = (m.email || '').toLowerCase().trim();
-            const role = (m.role || '').toLowerCase();
-            const title = (m.title || '').toLowerCase();
-            if (email === 'brandon.addison@orderofkpi.org') return false;
-            if (role === 'applicant' || role === 'prospective' || role === 'candidate' || title === 'candidate') return false;
-            return true;
-          });
+          dirMembers = data.members.filter((m: Member) => !isExcludedUser(m));
         }
       } catch (err) {
         console.warn('Could not fetch backend directory members:', err);
@@ -116,8 +119,6 @@ export default function FinancialRoster() {
         const kpiEmail = cols[7] || '';
         const email = (kpiEmail || personalEmail || `${firstName.toLowerCase()}.${lastName.toLowerCase()}@orderofkpi.org`).toLowerCase().trim();
 
-        if (email === 'brandon.addison@orderofkpi.org') continue;
-
         if (fy27Paid && (firstName || lastName)) {
           const fullName = `${firstName} ${lastName}`.trim();
 
@@ -127,7 +128,7 @@ export default function FinancialRoster() {
             m.name.toLowerCase() === fullName.toLowerCase()
           );
 
-          activeFinancialMembers.push({
+          const memberObj: Member = {
             name: fullName,
             first_name: firstName,
             email: email,
@@ -137,8 +138,13 @@ export default function FinancialRoster() {
             intake_class: matchedDirMember?.intake_class || 'Member',
             financial_status: 'active',
             profile_photo: matchedDirMember?.profile_photo || '',
-            industry: matchedDirMember?.industry || ''
-          });
+            industry: matchedDirMember?.industry || '',
+            is_test_credential: matchedDirMember?.is_test_credential
+          };
+
+          if (!isExcludedUser(memberObj)) {
+            activeFinancialMembers.push(memberObj);
+          }
         }
       }
 
@@ -146,20 +152,16 @@ export default function FinancialRoster() {
       for (const dm of dirMembers) {
         if ((dm.financial_status || '').toLowerCase() === 'active') {
           const emailNorm = (dm.email || '').toLowerCase().trim();
-          if (emailNorm === 'brandon.addison@orderofkpi.org') continue;
-          if (!activeFinancialMembers.some(m => m.email.toLowerCase() === emailNorm)) {
+          if (!isExcludedUser(dm) && !activeFinancialMembers.some(m => m.email.toLowerCase() === emailNorm)) {
             activeFinancialMembers.push(dm);
           }
         }
       }
 
-      // Enforce strict syntax logic: Membership = "Member" and Financial Status = "Active"
+      // Enforce strict syntax logic: Financial Status = "Active" and exclude Admin & Test users
       const finalRoster = activeFinancialMembers.filter(m => {
-        const role = (m.role || '').toLowerCase();
-        const title = (m.title || '').toLowerCase();
-        const isMem = role !== 'applicant' && role !== 'prospective' && role !== 'candidate' && title !== 'candidate';
         const isFinActive = (m.financial_status || '').toLowerCase() === 'active';
-        return isMem && isFinActive;
+        return !isExcludedUser(m) && isFinActive;
       });
 
       setMembers(finalRoster);
@@ -171,10 +173,13 @@ export default function FinancialRoster() {
         const data = await response.json();
         if (data.success && Array.isArray(data.members)) {
           setMembers(data.members.filter((m: Member) => {
+            const email = (m.email || '').toLowerCase().trim();
             const role = (m.role || '').toLowerCase();
             const title = (m.title || '').toLowerCase();
-            const isMem = role !== 'applicant' && role !== 'prospective' && role !== 'candidate' && title !== 'candidate';
-            return isMem && (m.financial_status || '').toLowerCase() === 'active' && m.email.toLowerCase() !== 'brandon.addison@orderofkpi.org';
+            const isTest = m.is_test_credential === 1 || m.is_test_credential === true || email.startsWith('qa.') || email.startsWith('test.');
+            const isAdmin = role === 'admin' || title === 'administrator' || email === 'admin@orderofkpi.org';
+            const isApplicantOrCandidate = role === 'applicant' || role === 'prospective' || role === 'candidate' || title === 'candidate';
+            return !isTest && !isAdmin && !isApplicantOrCandidate && email !== 'brandon.addison@orderofkpi.org' && (m.financial_status || '').toLowerCase() === 'active';
           }));
         }
       } catch (fallbackErr) {
@@ -244,9 +249,6 @@ export default function FinancialRoster() {
           <h1 className="text-4xl md:text-6xl font-display text-[#1E3F20] tracking-wider uppercase text-center max-w-4xl">
             Financial Membership Roster
           </h1>
-          <p className="text-[#1E3F20]/70 text-sm mt-3 max-w-xl font-medium">
-            Active Members in good financial standing (Membership = &ldquo;Member&rdquo; &amp; Financial Status = &ldquo;Active&rdquo;).
-          </p>
         </motion.div>
       </div>
 
