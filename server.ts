@@ -401,7 +401,8 @@ const defaultUsers = [
   { name: "Kevin Jennings", email: "kevin.jennings@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
   { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
   { name: "Brandon Hunter", email: "brandon.hunter@orderofkpi.org", role: "member", title: "Member", intake_class: "", financial_status: "active", industry: "" },
-  { name: "Terrell Singleton", email: "terrell.singleton@orderofkpi.org", role: "member", title: "Member", intake_class: "", financial_status: "active", industry: "" }
+  { name: "Terrell Singleton", email: "terrell.singleton@orderofkpi.org", role: "member", title: "Member", intake_class: "", financial_status: "active", industry: "" },
+  { name: "Churtis Poulson", email: "churtis.poulson@orderofkpi.org", role: "member", title: "Member", intake_class: "", financial_status: "active", industry: "" }
 ];
 
 const initialCandidates = [
@@ -3001,21 +3002,36 @@ async function startServer() {
     }
   });
 
-  app.delete("/api/admin/dean-votes/:id", (req, res) => {
+  app.delete("/api/admin/dean-votes/:id", async (req, res) => {
     try {
       const { id } = req.params;
+      const cleanId = id.toLowerCase().trim();
 
       if (useSqlite && sqliteDb) {
         try {
-          sqliteDb.prepare("DELETE FROM dean_votes WHERE id = ?").run(id);
+          sqliteDb.prepare("DELETE FROM dean_votes WHERE id = ? OR LOWER(voter_email) = ?").run(id, cleanId);
         } catch (dbErr) {
           console.error("SQLite delete dean vote error:", dbErr);
         }
       }
 
       let list = getFallbackDeanVotes();
-      list = list.filter(v => v.id !== id);
+      const target = list.find(v => v.id === id || (v.voter_email || "").toLowerCase().trim() === cleanId);
+      const emailToClean = target?.voter_email || (cleanId.includes("@") ? cleanId : "");
+
+      list = list.filter(v => v.id !== id && (v.voter_email || "").toLowerCase().trim() !== cleanId);
       saveFallbackDeanVotes(list);
+
+      // Delete from Cloud Firestore if configured
+      if (firebaseProjectId && firebaseApiKey) {
+        const dbId = firebaseDatabaseId || "(default)";
+        const docKeys = [id, cleanId, emailToClean].filter(Boolean);
+        for (const k of docKeys) {
+          const safeDocId = k.replace(/[^a-zA-Z0-9]/g, '_');
+          const url = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/dean_votes/${encodeURIComponent(safeDocId)}?key=${firebaseApiKey}`;
+          fetch(url, { method: "DELETE" }).catch(() => {});
+        }
+      }
 
       res.json({ success: true, message: "Vote deleted successfully." });
     } catch (err: any) {
@@ -3028,10 +3044,11 @@ async function startServer() {
       let votes: any[] = [];
       if (useSqlite && sqliteDb) {
         try {
-          votes = sqliteDb.prepare("SELECT id, nominee_name, timestamp FROM dean_votes").all();
+          votes = sqliteDb.prepare("SELECT id, voter_email, nominee_name, timestamp FROM dean_votes").all();
         } catch (dbErr) {
           votes = getFallbackDeanVotes().map(v => ({
             id: v.id,
+            voter_email: v.voter_email,
             nominee_name: v.nominee_name,
             timestamp: v.timestamp
           }));
@@ -3039,6 +3056,7 @@ async function startServer() {
       } else {
         votes = getFallbackDeanVotes().map(v => ({
           id: v.id,
+          voter_email: v.voter_email,
           nominee_name: v.nominee_name,
           timestamp: v.timestamp
         }));

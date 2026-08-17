@@ -40,35 +40,83 @@ export default function DeanVotingDashboard() {
     }
   }, [isAuthorizedCommittee]);
 
+  const eligibleEmails = [
+    "anthony.jones@orderofkpi.org",
+    "brandon.owens@orderofkpi.org",
+    "brian.johnson@orderofkpi.org",
+    "brian.goings@orderofkpi.org",
+    "darron.jenkins@orderofkpi.org",
+    "denzel.talley@orderofkpi.org",
+    "deshaun.safford@orderofkpi.org",
+    "dominic.goodman@orderofkpi.org",
+    "donald.mitchell@orderofkpi.org",
+    "edward.cook@orderofkpi.org",
+    "ishmeal.allensworth@orderofkpi.org",
+    "jack.dee@orderofkpi.org",
+    "james.haywood@orderofkpi.org",
+    "jason.pilar@orderofkpi.org",
+    "kameron.whitfield@orderofkpi.org",
+    "keith.woods@orderofkpi.org",
+    "tobias.bordley@orderofkpi.org"
+  ];
+
+  const normalizeCanonicalVoterEmail = (rawEmail: string): string => {
+    const e = (rawEmail || '').toLowerCase().trim();
+    if (e === 'dmitchell02@gmail.com') return 'donald.mitchell@orderofkpi.org';
+    if (e === 'ishmael.allensworth@orderofkpi.org') return 'ishmeal.allensworth@orderofkpi.org';
+    if (e === 'jack@orderofkpi.org') return 'jack.dee@orderofkpi.org';
+    return e;
+  };
+
+  const processVotes = (rawVotes: any[]) => {
+    // Sort by timestamp ascending so latest votes overwrite earlier ones
+    const sorted = [...rawVotes].sort((a, b) => {
+      const t1 = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const t2 = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return t1 - t2;
+    });
+
+    const map = new Map<string, any>();
+    for (const item of sorted) {
+      if (!item || !item.nominee_name) continue;
+      const rawEmail = (item.voter_email || '').toLowerCase().trim();
+      const canonicalEmail = normalizeCanonicalVoterEmail(rawEmail);
+      const key = canonicalEmail || item.id || Math.random().toString();
+      if (canonicalEmail && (eligibleEmails.includes(canonicalEmail) || eligibleEmails.includes(rawEmail) || rawEmail === 'candidate@gmail.com')) {
+        map.set(canonicalEmail, item);
+      } else if (!rawEmail) {
+        map.set(key, item);
+      }
+    }
+
+    const mergedVotes = Array.from(map.values());
+    const countMap: Record<string, number> = {};
+    mergedVotes.forEach((v: any) => {
+      const name = v.nominee_name;
+      if (!name) return;
+      countMap[name] = (countMap[name] || 0) + 1;
+    });
+
+    const list = Object.keys(countMap).map((nominee_name) => ({
+      nominee_name,
+      votes: countMap[nominee_name]
+    })).sort((a, b) => b.votes - a.votes);
+
+    const total = Math.min(mergedVotes.length, eligibleEmails.length);
+
+    return { list, total };
+  };
+
   const fetchVotingResults = async () => {
     try {
       // 1. Fetch server votes immediately to render UI instantly
       try {
         const serverRes = await fetch('/api/dean-votes').then(r => r.json());
         if (serverRes && serverRes.success && Array.isArray(serverRes.votes)) {
-          const map = new Map<string, any>();
-          for (const item of serverRes.votes) {
-            if (!item || !item.nominee_name) continue;
-            const key = (item.voter_email || item.id || Math.random().toString()).toLowerCase().trim();
-            map.set(key, item);
-          }
-          const mergedVotes = Array.from(map.values());
-          const countMap: Record<string, number> = {};
-          let total = 0;
-          mergedVotes.forEach((v: any) => {
-            const name = v.nominee_name;
-            if (!name) return;
-            countMap[name] = (countMap[name] || 0) + 1;
-            total += 1;
-          });
-          const list = Object.keys(countMap).map((nominee_name) => ({
-            nominee_name,
-            votes: countMap[nominee_name]
-          })).sort((a, b) => b.votes - a.votes);
-
+          const { list, total } = processVotes(serverRes.votes);
           setTallies(list);
           setTotalVotes(total);
-          setLoading(false); // Set loading false immediately when server data is ready!
+          setLoading(false);
         }
       } catch (e) {
         console.warn('Server fetch votes failed:', e);
@@ -89,28 +137,7 @@ export default function DeanVotingDashboard() {
         const serverRes = await fetch('/api/dean-votes').then(r => r.json()).catch(() => ({ success: true, votes: [] }));
         const serverVotes = serverRes.success && Array.isArray(serverRes.votes) ? serverRes.votes : [];
 
-        const map = new Map<string, any>();
-        for (const item of [...firestoreVotes, ...serverVotes]) {
-          if (!item || !item.nominee_name) continue;
-          const key = (item.voter_email || item.id || Math.random().toString()).toLowerCase().trim();
-          map.set(key, item);
-        }
-
-        const mergedVotes = Array.from(map.values());
-        const countMap: Record<string, number> = {};
-        let total = 0;
-        mergedVotes.forEach((v: any) => {
-          const name = v.nominee_name;
-          if (!name) return;
-          countMap[name] = (countMap[name] || 0) + 1;
-          total += 1;
-        });
-
-        const list = Object.keys(countMap).map((nominee_name) => ({
-          nominee_name,
-          votes: countMap[nominee_name]
-        })).sort((a, b) => b.votes - a.votes);
-
+        const { list, total } = processVotes([...firestoreVotes, ...serverVotes]);
         setTallies(list);
         setTotalVotes(total);
       }
@@ -222,7 +249,7 @@ export default function DeanVotingDashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 max-w-md">
           <div className="bg-white border border-[#B8860B]/30 rounded-2xl p-6 shadow-sm flex items-center gap-5">
             <div className="p-4 bg-[#1E3F20]/5 rounded-2xl text-[#1E3F20]">
               <Users size={28} />
@@ -230,16 +257,6 @@ export default function DeanVotingDashboard() {
             <div>
               <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Total Ballots Cast</p>
               <h3 className="text-3xl font-serif font-bold text-[#1E3F20] mt-1">{totalVotes}</h3>
-            </div>
-          </div>
-
-          <div className="bg-white border border-[#B8860B]/30 rounded-2xl p-6 shadow-sm flex items-center gap-5">
-            <div className="p-4 bg-[#B8860B]/10 rounded-2xl text-[#B8860B]">
-              <Award size={28} />
-            </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Qualified Intake Dean Candidates</p>
-              <h3 className="text-3xl font-serif font-bold text-[#1E3F20] mt-1">{tallies.length}</h3>
             </div>
           </div>
         </div>

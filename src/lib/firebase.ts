@@ -747,7 +747,7 @@ export async function firebaseFetchAllDeanVotes(): Promise<{ success: boolean; v
       querySnapshot.forEach((docSnapshot) => {
         const data = docSnapshot.data();
         if (data && data.voter_email) {
-          list.push(data);
+          list.push({ id: docSnapshot.id, ...data });
         }
       });
       return { success: true, votes: list };

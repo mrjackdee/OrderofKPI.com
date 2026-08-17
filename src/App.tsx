@@ -84,7 +84,7 @@ export default function App() {
           <Route path="dean-nomination" element={<ProtectedRoute><DeanNominationForm /></ProtectedRoute>} />
           <Route path="dean-nomination-dashboard" element={<ProtectedRoute allowedRoles={['admin', 'Membership Committee', 'Membership Committee Chair']}><DeanNominationDashboard /></ProtectedRoute>} />
           <Route path="dean-audit-dashboard" element={<ProtectedRoute allowedRoles={['admin']}><DeanAuditLogDashboard /></ProtectedRoute>} />
-          <Route path="dean-voting" element={<ProtectedRoute allowedRoles={['admin']}><DeanVotingForm /></ProtectedRoute>} />
+          <Route path="dean-voting" element={<ProtectedRoute><DeanVotingForm /></ProtectedRoute>} />
           <Route path="dean-voting-dashboard" element={<ProtectedRoute allowedRoles={['admin', 'Membership Committee', 'Membership Committee Chair']}><DeanVotingDashboard /></ProtectedRoute>} />
           <Route path="dean-voting-audit" element={<ProtectedRoute allowedRoles={['admin']}><DeanVotingAuditDashboard /></ProtectedRoute>} />
           <Route path="privacy-policy" element={<PrivacyPolicy />} />

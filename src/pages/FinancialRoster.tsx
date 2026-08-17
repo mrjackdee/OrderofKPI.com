@@ -117,7 +117,10 @@ export default function FinancialRoster() {
         const fy27Paid = (cols[3] || '').trim().toUpperCase() === 'TRUE';
         const personalEmail = cols[5] || '';
         const kpiEmail = cols[7] || '';
-        const email = (kpiEmail || personalEmail || `${firstName.toLowerCase()}.${lastName.toLowerCase()}@orderofkpi.org`).toLowerCase().trim();
+        let email = (kpiEmail || personalEmail || `${firstName.toLowerCase()}.${lastName.toLowerCase()}@orderofkpi.org`).toLowerCase().trim();
+        if (firstName.toLowerCase() === 'terrell' && lastName.toLowerCase() === 'singleton') {
+          email = 'terrell.singleton@orderofkpi.org';
+        }
 
         if (fy27Paid && (firstName || lastName)) {
           const fullName = `${firstName} ${lastName}`.trim();

@@ -101,18 +101,7 @@ export default function MemberPortal() {
             </div>
           </Link>
 
-          <Link
-            to="/member-directory"
-            className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
-          >
-            <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
-              <ClipboardCheck size={28} />
-            </div>
-            <div>
-              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Access Directory</h4>
-              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">All System Logins</p>
-            </div>
-          </Link>
+
 
           {isAdmin && (
             <Link
@@ -142,20 +131,49 @@ export default function MemberPortal() {
             </div>
           </Link>
 
-          {isAdmin && (
-            <Link
-              to="/dean-voting"
-              className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
-            >
-              <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
-                <Award size={28} />
-              </div>
-              <div>
-                <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Vote for Intake Dean</h4>
-                <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Team Voting Ballot</p>
-              </div>
-            </Link>
-          )}
+          {(() => {
+            const eligibleEmails = [
+              "anthony.jones@orderofkpi.org",
+              "brandon.owens@orderofkpi.org",
+              "brian.johnson@orderofkpi.org",
+              "brian.goings@orderofkpi.org",
+              "darron.jenkins@orderofkpi.org",
+              "denzel.talley@orderofkpi.org",
+              "deshaun.safford@orderofkpi.org",
+              "dominic.goodman@orderofkpi.org",
+              "donald.mitchell@orderofkpi.org",
+              "dmitchell02@gmail.com",
+              "edward.cook@orderofkpi.org",
+              "ishmeal.allensworth@orderofkpi.org",
+              "ishmael.allensworth@orderofkpi.org",
+              "jack.dee@orderofkpi.org",
+              "jack@orderofkpi.org",
+              "james.haywood@orderofkpi.org",
+              "jason.pilar@orderofkpi.org",
+              "kameron.whitfield@orderofkpi.org",
+              "keith.woods@orderofkpi.org",
+              "tobias.bordley@orderofkpi.org",
+              "candidate@gmail.com",
+              "admin@orderofkpi.org"
+            ];
+            const normEmail = (userEmail || '').toLowerCase().trim();
+            const isEligibleVoter = isAdmin || eligibleEmails.includes(normEmail) || !isApplicant;
+            if (!isEligibleVoter) return null;
+            return (
+              <Link
+                to="/dean-voting"
+                className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
+              >
+                <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
+                  <Award size={28} />
+                </div>
+                <div>
+                  <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Vote for Intake Dean</h4>
+                  <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Team Voting Ballot</p>
+                </div>
+              </Link>
+            );
+          })()}
         </motion.div>
 
         {/* Administrative Tools */}
@@ -165,12 +183,60 @@ export default function MemberPortal() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
                 { 
+                  title: 'Access Directory', 
+                  desc: 'All system logins and member accounts.', 
+                  icon: ClipboardCheck, 
+                  path: '/member-directory',
+                  color: 'bg-gold text-ivy',
+                  roles: ['admin']
+                },
+                { 
                   title: 'Admin Dashboard', 
                   desc: 'Member & system management.', 
                   icon: Settings, 
                   path: '/admin-dashboard',
                   color: 'bg-ivy text-cream',
                   roles: ['admin']
+                },
+                { 
+                  title: 'Candidate Tracker', 
+                  desc: 'Manage membership intake.', 
+                  icon: Users, 
+                  path: '/candidate-tracker',
+                  color: 'bg-gold text-ivy',
+                  roles: ['admin', 'officer', 'Membership Committee', 'Membership Committee Chair']
+                },
+                { 
+                  title: 'Dean Audit & Management', 
+                  desc: 'Admin log mapping voters to nominees with edit/delete.', 
+                  icon: ShieldCheck, 
+                  path: '/dean-audit-dashboard',
+                  color: 'bg-gold text-ivy',
+                  roles: ['admin']
+                },
+                { 
+                  title: 'Dean Nomination Results', 
+                  desc: 'Anonymous aggregated nominee tallies.', 
+                  icon: Award, 
+                  path: '/dean-nomination-dashboard',
+                  color: 'bg-ivy text-cream',
+                  roles: ['admin', 'Membership Committee Chair', 'Membership Committee']
+                },
+                { 
+                  title: 'Dean Voting Audit & Mgmt', 
+                  desc: 'Admin log mapping voters to votes with edit/delete.', 
+                  icon: ShieldCheck, 
+                  path: '/dean-voting-audit',
+                  color: 'bg-gold text-ivy',
+                  roles: ['admin']
+                },
+                { 
+                  title: 'Dean Voting Results', 
+                  desc: 'Anonymous aggregated vote tallies.', 
+                  icon: Award, 
+                  path: '/dean-voting-dashboard',
+                  color: 'bg-ivy text-cream',
+                  roles: ['admin', 'Membership Committee Chair', 'Membership Committee']
                 },
                 { 
                   title: 'Member Directory Administration', 
@@ -181,12 +247,12 @@ export default function MemberPortal() {
                   roles: ['admin']
                 },
                 { 
-                  title: 'Candidate Tracker', 
-                  desc: 'Manage membership intake.', 
-                  icon: Users, 
-                  path: '/candidate-tracker',
+                  title: 'Membership Chair Portal', 
+                  desc: 'Review audit logs, committee access & candidate removal.', 
+                  icon: ShieldCheck, 
+                  path: '/chair-dashboard',
                   color: 'bg-gold text-ivy',
-                  roles: ['admin', 'officer', 'Membership Committee', 'Membership Committee Chair']
+                  roles: ['admin', 'officer', 'Membership Committee Chair']
                 },
                 { 
                   title: 'Process Timeline', 
@@ -203,46 +269,6 @@ export default function MemberPortal() {
                   path: '/review-applications',
                   color: 'bg-ivy text-cream',
                   roles: ['admin', 'Membership Committee', 'Membership Committee Chair']
-                },
-                { 
-                  title: 'Membership Chair Portal', 
-                  desc: 'Review audit logs, committee access & candidate removal.', 
-                  icon: ShieldCheck, 
-                  path: '/chair-dashboard',
-                  color: 'bg-gold text-ivy',
-                  roles: ['admin', 'officer', 'Membership Committee Chair']
-                },
-                { 
-                  title: 'Dean Nomination Results', 
-                  desc: 'Anonymous aggregated nominee tallies.', 
-                  icon: Award, 
-                  path: '/dean-nomination-dashboard',
-                  color: 'bg-ivy text-cream',
-                  roles: ['admin', 'Membership Committee Chair', 'Membership Committee']
-                },
-                { 
-                  title: 'Dean Audit & Management', 
-                  desc: 'Admin log mapping voters to nominees with edit/delete.', 
-                  icon: ShieldCheck, 
-                  path: '/dean-audit-dashboard',
-                  color: 'bg-gold text-ivy',
-                  roles: ['admin']
-                },
-                { 
-                  title: 'Dean Voting Results', 
-                  desc: 'Anonymous aggregated vote tallies.', 
-                  icon: Award, 
-                  path: '/dean-voting-dashboard',
-                  color: 'bg-ivy text-cream',
-                  roles: ['admin', 'Membership Committee Chair', 'Membership Committee']
-                },
-                { 
-                  title: 'Dean Voting Audit & Mgmt', 
-                  desc: 'Admin log mapping voters to votes with edit/delete.', 
-                  icon: ShieldCheck, 
-                  path: '/dean-voting-audit',
-                  color: 'bg-gold text-ivy',
-                  roles: ['admin']
                 }
               ]
               .filter(tool => {

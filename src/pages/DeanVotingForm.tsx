@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { Award, UserCheck, ShieldCheck, CheckCircle2, AlertCircle, ArrowLeft, Send, Check } from 'lucide-react';
+import { Award, UserCheck, ShieldCheck, CheckCircle2, AlertCircle, ArrowLeft, Send, Check, Clock } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 import { 
   firebaseSaveDeanVote, 
@@ -14,7 +14,8 @@ import { getFriendlyError } from '../lib/utils';
 // Define the approved candidate slate once formal acceptances are received.
 // Currently empty pending confirmation and formal acceptances of nomination.
 const APPROVED_DEAN_CANDIDATES: string[] = [
-  // Approved candidates will be listed here in a future prompt once nominations are formally accepted.
+  "Brandon Owens",
+  "Kameron Whitfield"
 ];
 
 export default function DeanVotingForm() {
@@ -28,6 +29,32 @@ export default function DeanVotingForm() {
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [error, setError] = useState('');
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: false });
+
+  useEffect(() => {
+    const deadline = new Date("2026-08-19T23:59:00-04:00").getTime();
+    
+    const updateCountdown = () => {
+      const now = new Date().getTime();
+      const difference = deadline - now;
+      
+      if (difference <= 0) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: true });
+        return;
+      }
+      
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+      
+      setTimeLeft({ days, hours, minutes, seconds, expired: false });
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     // Perform background sync on mount
@@ -138,7 +165,7 @@ export default function DeanVotingForm() {
       console.log('[DeanVotingForm] Write results:', { serverSuccess, fsSuccess });
 
       if (serverSuccess || fsSuccess) {
-        setSuccessMessage('Your vote for the Intake Dean has been successfully recorded. You may update your vote while the voting window is active.');
+        setSuccessMessage('Your vote has been successfully submitted and saved');
         
         if (!serverSuccess && fsSuccess) {
           console.log('[DeanVotingForm] Triggering background sync because server write failed...');
@@ -184,11 +211,42 @@ export default function DeanVotingForm() {
           <p className="text-gray-600 text-sm leading-relaxed max-w-2xl">
             Cast your official ballot for the Intake Dean position. Each financial member is restricted to a single active vote.
           </p>
-          <div className="bg-[#FDFCF0] border border-[#B8860B]/30 rounded-2xl p-5 space-y-2 mt-4 text-xs text-[#1E3F20]">
-            <p className="font-bold uppercase tracking-wider text-[#B8860B]">Voting Period & Timeline</p>
-            <p><strong>Period:</strong> Monday, August 17, 2026 to Wednesday, August 19, 2026.</p>
-            <p><strong>Guidelines:</strong> Members will cast a single vote for their preferred candidate. Ballots may be updated while voting is active.</p>
-            <p className="pt-2 border-t border-[#B8860B]/20 text-gray-600">
+          <div className="bg-[#FDFCF0] border border-[#B8860B]/40 rounded-2xl p-6 space-y-4 mt-6 text-[#1E3F20] shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-[#B8860B]/10 rounded-xl text-[#B8860B]">
+                <Clock size={22} />
+              </div>
+              <div>
+                <p className="text-base md:text-lg font-bold uppercase tracking-wider text-[#1E3F20]">Intake Team Dean Voting Window</p>
+                <p className="text-sm md:text-base font-bold text-[#1E3F20] mt-0.5">August 17 – August 19, 2026</p>
+                <p className="text-xs text-gray-500 mt-1">Deadline: August 19, 2026 at 11:59 PM ET</p>
+              </div>
+            </div>
+
+            {/* Countdown timer */}
+            <div className="pt-3 border-t border-[#B8860B]/20 flex flex-wrap items-center gap-4">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#B8860B]">Time Remaining:</span>
+              {timeLeft.expired ? (
+                <span className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-200">Voting Period Closed</span>
+              ) : (
+                <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#1E3F20]">
+                  <div className="bg-white px-3 py-1.5 rounded-lg border border-[#B8860B]/30 shadow-2xs">
+                    <span className="text-sm font-bold">{timeLeft.days}</span> <span className="text-[10px] text-gray-500 font-normal">days</span>
+                  </div>
+                  <div className="bg-white px-3 py-1.5 rounded-lg border border-[#B8860B]/30 shadow-2xs">
+                    <span className="text-sm font-bold">{String(timeLeft.hours).padStart(2, '0')}</span> <span className="text-[10px] text-gray-500 font-normal">hrs</span>
+                  </div>
+                  <div className="bg-white px-3 py-1.5 rounded-lg border border-[#B8860B]/30 shadow-2xs">
+                    <span className="text-sm font-bold">{String(timeLeft.minutes).padStart(2, '0')}</span> <span className="text-[10px] text-gray-500 font-normal">mins</span>
+                  </div>
+                  <div className="bg-white px-3 py-1.5 rounded-lg border border-[#B8860B]/30 shadow-2xs">
+                    <span className="text-sm font-bold">{String(timeLeft.seconds).padStart(2, '0')}</span> <span className="text-[10px] text-gray-500 font-normal">secs</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <p className="text-xs text-gray-600 pt-1">
               For questions regarding the voting process, please reach out to <a href="mailto:james.haywood@orderofkpi.org" className="font-bold text-[#1E3F20] underline">james.haywood@orderofkpi.org</a> (Membership Intake Chair).
             </p>
           </div>
@@ -196,13 +254,18 @@ export default function DeanVotingForm() {
 
         {/* Status Banner */}
         {existingVote && (
-          <div className="bg-[#1E3F20]/5 border border-[#1E3F20]/20 rounded-2xl p-6 flex items-start gap-4">
-            <CheckCircle2 size={24} className="text-[#1E3F20] flex-shrink-0 mt-0.5" />
-            <div>
-              <h3 className="font-bold text-[#1E3F20] text-sm uppercase tracking-wider">Active Vote Recorded</h3>
-              <p className="text-xs text-gray-600 mt-1">
-                You currently have an active ballot cast for <span className="font-bold text-[#1E3F20]">{existingVote.nominee_name}</span>.
-              </p>
+          <div className="bg-[#1E3F20]/5 border border-[#1E3F20]/20 rounded-2xl p-6 space-y-3">
+            <div className="flex items-start gap-4">
+              <CheckCircle2 size={24} className="text-[#1E3F20] flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-bold text-[#1E3F20] text-sm uppercase tracking-wider">Active Vote Recorded</h3>
+                <p className="text-xs text-gray-600 mt-1">
+                  You currently have an active ballot cast for <span className="font-bold text-[#1E3F20]">{existingVote.nominee_name}</span>.
+                </p>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-[#1E3F20]/10 text-xs text-[#1E3F20] font-medium flex items-center justify-between">
+              <span>You may modify your vote at any time up until the voting deadline on August 19, 2026 at 11:59 PM ET.</span>
             </div>
           </div>
         )}

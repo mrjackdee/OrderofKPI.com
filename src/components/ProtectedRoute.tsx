@@ -40,6 +40,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
 
       const hasAccess = allowedRoles.some(role => {
         if (role === userRole) return true;
+        if (role === 'member' && userRole && userRole !== 'applicant' && userRole !== 'prospective') return true;
         if (role === 'Membership Committee' && isCommittee) return true;
         if (role === 'Membership Committee Chair' && isChair) return true;
         return false;
