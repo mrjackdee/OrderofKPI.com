@@ -548,6 +548,32 @@ function performClientSidePasswordChange(email: string, currentPass: string, new
   localStorage.setItem(`kpi_client_password_${normEmail}`, newPass);
   localStorage.setItem(`kpi_password_changed_${normEmail}`, 'true');
 
+  // Async sync to Cloud Firestore
+  (async () => {
+    try {
+      const { doc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('./firebase');
+
+      const msgUint8 = new TextEncoder().encode(newPass);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+      const passwordHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+      await setDoc(doc(db, 'user_password_overrides', normEmail), {
+        email: normEmail,
+        hash: passwordHash,
+        isFirstLogin: false,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      await setDoc(doc(db, 'candidate_accounts', normEmail), {
+        email: normEmail,
+        pass: newPass,
+        isFirstLogin: false,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (e) {}
+  })();
+
   return {
     success: true,
     message: 'Your portal password was updated successfully.'

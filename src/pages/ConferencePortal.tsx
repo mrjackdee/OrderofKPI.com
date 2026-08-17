@@ -433,7 +433,7 @@ export default function ConferencePortal() {
     { position: "Epistoleus", name: "Edward Cook" },
     { position: "Historian", name: "Brandon Owens" },
     { position: "Hodegos", name: "Darron Jenkins" },
-    { position: "Tamiouchos", name: "Ishmael Allensworth" }
+    { position: "Tamiouchos", name: "Ishmeal Allensworth" }
   ];
 
   if (!isAuthenticated) {

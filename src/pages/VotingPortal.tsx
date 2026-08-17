@@ -88,7 +88,7 @@ const AVAILABLE_POSITIONS: Position[] = [
     id: "tamiouchos",
     title: "Tamiouchos",
     nominees: [
-      { id: "tam-ia", name: "Ishmael Allensworth", position: "Tamiouchos" }
+      { id: "tam-ia", name: "Ishmeal Allensworth", position: "Tamiouchos" }
     ]
   }
 ];

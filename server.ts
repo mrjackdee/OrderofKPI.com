@@ -28,10 +28,11 @@ interface UserRecord {
 }
 
 const passwordOverridesPath = path.join(process.cwd(), "user_password_overrides.json");
+const altPasswordOverridesPath = path.join(process.cwd(), "password_overrides.json");
 
 let firebaseProjectId = process.env.VITE_FIREBASE_PROJECT_ID || "";
 let firebaseApiKey = process.env.VITE_FIREBASE_API_KEY || "";
-let firebaseDatabaseId = process.env.VITE_FIREBASE_DATABASE_ID || "ai-studio-orderofkpicomint-87b8a669-8698-4f66-8799-ff9b38422e20";
+let firebaseDatabaseId = process.env.VITE_FIREBASE_DATABASE_ID || "ai-studio-87b8a669-8698-4f66-8799-ff9b38422e20";
 try {
   const cfgPath = path.join(process.cwd(), "firebase-applet-config.json");
   if (fs.existsSync(cfgPath)) {
@@ -61,9 +62,19 @@ function loadPasswordOverridesFromFile() {
     try {
       const data = JSON.parse(fs.readFileSync(passwordOverridesPath, "utf-8"));
       globalPasswordOverrides = { ...globalPasswordOverrides, ...data };
-      console.log(`[AUTH] Loaded ${Object.keys(data).length} password overrides from persistent storage.`);
+      console.log(`[AUTH] Loaded ${Object.keys(data).length} password overrides from user_password_overrides.json`);
     } catch (err) {
       console.error("[AUTH] Error loading password overrides file:", err);
+    }
+  }
+
+  if (fs.existsSync(altPasswordOverridesPath)) {
+    try {
+      const altData = JSON.parse(fs.readFileSync(altPasswordOverridesPath, "utf-8"));
+      globalPasswordOverrides = { ...globalPasswordOverrides, ...altData };
+      console.log(`[AUTH] Loaded ${Object.keys(altData).length} password overrides from password_overrides.json`);
+    } catch (err) {
+      console.error("[AUTH] Error loading alt password overrides file:", err);
     }
   }
 
@@ -104,7 +115,7 @@ async function syncPasswordOverridesFromFirestoreCloud() {
         const hash = fields.hash?.stringValue || "";
         const isFirstLogin = fields.isFirstLogin?.integerValue !== undefined
           ? Number(fields.isFirstLogin.integerValue)
-          : (fields.isFirstLogin?.booleanValue === false ? 0 : 1);
+          : (fields.isFirstLogin?.booleanValue === false ? 0 : (fields.isFirstLogin?.booleanValue === true ? 1 : 0));
         const updatedAt = fields.updatedAt?.stringValue || new Date().toISOString();
 
         if (normEmail && hash) {
@@ -146,12 +157,13 @@ function savePasswordOverride(email: string, hash: string, isFirstLogin: number 
   };
   try {
     fs.writeFileSync(passwordOverridesPath, JSON.stringify(globalPasswordOverrides, null, 2));
+    fs.writeFileSync(altPasswordOverridesPath, JSON.stringify(globalPasswordOverrides, null, 2));
     console.log(`[AUTH] Password override saved persistently for: ${normEmail}`);
   } catch (err) {
     console.error("[AUTH] Failed to save password override file:", err);
   }
 
-  // Push to Firestore Cloud asynchronously so changed passwords persist across container resets
+  // Push to Firestore Cloud asynchronously so changed passwords persist across container resets & all environments
   if (firebaseProjectId && firebaseApiKey) {
     const docId = normEmail.replace(/\//g, "_");
     const dbId = firebaseDatabaseId || "(default)";
@@ -173,6 +185,20 @@ function savePasswordOverride(email: string, hash: string, isFirstLogin: number 
     }).catch(err => {
       console.warn("[AUTH Cloud Sync] Error pushing to Firestore:", err);
     });
+
+    // Also update candidate_accounts in Firestore if candidate
+    const candUrl = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/candidate_accounts/${encodeURIComponent(docId)}?key=${firebaseApiKey}`;
+    fetch(candUrl, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fields: {
+          email: { stringValue: normEmail },
+          isFirstLogin: { booleanValue: isFirstLogin === 1 },
+          updatedAt: { stringValue: new Date().toISOString() }
+        }
+      })
+    }).catch(() => {});
   }
 }
 
@@ -869,13 +895,15 @@ async function initDb() {
       }
     }
 
-    // Ensure Brandon Addison and duplicate Donald Mitchell Gmail account are permanently purged
+    // Ensure old/deprecated logins are permanently purged
     delete cleanData['brandon.addison@orderofkpi.org'];
     delete cleanData['dmitchell02@gmail.com'];
+    delete cleanData['ishmael.allensworth@orderofkpi.org'];
     if (useSqlite && sqliteDb) {
       try {
         sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'brandon.addison@orderofkpi.org'").run();
         sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'dmitchell02@gmail.com'").run();
+        sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'ishmael.allensworth@orderofkpi.org'").run();
       } catch (e) {}
     }
 
@@ -886,11 +914,14 @@ async function initDb() {
     setTimeout(() => {
       syncLocalMemberToFirestoreCloud("brandon.hunter@orderofkpi.org").catch(e => console.warn("Notice syncing Brandon Hunter to Firestore:", e));
       syncLocalMemberToFirestoreCloud("terrell.singleton@orderofkpi.org").catch(e => console.warn("Notice syncing Terrell Singleton to Firestore:", e));
+      syncLocalMemberToFirestoreCloud("ishmeal.allensworth@orderofkpi.org").catch(e => console.warn("Notice syncing Ishmeal Allensworth to Firestore:", e));
       
       if (firebaseProjectId && firebaseApiKey) {
         const dbId = firebaseDatabaseId || "(default)";
-        const url = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/members/dmitchell02_gmail_com?key=${firebaseApiKey}`;
-        fetch(url, { method: "DELETE" }).catch(e => console.warn("Notice purging dmitchell02 from Firestore:", e));
+        const urlDmitchell = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/members/dmitchell02_gmail_com?key=${firebaseApiKey}`;
+        fetch(urlDmitchell, { method: "DELETE" }).catch(e => console.warn("Notice purging dmitchell02 from Firestore:", e));
+        const urlIshmael = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/members/ishmael_allensworth_orderofkpi_org?key=${firebaseApiKey}`;
+        fetch(urlIshmael, { method: "DELETE" }).catch(e => console.warn("Notice purging ishmael from Firestore:", e));
       }
     }, 1500);
   } catch (jsonErr) {

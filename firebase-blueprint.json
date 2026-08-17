@@ -118,9 +118,25 @@
         "industry": { "type": "string" }
       },
       "required": ["email", "name", "role"]
+    },
+    "user_password_override": {
+      "title": "User Password Override",
+      "description": "Persistent password override records across dev and prod environments.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "hash": { "type": "string" },
+        "isFirstLogin": { "type": "integer" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "hash"]
     }
   },
   "firestore": {
+    "user_password_overrides/{overrideId}": {
+      "schema": "user_password_override",
+      "description": "User password overrides synchronized across dev and prod database instances."
+    },
     "applications/{applicationId}": {
       "schema": "membership_application",
       "description": "Member applications."

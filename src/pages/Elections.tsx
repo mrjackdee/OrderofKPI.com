@@ -47,7 +47,7 @@ const nominees = [
   { position: "Epistoleus", names: ["Edward Cook"] },
   { position: "Historian", names: ["Brandon Owens"] },
   { position: "Hodegos", names: ["Darron Jenkins"] },
-  { position: "Tamiouchos", names: ["Ishmael Allensworth"] },
+  { position: "Tamiouchos", names: ["Ishmeal Allensworth"] },
 ];
 
 const positions: Position[] = [
