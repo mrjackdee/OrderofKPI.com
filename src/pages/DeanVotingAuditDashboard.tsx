@@ -365,7 +365,35 @@ export default function DeanVotingAuditDashboard() {
             <div className="p-12 text-center text-gray-500 text-xs">No matching vote audit records found.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              {/* Mobile View */}
+              <div className="block sm:hidden">
+                {filteredVotes.map((v) => (
+                  <div key={v.id} className="p-4 border-b border-[#B8860B]/20">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="font-bold text-[#1E3F20] truncate mr-2">{v.voter_email}</div>
+                      <div className="text-[10px] text-gray-500 whitespace-nowrap">{v.timestamp ? new Date(v.timestamp).toLocaleDateString() : 'N/A'}</div>
+                    </div>
+                    <div className="text-xs text-gray-700 mb-3">Voted for: <span className="font-semibold text-[#1E3F20]">{v.nominee_name}</span></div>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => handleStartEdit(v)}
+                        className="p-2 bg-[#B8860B]/10 hover:bg-[#B8860B] hover:text-white text-[#B8860B] rounded-lg transition-colors"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(v.id, v.voter_email)}
+                        className="p-2 bg-red-50 hover:bg-red-600 hover:text-white text-red-600 rounded-lg transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Desktop View */}
+              <table className="hidden sm:table w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-[#1E3F20] text-white text-[10px] font-bold uppercase tracking-wider">
                     <th className="p-4">Voter (Submitter)</th>

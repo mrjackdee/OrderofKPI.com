@@ -3279,6 +3279,11 @@ async function startServer() {
 
   // Support both DELETE with path parameter AND DELETE with query/body
   const handleDeanVoteDelete = async (req: express.Request, res: express.Response) => {
+    console.log("DEBUG: handleDeanVoteDelete REQ:", {
+      params: req.params,
+      query: req.query,
+      body: req.body
+    });
     try {
       const id = (req.params.id || req.query.id as string || req.body.id as string || "").trim();
       const email = (req.query.email as string || req.body.email as string || "").toLowerCase().trim();
@@ -3304,13 +3309,13 @@ async function startServer() {
 
       let list = getFallbackDeanVotes();
       const target = list.find(v => 
-        (id && (v.id === id || (v.voter_email || "").toLowerCase().trim() === cleanId)) ||
+        (id && (v.id.toString() === id.toString() || (v.voter_email || "").toLowerCase().trim() === cleanId)) ||
         (email && (v.voter_email || "").toLowerCase().trim() === email)
       );
       const emailToClean = target?.voter_email || email || (cleanId.includes("@") ? cleanId : "");
 
       list = list.filter(v => 
-        !(id && (v.id === id || (v.voter_email || "").toLowerCase().trim() === cleanId)) &&
+        !(id && (v.id.toString() === id.toString() || (v.voter_email || "").toLowerCase().trim() === cleanId)) &&
         !(email && (v.voter_email || "").toLowerCase().trim() === email)
       );
       saveFallbackDeanVotes(list);
