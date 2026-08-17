@@ -659,7 +659,7 @@ export async function fetchApplication(email: string) {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
-      const response = await fetch(`/api/applications/${normEmail}`, { signal: controller.signal });
+      const response = await fetch(`/api/applications?email=${encodeURIComponent(normEmail)}`, { signal: controller.signal });
       clearTimeout(timeoutId);
       if (response.ok) {
         return await response.json();

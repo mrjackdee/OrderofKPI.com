@@ -275,7 +275,7 @@ export default function CandidateTracker() {
       }
 
       // 2. Delete candidate and local application records from the backend
-      const res = await fetch(`/api/candidates/${encodeURIComponent(id)}?chairEmail=${encodeURIComponent(currentUserEmail)}`, {
+      const res = await fetch(`/api/candidates?id=${encodeURIComponent(id)}&chairEmail=${encodeURIComponent(currentUserEmail)}`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -377,7 +377,7 @@ export default function CandidateTracker() {
         );
       }
       
-      const response = await fetch(`/api/candidates/${id}`, {
+      const response = await fetch(`/api/candidates?id=${encodeURIComponent(id)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

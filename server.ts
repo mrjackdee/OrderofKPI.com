@@ -1962,8 +1962,8 @@ async function startServer() {
   });
 
   // Edit a member
-  app.put("/api/members/:email", (req, res) => {
-    const { email } = req.params;
+  const handleMemberPut = (req: express.Request, res: express.Response) => {
+    const email = req.params.email || req.query.email as string || req.body.email as string || "";
     const { name, first_name, last_name, role, title, intake_class, financial_status, industry, profile_photo, adminEmail, is_test_credential } = req.body;
     if (!email) {
       return res.status(400).json({ success: false, message: "Email is required" });
@@ -2033,11 +2033,14 @@ async function startServer() {
       console.error("Error updating member:", err);
       res.status(500).json({ success: false, message: err.message || "Failed to update member" });
     }
-  });
+  };
+
+  app.put("/api/members/:email", handleMemberPut);
+  app.put("/api/members", handleMemberPut);
 
   // Delete a member
-  app.delete("/api/members/:email", (req, res) => {
-    const { email } = req.params;
+  const handleMemberDelete = (req: express.Request, res: express.Response) => {
+    const email = req.params.email || req.query.email as string || req.body.email as string || "";
     const { adminEmail } = req.query;
     if (!email) {
       return res.status(400).json({ success: false, message: "Email is required" });
@@ -2077,14 +2080,67 @@ async function startServer() {
       console.error("Error deleting member:", err);
       res.status(500).json({ success: false, message: err.message || "Failed to delete member" });
     }
-  });
+  };
+
+  app.delete("/api/members/:email", handleMemberDelete);
+  app.delete("/api/members", handleMemberDelete);
 
   // --- CANDIDATE ENDPOINTS ---
 
   // --- CANDIDATE ENDPOINTS ---
+
+  const handleApplicationGet = (req: express.Request, res: express.Response) => {
+    try {
+      const email = req.params.email || req.query.email as string || "";
+      const normEmail = email.toLowerCase().trim();
+      let application: any = null;
+      let candidateStatus: string | null = null;
+
+      if (useSqlite && sqliteDb) {
+        const appRow = sqliteDb.prepare("SELECT * FROM membership_applications WHERE LOWER(email) = ?").get(normEmail) as any;
+        const candRow = sqliteDb.prepare("SELECT status FROM candidates WHERE LOWER(email) = ?").get(normEmail) as any;
+        if (candRow) candidateStatus = candRow.status;
+
+        if (appRow) {
+          application = {
+            ...appRow,
+            data: JSON.parse(appRow.data || "{}")
+          };
+        }
+      }
+
+      // JSON file fallback if not found in SQLite
+      const appsJsonFile = path.join(process.cwd(), "data", "applications.json");
+      if (!application && fs.existsSync(appsJsonFile)) {
+        try {
+          const jsonStore = JSON.parse(fs.readFileSync(appsJsonFile, "utf-8"));
+          if (jsonStore[normEmail]) {
+            application = jsonStore[normEmail];
+          }
+        } catch (je) {
+          console.error("JSON read error for application:", je);
+        }
+      }
+
+      return res.json({ 
+        success: true, 
+        application,
+        candidateStatus
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  };
+
+  app.get("/api/applications/:email", handleApplicationGet);
 
   app.get("/api/applications", (req, res) => {
     try {
+      const emailQuery = req.query.email as string;
+      if (emailQuery) {
+        return handleApplicationGet(req, res);
+      }
+
       let apps: any[] = [];
       if (useSqlite && sqliteDb) {
         try {
@@ -2122,48 +2178,6 @@ async function startServer() {
       });
 
       res.json({ success: true, applications: apps });
-    } catch (err: any) {
-      res.status(500).json({ success: false, message: err.message });
-    }
-  });
-
-  app.get("/api/applications/:email", (req, res) => {
-    try {
-      const normEmail = (req.params.email || "").toLowerCase().trim();
-      let application: any = null;
-      let candidateStatus: string | null = null;
-
-      if (useSqlite && sqliteDb) {
-        const appRow = sqliteDb.prepare("SELECT * FROM membership_applications WHERE LOWER(email) = ?").get(normEmail) as any;
-        const candRow = sqliteDb.prepare("SELECT status FROM candidates WHERE LOWER(email) = ?").get(normEmail) as any;
-        if (candRow) candidateStatus = candRow.status;
-
-        if (appRow) {
-          application = {
-            ...appRow,
-            data: JSON.parse(appRow.data || "{}")
-          };
-        }
-      }
-
-      // JSON file fallback if not found in SQLite
-      const appsJsonFile = path.join(process.cwd(), "data", "applications.json");
-      if (!application && fs.existsSync(appsJsonFile)) {
-        try {
-          const jsonStore = JSON.parse(fs.readFileSync(appsJsonFile, "utf-8"));
-          if (jsonStore[normEmail]) {
-            application = jsonStore[normEmail];
-          }
-        } catch (je) {
-          console.error("JSON read error for application:", je);
-        }
-      }
-
-      return res.json({ 
-        success: true, 
-        application,
-        candidateStatus
-      });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -2754,9 +2768,9 @@ async function startServer() {
     }
   });
 
-  app.put("/api/candidates/:id", (req, res) => {
+  const handleCandidatePut = (req: express.Request, res: express.Response) => {
     try {
-      const { id } = req.params;
+      const id = req.params.id || req.query.id as string || req.body.id as string || "";
       const { name, status, scores, notes, document_vault, reviewerEmail } = req.body;
       
       if (useSqlite && sqliteDb) {
@@ -2817,7 +2831,10 @@ async function startServer() {
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
-  });
+  };
+
+  app.put("/api/candidates/:id", handleCandidatePut);
+  app.put("/api/candidates", handleCandidatePut);
 
   async function deleteFirestoreCandidateApplication(email: string) {
     if (!firebaseProjectId || !firebaseApiKey || !email) return;
@@ -2847,9 +2864,9 @@ async function startServer() {
     }
   }
 
-  app.delete("/api/candidates/:id", (req, res) => {
+  const handleCandidateDelete = (req: express.Request, res: express.Response) => {
     try {
-      const rawId = req.params.id;
+      const rawId = req.params.id || req.query.id as string || "";
       const { chairEmail } = req.query;
       const normId = decodeURIComponent(rawId || "").toLowerCase().trim();
 
@@ -2897,8 +2914,8 @@ async function startServer() {
           Object.keys(jsonStore).forEach(e => {
             const normE = e.toLowerCase().trim();
             if (normE === normId || (emailToDel && normE === emailToDel)) {
-              delete jsonStore[e];
-              deletedAny = true;
+               delete jsonStore[e];
+               deletedAny = true;
             }
           });
           if (deletedAny) {
@@ -2918,7 +2935,10 @@ async function startServer() {
       console.error('Error deleting candidate:', err);
       res.status(500).json({ success: false, message: err.message });
     }
-  });
+  };
+
+  app.delete("/api/candidates/:id", handleCandidateDelete);
+  app.delete("/api/candidates", handleCandidateDelete);
 
   // --- APPLICATION REVIEW AUDIT LOG ENDPOINTS ---
 
@@ -3013,9 +3033,9 @@ async function startServer() {
     }
   });
 
-  app.delete("/api/committee/members/:email", (req, res) => {
+  const handleCommitteeMemberDelete = (req: express.Request, res: express.Response) => {
     try {
-      const { email } = req.params;
+      const email = req.params.email || req.query.email as string || req.body.email as string || "";
       const { chairEmail } = req.query;
       const normEmail = email.toLowerCase().trim();
 
@@ -3041,7 +3061,10 @@ async function startServer() {
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
-  });
+  };
+
+  app.delete("/api/committee/members/:email", handleCommitteeMemberDelete);
+  app.delete("/api/committee/members", handleCommitteeMemberDelete);
 
   // --- VOTING ENDPOINTS ---
 
@@ -3335,14 +3358,14 @@ Details:
 • Total Votes Cast To Date: ${totalVotesCast}
 
 Logged: ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })} EST
-Order of KPI Application Portal`;
+KP Member Portal`;
 
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #fcfbf4;">
         ${isLocal ? `<div style="background-color: #d97706; color: #ffffff; padding: 8px 12px; text-align: center; font-weight: bold; font-size: 12px; border-radius: 6px 6px 0 0; letter-spacing: 1px; text-transform: uppercase;">⚠️ TEST / LOCAL ENVIRONMENT NOTIFICATION</div>` : ''}
         <div style="background-color: #1E3F20; color: #FFFFFF; padding: 20px; text-align: center; border-radius: ${isLocal ? '0' : '8px 8px 0 0'};">
           <h2 style="margin: 0; font-size: 20px;">Intake Team Dean Election Alert</h2>
-          <p style="margin: 5px 0 0 0; font-size: 13px; color: #D4AF37;">Order of KPI Application Portal</p>
+          <p style="margin: 5px 0 0 0; font-size: 13px; color: #D4AF37;">KP Member Portal</p>
         </div>
         <div style="padding: 24px; background-color: #ffffff; color: #333333; line-height: 1.6;">
           <p style="font-size: 16px; margin-top: 0;">A new vote has been cast in the <strong>Intake Team Dean</strong> election.</p>
@@ -3542,9 +3565,9 @@ Order of KPI Application Portal`;
     }
   });
 
-  app.put("/api/admin/dean-nominations/:id", (req, res) => {
+  const handleDeanNominationPut = (req: express.Request, res: express.Response) => {
     try {
-      const { id } = req.params;
+      const id = req.params.id || req.query.id as string || req.body.id as string || "";
       const { nominee_first_name, nominee_last_name, statement } = req.body;
       if (!nominee_first_name || !nominee_last_name || !statement) {
         return res.status(400).json({ success: false, message: "All fields are required." });
@@ -3578,11 +3601,14 @@ Order of KPI Application Portal`;
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
-  });
+  };
 
-  app.delete("/api/admin/dean-nominations/:id", (req, res) => {
+  app.put("/api/admin/dean-nominations/:id", handleDeanNominationPut);
+  app.put("/api/admin/dean-nominations", handleDeanNominationPut);
+
+  const handleDeanNominationDelete = (req: express.Request, res: express.Response) => {
     try {
-      const { id } = req.params;
+      const id = req.params.id || req.query.id as string || "";
 
       if (useSqlite && sqliteDb) {
         try {
@@ -3600,7 +3626,10 @@ Order of KPI Application Portal`;
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
-  });
+  };
+
+  app.delete("/api/admin/dean-nominations/:id", handleDeanNominationDelete);
+  app.delete("/api/admin/dean-nominations", handleDeanNominationDelete);
 
   app.get("/api/dean-nominations", (req, res) => {
     try {

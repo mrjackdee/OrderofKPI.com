@@ -185,7 +185,7 @@ export default function CommitteeChairDashboard() {
           currentCandidate.phone
         );
       }
-      const res = await fetch(`/api/candidates/${candidateId}`, {
+      const res = await fetch(`/api/candidates?id=${encodeURIComponent(candidateId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -253,7 +253,7 @@ export default function CommitteeChairDashboard() {
     setCandidates(prev => prev.filter(c => c.id !== candidateId && c.email?.toLowerCase().trim() !== candidateId.toLowerCase().trim()));
 
     try {
-      const res = await fetch(`/api/candidates/${encodeURIComponent(candidateId)}?chairEmail=${encodeURIComponent(currentUserEmail)}`, {
+      const res = await fetch(`/api/candidates?id=${encodeURIComponent(candidateId)}&chairEmail=${encodeURIComponent(currentUserEmail)}`, {
         method: 'DELETE'
       });
       const data = await res.json();
@@ -306,7 +306,7 @@ export default function CommitteeChairDashboard() {
     if (!window.confirm(`Revoke Membership Committee access for ${name}?`)) return;
 
     try {
-      const res = await fetch(`/api/committee/members/${encodeURIComponent(email)}?chairEmail=${encodeURIComponent(currentUserEmail)}`, {
+      const res = await fetch(`/api/committee/members?email=${encodeURIComponent(email)}&chairEmail=${encodeURIComponent(currentUserEmail)}`, {
         method: 'DELETE'
       });
       const data = await res.json();

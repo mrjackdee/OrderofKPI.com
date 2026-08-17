@@ -104,7 +104,7 @@ export default function DeanAuditLogDashboard() {
     setError('');
     setMessage('');
     try {
-      const res = await fetch(`/api/admin/dean-nominations/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/dean-nominations?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         setMessage('Nomination successfully deleted.');
@@ -128,7 +128,7 @@ export default function DeanAuditLogDashboard() {
     setError('');
     setMessage('');
     try {
-      const res = await fetch(`/api/admin/dean-nominations/${id}`, {
+      const res = await fetch(`/api/admin/dean-nominations?id=${encodeURIComponent(id)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

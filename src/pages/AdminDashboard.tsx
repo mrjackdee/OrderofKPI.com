@@ -570,7 +570,7 @@ export default function AdminDashboard() {
 
     setActionLoading(true);
     try {
-      const url = isNewMember ? '/api/members' : `/api/members/${editingMember.email}`;
+      const url = isNewMember ? '/api/members' : `/api/members?email=${encodeURIComponent(editingMember.email)}`;
       const method = isNewMember ? 'POST' : 'PUT';
       
       const response = await fetch(url, {
@@ -608,7 +608,7 @@ export default function AdminDashboard() {
     if (!window.confirm(`Are you sure you want to permanently remove member "${name}" (${email}) from the active directory?`)) return;
     
     try {
-      const response = await fetch(`/api/members/${email}?adminEmail=${encodeURIComponent(currentUserEmail)}`, {
+      const response = await fetch(`/api/members?email=${encodeURIComponent(email)}&adminEmail=${encodeURIComponent(currentUserEmail)}`, {
         method: 'DELETE',
         headers: { 'x-user-email': currentUserEmail }
       });
@@ -681,7 +681,7 @@ export default function AdminDashboard() {
           candidate.phone
         );
       }
-      const response = await fetch(`/api/candidates/${id}`, {
+      const response = await fetch(`/api/candidates?id=${encodeURIComponent(id)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -710,7 +710,7 @@ export default function AdminDashboard() {
     setCandidates(prev => prev.filter(c => c.id !== id && c.email?.toLowerCase().trim() !== id.toLowerCase().trim()));
 
     try {
-      const response = await fetch(`/api/candidates/${encodeURIComponent(id)}?chairEmail=${encodeURIComponent(currentUserEmail)}`, {
+      const response = await fetch(`/api/candidates?id=${encodeURIComponent(id)}&chairEmail=${encodeURIComponent(currentUserEmail)}`, {
         method: 'DELETE'
       });
       const data = await response.json();
