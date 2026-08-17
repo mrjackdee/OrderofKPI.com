@@ -33,6 +33,53 @@ const app = getApps().length > 0 ? getApp() : initializeApp(activeFirebaseConfig
 export const db = getFirestore(app, activeFirebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid || null,
+      email: auth.currentUser?.email || null,
+      emailVerified: auth.currentUser?.emailVerified || null,
+      isAnonymous: auth.currentUser?.isAnonymous || null,
+      tenantId: auth.currentUser?.tenantId || null,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error Details: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
 export interface BallotInfo {
   id: string;
   name: string;
@@ -630,6 +677,9 @@ export async function firebaseSaveDeanNomination(voterEmail: string, data: { nom
     return await Promise.race([savePromise, timeoutPromise]);
   } catch (err: any) {
     console.error('Failed to save Dean Nomination to Firestore:', err);
+    if (err && (err.message?.includes('permission') || err.message?.includes('Permission') || String(err).includes('permission') || err.code === 'permission-denied')) {
+      handleFirestoreError(err, OperationType.WRITE, `${targetCol}/${safeDocId}`);
+    }
     return { success: false, message: err.message || 'Firestore write failed' };
   }
 }
@@ -658,6 +708,9 @@ export async function firebaseFetchDeanNomination(voterEmail: string): Promise<{
     return await Promise.race([fetchPromise, timeoutPromise]);
   } catch (err: any) {
     console.error('Failed to fetch Dean Nomination from Firestore:', err);
+    if (err && (err.message?.includes('permission') || err.message?.includes('Permission') || String(err).includes('permission') || err.code === 'permission-denied')) {
+      handleFirestoreError(err, OperationType.GET, `${targetCol}/${safeDocId}`);
+    }
     return { success: false, message: err.message || 'Firestore fetch failed' };
   }
 }
@@ -687,6 +740,9 @@ export async function firebaseFetchAllDeanNominations(): Promise<{ success: bool
     return await Promise.race([fetchPromise, timeoutPromise]);
   } catch (err: any) {
     console.error('Failed to fetch all Dean Nominations from Firestore:', err);
+    if (err && (err.message?.includes('permission') || err.message?.includes('Permission') || String(err).includes('permission') || err.code === 'permission-denied')) {
+      handleFirestoreError(err, OperationType.LIST, targetCol);
+    }
     return { success: false, message: err.message || 'Firestore fetch failed' };
   }
 }
@@ -720,6 +776,9 @@ export async function firebaseSaveDeanVote(voterEmail: string, nomineeName: stri
     return await Promise.race([savePromise, timeoutPromise]);
   } catch (err: any) {
     console.error('Failed to save Dean Vote to Firestore:', err);
+    if (err && (err.message?.includes('permission') || err.message?.includes('Permission') || String(err).includes('permission') || err.code === 'permission-denied')) {
+      handleFirestoreError(err, OperationType.WRITE, `${targetCol}/${safeDocId}`);
+    }
     return { success: false, message: err.message || 'Firestore write failed' };
   }
 }
@@ -748,6 +807,9 @@ export async function firebaseFetchDeanVote(voterEmail: string): Promise<{ succe
     return await Promise.race([fetchPromise, timeoutPromise]);
   } catch (err: any) {
     console.error('Failed to fetch Dean Vote from Firestore:', err);
+    if (err && (err.message?.includes('permission') || err.message?.includes('Permission') || String(err).includes('permission') || err.code === 'permission-denied')) {
+      handleFirestoreError(err, OperationType.GET, `${targetCol}/${safeDocId}`);
+    }
     return { success: false, message: err.message || 'Firestore fetch failed' };
   }
 }
@@ -777,6 +839,9 @@ export async function firebaseFetchAllDeanVotes(): Promise<{ success: boolean; v
     return await Promise.race([fetchPromise, timeoutPromise]);
   } catch (err: any) {
     console.error('Failed to fetch all Dean Votes from Firestore:', err);
+    if (err && (err.message?.includes('permission') || err.message?.includes('Permission') || String(err).includes('permission') || err.code === 'permission-denied')) {
+      handleFirestoreError(err, OperationType.LIST, targetCol);
+    }
     return { success: false, message: err.message || 'Firestore fetch failed' };
   }
 }
@@ -785,25 +850,31 @@ export async function firebaseFetchAllDeanVotes(): Promise<{ success: boolean; v
  * Deletes a Dean Vote record from Cloud Firestore (deletes from both production and dev collections).
  */
 export async function firebaseDeleteDeanVote(idOrEmail: string): Promise<{ success: boolean; message?: string }> {
+  const norm = idOrEmail.toLowerCase().trim();
+  const safeDocId = norm.replace(/[^a-zA-Z0-9]/g, '_');
+  const docKeys = Array.from(new Set([idOrEmail, norm, safeDocId])).filter(Boolean);
+  const collections = ['dean_votes', 'dean_votes_dev'];
+
   try {
-    const norm = idOrEmail.toLowerCase().trim();
-    const safeDocId = norm.replace(/[^a-zA-Z0-9]/g, '_');
-    const docKeys = Array.from(new Set([idOrEmail, norm, safeDocId])).filter(Boolean);
-
-    const collections = ['dean_votes', 'dean_votes_dev'];
-
     for (const colName of collections) {
       for (const k of docKeys) {
         try {
           const docRef = doc(db, colName, k);
           await deleteDoc(docRef);
-        } catch (e) {}
+        } catch (e: any) {
+          if (e && (e.message?.includes('permission') || e.message?.includes('Permission') || String(e).includes('permission') || e.code === 'permission-denied')) {
+            handleFirestoreError(e, OperationType.DELETE, `${colName}/${k}`);
+          }
+        }
       }
     }
 
     return { success: true, message: 'Vote deleted from Firestore successfully' };
   } catch (err: any) {
     console.error('Failed to delete Dean vote from Firestore:', err);
+    if (err && (err.message?.includes('permission') || err.message?.includes('Permission') || String(err).includes('permission') || err.code === 'permission-denied')) {
+      handleFirestoreError(err, OperationType.DELETE, `dean_votes/${idOrEmail}`);
+    }
     return { success: false, message: err.message };
   }
 }
@@ -812,25 +883,31 @@ export async function firebaseDeleteDeanVote(idOrEmail: string): Promise<{ succe
  * Deletes a Dean Nomination record from Cloud Firestore.
  */
 export async function firebaseDeleteDeanNomination(idOrEmail: string): Promise<{ success: boolean; message?: string }> {
+  const norm = idOrEmail.toLowerCase().trim();
+  const safeDocId = norm.replace(/[^a-zA-Z0-9]/g, '_');
+  const docKeys = Array.from(new Set([idOrEmail, norm, safeDocId])).filter(Boolean);
+  const collections = ['dean_nominations', 'dean_nominations_dev'];
+
   try {
-    const norm = idOrEmail.toLowerCase().trim();
-    const safeDocId = norm.replace(/[^a-zA-Z0-9]/g, '_');
-    const docKeys = Array.from(new Set([idOrEmail, norm, safeDocId])).filter(Boolean);
-
-    const collections = ['dean_nominations', 'dean_nominations_dev'];
-
     for (const colName of collections) {
       for (const k of docKeys) {
         try {
           const docRef = doc(db, colName, k);
           await deleteDoc(docRef);
-        } catch (e) {}
+        } catch (e: any) {
+          if (e && (e.message?.includes('permission') || e.message?.includes('Permission') || String(e).includes('permission') || e.code === 'permission-denied')) {
+            handleFirestoreError(e, OperationType.DELETE, `${colName}/${k}`);
+          }
+        }
       }
     }
 
     return { success: true, message: 'Nomination deleted from Firestore successfully' };
   } catch (err: any) {
     console.error('Failed to delete Dean nomination from Firestore:', err);
+    if (err && (err.message?.includes('permission') || err.message?.includes('Permission') || String(err).includes('permission') || err.code === 'permission-denied')) {
+      handleFirestoreError(err, OperationType.DELETE, `dean_nominations/${idOrEmail}`);
+    }
     return { success: false, message: err.message };
   }
 }

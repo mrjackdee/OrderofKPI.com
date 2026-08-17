@@ -151,18 +151,20 @@ export default function MemberPortal() {
             </Link>
           )}
 
-          <Link
-            to="/dean-nomination"
-            className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
-          >
-            <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
-              <Award size={28} />
-            </div>
-            <div>
-              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Intake Dean Nominees</h4>
-              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Roster & Status (Closed)</p>
-            </div>
-          </Link>
+          {isAdmin && (
+            <Link
+              to="/dean-nomination"
+              className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
+            >
+              <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
+                <Award size={28} />
+              </div>
+              <div>
+                <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Intake Dean Nominees</h4>
+                <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Roster & Status (Closed)</p>
+              </div>
+            </Link>
+          )}
 
           {(() => {
             const normEmail = (userEmail || '').toLowerCase().trim();

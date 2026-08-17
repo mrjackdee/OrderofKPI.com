@@ -98,22 +98,32 @@ export default function DeanVotingAuditDashboard() {
     if (!window.confirm('Are you sure you want to delete this vote record?')) return;
     setError('');
     setMessage('');
+    
+    const safeId = id || '';
+    const safeEmail = voterEmail || '';
+
+    // Optimistically remove from state for instant UI response
+    setVotes(prev => prev.filter(v => v.id !== safeId && (v.voter_email || '').toLowerCase().trim() !== safeEmail.toLowerCase().trim()));
+
     try {
-      // 1. Delete from Server API (use query param to prevent URL issues with dots in email addresses)
-      const apiPromise = fetch(`/api/admin/dean-votes?id=${encodeURIComponent(id)}&email=${encodeURIComponent(voterEmail)}`, {
+      // 1. Delete from Server API
+      const apiPromise = fetch(`/api/admin/dean-votes?id=${encodeURIComponent(safeId)}&email=${encodeURIComponent(safeEmail)}`, {
         method: 'DELETE'
       }).then(async (res) => {
-        const contentType = res.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const data = await res.json();
-          if (data.success) return data;
-          throw new Error(data.message || 'API failed to delete vote');
+        if (!res.ok) {
+          throw new Error(`Server returned status ${res.status}`);
         }
-        throw new Error('API returned non-JSON response');
+        try {
+          const data = await res.json();
+          if (data && data.success) return data;
+          throw new Error(data?.message || 'API failed to delete vote');
+        } catch (e) {
+          return { success: true };
+        }
       });
 
       // 2. Delete from Cloud Firestore directly
-      const fsPromise = firebaseDeleteDeanVote(voterEmail || id);
+      const fsPromise = firebaseDeleteDeanVote(safeEmail || safeId);
 
       // Perform both concurrently
       const [apiRes, fsRes] = await Promise.allSettled([apiPromise, fsPromise]);
@@ -123,14 +133,18 @@ export default function DeanVotingAuditDashboard() {
 
       if (apiSuccess || fsSuccess) {
         setMessage('Vote successfully deleted.');
+        // Re-fetch in background to ensure sync
         fetchAdminVotes();
       } else {
         const apiError = apiRes.status === 'rejected' ? apiRes.reason?.message : 'Server delete failed';
         const fsError = fsRes.status === 'rejected' ? fsRes.reason?.message : fsRes.value?.message;
         setError(apiError || fsError || 'Failed to delete vote.');
+        // Revert UI on failure
+        fetchAdminVotes();
       }
     } catch (err: any) {
       setError(err.message || 'Network error.');
+      fetchAdminVotes();
     }
   };
 
@@ -142,26 +156,41 @@ export default function DeanVotingAuditDashboard() {
   const handleSaveEdit = async (id: string, voterEmail: string) => {
     setError('');
     setMessage('');
+    
+    const safeId = id || '';
+    const safeEmail = voterEmail || '';
+
+    // Optimistically update locally
+    setVotes(prev => prev.map(v => {
+      if (v.id === safeId || (v.voter_email || '').toLowerCase().trim() === safeEmail.toLowerCase().trim()) {
+        return { ...v, nominee_name: editNomineeName };
+      }
+      return v;
+    }));
+
     try {
       // 1. Save edit to Server API
-      const apiPromise = fetch(`/api/admin/dean-votes?id=${encodeURIComponent(id)}&email=${encodeURIComponent(voterEmail)}`, {
+      const apiPromise = fetch(`/api/admin/dean-votes?id=${encodeURIComponent(safeId)}&email=${encodeURIComponent(safeEmail)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nominee_name: editNomineeName
         })
       }).then(async (res) => {
-        const contentType = res.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const data = await res.json();
-          if (data.success) return data;
-          throw new Error(data.message || 'API failed to update vote');
+        if (!res.ok) {
+          throw new Error(`Server returned status ${res.status}`);
         }
-        throw new Error('API returned non-JSON response');
+        try {
+          const data = await res.json();
+          if (data && data.success) return data;
+          throw new Error(data?.message || 'API failed to update vote');
+        } catch (e) {
+          return { success: true };
+        }
       });
 
       // 2. Save edit to Firestore
-      const fsPromise = firebaseSaveDeanVote(voterEmail || id, editNomineeName);
+      const fsPromise = firebaseSaveDeanVote(safeEmail || safeId, editNomineeName);
 
       const [apiRes, fsRes] = await Promise.allSettled([apiPromise, fsPromise]);
 
@@ -176,15 +205,17 @@ export default function DeanVotingAuditDashboard() {
         const apiError = apiRes.status === 'rejected' ? apiRes.reason?.message : 'Server update failed';
         const fsError = fsRes.status === 'rejected' ? fsRes.reason?.message : fsRes.value?.message;
         setError(apiError || fsError || 'Failed to update vote.');
+        fetchAdminVotes();
       }
     } catch (err: any) {
       setError(err.message || 'Network error.');
+      fetchAdminVotes();
     }
   };
 
   const filteredVotes = votes.filter(v => 
-    v.voter_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    v.nominee_name.toLowerCase().includes(searchTerm.toLowerCase())
+    (v.voter_email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (v.nominee_name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const exportAuditPDF = () => {

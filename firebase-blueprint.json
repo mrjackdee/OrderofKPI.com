@@ -130,9 +130,53 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["email", "hash"]
+    },
+    "dean_nomination": {
+      "title": "Dean Nomination",
+      "description": "Intake Dean nomination record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "voter_email": { "type": "string" },
+        "nominee_first_name": { "type": "string" },
+        "nominee_last_name": { "type": "string" },
+        "statement": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "is_dev": { "type": "boolean" }
+      },
+      "required": ["voter_email", "nominee_first_name", "nominee_last_name", "statement"]
+    },
+    "dean_vote": {
+      "title": "Dean Vote",
+      "description": "Intake Dean voting ballot record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "voter_email": { "type": "string" },
+        "nominee_name": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "is_dev": { "type": "boolean" }
+      },
+      "required": ["voter_email", "nominee_name"]
     }
   },
   "firestore": {
+    "dean_nominations/{nominationId}": {
+      "schema": "dean_nomination",
+      "description": "Production Intake Dean nominations."
+    },
+    "dean_nominations_dev/{nominationId}": {
+      "schema": "dean_nomination",
+      "description": "Development Intake Dean nominations."
+    },
+    "dean_votes/{voteId}": {
+      "schema": "dean_vote",
+      "description": "Production Intake Dean votes."
+    },
+    "dean_votes_dev/{voteId}": {
+      "schema": "dean_vote",
+      "description": "Development Intake Dean votes."
+    },
     "user_password_overrides/{overrideId}": {
       "schema": "user_password_override",
       "description": "User password overrides synchronized across dev and prod database instances."

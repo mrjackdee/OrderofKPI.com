@@ -3138,7 +3138,36 @@ async function startServer() {
     } catch (e) {}
   }
 
-  app.get("/api/admin/dean-votes", (req, res) => {
+  async function getLegitimateVoterEmails(): Promise<Set<string>> {
+    try {
+      const isStale = Date.now() - cachedSheetData.lastFetched > 5 * 60 * 1000;
+      if (isStale || !cachedSheetData.data) {
+        await fetchGoogleSheetRosterLive().catch(() => {});
+      }
+      const set = new Set<string>();
+      if (cachedSheetData.data && Array.isArray(cachedSheetData.data.members)) {
+        for (const member of cachedSheetData.data.members) {
+          const fy26Paid = !!member.fy26Paid;
+          const fy27Paid = !!member.fy27Paid;
+          const mipCert = !!member.mipCert;
+          const fy27MipEligible = !!member.fy27MipEligible;
+          
+          const isEligible = fy27MipEligible || (fy26Paid && fy27Paid && mipCert);
+          
+          if (isEligible) {
+            if (member.kpiEmail) set.add(member.kpiEmail.toLowerCase().trim());
+            if (member.personalEmail) set.add(member.personalEmail.toLowerCase().trim());
+          }
+        }
+      }
+      return set;
+    } catch (e) {
+      console.error("Error computing legitimate voter emails:", e);
+      return new Set();
+    }
+  }
+
+  app.get("/api/admin/dean-votes", async (req, res) => {
     try {
       let votes: any[] = [];
       if (useSqlite && sqliteDb) {
@@ -3150,7 +3179,16 @@ async function startServer() {
       } else {
         votes = getFallbackDeanVotes();
       }
-      res.json({ success: true, votes });
+
+      // Automatic filtering routine for active member eligibility
+      const legitEmails = await getLegitimateVoterEmails();
+      const filteredVotes = votes.filter(v => {
+        const email = (v.voter_email || "").toLowerCase().trim();
+        if (email === "admin@orderofkpi.org" || email === "candidate@gmail.com") return false;
+        return legitEmails.has(email);
+      });
+
+      res.json({ success: true, votes: filteredVotes });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -3273,7 +3311,7 @@ async function startServer() {
   app.delete("/api/admin/dean-votes/:id", handleDeanVoteDelete);
   app.delete("/api/admin/dean-votes", handleDeanVoteDelete);
 
-  app.get("/api/dean-votes", (req, res) => {
+  app.get("/api/dean-votes", async (req, res) => {
     try {
       let votes: any[] = [];
       if (useSqlite && sqliteDb) {
@@ -3295,18 +3333,33 @@ async function startServer() {
           timestamp: v.timestamp
         }));
       }
-      res.json({ success: true, votes });
+
+      // Automatic filtering routine for active member eligibility
+      const legitEmails = await getLegitimateVoterEmails();
+      const filteredVotes = votes.filter(v => {
+        const email = (v.voter_email || "").toLowerCase().trim();
+        if (email === "admin@orderofkpi.org" || email === "candidate@gmail.com") return false;
+        return legitEmails.has(email);
+      });
+
+      res.json({ success: true, votes: filteredVotes });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
   });
 
-  app.get("/api/dean-votes/user", (req, res) => {
+  app.get("/api/dean-votes/user", async (req, res) => {
     try {
       const email = (req.query.email as string || "").toLowerCase().trim();
       if (!email) {
         return res.status(400).json({ success: false, message: "Email required" });
       }
+
+      const legitEmails = await getLegitimateVoterEmails();
+      if (!legitEmails.has(email) || email === "admin@orderofkpi.org" || email === "candidate@gmail.com") {
+        return res.json({ success: true, vote: null, message: "User is not eligible to vote under Google Sheet active member criteria." });
+      }
+
       let vote = null;
       if (useSqlite && sqliteDb) {
         try {
@@ -3421,7 +3474,7 @@ KP Member Portal`;
     }
   }
 
-  app.post("/api/dean-votes", (req, res) => {
+  app.post("/api/dean-votes", async (req, res) => {
     try {
       const { voter_email, nominee_name } = req.body;
       if (!voter_email || !nominee_name) {
@@ -3429,6 +3482,13 @@ KP Member Portal`;
       }
 
       const emailNorm = voter_email.toLowerCase().trim();
+
+      // Check Google Sheet active member criteria for eligibility
+      const legitEmails = await getLegitimateVoterEmails();
+      if (!legitEmails.has(emailNorm) || emailNorm === "admin@orderofkpi.org" || emailNorm === "candidate@gmail.com") {
+        return res.status(403).json({ success: false, message: "Your account is not eligible to vote under Google Sheet active member criteria." });
+      }
+
       const id = Math.random().toString(36).substring(2, 9);
       const timestamp = new Date().toISOString();
 
@@ -3489,18 +3549,22 @@ KP Member Portal`;
     }
   });
 
-  app.post("/api/dean-votes/sync-bulk", (req, res) => {
+  app.post("/api/dean-votes/sync-bulk", async (req, res) => {
     try {
       const { votes } = req.body;
       if (!Array.isArray(votes)) {
         return res.status(400).json({ success: false, message: "Votes list required as array." });
       }
 
+      const legitEmails = await getLegitimateVoterEmails();
       const list = getFallbackDeanVotes();
 
       for (const v of votes) {
         if (!v.voter_email || !v.nominee_name) continue;
         const emailNorm = v.voter_email.toLowerCase().trim();
+        if (!legitEmails.has(emailNorm) || emailNorm === "admin@orderofkpi.org" || emailNorm === "candidate@gmail.com") {
+          continue; // Discard ineligible / test votes
+        }
         const id = v.id || Math.random().toString(36).substring(2, 9);
         const timestamp = v.timestamp || new Date().toISOString();
 
@@ -3545,7 +3609,7 @@ KP Member Portal`;
     }
   });
 
-  app.get("/api/admin/dean-nominations", (req, res) => {
+  app.get("/api/admin/dean-nominations", async (req, res) => {
     try {
       const fallbackList = getFallbackDeanNominations();
       let sqliteList: any[] = [];
@@ -3559,7 +3623,16 @@ KP Member Portal`;
         if (!item || !item.voter_email) continue;
         map.set(item.voter_email.toLowerCase().trim(), item);
       }
-      res.json({ success: true, nominations: Array.from(map.values()) });
+
+      // Filter to only eligible nominators
+      const legitEmails = await getLegitimateVoterEmails();
+      const filteredNominations = Array.from(map.values()).filter(nom => {
+        const email = (nom.voter_email || "").toLowerCase().trim();
+        if (email === "admin@orderofkpi.org" || email === "candidate@gmail.com") return false;
+        return legitEmails.has(email);
+      });
+
+      res.json({ success: true, nominations: filteredNominations });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -3631,7 +3704,7 @@ KP Member Portal`;
   app.delete("/api/admin/dean-nominations/:id", handleDeanNominationDelete);
   app.delete("/api/admin/dean-nominations", handleDeanNominationDelete);
 
-  app.get("/api/dean-nominations", (req, res) => {
+  app.get("/api/dean-nominations", async (req, res) => {
     try {
       const fallbackList = getFallbackDeanNominations();
       let sqliteList: any[] = [];
@@ -3653,18 +3726,33 @@ KP Member Portal`;
           timestamp: item.timestamp
         });
       }
-      res.json({ success: true, nominations: Array.from(map.values()) });
+
+      // Filter to only eligible nominators
+      const legitEmails = await getLegitimateVoterEmails();
+      const filteredNominations = Array.from(map.values()).filter(nom => {
+        const email = (nom.voter_email || "").toLowerCase().trim();
+        if (email === "admin@orderofkpi.org" || email === "candidate@gmail.com") return false;
+        return legitEmails.has(email);
+      });
+
+      res.json({ success: true, nominations: filteredNominations });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
   });
 
-  app.get("/api/dean-nominations/user", (req, res) => {
+  app.get("/api/dean-nominations/user", async (req, res) => {
     try {
       const email = (req.query.email as string || "").toLowerCase().trim();
       if (!email) {
         return res.status(400).json({ success: false, message: "Email required" });
       }
+
+      const legitEmails = await getLegitimateVoterEmails();
+      if (!legitEmails.has(email) || email === "admin@orderofkpi.org" || email === "candidate@gmail.com") {
+        return res.json({ success: true, nomination: null, message: "User is not eligible under Google Sheet active member criteria." });
+      }
+
       let nomination = null;
       if (useSqlite && sqliteDb) {
         try {
