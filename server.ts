@@ -511,7 +511,8 @@ async function initDb() {
     "james.haywood@orderofkpi.org": "2012",
     "admin@orderofkpi.org": "2012",
     "donald.mitchell@orderofkpi.org": "1914",
-    "sammie.poe@orderofkpi.org": "atlanta"
+    "sammie.poe@orderofkpi.org": "atlanta",
+    "churtis.poulson@orderofkpi.org": "atlanta"
   };
   const testUsers = ["admin@orderofkpi.org"];
 

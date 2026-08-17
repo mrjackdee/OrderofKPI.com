@@ -18,9 +18,38 @@ const APPROVED_DEAN_CANDIDATES: string[] = [
   "Kameron Whitfield"
 ];
 
+const ELIGIBLE_DEAN_VOTERS = [
+  "anthony.jones@orderofkpi.org",
+  "brandon.owens@orderofkpi.org",
+  "brian.johnson@orderofkpi.org",
+  "brian.goings@orderofkpi.org",
+  "darron.jenkins@orderofkpi.org",
+  "denzel.talley@orderofkpi.org",
+  "deshaun.safford@orderofkpi.org",
+  "dominic.goodman@orderofkpi.org",
+  "donald.mitchell@orderofkpi.org",
+  "dmitchell02@gmail.com",
+  "edward.cook@orderofkpi.org",
+  "ishmeal.allensworth@orderofkpi.org",
+  "ishmael.allensworth@orderofkpi.org",
+  "jack.dee@orderofkpi.org",
+  "jack@orderofkpi.org",
+  "james.haywood@orderofkpi.org",
+  "jason.pilar@orderofkpi.org",
+  "kameron.whitfield@orderofkpi.org",
+  "keith.woods@orderofkpi.org",
+  "tobias.bordley@orderofkpi.org",
+  "candidate@gmail.com",
+  "admin@orderofkpi.org"
+];
+
 export default function DeanVotingForm() {
   const userEmail = sessionStorage.getItem('userEmail') || '';
   const userName = sessionStorage.getItem('userName') || '';
+  const userRole = sessionStorage.getItem('userRole') || '';
+  const isAdmin = userRole === 'admin' || userEmail === 'admin@orderofkpi.org';
+  const normEmail = userEmail.toLowerCase().trim();
+  const isEligibleVoter = isAdmin || ELIGIBLE_DEAN_VOTERS.includes(normEmail);
 
   const [candidates, setCandidates] = useState<string[]>(APPROVED_DEAN_CANDIDATES);
   const [selectedCandidate, setSelectedCandidate] = useState('');
@@ -123,6 +152,11 @@ export default function DeanVotingForm() {
     e.preventDefault();
     setError('');
     setSuccessMessage('');
+
+    if (!isEligibleVoter) {
+      setError('Voting in the Intake Dean election is restricted to active financial members who meet the MIP criteria on the official roster.');
+      return;
+    }
 
     if (candidates.length === 0) {
       setError('Voting is not currently active. The approved candidate slate has not yet been published.');
@@ -251,6 +285,21 @@ export default function DeanVotingForm() {
             </p>
           </div>
         </div>
+
+        {/* Ineligible Banner */}
+        {!isEligibleVoter && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 space-y-2">
+            <div className="flex items-start gap-3 text-amber-800">
+              <AlertCircle size={22} className="flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-bold text-sm uppercase tracking-wider">Voting Eligibility Notice</h3>
+                <p className="text-xs text-amber-900 mt-1">
+                  Voting in the Intake Dean election is restricted to active financial members who meet the MIP criteria on the official roster. If you believe this is an error, please contact the Membership Intake Chair.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Status Banner */}
         {existingVote && (

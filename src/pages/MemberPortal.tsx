@@ -157,7 +157,7 @@ export default function MemberPortal() {
               "admin@orderofkpi.org"
             ];
             const normEmail = (userEmail || '').toLowerCase().trim();
-            const isEligibleVoter = isAdmin || eligibleEmails.includes(normEmail) || !isApplicant;
+            const isEligibleVoter = isAdmin || eligibleEmails.includes(normEmail);
             if (!isEligibleVoter) return null;
             return (
               <Link
