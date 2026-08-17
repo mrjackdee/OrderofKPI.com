@@ -22,7 +22,7 @@ export const defaultMembers: MemberUser[] = [
   { name: "QA Chair Agent", email: "qa.chair@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair" },
   { name: "QA Committee Agent", email: "qa.committee@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member" },
   { name: "QA Officer Agent", email: "qa.officer@orderofkpi.org", role: "officer", title: "1st Anti-Basileus" },
-  { name: "QA Member Agent", email: "qa.member@orderofkpi.org", role: "member", title: "Member" },
+  { name: "QA Member Agent", email: "qa.member@orderofkpi.org", role: "member", title: "" },
   { name: "Admin User", email: "admin@orderofkpi.org", role: "admin", title: "Administrator" },
   { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "Membership Committee" },
   { name: "Deshaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee" },
@@ -46,9 +46,9 @@ export const defaultMembers: MemberUser[] = [
   { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member" },
   { name: "Kevin Jennings", email: "kevin.jennings@orderofkpi.org", role: "member" },
   { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member" },
-  { name: "Brandon Hunter", email: "brandon.hunter@orderofkpi.org", role: "member", title: "Member" },
-  { name: "Terrell Singleton", email: "terrell.singleton@orderofkpi.org", role: "member", title: "Member" },
-  { name: "Churtis Poulson", email: "churtis.poulson@orderofkpi.org", role: "member", title: "Member" },
+  { name: "Brandon Hunter", email: "brandon.hunter@orderofkpi.org", role: "member", title: "" },
+  { name: "Terrell Singleton", email: "terrell.singleton@orderofkpi.org", role: "member", title: "" },
+  { name: "Churtis Poulson", email: "churtis.poulson@orderofkpi.org", role: "member", title: "" },
   { name: "Applicant Test", email: "applicant@orderofkpi.org", role: "member" }
 ];
 

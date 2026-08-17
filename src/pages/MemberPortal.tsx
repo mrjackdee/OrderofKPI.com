@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link, Navigate } from 'react-router-dom';
 import { 
@@ -16,10 +16,33 @@ import {
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import MemberHeader from '../components/MemberHeader';
 import { syncApplicationsFromFirestore } from '../lib/memberDb';
+import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 
 export default function MemberPortal() {
   const userRole = sessionStorage.getItem('userRole');
   const userEmail = sessionStorage.getItem('userEmail');
+
+  const [eligibleVoters, setEligibleVoters] = useState<string[]>([
+    "anthony.jones@orderofkpi.org",
+    "brandon.owens@orderofkpi.org",
+    "brian.johnson@orderofkpi.org",
+    "brian.goings@orderofkpi.org",
+    "darron.jenkins@orderofkpi.org",
+    "denzel.talley@orderofkpi.org",
+    "deshaun.safford@orderofkpi.org",
+    "dominic.goodman@orderofkpi.org",
+    "donald.mitchell@orderofkpi.org",
+    "edward.cook@orderofkpi.org",
+    "ishmeal.allensworth@orderofkpi.org",
+    "jack.dee@orderofkpi.org",
+    "james.haywood@orderofkpi.org",
+    "jason.pilar@orderofkpi.org",
+    "kameron.whitfield@orderofkpi.org",
+    "keith.woods@orderofkpi.org",
+    "tobias.bordley@orderofkpi.org",
+    "candidate@gmail.com",
+    "admin@orderofkpi.org"
+  ]);
 
   const isApplicant = userRole === 'applicant' || userRole === 'prospective';
 
@@ -33,9 +56,19 @@ export default function MemberPortal() {
   const isChair = userEmail?.toLowerCase() === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair' || normalizedRole.includes('chair') || isAdmin;
   const isBrian = userEmail?.toLowerCase() === 'brian.johnson@orderofkpi.org';
   const isMembershipCommittee = userRole === 'Membership Committee' || normalizedRole.includes('membership committee') || normalizedRole.includes('committee') || isChair || isAdmin;
-  React.useEffect(() => {
+  
+  useEffect(() => {
     logPortalSectionAccess('Member Portal');
     syncApplicationsFromFirestore().catch(() => {});
+
+    // Poll live Google Sheet for real-time voter eligibility criteria
+    getLiveGoogleSheetRoster()
+      .then(res => {
+        if (res && Array.isArray(res.eligibleVoters) && res.eligibleVoters.length > 0) {
+          setEligibleVoters(res.eligibleVoters);
+        }
+      })
+      .catch(err => console.warn('Live Google Sheet fetch notice:', err));
   }, []);
 
   const containerVariants = {
@@ -132,29 +165,8 @@ export default function MemberPortal() {
           </Link>
 
           {(() => {
-            const eligibleEmails = [
-              "anthony.jones@orderofkpi.org",
-              "brandon.owens@orderofkpi.org",
-              "brian.johnson@orderofkpi.org",
-              "brian.goings@orderofkpi.org",
-              "darron.jenkins@orderofkpi.org",
-              "denzel.talley@orderofkpi.org",
-              "deshaun.safford@orderofkpi.org",
-              "dominic.goodman@orderofkpi.org",
-              "donald.mitchell@orderofkpi.org",
-              "edward.cook@orderofkpi.org",
-              "ishmeal.allensworth@orderofkpi.org",
-              "jack.dee@orderofkpi.org",
-              "james.haywood@orderofkpi.org",
-              "jason.pilar@orderofkpi.org",
-              "kameron.whitfield@orderofkpi.org",
-              "keith.woods@orderofkpi.org",
-              "tobias.bordley@orderofkpi.org",
-              "candidate@gmail.com",
-              "admin@orderofkpi.org"
-            ];
             const normEmail = (userEmail || '').toLowerCase().trim();
-            const isEligibleVoter = isAdmin || eligibleEmails.includes(normEmail);
+            const isEligibleVoter = isAdmin || eligibleVoters.includes(normEmail);
             if (!isEligibleVoter) return null;
             return (
               <Link

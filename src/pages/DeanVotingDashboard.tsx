@@ -6,6 +6,7 @@ import { Award, Download, ArrowLeft, ShieldCheck, Users, BarChart2, RefreshCw } 
 import MemberHeader from '../components/MemberHeader';
 import { syncApplicationsFromFirestore } from '../lib/memberDb';
 import { syncDeanDataFromFirestore, firebaseFetchAllDeanVotes } from '../lib/firebase';
+import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 
 interface VoteTally {
   nominee_name: string;
@@ -22,25 +23,7 @@ export default function DeanVotingDashboard() {
   const isChair = normEmail === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair' || isAdmin;
   const isAuthorizedCommittee = userRole === 'Membership Committee' || isChair || isAdmin;
 
-  const [tallies, setTallies] = useState<VoteTally[]>([]);
-  const [totalVotes, setTotalVotes] = useState(0);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    if (isAuthorizedCommittee) {
-      // Fetch immediately so UI loads instantly
-      fetchVotingResults();
-
-      // Trigger background syncs asynchronously
-      Promise.all([
-        syncApplicationsFromFirestore().catch(() => {}),
-        syncDeanDataFromFirestore().catch(() => {})
-      ]).then(() => {
-        fetchVotingResults();
-      });
-    }
-  }, [isAuthorizedCommittee]);
-
-  const eligibleEmails = [
+  const [eligibleEmails, setEligibleEmails] = useState<string[]>([
     "anthony.jones@orderofkpi.org",
     "brandon.owens@orderofkpi.org",
     "brian.johnson@orderofkpi.org",
@@ -58,7 +41,35 @@ export default function DeanVotingDashboard() {
     "kameron.whitfield@orderofkpi.org",
     "keith.woods@orderofkpi.org",
     "tobias.bordley@orderofkpi.org"
-  ];
+  ]);
+
+  const [tallies, setTallies] = useState<VoteTally[]>([]);
+  const [totalVotes, setTotalVotes] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Poll live Google Sheet for voter eligibility list
+    getLiveGoogleSheetRoster()
+      .then(res => {
+        if (res && Array.isArray(res.eligibleVoters) && res.eligibleVoters.length > 0) {
+          setEligibleEmails(res.eligibleVoters.filter(e => e.endsWith('@orderofkpi.org')));
+        }
+      })
+      .catch(err => console.warn('Live Google Sheet fetch notice:', err));
+
+    if (isAuthorizedCommittee) {
+      // Fetch immediately so UI loads instantly
+      fetchVotingResults();
+
+      // Trigger background syncs asynchronously
+      Promise.all([
+        syncApplicationsFromFirestore().catch(() => {}),
+        syncDeanDataFromFirestore().catch(() => {})
+      ]).then(() => {
+        fetchVotingResults();
+      });
+    }
+  }, [isAuthorizedCommittee]);
 
   const normalizeCanonicalVoterEmail = (rawEmail: string): string => {
     const e = (rawEmail || '').toLowerCase().trim();

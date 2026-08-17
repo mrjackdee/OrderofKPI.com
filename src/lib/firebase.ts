@@ -797,7 +797,7 @@ export async function syncDeanDataFromFirestore() {
 
 
 
-export async function firebaseUpdateCandidateStatus(email: string, status: string, scores: any = {}, notes: string = "", documentVault: any[] = []) {
+export async function firebaseUpdateCandidateStatus(email: string, status: string, scores: any = {}, notes: string = "", documentVault: any[] = [], name?: string, phone?: string) {
   try {
     const normEmail = email.toLowerCase().trim();
     const candRef = doc(db, 'candidates', normEmail);
@@ -809,6 +809,12 @@ export async function firebaseUpdateCandidateStatus(email: string, status: strin
       document_vault: documentVault,
       updatedAt: new Date().toISOString()
     };
+    if (name && !name.includes('@') && name.trim().toLowerCase() !== normEmail.split('@')[0].toLowerCase()) {
+      payload.name = name.trim();
+    }
+    if (phone) {
+      payload.phone = phone.trim();
+    }
     await setDoc(candRef, payload, { merge: true });
     return { success: true };
   } catch (err: any) {

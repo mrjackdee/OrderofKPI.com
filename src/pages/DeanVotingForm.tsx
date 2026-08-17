@@ -10,6 +10,7 @@ import {
   syncDeanDataFromFirestore 
 } from '../lib/firebase';
 import { getFriendlyError } from '../lib/utils';
+import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 
 // Define the approved candidate slate once formal acceptances are received.
 // Currently empty pending confirmation and formal acceptances of nomination.
@@ -18,7 +19,7 @@ const APPROVED_DEAN_CANDIDATES: string[] = [
   "Kameron Whitfield"
 ];
 
-const ELIGIBLE_DEAN_VOTERS = [
+const DEFAULT_ELIGIBLE_DEAN_VOTERS = [
   "anthony.jones@orderofkpi.org",
   "brandon.owens@orderofkpi.org",
   "brian.johnson@orderofkpi.org",
@@ -46,7 +47,9 @@ export default function DeanVotingForm() {
   const userRole = sessionStorage.getItem('userRole') || '';
   const isAdmin = userRole === 'admin' || userEmail === 'admin@orderofkpi.org';
   const normEmail = userEmail.toLowerCase().trim();
-  const isEligibleVoter = isAdmin || ELIGIBLE_DEAN_VOTERS.includes(normEmail);
+
+  const [eligibleVoters, setEligibleVoters] = useState<string[]>(DEFAULT_ELIGIBLE_DEAN_VOTERS);
+  const isEligibleVoter = isAdmin || eligibleVoters.includes(normEmail);
 
   const [candidates, setCandidates] = useState<string[]>(APPROVED_DEAN_CANDIDATES);
   const [selectedCandidate, setSelectedCandidate] = useState('');
@@ -58,6 +61,15 @@ export default function DeanVotingForm() {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: false });
 
   useEffect(() => {
+    // Poll live Google Sheet roster
+    getLiveGoogleSheetRoster()
+      .then(res => {
+        if (res && Array.isArray(res.eligibleVoters) && res.eligibleVoters.length > 0) {
+          setEligibleVoters(res.eligibleVoters);
+        }
+      })
+      .catch(err => console.warn('Live Google Sheet fetch notice:', err));
+
     const deadline = new Date("2026-08-19T23:59:00-04:00").getTime();
     
     const updateCountdown = () => {

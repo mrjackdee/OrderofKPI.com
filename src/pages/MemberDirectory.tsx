@@ -159,9 +159,15 @@ export default function MemberDirectory() {
                     <h3 className="text-xl font-display text-ivy truncate mb-1">
                       {member.name}
                     </h3>
-                    <p className="text-gold font-semibold text-sm uppercase tracking-wider mb-2">
-                      {member.title || (member.role === 'admin' ? 'Administrator' : member.role)}
-                    </p>
+                    {member.title && 
+                     member.title.toLowerCase() !== 'member' && 
+                     member.title.toLowerCase() !== 'financial member' && 
+                     member.title.toLowerCase() !== 'candidate' && 
+                     member.title.toLowerCase() !== 'administrator' && (
+                      <p className="text-gold font-semibold text-sm uppercase tracking-wider mb-2">
+                        {member.title}
+                      </p>
+                    )}
                     
                     <div className="flex flex-wrap gap-1.5 mb-3">
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-green-50 border border-green-200 text-[9px] font-black uppercase tracking-widest text-green-700">

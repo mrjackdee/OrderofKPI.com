@@ -91,6 +91,44 @@ export default function CandidateTracker() {
     }
   };
 
+  const resolveCandidateName = (email: string, currentName?: string, appData?: any): string => {
+    const normEmail = (email || '').toLowerCase().trim();
+    if (!normEmail) return currentName || '';
+
+    // 1. Check prospectiveMembers roster map
+    const rosterMatch = prospectiveMembers.find(p => p.email.toLowerCase().trim() === normEmail);
+    if (rosterMatch && rosterMatch.name && rosterMatch.name.trim()) {
+      return rosterMatch.name.trim();
+    }
+
+    // 2. Check application data
+    if (appData) {
+      const dataObj = appData.data || appData;
+      const fn = dataObj.firstName || dataObj.first_name || dataObj.personalInformation?.firstName || appData.firstName;
+      const ln = dataObj.lastName || dataObj.last_name || dataObj.personalInformation?.lastName || appData.lastName;
+      if (fn || ln) {
+        const full = `${fn || ''} ${ln || ''}`.trim();
+        if (full && !full.includes('@') && full.toLowerCase() !== normEmail.split('@')[0].toLowerCase()) {
+          return full;
+        }
+      }
+    }
+
+    // 3. If currentName is provided and is a valid real name (not email, not email prefix like 'averyt16')
+    const emailPrefix = normEmail.split('@')[0].toLowerCase();
+    if (currentName && currentName.trim()) {
+      const trimmed = currentName.trim();
+      if (!trimmed.includes('@') && trimmed.toLowerCase() !== emailPrefix) {
+        return trimmed;
+      }
+    }
+
+    if (currentName && !currentName.includes('@')) {
+      return currentName;
+    }
+    return emailPrefix;
+  };
+
   const fetchCandidates = async () => {
     try {
       const apiFetch = fetch('/api/candidates')
@@ -107,16 +145,20 @@ export default function CandidateTracker() {
       const candMap = new Map<string, Candidate>();
       apiCandidates.forEach(c => {
         const e = (c.email || '').toLowerCase().trim();
-        if (e) candMap.set(e, c);
+        if (e) {
+          const resolvedName = resolveCandidateName(e, c.name);
+          candMap.set(e, { ...c, name: resolvedName });
+        }
       });
 
       fbCandidates.forEach(c => {
         const e = (c.email || '').toLowerCase().trim();
         if (!e) return;
+        const resolvedName = resolveCandidateName(e, c.name);
         if (!candMap.has(e)) {
           candMap.set(e, {
             id: c.id || 'cand_' + e.replace(/[^a-z0-9]/g, '_'),
-            name: c.name || e.split('@')[0],
+            name: resolvedName,
             email: e,
             phone: c.phone || '',
             status: (c.status || 'Applied') as Candidate['status'],
@@ -127,9 +169,16 @@ export default function CandidateTracker() {
           });
         } else {
           const existing = candMap.get(e)!;
-          if (existing.status === 'Inquiry' && c.status && c.status !== 'Inquiry') {
+          if (c.status) {
             existing.status = c.status as Candidate['status'];
           }
+          if (resolvedName && resolvedName !== e.split('@')[0]) {
+            existing.name = resolvedName;
+          }
+          if (c.phone) existing.phone = c.phone;
+          if (c.scores && Object.keys(c.scores).length > 0) existing.scores = c.scores;
+          if (c.notes) existing.notes = c.notes;
+          if (c.document_vault && c.document_vault.length > 0) existing.document_vault = c.document_vault;
         }
       });
 
@@ -257,34 +306,37 @@ export default function CandidateTracker() {
     const updated = candidates.map(c => {
       const normEmail = (c.email || '').toLowerCase().trim();
       if (normEmail) seenEmails.add(normEmail);
+      const app = submittedAppsMap.get(normEmail);
+      const resolvedName = resolveCandidateName(normEmail, c.name, app);
       if (normEmail && submittedAppsMap.has(normEmail)) {
-        const app = submittedAppsMap.get(normEmail);
         const appPhone = app?.data?.phone || app?.phone || c.phone || '';
         const rawDate = app?.submitted_at || app?.submittedAt || app?.last_saved_at || app?.lastSavedAt || '';
         const appDate = typeof rawDate === 'string' ? rawDate.split('T')[0] : '';
         return {
           ...c,
+          name: resolvedName,
           status: (c.status === 'Inquiry' ? 'Applied' : c.status) as Candidate['status'],
           phone: appPhone || c.phone,
           application_date: c.application_date || appDate || ''
         };
       }
-      return c;
+      return {
+        ...c,
+        name: resolvedName
+      };
     });
 
     // Synthesize missing candidates from submitted applications
     submittedAppsMap.forEach((app, normEmail) => {
       if (!seenEmails.has(normEmail)) {
-        const firstName = app.data?.firstName || app.firstName || normEmail.split('@')[0];
-        const lastName = app.data?.lastName || app.lastName || '';
-        const name = `${firstName} ${lastName}`.trim();
+        const resolvedName = resolveCandidateName(normEmail, undefined, app);
         const appPhone = app.data?.phone || app.phone || '';
         const rawDate = app.submitted_at || app.submittedAt || app.last_saved_at || app.lastSavedAt || new Date().toISOString();
         const appDate = typeof rawDate === 'string' ? rawDate.split('T')[0] : '';
         
         updated.push({
           id: 'cand_' + normEmail.replace(/[^a-z0-9]/g, '_'),
-          name: name || normEmail,
+          name: resolvedName,
           email: normEmail,
           phone: appPhone,
           status: 'Applied',
@@ -306,19 +358,34 @@ export default function CandidateTracker() {
     const candidate = mergedCandidates.find(c => c.id === id);
     if (!candidate) return;
 
+    const candName = candidate.name || resolveCandidateName(candidate.email);
+
     // Optimistically update candidate status
-    setCandidates(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
+    setCandidates(prev => prev.map(c => c.id === id ? { ...c, name: candName, status: newStatus } : c));
 
     try {
       // Async persist to Firebase
       if (candidate.email) {
-        await firebaseUpdateCandidateStatus(candidate.email, newStatus, candidate.scores, candidate.notes, candidate.document_vault);
+        await firebaseUpdateCandidateStatus(
+          candidate.email, 
+          newStatus, 
+          candidate.scores, 
+          candidate.notes, 
+          candidate.document_vault,
+          candName,
+          candidate.phone
+        );
       }
       
       const response = await fetch(`/api/candidates/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...candidate, status: newStatus, reviewerEmail: currentUserEmail }),
+        body: JSON.stringify({ 
+          ...candidate, 
+          name: candName, 
+          status: newStatus, 
+          reviewerEmail: currentUserEmail 
+        }),
       });
       if (response.ok) {
         fetchCandidates();

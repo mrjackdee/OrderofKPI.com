@@ -16,6 +16,7 @@ import {
 import MemberHeader from '../components/MemberHeader';
 import { Member } from '../types';
 import { syncApplicationsFromFirestore } from '../lib/memberDb';
+import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 
 export default function FinancialRoster() {
   const navigate = useNavigate();
@@ -99,31 +100,14 @@ export default function FinancialRoster() {
         console.warn('Could not fetch backend directory members:', err);
       }
 
-      // 2. Fetch live Google Sheet CSV for financial status (Column D: FY27 Paid = TRUE)
-      const sheetUrl = 'https://docs.google.com/spreadsheets/d/1-IMvMUANALE3KC1UY46QwHpmdIeEM268ZXSCK_Amj3s/gviz/tq?tqx=out:csv';
-      const sheetRes = await fetch(sheetUrl);
-      if (!sheetRes.ok) {
-        throw new Error('Failed to load roster data from Google Sheet.');
-      }
-      const csvText = await sheetRes.text();
-      const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-
+      // 2. Fetch live Google Sheet data
+      const sheetData = await getLiveGoogleSheetRoster();
       const activeFinancialMembers: Member[] = [];
 
-      for (let i = 1; i < lines.length; i++) {
-        const cols = parseCSVLine(lines[i]);
-        const firstName = cols[0] || '';
-        const lastName = cols[1] || '';
-        const fy27Paid = (cols[3] || '').trim().toUpperCase() === 'TRUE';
-        const personalEmail = cols[5] || '';
-        const kpiEmail = cols[7] || '';
-        let email = (kpiEmail || personalEmail || `${firstName.toLowerCase()}.${lastName.toLowerCase()}@orderofkpi.org`).toLowerCase().trim();
-        if (firstName.toLowerCase() === 'terrell' && lastName.toLowerCase() === 'singleton') {
-          email = 'terrell.singleton@orderofkpi.org';
-        }
-
-        if (fy27Paid && (firstName || lastName)) {
-          const fullName = `${firstName} ${lastName}`.trim();
+      for (const row of sheetData.members) {
+        if (row.fy27Paid && (row.firstName || row.lastName)) {
+          const fullName = row.fullName;
+          const email = row.kpiEmail;
 
           // Match with local directory member if exists
           const matchedDirMember = dirMembers.find(m => 
@@ -133,7 +117,7 @@ export default function FinancialRoster() {
 
           const memberObj: Member = {
             name: fullName,
-            first_name: firstName,
+            first_name: row.firstName,
             email: email,
             role: matchedDirMember?.role || 'member',
             title: matchedDirMember?.title || '',
@@ -320,7 +304,11 @@ export default function FinancialRoster() {
                 </div>
 
                 <h3 className="text-[#1E3F20] font-bold text-lg mb-1">{member.name}</h3>
-                {member.title && (
+                {member.title && 
+                 member.title.toLowerCase() !== 'member' && 
+                 member.title.toLowerCase() !== 'financial member' && 
+                 member.title.toLowerCase() !== 'candidate' && 
+                 member.title.toLowerCase() !== 'administrator' && (
                   <div className="text-[#B8860B] text-xs font-body italic font-bold mb-2 uppercase tracking-wide">
                     {member.title}
                   </div>

@@ -377,7 +377,7 @@ const defaultUsers = [
   { name: "QA Chair Agent", email: "qa.chair@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", intake_class: "", financial_status: "active", industry: "QA Testing" },
   { name: "QA Committee Agent", email: "qa.committee@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member", intake_class: "", financial_status: "active", industry: "QA Testing" },
   { name: "QA Officer Agent", email: "qa.officer@orderofkpi.org", role: "officer", title: "1st Anti-Basileus", intake_class: "", financial_status: "active", industry: "QA Testing" },
-  { name: "QA Member Agent", email: "qa.member@orderofkpi.org", role: "member", title: "Member", intake_class: "", financial_status: "active", industry: "QA Testing" },
+  { name: "QA Member Agent", email: "qa.member@orderofkpi.org", role: "member", title: "", intake_class: "", financial_status: "active", industry: "QA Testing" },
   { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator", intake_class: "", financial_status: "active", industry: "Technology" },
   { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", intake_class: "", financial_status: "active", industry: "Leadership" },
   { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "Membership Committee", intake_class: "", financial_status: "active", industry: "Consulting" },
@@ -400,9 +400,9 @@ const defaultUsers = [
   { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
   { name: "Kevin Jennings", email: "kevin.jennings@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
   { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
-  { name: "Brandon Hunter", email: "brandon.hunter@orderofkpi.org", role: "member", title: "Member", intake_class: "", financial_status: "active", industry: "" },
-  { name: "Terrell Singleton", email: "terrell.singleton@orderofkpi.org", role: "member", title: "Member", intake_class: "", financial_status: "active", industry: "" },
-  { name: "Churtis Poulson", email: "churtis.poulson@orderofkpi.org", role: "member", title: "Member", intake_class: "", financial_status: "active", industry: "" }
+  { name: "Brandon Hunter", email: "brandon.hunter@orderofkpi.org", role: "member", title: "", intake_class: "", financial_status: "active", industry: "" },
+  { name: "Terrell Singleton", email: "terrell.singleton@orderofkpi.org", role: "member", title: "", intake_class: "", financial_status: "active", industry: "" },
+  { name: "Churtis Poulson", email: "churtis.poulson@orderofkpi.org", role: "member", title: "", intake_class: "", financial_status: "active", industry: "" }
 ];
 
 const initialCandidates = [
@@ -1412,6 +1412,142 @@ async function startServer() {
     return res.json({ success: true, count: Object.keys(globalPasswordOverrides).length });
   });
 
+  // Google Sheet Live Polling Cache & Listener
+  const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1-IMvMUANALE3KC1UY46QwHpmdIeEM268ZXSCK_Amj3s/gviz/tq?tqx=out:csv';
+  let cachedSheetData: { lastFetched: number; data: any } = { lastFetched: 0, data: null };
+
+  function parseCSVLine(line: string): string[] {
+    const row: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        row.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    row.push(current.trim());
+    return row;
+  }
+
+  async function fetchGoogleSheetRosterLive() {
+    try {
+      const response = await fetch(GOOGLE_SHEET_CSV_URL);
+      if (!response.ok) {
+        throw new Error(`Google Sheet fetch error: ${response.statusText}`);
+      }
+      const csvText = await response.text();
+      const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+      const members: any[] = [];
+      const eligibleVotersSet = new Set<string>();
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = parseCSVLine(lines[i]);
+        const firstName = cols[0] || '';
+        const lastName = cols[1] || '';
+        if (!firstName && !lastName) continue;
+
+        const fy26Paid = (cols[2] || '').trim().toUpperCase() === 'TRUE';
+        const fy27Paid = (cols[3] || '').trim().toUpperCase() === 'TRUE';
+        const mipCert = (cols[4] || '').trim().toUpperCase() === 'TRUE';
+        const personalEmail = cols[5] || '';
+        const phone = cols[6] || '';
+        const rawKpiEmail = cols[7] || '';
+        const notes = cols[8] || '';
+        const fy27MipEligible = (cols[9] || '').trim().toUpperCase() === 'YES';
+
+        let kpiEmail = rawKpiEmail.toLowerCase().trim();
+        if (!kpiEmail && firstName && lastName) {
+          kpiEmail = `${firstName.toLowerCase().trim()}.${lastName.toLowerCase().trim()}@orderofkpi.org`;
+        }
+        if (firstName.toLowerCase() === 'terrell' && lastName.toLowerCase() === 'singleton') {
+          kpiEmail = 'terrell.singleton@orderofkpi.org';
+        }
+
+        const isEligibleVoter = fy27MipEligible; // EXCLUSIVE CRITERIA FOR INTAKE DEAN VOTING ONLY
+
+        if (isEligibleVoter) {
+          if (kpiEmail) {
+            eligibleVotersSet.add(kpiEmail);
+          }
+          if (personalEmail) {
+            eligibleVotersSet.add(personalEmail.toLowerCase().trim());
+          }
+        }
+
+        members.push({
+          firstName,
+          lastName,
+          fullName: `${firstName} ${lastName}`.trim(),
+          fy26Paid,
+          fy27Paid,
+          mipCert,
+          personalEmail,
+          phone,
+          kpiEmail,
+          notes,
+          fy27MipEligible,
+          isDeanVoterEligible: isEligibleVoter,
+          isEligibleVoter
+        });
+      }
+
+      eligibleVotersSet.add('admin@orderofkpi.org');
+      eligibleVotersSet.add('candidate@gmail.com');
+
+      const result = {
+        success: true,
+        lastUpdated: new Date().toISOString(),
+        members,
+        eligibleVoters: Array.from(eligibleVotersSet)
+      };
+
+      cachedSheetData = {
+        lastFetched: Date.now(),
+        data: result
+      };
+
+      return result;
+    } catch (err: any) {
+      console.error('[ROSTER] Live Google Sheet polling error:', err.message);
+      if (cachedSheetData.data) {
+        return cachedSheetData.data;
+      }
+      throw err;
+    }
+  }
+
+  // Poll Google Sheet on server startup and every 5 minutes
+  fetchGoogleSheetRosterLive().catch(e => console.warn('[ROSTER] Initial sheet poll notice:', e.message));
+  setInterval(() => {
+    fetchGoogleSheetRosterLive().catch(e => console.warn('[ROSTER] Scheduled sheet poll notice:', e.message));
+  }, 5 * 60 * 1000);
+
+  app.get("/api/roster/google-sheet", async (req, res) => {
+    try {
+      const force = req.query.force === 'true';
+      const isStale = Date.now() - cachedSheetData.lastFetched > 2 * 60 * 1000;
+      if (force || isStale || !cachedSheetData.data) {
+        const freshData = await fetchGoogleSheetRosterLive();
+        return res.json(freshData);
+      }
+      return res.json(cachedSheetData.data);
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
   app.get("/api/admin/password-logs", (req, res) => {
     if (useSqlite && sqliteDb) {
       try {
@@ -2305,7 +2441,15 @@ async function startServer() {
       { id: 'cand_hupirate90_me_com', name: 'Charles Miller', email: 'hupirate90@me.com', phone: '301-602-9348', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
       { id: 'cand_quincyld86_gmail_com', name: 'Dr. Quincy Dinnerson', email: 'quincyld86@gmail.com', phone: '336-420-1326', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
       { id: 'cand_jabari_smithperry_gmail_com', name: 'Jabari Smith Perry', email: 'jabari.smithperry@gmail.com', phone: '404-784-7008', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
-      { id: 'cand_l_a_sennet_gmail_com', name: 'Lee Sennet', email: 'l.a.sennet@gmail.com', phone: '281-740-1774', status: 'Inquiry', scores: {}, notes: '', document_vault: [] }
+      { id: 'cand_l_a_sennet_gmail_com', name: 'Lee Sennet', email: 'l.a.sennet@gmail.com', phone: '281-740-1774', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
+      { id: 'cand_malineskidrussell_gmail_com', name: 'Malinski Russell', email: 'malineskidrussell@gmail.com', phone: '404-555-0011', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
+      { id: 'cand_mabmykie1914_gmail_com', name: 'Michael L Coleman', email: 'mabmykie1914@gmail.com', phone: '404-555-7119', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
+      { id: 'cand_roliver449_gmail_com', name: 'Ronald Oliver', email: 'roliver449@gmail.com', phone: '404-555-6846', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
+      { id: 'cand_burnettesteven3_gmail_com', name: 'Steven Burnette', email: 'burnettesteven3@gmail.com', phone: '404-555-0182', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
+      { id: 'cand_tashaunbenton233_gmail_com', name: 'Tashaun Najee Benton', email: 'tashaunbenton233@gmail.com', phone: '404-555-1821', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
+      { id: 'cand_o_titus_yahoo_com', name: 'Titus Oliver', email: 'o_titus@yahoo.com', phone: '404-555-7713', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
+      { id: 'cand_zgatesnorris_gmail_com', name: 'Zion Gates-Norris', email: 'zgatesnorris@gmail.com', phone: '404-555-4876', status: 'Inquiry', scores: {}, notes: '', document_vault: [] },
+      { id: 'cand_jaabn2_gmail_com', name: 'Jamar Amber', email: 'jaabn2@gmail.com', phone: '404-555-3795', status: 'Inquiry', scores: {}, notes: '', document_vault: [] }
     ];
   }
   function saveFallbackCandidates(list: any[]) {
@@ -2612,20 +2756,35 @@ async function startServer() {
   app.put("/api/candidates/:id", (req, res) => {
     try {
       const { id } = req.params;
-      const { status, scores, notes, document_vault, reviewerEmail } = req.body;
+      const { name, status, scores, notes, document_vault, reviewerEmail } = req.body;
       
       if (useSqlite && sqliteDb) {
-        sqliteDb.prepare(`
-          UPDATE candidates 
-          SET status = ?, scores = ?, notes = ?, document_vault = ?
-          WHERE id = ?
-        `).run(
-          status, 
-          JSON.stringify(scores || {}), 
-          notes || "", 
-          JSON.stringify(document_vault || []), 
-          id
-        );
+        if (name && !name.includes('@')) {
+          sqliteDb.prepare(`
+            UPDATE candidates 
+            SET status = ?, scores = ?, notes = ?, document_vault = ?, name = ?
+            WHERE id = ?
+          `).run(
+            status, 
+            JSON.stringify(scores || {}), 
+            notes || "", 
+            JSON.stringify(document_vault || []), 
+            name,
+            id
+          );
+        } else {
+          sqliteDb.prepare(`
+            UPDATE candidates 
+            SET status = ?, scores = ?, notes = ?, document_vault = ?
+            WHERE id = ?
+          `).run(
+            status, 
+            JSON.stringify(scores || {}), 
+            notes || "", 
+            JSON.stringify(document_vault || []), 
+            id
+          );
+        }
 
         if (reviewerEmail) {
           const cand = sqliteDb.prepare("SELECT name, email FROM candidates WHERE id = ?").get(id) as any;
@@ -2644,7 +2803,8 @@ async function startServer() {
             status, 
             scores: scores || {}, 
             notes: notes || "", 
-            document_vault: document_vault || [] 
+            document_vault: document_vault || [],
+            name: (name && !name.includes('@')) ? name : fallbackList[index].name
           };
           saveFallbackCandidates(fallbackList);
         }

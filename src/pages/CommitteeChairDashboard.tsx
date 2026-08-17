@@ -770,7 +770,10 @@ export default function CommitteeChairDashboard() {
                         <p className="text-xs text-ivy/60 font-body">{member.email}</p>
                       </div>
 
-                      {member.title && (
+                      {member.title && 
+                       member.title.toLowerCase() !== 'member' && 
+                       member.title.toLowerCase() !== 'financial member' && 
+                       member.title.toLowerCase() !== 'candidate' && (
                         <p className="text-xs font-bold text-gold uppercase tracking-wider">{member.title}</p>
                       )}
                     </div>

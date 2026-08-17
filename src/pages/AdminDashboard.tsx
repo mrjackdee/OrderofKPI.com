@@ -1004,7 +1004,9 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <p className="font-bold text-gold">{member.title || '-'}</p>
+                          <p className="font-bold text-gold">
+                            {member.title && member.title.toLowerCase() !== 'member' && member.title.toLowerCase() !== 'candidate' ? member.title : '-'}
+                          </p>
                           <p className="text-[10px] text-ivy/50">{member.intake_class || 'Member'}</p>
                         </td>
                         <td className="px-6 py-4">
