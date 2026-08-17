@@ -33,7 +33,7 @@ const events = [
 const deanEvents = [
   { step: 1, title: 'Chapter Notification & Nominations Open', date: '8/7/2026', time: 'Chapter notification of Dean process and opening of nomination submissions', icon: Mail },
   { step: 2, title: 'Dean Nominations Accepted', date: '8/10/2026 - 8/12/2026', time: 'Closes 9:08 PM ET on August 12', icon: Edit3 },
-  { step: 3, title: 'Special Meeting', date: '8/16/2026', time: '7:00 PM ET', icon: Users },
+  { step: 3, title: 'Member Intake Team Special Meeting', date: '8/16/2026', time: '7:00 PM ET', icon: Users },
   { step: 4, title: 'Dean Team Voting', date: '8/17/2026 - 8/19/2026', time: 'Dean team voting', icon: ThumbsUp },
   { step: 5, title: 'Announcement of Dean', date: '8/21/2026', time: 'Announcement of Dean', icon: Star },
   { step: 6, title: 'Dean Selects Asst Dean & Team', date: '8/24/2026 - 8/28/2026', time: 'Assistant Dean of Pledges and Dean team', icon: UserCheck },
