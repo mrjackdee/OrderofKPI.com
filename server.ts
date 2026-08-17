@@ -381,7 +381,7 @@ const defaultUsers = [
   { name: "QA Member Agent", email: "qa.member@orderofkpi.org", role: "member", title: "", intake_class: "", financial_status: "active", industry: "QA Testing" },
   { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator", intake_class: "", financial_status: "active", industry: "Technology" },
   { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", intake_class: "", financial_status: "active", industry: "Leadership" },
-  { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "Membership Committee", intake_class: "", financial_status: "active", industry: "Consulting" },
+  { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "officer", intake_class: "", financial_status: "active", industry: "Consulting" },
   { name: "DeShaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee", intake_class: "", financial_status: "active", industry: "Education" },
   { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member", intake_class: "", financial_status: "active", industry: "Engineering" },
   { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "Membership Committee", intake_class: "", financial_status: "active", industry: "Management" },
