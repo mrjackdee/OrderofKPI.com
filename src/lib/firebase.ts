@@ -138,10 +138,7 @@ const INITIAL_CANDIDATES_LIST: Record<string, { name: string; pass: string }> = 
   'burnettesteven3@gmail.com': { name: 'Steven Burnette', pass: '2275' },
   'tashaunbenton233@gmail.com': { name: 'Tashaun Najee Benton', pass: '1821' },
   'o_titus@yahoo.com': { name: 'Titus Oliver', pass: '7713' },
-  'zgatesnorris@gmail.com': { name: 'Zion Gates-Norris', pass: '4876' },
-  'donald.mitchell@orderofkpi.org': { name: 'Donald Mitchell', pass: '1914' },
-  'sammie.poe@orderofkpi.org': { name: 'Sammie Poe', pass: 'atlanta' },
-  'churtis.poulson@orderofkpi.org': { name: 'Churtis Poulson', pass: 'atlanta' }
+  'zgatesnorris@gmail.com': { name: 'Zion Gates-Norris', pass: '4876' }
 };
 
 /**

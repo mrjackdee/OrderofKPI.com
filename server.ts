@@ -902,6 +902,7 @@ async function initDb() {
     delete cleanData['ishmael.allensworth@orderofkpi.org'];
     delete cleanData['terrell.singleton@gmail.com'];
     delete cleanData['jack@orderofkpi.org'];
+    delete cleanData['poul528@gmail.com'];
     if (useSqlite && sqliteDb) {
       try {
         sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'brandon.addison@orderofkpi.org'").run();
@@ -909,6 +910,7 @@ async function initDb() {
         sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'ishmael.allensworth@orderofkpi.org'").run();
         sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'terrell.singleton@gmail.com'").run();
         sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'jack@orderofkpi.org'").run();
+        sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) = 'poul528@gmail.com'").run();
       } catch (e) {}
     }
 
@@ -921,9 +923,12 @@ async function initDb() {
       syncLocalMemberToFirestoreCloud("terrell.singleton@orderofkpi.org").catch(e => console.warn("Notice syncing Terrell Singleton to Firestore:", e));
       syncLocalMemberToFirestoreCloud("ishmeal.allensworth@orderofkpi.org").catch(e => console.warn("Notice syncing Ishmeal Allensworth to Firestore:", e));
       syncLocalMemberToFirestoreCloud("jack.dee@orderofkpi.org").catch(e => console.warn("Notice syncing Jack Dee to Firestore:", e));
+      syncLocalMemberToFirestoreCloud("churtis.poulson@orderofkpi.org").catch(e => console.warn("Notice syncing Churtis Poulson to Firestore:", e));
       
       if (firebaseProjectId && firebaseApiKey) {
         const dbId = firebaseDatabaseId || "(default)";
+        const urlPoul = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/members/poul528_gmail_com?key=${firebaseApiKey}`;
+        fetch(urlPoul, { method: "DELETE" }).catch(e => console.warn("Notice purging poul528 from Firestore:", e));
         const urlDmitchell = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/members/dmitchell02_gmail_com?key=${firebaseApiKey}`;
         fetch(urlDmitchell, { method: "DELETE" }).catch(e => console.warn("Notice purging dmitchell02 from Firestore:", e));
         const urlIshmael = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/members/ishmael_allensworth_orderofkpi_org?key=${firebaseApiKey}`;
