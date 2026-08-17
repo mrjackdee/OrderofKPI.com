@@ -231,7 +231,7 @@ export default function MemberPortal() {
                   icon: Award, 
                   path: '/dean-nomination-dashboard',
                   color: 'bg-ivy text-cream',
-                  roles: ['admin', 'Membership Committee Chair', 'Membership Committee']
+                  roles: ['admin']
                 },
                 { 
                   title: 'Dean Voting Audit & Mgmt', 
@@ -247,7 +247,7 @@ export default function MemberPortal() {
                   icon: Award, 
                   path: '/dean-voting-dashboard',
                   color: 'bg-ivy text-cream',
-                  roles: ['admin', 'Membership Committee Chair', 'Membership Committee']
+                  roles: ['admin']
                 },
                 { 
                   title: 'Member Directory Administration', 
@@ -283,6 +283,11 @@ export default function MemberPortal() {
                 }
               ]
               .filter(tool => {
+                const lowerEmail = (userEmail || '').toLowerCase().trim();
+                if ((lowerEmail === 'james.haywood@orderofkpi.org' || lowerEmail === 'brian.johnson@orderofkpi.org') && 
+                    (tool.title === 'Dean Voting Results' || tool.title === 'Dean Nomination Results')) {
+                  return true;
+                }
                 if (!tool.roles) return true;
                 if (isAdmin) return true;
                 if (isBrian && tool.roles.includes('brian')) return true;

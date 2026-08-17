@@ -3393,13 +3393,18 @@ async function startServer() {
   });
 
   async function sendDeanVoteNotification(voterEmail: string, nomineeName: string, totalVotesCast: number) {
-    const targetEmail = process.env.NOTIFICATION_EMAIL || "info@kpi2012.org";
+    // Clean and normalize environmental variables (handling quotes and trailing spaces which often happen in cloud dashboards)
+    const cleanHost = (process.env.SMTP_HOST || "").replace(/^["']|["']$/g, "").trim();
+    const smtpPortRaw = (process.env.SMTP_PORT || "587").replace(/^["']|["']$/g, "").trim();
+    const smtpPort = parseInt(smtpPortRaw, 10) || 587;
+    const cleanUser = (process.env.SMTP_USER || "").replace(/^["']|["']$/g, "").trim();
+    const cleanPass = (process.env.SMTP_PASS || "").replace(/^["']|["']$/g, "").trim();
+    const targetEmail = (process.env.NOTIFICATION_EMAIL || "info@kpi2012.org").replace(/^["']|["']$/g, "").trim();
     
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = parseInt(process.env.SMTP_PORT || "587", 10);
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const smtpFrom = process.env.SMTP_FROM || `"Order of KPI Portal" <${smtpUser || "no-reply@orderofkpi.org"}>`;
+    let cleanFrom = (process.env.SMTP_FROM || "").replace(/^["']|["']$/g, "").trim();
+    if (!cleanFrom) {
+      cleanFrom = cleanUser ? `"Order of KPI Portal" <${cleanUser}>` : `"Order of KPI Portal" <no-reply@orderofkpi.org>`;
+    }
 
     const isLocal = process.env.NODE_ENV !== "production";
     const subjectPrefix = isLocal ? "[TEST] " : "";
@@ -3444,24 +3449,34 @@ KP Member Portal`;
       </div>
     `;
 
-    if (!smtpHost || !smtpUser) {
-      console.log(`[Dean Vote Email Logged] To: ${targetEmail} | Vote Cast For: ${nomineeName} | Total Votes Cast: ${totalVotesCast} (SMTP_HOST/SMTP_USER not provided in env yet)`);
+    // Informative pre-checks logged directly to server output for ease of administrative troubleshooting
+    if (!cleanHost || !cleanUser) {
+      console.warn(`[Dean Vote Email Skip] SMTP host or user is empty. Clean SMTP Host: "${cleanHost}", Clean SMTP User: "${cleanUser}". Falling back to logging only.`);
+      console.log(`[Dean Vote Email Logged] To: ${targetEmail} | Vote Cast For: ${nomineeName} | Total Votes Cast: ${totalVotesCast}`);
       return;
     }
 
+    console.log(`[Dean Vote Email Attempt] Launching SMTP mail task to "${targetEmail}" via "${cleanHost}:${smtpPort}" (Secure: ${smtpPort === 465}, User: "${cleanUser}", From: "${cleanFrom}")`);
+
     try {
       const transporter = nodemailer.createTransport({
-        host: smtpHost,
+        host: cleanHost,
         port: smtpPort,
-        secure: smtpPort === 465,
+        secure: smtpPort === 465, // True for port 465, false for 587/25
         auth: {
-          user: smtpUser,
-          pass: smtpPass
-        }
+          user: cleanUser,
+          pass: cleanPass
+        },
+        tls: {
+          // Do not fail on self-signed certs or hostname mismatches (very common in private domain SMTP servers)
+          rejectUnauthorized: false
+        },
+        connectionTimeout: 10000, // 10s connection timeout limit
+        greetingTimeout: 10000,   // 10s greeting timeout limit
       });
 
       const info = await transporter.sendMail({
-        from: smtpFrom,
+        from: cleanFrom,
         to: targetEmail,
         subject: subject,
         text: textContent,
@@ -3469,8 +3484,12 @@ KP Member Portal`;
       });
 
       console.log(`[Dean Vote Email Sent] Successfully sent vote notification to ${targetEmail} (Message ID: ${info.messageId})`);
-    } catch (err) {
-      console.error(`[Dean Vote Email Failed] Could not send email to ${targetEmail}:`, err);
+    } catch (err: any) {
+      console.error(`[Dean Vote Email Failed] SMTP dispatch failed for recipient "${targetEmail}" over "${cleanHost}:${smtpPort}":`, {
+        errorMessage: err.message,
+        errorCode: err.code,
+        command: err.command
+      });
     }
   }
 

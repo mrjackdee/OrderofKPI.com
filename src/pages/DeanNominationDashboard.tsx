@@ -28,10 +28,11 @@ export default function DeanNominationDashboard() {
 
   const normEmail = userEmail.toLowerCase().trim();
   const isAdmin = userRole === 'admin' || normEmail === 'admin@orderofkpi.org';
-  const isChair = normEmail === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair';
-  const isBrian = normEmail === 'brian.johnson@orderofkpi.org';
 
-  const canAccess = isAdmin || isChair || userRole === 'Membership Committee';
+  const canAccess = 
+    isAdmin || 
+    normEmail === 'james.haywood@orderofkpi.org' || 
+    normEmail === 'brian.johnson@orderofkpi.org';
 
   const [nominations, setNominations] = useState<NominationItem[]>([]);
   const [loading, setLoading] = useState(true);

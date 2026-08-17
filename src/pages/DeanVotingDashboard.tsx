@@ -20,8 +20,10 @@ export default function DeanVotingDashboard() {
   const normalizedRole = (userRole || '').toLowerCase();
   
   const isAdmin = normEmail === 'admin@orderofkpi.org' || userRole === 'admin';
-  const isChair = normEmail === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair' || isAdmin;
-  const isAuthorizedCommittee = userRole === 'Membership Committee' || isChair || isAdmin;
+  const isAuthorizedCommittee = 
+    isAdmin || 
+    normEmail === 'james.haywood@orderofkpi.org' || 
+    normEmail === 'brian.johnson@orderofkpi.org';
 
   const [eligibleEmails, setEligibleEmails] = useState<string[]>([
     "anthony.jones@orderofkpi.org",
