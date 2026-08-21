@@ -76,9 +76,9 @@ export default function MemberPortal() {
   }
 
   const normalizedRole = (userRole || '').toLowerCase();
-  const isAdmin = userRole === 'admin' || userEmail?.toLowerCase() === 'admin@orderofkpi.org';
+  const isAdmin = normUser.role === 'admin' || userRole === 'admin' || userEmail?.toLowerCase() === 'admin@orderofkpi.org' || userEmail?.toLowerCase() === 'qa.admin@orderofkpi.org' || userEmail?.toLowerCase() === 'info@kpi2012.org';
   const isChair = userEmail?.toLowerCase() === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair' || normalizedRole.includes('chair') || isAdmin;
-  const isBrian = userEmail?.toLowerCase() === 'brian.johnson@orderofkpi.org';
+  const isBrian = normUser.email === 'brian.johnson@orderofkpi.org' || userEmail?.toLowerCase() === 'brian.johnson@orderofkpi.org';
   const isMembershipCommittee = userRole === 'Membership Committee' || normalizedRole.includes('membership committee') || normalizedRole.includes('committee') || isChair || isAdmin;
   
   useEffect(() => {

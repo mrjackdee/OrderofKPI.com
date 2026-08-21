@@ -1967,6 +1967,14 @@ async function startServer() {
         };
       });
 
+      if (process.env.NODE_ENV === 'production') {
+        members = members.filter((m: any) => {
+          const email = (m.email || '').toLowerCase().trim();
+          const isTest = m.is_test_credential === 1 || email.startsWith('qa.') || email.startsWith('test.') || email === 'candidate@gmail.com' || email === 'applicant@orderofkpi.org';
+          return !isTest;
+        });
+      }
+
       // Sort members: officers first, then admin, then members, alphabetically by name
       const roleOrder = { officer: 1, admin: 2, member: 3 };
       members.sort((a, b) => {

@@ -127,7 +127,15 @@ export const defaultMembers: MemberUser[] = [
   { name: "Terrell Singleton", email: "terrell.singleton@orderofkpi.org", role: "member", title: "" },
   { name: "Churtis Poulson", email: "churtis.poulson@orderofkpi.org", role: "member", title: "" },
   { name: "Applicant Test", email: "applicant@orderofkpi.org", role: "member" }
-];
+].filter(m => {
+  if (typeof window !== 'undefined' && (import.meta as any).env?.PROD) {
+    const email = (m.email || '').toLowerCase().trim();
+    if (email.startsWith('qa.') || email.startsWith('test.') || email === 'candidate@gmail.com' || email === 'applicant@orderofkpi.org') {
+      return false;
+    }
+  }
+  return true;
+}) as MemberUser[];
 
 /**
  * Migration & RBAC normalization helper for user roles & committee assignments.
@@ -140,6 +148,7 @@ export function normalizeUserRBAC(user: {
   committees?: CommitteeSlug[] | string[];
   committeeRoles?: Record<string, CommitteeRole | string>;
 }): {
+  email: string;
   role: 'admin' | 'officer' | 'member' | 'prospective' | 'applicant';
   title?: string;
   committees: CommitteeSlug[];
@@ -152,7 +161,7 @@ export function normalizeUserRBAC(user: {
   let committees: CommitteeSlug[] = Array.isArray(user.committees) ? [...(user.committees as CommitteeSlug[])] : [];
   let committeeRoles: Record<string, CommitteeRole> = { ...(user.committeeRoles as Record<string, CommitteeRole> || {}) };
 
-  if (rawRole === 'admin' || normEmail === 'admin@orderofkpi.org' || normEmail === 'qa.admin@orderofkpi.org') {
+  if (rawRole === 'admin' || normEmail === 'admin@orderofkpi.org' || normEmail === 'qa.admin@orderofkpi.org' || normEmail === 'info@kpi2012.org') {
     normalizedRole = 'admin';
     committees = [...ALL_COMMITTEE_SLUGS];
   } else if (rawRole === 'officer' || rawRole.toLowerCase().includes('officer')) {
@@ -175,6 +184,7 @@ export function normalizeUserRBAC(user: {
   }
 
   return {
+    email: normEmail,
     role: normalizedRole,
     title,
     committees,
@@ -228,7 +238,7 @@ export function getVisibleCommitteesForUser(user: {
   committeeRoles?: Record<string, CommitteeRole | string>;
 }) {
   const norm = normalizeUserRBAC(user);
-  const isBrian = (user.email || '').toLowerCase().trim() === 'brian.johnson@orderofkpi.org';
+  const isBrian = (norm.email || user.email || '').toLowerCase().trim() === 'brian.johnson@orderofkpi.org';
   const isExecutive = norm.role === 'admin' || norm.role === 'officer' || isBrian;
 
   return STANDING_COMMITTEES.map(def => {
