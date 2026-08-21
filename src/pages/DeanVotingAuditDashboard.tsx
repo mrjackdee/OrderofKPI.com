@@ -102,8 +102,11 @@ export default function DeanVotingAuditDashboard() {
     const safeId = id || '';
     const safeEmail = voterEmail || '';
 
-    // Optimistically remove from state for instant UI response
-    setVotes(prev => prev.filter(v => v.id !== safeId && (v.voter_email || '').toLowerCase().trim() !== safeEmail.toLowerCase().trim()));
+    // Optimistically remove from state for instant UI response - use string comparison for ID resilience
+    setVotes(prev => prev.filter(v => 
+      v.id.toString() !== safeId.toString() && 
+      (v.voter_email || '').toLowerCase().trim() !== safeEmail.toLowerCase().trim()
+    ));
 
     try {
       // 1. Delete from Server API

@@ -30,3 +30,9 @@
   - Provide highly descriptive error diagnostics. If both write tasks fail, bubble up the specific network-level or database-level errors instead of generic strings.
 - **HTTP/JSON Robustness (Non-JSON Guard)**: Always check the HTTP response `Content-Type` header (checking if it contains `application/json`) before attempting to parse with `res.json()`. If a production server returns an HTML redirect or gateway error, capture the raw response status text to notify the user of route-level authorization failures or deployment redirects instead of throwing unhelpful errors like `Server response was not JSON`.
 
+## 5. Regression Prevention & Expansion Safeguards
+- **Additive-Only Backend Changes**: New feature endpoints in `server.ts` must be unique and never overwrite or interfere with existing Auth or Application routes.
+- **Schema Graceful Degradation**: Data logic and schemas must be backward-compatible. Ensure new fields (e.g., committee roles) are treated as optional so that legacy user records or states do not cause application failures.
+- **UI Containment & Role Isolation**: New navigation items, committee dashboards, or administrative controls must be strictly hidden from unauthorized users via RBAC without affecting the visual layout or accessibility of existing member features.
+- **Staging-First Validation**: All large structural changes (Calendars, Committee Portals, RBAC updates) must be thoroughly validated in the development environment before being finalized for production to ensure zero impact on existing workflows.
+

@@ -1,16 +1,34 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { CommitteeSlug } from '../types';
+import { hasCommitteeAccess, isCommitteeChair, normalizeUserRBAC } from '../lib/memberDb';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: string[];
+  committeeSlug?: CommitteeSlug;
+  requireChair?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+  children, 
+  allowedRoles,
+  committeeSlug,
+  requireChair
+}) => {
   const location = useLocation();
   const isAuthenticated = !!sessionStorage.getItem('userEmail');
-  const userRole = sessionStorage.getItem('userRole');
-  const userEmail = sessionStorage.getItem('userEmail');
+  const userRole = sessionStorage.getItem('userRole') || '';
+  const userEmail = sessionStorage.getItem('userEmail') || '';
+  
+  let userCommittees: string[] = [];
+  let userCommitteeRoles: Record<string, string> = {};
+  try {
+    const rawCommittees = sessionStorage.getItem('userCommittees');
+    if (rawCommittees) userCommittees = JSON.parse(rawCommittees);
+    const rawRoles = sessionStorage.getItem('userCommitteeRoles');
+    if (rawRoles) userCommitteeRoles = JSON.parse(rawRoles);
+  } catch (e) {}
 
   if (!isAuthenticated) {
     if (location.pathname === '/applicant-portal') {
@@ -28,21 +46,47 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
     }
   }
 
+  const normEmail = userEmail.toLowerCase().trim();
+  const normUser = normalizeUserRBAC({
+    email: normEmail,
+    role: userRole,
+    committees: userCommittees,
+    committeeRoles: userCommitteeRoles
+  });
+
+  const isAdmin = normUser.role === 'admin';
+  const isOfficer = normUser.role === 'officer';
+
+  // Committee-level access control
+  if (committeeSlug) {
+    if (!isAdmin && !isOfficer) {
+      const hasAccess = hasCommitteeAccess(committeeSlug, normUser);
+      if (!hasAccess) {
+        return <Navigate to="/member-portal" replace />;
+      }
+      if (requireChair) {
+        const isChair = isCommitteeChair(committeeSlug, normUser);
+        if (!isChair) {
+          return <Navigate to="/member-portal" replace />;
+        }
+      }
+    }
+  }
+
   // Role-Based Access Control Checks
   if (allowedRoles && allowedRoles.length > 0) {
-    const normEmail = (userEmail || '').toLowerCase().trim();
-    const isAdmin = userRole === 'admin' || normEmail === 'admin@orderofkpi.org';
-
     // Admins always bypass checks
     if (!isAdmin) {
-      const isChair = normEmail === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair';
-      const isCommittee = userRole === 'Membership Committee' || isChair;
+      const isChair = isCommitteeChair('membership_intake', normUser);
+      const isCommittee = hasCommitteeAccess('membership_intake', normUser);
 
       const hasAccess = allowedRoles.some(role => {
+        if (role === normUser.role) return true;
         if (role === userRole) return true;
-        if (role === 'member' && userRole && userRole !== 'applicant' && userRole !== 'prospective') return true;
-        if (role === 'Membership Committee' && isCommittee) return true;
-        if (role === 'Membership Committee Chair' && isChair) return true;
+        if (role === 'officer' && isOfficer) return true;
+        if (role === 'member' && normUser.role !== 'applicant' && normUser.role !== 'prospective') return true;
+        if ((role === 'Membership Committee' || role === 'membership_intake') && isCommittee) return true;
+        if ((role === 'Membership Committee Chair' || role === 'membership_chair') && isChair) return true;
         return false;
       });
 

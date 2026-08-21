@@ -9,37 +9,114 @@ import {
   firebaseFetchAllCandidates,
   auth
 } from './firebase';
+import { CommitteeSlug, CommitteeRole, STANDING_COMMITTEES } from '../types';
 
 export interface MemberUser {
   name: string;
   email: string;
   role: 'admin' | 'member' | 'officer' | 'prospective' | 'applicant' | 'Membership Committee' | 'Membership Committee Chair';
   title?: string;
+  committees?: CommitteeSlug[];
+  committeeRoles?: Record<string, CommitteeRole>;
 }
 
+export const ALL_COMMITTEE_SLUGS: CommitteeSlug[] = [
+  'annual_event',
+  'scholarship',
+  'judicial_ethics',
+  'digital_technology',
+  'membership_intake',
+  'transfer_member'
+];
+
 export const defaultMembers: MemberUser[] = [
-  { name: "QA Admin Agent", email: "qa.admin@orderofkpi.org", role: "admin", title: "Administrator" },
-  { name: "QA Chair Agent", email: "qa.chair@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair" },
-  { name: "QA Committee Agent", email: "qa.committee@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member" },
-  { name: "QA Officer Agent", email: "qa.officer@orderofkpi.org", role: "officer", title: "1st Anti-Basileus" },
-  { name: "QA Member Agent", email: "qa.member@orderofkpi.org", role: "member", title: "" },
-  { name: "Admin User", email: "admin@orderofkpi.org", role: "admin", title: "Administrator" },
-  { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "officer" },
-  { name: "Deshaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee" },
-  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member" },
-  { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "Membership Committee" },
+  { 
+    name: "QA Admin Agent", 
+    email: "qa.admin@orderofkpi.org", 
+    role: "admin", 
+    title: "Administrator",
+    committees: ['annual_event', 'scholarship', 'judicial_ethics', 'digital_technology', 'membership_intake', 'transfer_member'],
+    committeeRoles: { annual_event: 'chair', scholarship: 'chair', judicial_ethics: 'chair', digital_technology: 'chair', membership_intake: 'chair', transfer_member: 'chair' }
+  },
+  { 
+    name: "QA Chair Agent", 
+    email: "qa.chair@orderofkpi.org", 
+    role: "officer", 
+    title: "2nd Anti-Basileus / Committee Chair",
+    committees: ['membership_intake'],
+    committeeRoles: { membership_intake: 'chair' }
+  },
+  { 
+    name: "QA Committee Agent", 
+    email: "qa.committee@orderofkpi.org", 
+    role: "member", 
+    title: "Grammateus / Committee Member",
+    committees: ['membership_intake'],
+    committeeRoles: { membership_intake: 'member' }
+  },
+  { 
+    name: "QA Officer Agent", 
+    email: "qa.officer@orderofkpi.org", 
+    role: "officer", 
+    title: "1st Anti-Basileus",
+    committees: ['annual_event', 'scholarship', 'judicial_ethics', 'digital_technology', 'membership_intake', 'transfer_member']
+  },
+  { 
+    name: "QA Member Agent", 
+    email: "qa.member@orderofkpi.org", 
+    role: "member", 
+    title: "" 
+  },
+  { 
+    name: "Admin User", 
+    email: "admin@orderofkpi.org", 
+    role: "admin", 
+    title: "Administrator",
+    committees: ['annual_event', 'scholarship', 'judicial_ethics', 'digital_technology', 'membership_intake', 'transfer_member'],
+    committeeRoles: { annual_event: 'chair', scholarship: 'chair', judicial_ethics: 'chair', digital_technology: 'chair', membership_intake: 'chair', transfer_member: 'chair' }
+  },
+  { 
+    name: "James Haywood Jr", 
+    email: "james.haywood@orderofkpi.org", 
+    role: "officer", 
+    title: "2nd Anti-Basileus / Committee Chair",
+    committees: ['membership_intake'],
+    committeeRoles: { membership_intake: 'chair' }
+  },
+  { 
+    name: "Brian Johnson", 
+    email: "brian.johnson@orderofkpi.org", 
+    role: "member", 
+    title: "Grammateus / Committee Member",
+    committees: ['membership_intake'],
+    committeeRoles: { membership_intake: 'member' }
+  },
+  { 
+    name: "Deshaun Safford", 
+    email: "deshaun.safford@orderofkpi.org", 
+    role: "member",
+    committees: ['membership_intake'],
+    committeeRoles: { membership_intake: 'member' }
+  },
+  { 
+    name: "Jason Pilar", 
+    email: "jason.pilar@orderofkpi.org", 
+    role: "member",
+    committees: ['membership_intake'],
+    committeeRoles: { membership_intake: 'member' }
+  },
+  { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "officer", title: "Officer" },
   { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos" },
   { name: "Edward Cook", email: "edward.cook@orderofkpi.org", role: "officer", title: "Epistoleus" },
   { name: "Darron Jenkins", email: "darron.jenkins@orderofkpi.org", role: "officer", title: "Hodegos" },
-  { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair" },
-  { name: "Dameone Ferguson", email: "dameone.ferguson@orderofkpi.org", role: "member" },
   { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus" },
+  { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian" },
+  { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus" },
+  { name: "Dameone Ferguson", email: "dameone.ferguson@orderofkpi.org", role: "member" },
   { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member" },
   { name: "Sammie Poe", email: "sammie.poe@orderofkpi.org", role: "member" },
   { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member" },
   { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member" },
-  { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian" },
-  { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus" },
   { name: "Denzel Talley", email: "denzel.talley@orderofkpi.org", role: "member" },
   { name: "Alejandro Araujo", email: "alejandro.araujo@orderofkpi.org", role: "member" },
   { name: "Demetrist Thomas", email: "demetrist.thomas@orderofkpi.org", role: "member" },
@@ -51,6 +128,191 @@ export const defaultMembers: MemberUser[] = [
   { name: "Churtis Poulson", email: "churtis.poulson@orderofkpi.org", role: "member", title: "" },
   { name: "Applicant Test", email: "applicant@orderofkpi.org", role: "member" }
 ];
+
+/**
+ * Migration & RBAC normalization helper for user roles & committee assignments.
+ * Ensures backward compatibility for legacy roles while upgrading to new RBAC schema.
+ */
+export function normalizeUserRBAC(user: {
+  email?: string;
+  role?: string;
+  title?: string;
+  committees?: CommitteeSlug[] | string[];
+  committeeRoles?: Record<string, CommitteeRole | string>;
+}): {
+  role: 'admin' | 'officer' | 'member' | 'prospective' | 'applicant';
+  title?: string;
+  committees: CommitteeSlug[];
+  committeeRoles: Record<string, CommitteeRole>;
+} {
+  const normEmail = (user.email || '').toLowerCase().trim();
+  const rawRole = (user.role || 'member').trim();
+  let normalizedRole: 'admin' | 'officer' | 'member' | 'prospective' | 'applicant' = 'member';
+  let title = user.title;
+  let committees: CommitteeSlug[] = Array.isArray(user.committees) ? [...(user.committees as CommitteeSlug[])] : [];
+  let committeeRoles: Record<string, CommitteeRole> = { ...(user.committeeRoles as Record<string, CommitteeRole> || {}) };
+
+  if (rawRole === 'admin' || normEmail === 'admin@orderofkpi.org' || normEmail === 'qa.admin@orderofkpi.org') {
+    normalizedRole = 'admin';
+    committees = [...ALL_COMMITTEE_SLUGS];
+  } else if (rawRole === 'officer' || rawRole.toLowerCase().includes('officer')) {
+    normalizedRole = 'officer';
+    // Officers have oversight across committees
+  } else if (rawRole === 'applicant' || rawRole === 'prospective') {
+    normalizedRole = rawRole;
+  } else if (rawRole === 'Membership Committee Chair' || normEmail === 'james.haywood@orderofkpi.org' || normEmail === 'qa.chair@orderofkpi.org') {
+    normalizedRole = 'officer';
+    if (!title) title = '2nd Anti-Basileus / Committee Chair';
+    if (!committees.includes('membership_intake')) committees.push('membership_intake');
+    committeeRoles['membership_intake'] = 'chair';
+  } else if (rawRole === 'Membership Committee' || normEmail === 'qa.committee@orderofkpi.org' || normEmail === 'brian.johnson@orderofkpi.org' || normEmail === 'deshaun.safford@orderofkpi.org' || normEmail === 'jason.pilar@orderofkpi.org') {
+    normalizedRole = 'member';
+    if (!title && normEmail === 'brian.johnson@orderofkpi.org') title = 'Grammateus / Committee Member';
+    if (!committees.includes('membership_intake')) committees.push('membership_intake');
+    if (!committeeRoles['membership_intake']) committeeRoles['membership_intake'] = 'member';
+  } else {
+    normalizedRole = 'member';
+  }
+
+  return {
+    role: normalizedRole,
+    title,
+    committees,
+    committeeRoles
+  };
+}
+
+/**
+ * Checks if a user has access to a specific standing committee.
+ * Admins and Officers have organizational oversight access across all standing committees.
+ */
+export function hasCommitteeAccess(
+  committeeSlug: CommitteeSlug,
+  user: {
+    email?: string;
+    role?: string;
+    committees?: CommitteeSlug[] | string[];
+    committeeRoles?: Record<string, CommitteeRole | string>;
+  }
+): boolean {
+  const norm = normalizeUserRBAC(user);
+  if (norm.role === 'admin' || norm.role === 'officer') return true;
+  return norm.committees.includes(committeeSlug);
+}
+
+/**
+ * Checks if a user is the chair of a specific standing committee.
+ * Admins also hold chair-level edit affordances across all committees.
+ */
+export function isCommitteeChair(
+  committeeSlug: CommitteeSlug,
+  user: {
+    email?: string;
+    role?: string;
+    committees?: CommitteeSlug[] | string[];
+    committeeRoles?: Record<string, CommitteeRole | string>;
+  }
+): boolean {
+  const norm = normalizeUserRBAC(user);
+  if (norm.role === 'admin') return true;
+  return norm.committeeRoles[committeeSlug] === 'chair';
+}
+
+/**
+ * Returns all standing committee cards that should be displayed for this member in the portal navigation.
+ */
+export function getVisibleCommitteesForUser(user: {
+  email?: string;
+  role?: string;
+  committees?: CommitteeSlug[] | string[];
+  committeeRoles?: Record<string, CommitteeRole | string>;
+}) {
+  const norm = normalizeUserRBAC(user);
+  const isExecutive = norm.role === 'admin' || norm.role === 'officer';
+
+  return STANDING_COMMITTEES.map(def => {
+    const isAssigned = norm.committees.includes(def.slug);
+    const isChair = isCommitteeChair(def.slug, user);
+    const roleInCommittee: 'chair' | 'member' | null = isChair ? 'chair' : (isAssigned ? 'member' : null);
+    const hasAccess = isExecutive || isAssigned;
+
+    return {
+      ...def,
+      hasAccess,
+      isAssigned,
+      isChair,
+      roleInCommittee,
+      isExecutiveOversight: isExecutive && !isAssigned && !isChair
+    };
+  }).filter(c => c.hasAccess);
+}
+
+/**
+ * Determines whether a member is an eligible financial member permitted to be assigned to committees.
+ * Strictly excludes all applicants, aspirants, candidates, and non-financial members.
+ */
+export function isEligibleFinancialMember(
+  member: {
+    email?: string;
+    role?: string;
+    title?: string;
+    financial_status?: string;
+    is_test_credential?: boolean | number;
+  },
+  financialEmailsSet?: Set<string>
+): boolean {
+  if (!member || !member.email) return false;
+  const email = member.email.toLowerCase().trim();
+  const role = (member.role || '').toLowerCase().trim();
+  const title = (member.title || '').toLowerCase().trim();
+
+  // 1. Exclude Aspirants, Candidates, Applicants, and Prospective accounts
+  if (
+    role === 'applicant' ||
+    role === 'prospective' ||
+    role === 'candidate' ||
+    title === 'candidate' ||
+    email === 'candidate@gmail.com' ||
+    email.includes('candidate') ||
+    email.includes('applicant') ||
+    email.includes('prospective')
+  ) {
+    return false;
+  }
+
+  // 2. Exclude Test Candidate credentials
+  if (email.startsWith('qa.candidate') || email.startsWith('test.candidate')) {
+    return false;
+  }
+
+  // 3. Exclude non-members
+  if (email === 'brandon.addison@orderofkpi.org') {
+    return false;
+  }
+
+  // 4. Verify Financial Status
+  // If financialEmailsSet from live Google Sheet roster is provided:
+  if (financialEmailsSet && financialEmailsSet.size > 0) {
+    if (financialEmailsSet.has(email)) return true;
+  }
+
+  // If explicitly active
+  if ((member.financial_status || '').toLowerCase() === 'active') {
+    return true;
+  }
+
+  // If marked explicitly inactive, they are not financial
+  if ((member.financial_status || '').toLowerCase() === 'inactive') {
+    return false;
+  }
+
+  // Officers, Admins, and Organization Members in good standing
+  if (role === 'admin' || role === 'officer' || role === 'membership committee chair' || role === 'membership committee') {
+    return true;
+  }
+
+  return role === 'member';
+}
 
 export const prospectiveMembers: MemberUser[] = [
   { name: "Avery Torrence", email: "averyt16@gmail.com", role: "applicant" },
@@ -121,6 +383,8 @@ export async function performHybridLogin(email: string, pass: string): Promise<{
     firstName: string;
     role: string;
     title?: string;
+    committees?: CommitteeSlug[];
+    committeeRoles?: Record<string, CommitteeRole>;
     isFirstLogin: boolean;
   };
 }> {
@@ -142,10 +406,24 @@ export async function performHybridLogin(email: string, pass: string): Promise<{
     if (contentType && contentType.includes('application/json')) {
       const data = await response.json();
       if (response.ok && data.success) {
+        const norm = normalizeUserRBAC(data.user);
+        const enrichedUser = {
+          ...data.user,
+          role: norm.role,
+          title: norm.title || data.user.title,
+          committees: norm.committees,
+          committeeRoles: norm.committeeRoles
+        };
+        try {
+          sessionStorage.setItem('userRole', norm.role);
+          sessionStorage.setItem('userCommittees', JSON.stringify(norm.committees));
+          sessionStorage.setItem('userCommitteeRoles', JSON.stringify(norm.committeeRoles));
+        } catch (e) {}
+
         return {
           success: true,
           message: 'Login successful via Server API',
-          user: data.user
+          user: enrichedUser
         };
       } else {
         // Fallback: If server rejects password, check if they reset it via Firebase
@@ -165,9 +443,9 @@ export async function performHybridLogin(email: string, pass: string): Promise<{
               name = 'QA Admin';
               title = 'Administrator';
             } else if (normalizedEmail.includes('chair')) {
-              role = 'Membership Committee Chair';
+              role = 'officer';
               name = 'QA Committee Chair';
-              title = 'Committee Chair';
+              title = '2nd Anti-Basileus / Committee Chair';
             } else if (normalizedEmail.includes('member')) {
               role = 'member';
               name = 'QA Member';
@@ -178,6 +456,13 @@ export async function performHybridLogin(email: string, pass: string): Promise<{
           
           if (member) {
             const isChanged = localStorage.getItem(`kpi_password_changed_${normalizedEmail}`) === 'true';
+            const norm = normalizeUserRBAC(member);
+            try {
+              sessionStorage.setItem('userRole', norm.role);
+              sessionStorage.setItem('userCommittees', JSON.stringify(norm.committees));
+              sessionStorage.setItem('userCommitteeRoles', JSON.stringify(norm.committeeRoles));
+            } catch (e) {}
+
             return {
               success: true,
               message: 'Login successful via fallback authentication',
@@ -185,8 +470,10 @@ export async function performHybridLogin(email: string, pass: string): Promise<{
                 email: member.email,
                 name: member.name,
                 firstName: member.name.split(' ')[0],
-                role: member.role,
-                title: member.title,
+                role: norm.role,
+                title: norm.title,
+                committees: norm.committees,
+                committeeRoles: norm.committeeRoles,
                 isFirstLogin: !isChanged
               }
             };
@@ -511,6 +798,13 @@ async function performClientSideLogin(email: string, pass: string) {
   }
 
   const firstName = member.name.split(' ')[0];
+  const norm = normalizeUserRBAC(member);
+
+  try {
+    sessionStorage.setItem('userRole', norm.role);
+    sessionStorage.setItem('userCommittees', JSON.stringify(norm.committees));
+    sessionStorage.setItem('userCommitteeRoles', JSON.stringify(norm.committeeRoles));
+  } catch (e) {}
 
   return {
     success: true,
@@ -519,8 +813,10 @@ async function performClientSideLogin(email: string, pass: string) {
       email: member.email,
       name: member.name,
       firstName,
-      role: member.role,
-      title: member.title,
+      role: norm.role,
+      title: norm.title,
+      committees: norm.committees,
+      committeeRoles: norm.committeeRoles,
       isFirstLogin: !isChanged
     }
   };

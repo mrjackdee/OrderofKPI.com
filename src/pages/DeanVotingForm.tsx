@@ -365,52 +365,20 @@ export default function DeanVotingForm() {
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} noValidate className="space-y-6">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#1E3F20] mb-4">
-                  Select Your Preferred Candidate <span className="text-red-500">*</span>
-                </label>
-                <div className="space-y-3">
-                  {candidates.map((candidateName) => {
-                    const isSelected = selectedCandidate === candidateName;
-                    return (
-                      <div
-                        key={candidateName}
-                        onClick={() => setSelectedCandidate(candidateName)}
-                        className={`p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
-                          isSelected 
-                            ? 'bg-[#1E3F20]/5 border-[#1E3F20] shadow-sm' 
-                            : 'bg-[#FDFCF0] border-[#B8860B]/30 hover:border-[#1E3F20]/50'
-                        }`}
-                      >
-                        <div>
-                          <h4 className="font-serif font-bold text-base text-[#1E3F20]">{candidateName}</h4>
-                        </div>
-                        <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${
-                          isSelected ? 'bg-[#1E3F20] border-[#1E3F20] text-white' : 'border-gray-300 bg-white'
-                        }`}>
-                          {isSelected && <Check size={14} />}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+            <div className="py-12 px-6 text-center space-y-4">
+              <div className="inline-flex p-4 rounded-full bg-gray-100 text-gray-500 mb-2">
+                <Clock size={36} />
               </div>
-
-              <div className="pt-6 flex items-center justify-between border-t border-[#B8860B]/20">
-                <span className="text-xs text-gray-500 font-medium">
-                  Voting as: <strong className="text-[#1E3F20]">{userName || userEmail}</strong> (Strictly Anonymous)
+              <h3 className="font-serif font-bold text-xl text-[#1E3F20]">Voting Has Concluded</h3>
+              <p className="text-xs text-gray-600 max-w-lg mx-auto leading-relaxed">
+                The Intake Dean voting window has officially closed. No further votes can be cast at this time.
+              </p>
+              <div className="pt-4">
+                <span className="inline-block bg-[#FDFCF0] border border-[#B8860B]/30 px-4 py-2 rounded-full text-[11px] font-bold text-[#1E3F20] uppercase tracking-wider">
+                  Voting Concluded: August 19, 2026
                 </span>
-
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="bg-[#1E3F20] hover:bg-[#B8860B] text-white px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center gap-2 shadow-md transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  <Send size={14} /> {submitting ? 'Submitting Ballot...' : 'Submit Official Ballot'}
-                </button>
               </div>
-            </form>
+            </div>
           )}
         </div>
       </div>

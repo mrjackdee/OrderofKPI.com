@@ -11,16 +11,40 @@ import {
   LayoutGrid,
   ChevronRight,
   GraduationCap,
-  RefreshCw
+  RefreshCw,
+  FolderGit2,
+  Edit3,
+  Layers
 } from 'lucide-react';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import MemberHeader from '../components/MemberHeader';
-import { syncApplicationsFromFirestore } from '../lib/memberDb';
+import { syncApplicationsFromFirestore, getVisibleCommitteesForUser, isCommitteeChair, normalizeUserRBAC } from '../lib/memberDb';
 import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
+import { CommitteeSlug } from '../types';
+import { useSystemFeatures } from '../lib/settings';
 
 export default function MemberPortal() {
   const userRole = sessionStorage.getItem('userRole');
   const userEmail = sessionStorage.getItem('userEmail');
+  const { features } = useSystemFeatures();
+  let userCommittees: CommitteeSlug[] = [];
+  let userCommitteeRoles: Record<string, 'chair' | 'member'> = {};
+
+  try {
+    const rawCommittees = sessionStorage.getItem('userCommittees');
+    if (rawCommittees) userCommittees = JSON.parse(rawCommittees);
+    const rawRoles = sessionStorage.getItem('userCommitteeRoles');
+    if (rawRoles) userCommitteeRoles = JSON.parse(rawRoles);
+  } catch (e) {}
+
+  const normUser = normalizeUserRBAC({
+    email: userEmail || '',
+    role: userRole || 'member',
+    committees: userCommittees,
+    committeeRoles: userCommitteeRoles
+  });
+
+  const visibleCommittees = getVisibleCommitteesForUser(normUser);
 
   const [eligibleVoters, setEligibleVoters] = useState<string[]>([
     "anthony.jones@orderofkpi.org",
@@ -187,6 +211,90 @@ export default function MemberPortal() {
           })()}
         </motion.div>
 
+        {/* Standing Committees Section (RBAC filtered) */}
+        {!isApplicant && visibleCommittees.length > 0 && (isAdmin || features.committee_enabled) && (
+          <motion.section variants={itemVariants} className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gold/20 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold bg-gold/10 px-2.5 py-0.5 rounded-full">
+                    Role-Based Access
+                  </span>
+                  {(normUser.role === 'admin' || normUser.role === 'officer') && (
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-ivy/60">
+                      Organization-Wide View ({visibleCommittees.length} Committees)
+                    </span>
+                  )}
+                </div>
+                <h2 className="text-2xl font-display text-ivy uppercase tracking-widest mt-1">
+                  Standing Committees
+                </h2>
+              </div>
+              <p className="text-ivy/60 text-xs max-w-md">
+                Access your assigned committee workspaces, Google Shared Drive links, calendars, and working files.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {visibleCommittees.map((committee) => {
+                const chairStatus = isCommitteeChair(committee.slug, normUser);
+                const userCommRole = normUser.committeeRoles[committee.slug] || (chairStatus ? 'chair' : 'member');
+                
+                return (
+                  <Link
+                    key={committee.slug}
+                    to={`/committee/${committee.slug}`}
+                    className="bg-white border border-gold/20 rounded-lg p-6 flex flex-col justify-between hover:shadow-lg transition-all group shadow-soft hover:border-gold"
+                  >
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="p-3 bg-cream rounded-lg border border-gold/10 group-hover:bg-ivy group-hover:text-gold transition-colors">
+                          <FolderGit2 size={24} className="text-ivy group-hover:text-gold" />
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          {chairStatus ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-gold text-ivy shadow-sm">
+                              <Edit3 size={10} />
+                              Chair Access
+                            </span>
+                          ) : (normUser.role === 'admin' || normUser.role === 'officer') ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-ivy/10 text-ivy">
+                              {normUser.role.toUpperCase()} VIEW
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-ivy/5 text-ivy/70">
+                              Member
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h3 className="text-lg font-display font-bold uppercase tracking-wider text-ivy group-hover:text-gold transition-colors">
+                          {committee.name}
+                        </h3>
+                        <p className="text-ivy/60 text-xs mt-2 line-clamp-2 leading-relaxed">
+                          {committee.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-gold/10 mt-6 flex items-center justify-between text-xs">
+                      <span className="text-[10px] text-ivy/40 uppercase tracking-widest font-bold">
+                        Workspace
+                      </span>
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gold group-hover:text-ivy transition-colors">
+                        <span>Enter Workspace</span>
+                        <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </motion.section>
+        )}
+
         {/* Administrative Tools */}
         {!isApplicant && (
           <motion.section variants={itemVariants} className="mb-20">
@@ -263,7 +371,7 @@ export default function MemberPortal() {
                   icon: ShieldCheck, 
                   path: '/chair-dashboard',
                   color: 'bg-gold text-ivy',
-                  roles: ['admin', 'officer', 'Membership Committee Chair']
+                  roles: features.committee_enabled ? ['admin', 'officer', 'Membership Committee Chair'] : ['admin']
                 },
                 { 
                   title: 'Process Timeline', 

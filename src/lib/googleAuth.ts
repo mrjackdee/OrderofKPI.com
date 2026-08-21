@@ -2,58 +2,12 @@ import { auth } from './firebase';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
 
 const provider = new GoogleAuthProvider();
-// Request Workspace scopes
+// Standard Google Workspace & Drive Scopes
 provider.addScope('https://www.googleapis.com/auth/calendar');
-provider.addScope('https://www.googleapis.com/auth/calendar.events');
 provider.addScope('https://www.googleapis.com/auth/drive.file');
-provider.addScope('https://www.googleapis.com/auth/drive.metadata.readonly');
-provider.addScope('https://www.googleapis.com/auth/meetings.space.created');
-provider.addScope('https://www.googleapis.com/auth/meetings.space.readonly');
 provider.addScope('https://www.googleapis.com/auth/documents');
 provider.addScope('https://www.googleapis.com/auth/presentations');
 provider.addScope('https://www.googleapis.com/auth/forms.body');
-
-// Gmail Scopes
-provider.addScope('https://mail.google.com/');
-provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
-provider.addScope('https://www.googleapis.com/auth/gmail.send');
-provider.addScope('https://www.googleapis.com/auth/gmail.compose');
-provider.addScope('https://www.googleapis.com/auth/gmail.modify');
-provider.addScope('https://www.googleapis.com/auth/gmail.labels');
-provider.addScope('https://www.googleapis.com/auth/gmail.metadata');
-provider.addScope('https://www.googleapis.com/auth/gmail.insert');
-provider.addScope('https://www.googleapis.com/auth/gmail.settings.basic');
-provider.addScope('https://www.googleapis.com/auth/gmail.settings.sharing');
-provider.addScope('https://www.googleapis.com/auth/gmail.addons.current.action.compose');
-provider.addScope('https://www.googleapis.com/auth/gmail.addons.current.message.action');
-provider.addScope('https://www.googleapis.com/auth/gmail.addons.current.message.metadata');
-provider.addScope('https://www.googleapis.com/auth/gmail.addons.current.message.readonly');
-
-// Google Classroom Scopes
-provider.addScope('https://www.googleapis.com/auth/classroom.addons.student');
-provider.addScope('https://www.googleapis.com/auth/classroom.addons.teacher');
-provider.addScope('https://www.googleapis.com/auth/classroom.announcements');
-provider.addScope('https://www.googleapis.com/auth/classroom.announcements.readonly');
-provider.addScope('https://www.googleapis.com/auth/classroom.courses');
-provider.addScope('https://www.googleapis.com/auth/classroom.courses.readonly');
-provider.addScope('https://www.googleapis.com/auth/classroom.coursework.me');
-provider.addScope('https://www.googleapis.com/auth/classroom.coursework.me.readonly');
-provider.addScope('https://www.googleapis.com/auth/classroom.coursework.students');
-provider.addScope('https://www.googleapis.com/auth/classroom.coursework.students.readonly');
-provider.addScope('https://www.googleapis.com/auth/classroom.courseworkmaterials');
-provider.addScope('https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly');
-provider.addScope('https://www.googleapis.com/auth/classroom.guardianlinks.me.readonly');
-provider.addScope('https://www.googleapis.com/auth/classroom.guardianlinks.students');
-provider.addScope('https://www.googleapis.com/auth/classroom.guardianlinks.students.readonly');
-provider.addScope('https://www.googleapis.com/auth/classroom.profile.emails');
-provider.addScope('https://www.googleapis.com/auth/classroom.profile.photos');
-provider.addScope('https://www.googleapis.com/auth/classroom.push-notifications');
-provider.addScope('https://www.googleapis.com/auth/classroom.rosters');
-provider.addScope('https://www.googleapis.com/auth/classroom.rosters.readonly');
-provider.addScope('https://www.googleapis.com/auth/classroom.student-submissions.me.readonly');
-provider.addScope('https://www.googleapis.com/auth/classroom.student-submissions.students.readonly');
-provider.addScope('https://www.googleapis.com/auth/classroom.topics');
-provider.addScope('https://www.googleapis.com/auth/classroom.topics.readonly');
 
 let isSigningIn = false;
 let cachedAccessToken: string | null = null;

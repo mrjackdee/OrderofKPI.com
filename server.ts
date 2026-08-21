@@ -227,6 +227,26 @@ async function syncPortalMembersFromFirestoreCloud() {
         const industry = fields.industry?.stringValue || "";
         const profile_photo = fields.profile_photo?.stringValue || "";
         const is_test_val = fields.is_test_credential?.booleanValue !== undefined ? (fields.is_test_credential.booleanValue ? 1 : 0) : ((normEmail.startsWith("qa.") || normEmail.startsWith("test.")) ? 1 : 0);
+        
+        let committeesArray: string[] = [];
+        if (fields.committees?.arrayValue?.values) {
+          committeesArray = fields.committees.arrayValue.values.map((v: any) => v.stringValue).filter(Boolean);
+        } else if (fields.committees?.stringValue) {
+          try { committeesArray = JSON.parse(fields.committees.stringValue); } catch(e) {}
+        }
+        const committeesStr = JSON.stringify(committeesArray);
+
+        let committeeRolesMap: Record<string, string> = {};
+        if (fields.committeeRoles?.mapValue?.fields) {
+          Object.keys(fields.committeeRoles.mapValue.fields).forEach(k => {
+            committeeRolesMap[k] = fields.committeeRoles.mapValue.fields[k]?.stringValue || 'member';
+          });
+        } else if (fields.committee_roles?.stringValue) {
+          try { committeeRolesMap = JSON.parse(fields.committee_roles.stringValue); } catch(e) {}
+        } else if (fields.committeeRoles?.stringValue) {
+          try { committeeRolesMap = JSON.parse(fields.committeeRoles.stringValue); } catch(e) {}
+        }
+        const committeeRolesStr = JSON.stringify(committeeRolesMap);
 
         if (normEmail) {
           loadedCount++;
@@ -237,15 +257,15 @@ async function syncPortalMembersFromFirestoreCloud() {
               if (existingUser) {
                 sqliteDb.prepare(`
                   UPDATE users 
-                  SET name = ?, first_name = ?, last_name = ?, role = ?, title = ?, intake_class = ?, financial_status = ?, industry = ?, profile_photo = ?, is_test_credential = ?
+                  SET name = ?, first_name = ?, last_name = ?, role = ?, title = ?, intake_class = ?, financial_status = ?, industry = ?, profile_photo = ?, is_test_credential = ?, committees = ?, committee_roles = ?
                   WHERE email = ?
-                `).run(name, first_name, last_name, role, title, intake_class, financial_status, industry, profile_photo, is_test_val, normEmail);
+                `).run(name, first_name, last_name, role, title, intake_class, financial_status, industry, profile_photo, is_test_val, committeesStr, committeeRolesStr, normEmail);
               } else {
                 const defaultPasswordHash = hashPassword("atlanta");
                 sqliteDb.prepare(`
-                  INSERT INTO users (email, name, first_name, last_name, password_hash, is_first_login, role, title, intake_class, financial_status, industry, profile_photo, is_test_credential)
-                  VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
-                `).run(normEmail, name, first_name, last_name, defaultPasswordHash, role, title, intake_class, financial_status, industry, profile_photo, is_test_val);
+                  INSERT INTO users (email, name, first_name, last_name, password_hash, is_first_login, role, title, intake_class, financial_status, industry, profile_photo, is_test_credential, committees, committee_roles)
+                  VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `).run(normEmail, name, first_name, last_name, defaultPasswordHash, role, title, intake_class, financial_status, industry, profile_photo, is_test_val, committeesStr, committeeRolesStr);
               }
             } catch (e) {
               console.error("[PORTAL MEMBERS Cloud Sync] SQLite sync err:", e);
@@ -269,7 +289,9 @@ async function syncPortalMembersFromFirestoreCloud() {
                   financial_status,
                   industry,
                   profile_photo,
-                  is_test_credential: is_test_val
+                  is_test_credential: is_test_val,
+                  committees: committeesArray,
+                  committeeRoles: committeeRolesMap
                 };
               } else {
                 jsonUsers[normEmail].name = name;
@@ -282,6 +304,8 @@ async function syncPortalMembersFromFirestoreCloud() {
                 jsonUsers[normEmail].industry = industry;
                 jsonUsers[normEmail].profile_photo = profile_photo;
                 jsonUsers[normEmail].is_test_credential = is_test_val;
+                jsonUsers[normEmail].committees = committeesArray;
+                jsonUsers[normEmail].committeeRoles = committeeRolesMap;
               }
               fs.writeFileSync(jsonDbPath, JSON.stringify(jsonUsers, null, 2));
             } catch (e) {
@@ -311,6 +335,25 @@ async function syncLocalMemberToFirestoreCloud(email: string) {
   }
   if (!member) return;
 
+  let memberCommittees: string[] = [];
+  try {
+    if (Array.isArray(member.committees)) memberCommittees = member.committees;
+    else if (typeof member.committees === 'string') memberCommittees = JSON.parse(member.committees);
+  } catch (e) {}
+
+  let memberCommitteeRoles: Record<string, string> = {};
+  try {
+    if (member.committeeRoles && typeof member.committeeRoles === 'object') memberCommitteeRoles = member.committeeRoles;
+    else if (member.committee_roles && typeof member.committee_roles === 'object') memberCommitteeRoles = member.committee_roles;
+    else if (typeof member.committee_roles === 'string') memberCommitteeRoles = JSON.parse(member.committee_roles);
+    else if (typeof member.committeeRoles === 'string') memberCommitteeRoles = JSON.parse(member.committeeRoles);
+  } catch (e) {}
+
+  const committeeRolesFields: Record<string, { stringValue: string }> = {};
+  Object.keys(memberCommitteeRoles).forEach(k => {
+    committeeRolesFields[k] = { stringValue: memberCommitteeRoles[k] };
+  });
+
   const docId = normEmail.replace(/\//g, "_");
   const dbId = firebaseDatabaseId || "(default)";
   const url = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/portal_members/${encodeURIComponent(docId)}?key=${firebaseApiKey}`;
@@ -331,7 +374,17 @@ async function syncLocalMemberToFirestoreCloud(email: string) {
           financial_status: { stringValue: member.financial_status || "inactive" },
           industry: { stringValue: member.industry || "" },
           profile_photo: { stringValue: member.profile_photo || "" },
-          is_test_credential: { booleanValue: !!(member.is_test_credential === 1 || member.is_test_credential === true) }
+          is_test_credential: { booleanValue: !!(member.is_test_credential === 1 || member.is_test_credential === true) },
+          committees: {
+            arrayValue: {
+              values: memberCommittees.map(c => ({ stringValue: c }))
+            }
+          },
+          committeeRoles: {
+            mapValue: {
+              fields: committeeRolesFields
+            }
+          }
         }
       })
     });
@@ -520,7 +573,20 @@ async function initDb() {
   const setupSqliteDb = async () => {
     const { default: Database } = await import("better-sqlite3");
     const dbPath = path.join(process.cwd(), "kpi_members_v2.db");
-    sqliteDb = new Database(dbPath);
+    
+    // Check if dbPath exists and is 0-byte file before opening (which causes 'database disk image is malformed')
+    if (fs.existsSync(dbPath)) {
+      const stats = fs.statSync(dbPath);
+      if (stats.size === 0) {
+        try { fs.unlinkSync(dbPath); } catch (_) {}
+      }
+    }
+
+    sqliteDb = new Database(dbPath, { timeout: 10000 });
+    try {
+      sqliteDb.pragma('journal_mode = WAL');
+      sqliteDb.pragma('busy_timeout = 10000');
+    } catch (_) {}
     
     sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS users (
@@ -548,6 +614,18 @@ async function initDb() {
 
     try {
       sqliteDb.exec("ALTER TABLE users ADD COLUMN is_test_credential INTEGER DEFAULT 0");
+    } catch (e) {
+      // Column already exists
+    }
+
+    try {
+      sqliteDb.exec("ALTER TABLE users ADD COLUMN committees TEXT");
+    } catch (e) {
+      // Column already exists
+    }
+
+    try {
+      sqliteDb.exec("ALTER TABLE users ADD COLUMN committee_roles TEXT");
     } catch (e) {
       // Column already exists
     }
@@ -1855,7 +1933,10 @@ async function startServer() {
           intake_class: u.intake_class || "",
           financial_status: u.financial_status || "inactive",
           industry: u.industry || "",
-          is_test_credential: u.is_test_credential || 0
+          profile_photo: u.profile_photo || "",
+          is_test_credential: u.is_test_credential || 0,
+          committees: u.committees || [],
+          committeeRoles: u.committeeRoles || u.committee_roles || {}
         }));
       } else {
         members = defaultUsers.map(u => ({
@@ -1868,13 +1949,31 @@ async function startServer() {
           is_test_credential: (u.email.toLowerCase().startsWith("qa.") || u.email.toLowerCase().startsWith("test.")) ? 1 : 0
         }));
       }
+
+      // Normalize committee and role fields
+      members = members.map((m: any) => {
+        let parsedCommittees = m.committees;
+        let parsedRoles = m.committeeRoles || m.committee_roles;
+        if (typeof parsedCommittees === 'string') {
+          try { parsedCommittees = JSON.parse(parsedCommittees); } catch(e) { parsedCommittees = []; }
+        }
+        if (typeof parsedRoles === 'string') {
+          try { parsedRoles = JSON.parse(parsedRoles); } catch(e) { parsedRoles = {}; }
+        }
+        return {
+          ...m,
+          committees: Array.isArray(parsedCommittees) ? parsedCommittees : [],
+          committeeRoles: (parsedRoles && typeof parsedRoles === 'object') ? parsedRoles : {}
+        };
+      });
+
       // Sort members: officers first, then admin, then members, alphabetically by name
       const roleOrder = { officer: 1, admin: 2, member: 3 };
       members.sort((a, b) => {
         const orderA = roleOrder[a.role as keyof typeof roleOrder] || 4;
         const orderB = roleOrder[b.role as keyof typeof roleOrder] || 4;
         if (orderA !== orderB) return orderA - orderB;
-        return a.name.localeCompare(b.name);
+        return (a.name || '').localeCompare(b.name || '');
       });
       res.json({ success: true, members });
     } catch (err: any) {
@@ -1885,7 +1984,7 @@ async function startServer() {
 
   // Add a new member
   app.post("/api/members", (req, res) => {
-    const { email, name, first_name, last_name, role, title, intake_class, financial_status, industry, adminEmail, is_test_credential } = req.body;
+    const { email, name, first_name, last_name, role, title, intake_class, financial_status, industry, adminEmail, is_test_credential, committees, committeeRoles, committee_roles } = req.body;
     if (!email || !role) {
       return res.status(400).json({ success: false, message: "Email and role are required" });
     }
@@ -1901,6 +2000,9 @@ async function startServer() {
 
     const defaultPasswordHash = hashPassword("atlanta");
     const isTestVal = is_test_credential !== undefined ? (is_test_credential ? 1 : 0) : ((normEmail.startsWith("qa.") || normEmail.startsWith("test.")) ? 1 : 0);
+    const commsStr = JSON.stringify(Array.isArray(committees) ? committees : []);
+    const commRolesObj = committeeRoles || committee_roles || {};
+    const commRolesStr = JSON.stringify(typeof commRolesObj === 'object' ? commRolesObj : {});
 
     try {
       // Check if user already exists
@@ -1920,9 +2022,9 @@ async function startServer() {
       // Insert to SQLite
       if (useSqlite && sqliteDb) {
         sqliteDb.prepare(`
-          INSERT INTO users (email, name, first_name, last_name, password_hash, is_first_login, role, title, intake_class, financial_status, industry, is_test_credential)
-          VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
-        `).run(normEmail, fullName, firstName, lastName, defaultPasswordHash, role, title || "", intake_class || "", financial_status || "inactive", industry || "", isTestVal);
+          INSERT INTO users (email, name, first_name, last_name, password_hash, is_first_login, role, title, intake_class, financial_status, industry, is_test_credential, committees, committee_roles)
+          VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(normEmail, fullName, firstName, lastName, defaultPasswordHash, role, title || "", intake_class || "", financial_status || "inactive", industry || "", isTestVal, commsStr, commRolesStr);
       }
 
       // Sync JSON
@@ -1946,7 +2048,9 @@ async function startServer() {
         intake_class: intake_class || "",
         financial_status: financial_status || "inactive",
         industry: industry || "",
-        is_test_credential: isTestVal
+        is_test_credential: isTestVal,
+        committees: Array.isArray(committees) ? committees : [],
+        committeeRoles: commRolesObj
       };
       fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
 
@@ -1964,7 +2068,7 @@ async function startServer() {
   // Edit a member
   const handleMemberPut = (req: express.Request, res: express.Response) => {
     const email = req.params.email || req.query.email as string || req.body.email as string || "";
-    const { name, first_name, last_name, role, title, intake_class, financial_status, industry, profile_photo, adminEmail, is_test_credential } = req.body;
+    const { name, first_name, last_name, role, title, intake_class, financial_status, industry, profile_photo, adminEmail, is_test_credential, committees, committeeRoles, committee_roles } = req.body;
     if (!email) {
       return res.status(400).json({ success: false, message: "Email is required" });
     }
@@ -1974,6 +2078,9 @@ async function startServer() {
     const resolvedLastName = last_name || name?.split(" ").slice(1).join(" ") || "";
     const resolvedFullName = name || `${resolvedFirstName} ${resolvedLastName}`.trim();
     const isTestVal = is_test_credential !== undefined ? (is_test_credential ? 1 : 0) : null;
+    const commsStr = committees !== undefined ? JSON.stringify(Array.isArray(committees) ? committees : []) : null;
+    const commRolesObj = committeeRoles !== undefined ? committeeRoles : (committee_roles !== undefined ? committee_roles : null);
+    const commRolesStr = commRolesObj !== null ? JSON.stringify(commRolesObj) : null;
 
     try {
       // Update SQLite
@@ -1989,7 +2096,9 @@ async function startServer() {
               financial_status = COALESCE(?, financial_status),
               industry = COALESCE(?, industry),
               profile_photo = COALESCE(?, profile_photo),
-              is_test_credential = COALESCE(?, is_test_credential)
+              is_test_credential = COALESCE(?, is_test_credential),
+              committees = COALESCE(?, committees),
+              committee_roles = COALESCE(?, committee_roles)
           WHERE email = ?
         `).run(
           resolvedFullName || null, 
@@ -2002,6 +2111,8 @@ async function startServer() {
           industry !== undefined ? industry : null, 
           profile_photo || null, 
           isTestVal,
+          commsStr,
+          commRolesStr,
           normEmail
         );
       }
@@ -2020,6 +2131,8 @@ async function startServer() {
           if (industry !== undefined) data[normEmail].industry = industry;
           if (profile_photo) data[normEmail].profile_photo = profile_photo;
           if (isTestVal !== null) data[normEmail].is_test_credential = isTestVal;
+          if (committees !== undefined) data[normEmail].committees = committees;
+          if (commRolesObj !== null) data[normEmail].committeeRoles = commRolesObj;
           fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
         }
       }
@@ -2984,18 +3097,63 @@ async function startServer() {
     }
   });
 
-  // --- MEMBERSHIP COMMITTEE MEMBER ENDPOINTS ---
+  // --- STANDING COMMITTEE MEMBER ENDPOINTS ---
 
   app.get("/api/committee/members", (req, res) => {
     try {
-      let committeeMembers: any[] = [];
+      const slug = (req.query.slug || req.query.committee || "") as string;
+      let allUsers: any[] = [];
       if (useSqlite && sqliteDb) {
-        committeeMembers = sqliteDb.prepare("SELECT * FROM users WHERE role = 'Membership Committee' OR role = 'Membership Committee Chair' OR email = 'james.haywood@orderofkpi.org'").all();
+        allUsers = sqliteDb.prepare("SELECT * FROM users").all();
       } else if (fs.existsSync(jsonDbPath)) {
         const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
-        committeeMembers = Object.values(data).filter((u: any) => u.role === 'Membership Committee' || u.role === 'Membership Committee Chair' || u.email === 'james.haywood@orderofkpi.org');
+        allUsers = Object.values(data);
+      } else {
+        allUsers = defaultUsers;
       }
-      res.json({ success: true, members: committeeMembers });
+
+      // Normalize each user's committees and committee roles
+      const normalizedUsers = allUsers.map((u: any) => {
+        let comms: string[] = [];
+        let roles: Record<string, string> = {};
+        try {
+          if (Array.isArray(u.committees)) comms = u.committees;
+          else if (typeof u.committees === 'string') comms = JSON.parse(u.committees);
+        } catch(e) {}
+        try {
+          if (u.committeeRoles && typeof u.committeeRoles === 'object') roles = u.committeeRoles;
+          else if (u.committee_roles && typeof u.committee_roles === 'object') roles = u.committee_roles;
+          else if (typeof u.committee_roles === 'string') roles = JSON.parse(u.committee_roles);
+          else if (typeof u.committeeRoles === 'string') roles = JSON.parse(u.committeeRoles);
+        } catch(e) {}
+
+        // Backward compatibility for legacy membership committee roles
+        if (u.role === 'Membership Committee' || u.role === 'Membership Committee Chair' || u.email === 'james.haywood@orderofkpi.org') {
+          if (!comms.includes('membership_intake')) comms.push('membership_intake');
+          if (!roles['membership_intake']) {
+            roles['membership_intake'] = (u.role === 'Membership Committee Chair' || u.email === 'james.haywood@orderofkpi.org') ? 'chair' : 'member';
+          }
+        }
+
+        return {
+          ...u,
+          committees: comms,
+          committeeRoles: roles
+        };
+      });
+
+      if (!slug || slug === 'membership_intake') {
+        const membershipMembers = normalizedUsers.filter(u => 
+          u.committees.includes('membership_intake') || 
+          u.role === 'Membership Committee' || 
+          u.role === 'Membership Committee Chair' || 
+          u.email === 'james.haywood@orderofkpi.org'
+        );
+        return res.json({ success: true, members: membershipMembers });
+      }
+
+      const matchingMembers = normalizedUsers.filter(u => u.committees.includes(slug));
+      res.json({ success: true, members: matchingMembers });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -3003,31 +3161,89 @@ async function startServer() {
 
   app.post("/api/committee/members", (req, res) => {
     try {
-      const { email, chairEmail } = req.body;
+      const { email, chairEmail, committeeSlug, committeeRole } = req.body;
       if (!email) return res.status(400).json({ success: false, message: "Member email is required" });
 
       const normEmail = email.toLowerCase().trim();
+      const targetSlug = committeeSlug || 'membership_intake';
+      const targetRole = committeeRole || 'member';
+
+      let user: any = null;
+      if (useSqlite && sqliteDb) {
+        user = sqliteDb.prepare("SELECT * FROM users WHERE email = ?").get(normEmail);
+      } else if (fs.existsSync(jsonDbPath)) {
+        const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+        user = data[normEmail];
+      }
+
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User email not found in active directory" });
+      }
+
+      const uRole = (user.role || '').toLowerCase();
+      const uTitle = (user.title || '').toLowerCase();
+      if (
+        uRole === 'applicant' || 
+        uRole === 'prospective' || 
+        uRole === 'candidate' || 
+        uTitle === 'candidate' || 
+        normEmail === 'candidate@gmail.com' ||
+        normEmail.includes('candidate')
+      ) {
+        return res.status(403).json({ 
+          success: false, 
+          message: "Aspirant or candidate accounts are ineligible for committee assignments per organization constitution and bylaws." 
+        });
+      }
+
+      let comms: string[] = [];
+      let roles: Record<string, string> = {};
+      try {
+        if (Array.isArray(user.committees)) comms = user.committees;
+        else if (typeof user.committees === 'string') comms = JSON.parse(user.committees);
+      } catch(e) {}
+      try {
+        if (user.committeeRoles && typeof user.committeeRoles === 'object') roles = user.committeeRoles;
+        else if (user.committee_roles && typeof user.committee_roles === 'object') roles = user.committee_roles;
+        else if (typeof user.committee_roles === 'string') roles = JSON.parse(user.committee_roles);
+        else if (typeof user.committeeRoles === 'string') roles = JSON.parse(user.committeeRoles);
+      } catch(e) {}
+
+      if (!comms.includes(targetSlug)) {
+        comms.push(targetSlug);
+      }
+      roles[targetSlug] = targetRole;
+
+      const commsStr = JSON.stringify(comms);
+      const rolesStr = JSON.stringify(roles);
 
       if (useSqlite && sqliteDb) {
-        const user = sqliteDb.prepare("SELECT * FROM users WHERE email = ?").get(normEmail) as any;
-        if (!user) {
-          return res.status(404).json({ success: false, message: "User email not found in active directory" });
+        if (targetSlug === 'membership_intake' && user.role !== 'admin' && user.role !== 'officer') {
+          const newLegacyRole = targetRole === 'chair' ? 'Membership Committee Chair' : 'Membership Committee';
+          sqliteDb.prepare("UPDATE users SET role = ?, committees = ?, committee_roles = ? WHERE email = ?").run(newLegacyRole, commsStr, rolesStr, normEmail);
+        } else {
+          sqliteDb.prepare("UPDATE users SET committees = ?, committee_roles = ? WHERE email = ?").run(commsStr, rolesStr, normEmail);
         }
-        
-        sqliteDb.prepare("UPDATE users SET role = 'Membership Committee' WHERE email = ?").run(normEmail);
       }
 
       if (fs.existsSync(jsonDbPath)) {
         const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
         if (data[normEmail]) {
-          data[normEmail].role = 'Membership Committee';
+          data[normEmail].committees = comms;
+          data[normEmail].committeeRoles = roles;
+          if (targetSlug === 'membership_intake' && data[normEmail].role !== 'admin' && data[normEmail].role !== 'officer') {
+            data[normEmail].role = targetRole === 'chair' ? 'Membership Committee Chair' : 'Membership Committee';
+          }
           fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
         }
       }
 
-      logEvent(chairEmail || "james.haywood@orderofkpi.org", "COMMITTEE_MEMBER_ADDED", `Granted Membership Committee role access to ${normEmail}`);
+      // Sync to Firestore Cloud
+      syncLocalMemberToFirestoreCloud(normEmail);
 
-      res.json({ success: true, message: "Member added to Membership Committee with full review access permissions." });
+      logEvent(chairEmail || "system", "COMMITTEE_MEMBER_ADDED", `Granted ${targetSlug} (${targetRole}) access to ${normEmail}`);
+
+      res.json({ success: true, message: `Member assigned to ${targetSlug} as ${targetRole} successfully.` });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -3036,28 +3252,68 @@ async function startServer() {
   const handleCommitteeMemberDelete = (req: express.Request, res: express.Response) => {
     try {
       const email = req.params.email || req.query.email as string || req.body.email as string || "";
+      const targetSlug = (req.query.slug || req.query.committee || req.body.committeeSlug || 'membership_intake') as string;
       const { chairEmail } = req.query;
       const normEmail = email.toLowerCase().trim();
 
-      if (normEmail === 'james.haywood@orderofkpi.org') {
+      if (targetSlug === 'membership_intake' && normEmail === 'james.haywood@orderofkpi.org') {
         return res.status(400).json({ success: false, message: "Cannot remove the Membership Committee Chair" });
       }
 
+      let user: any = null;
       if (useSqlite && sqliteDb) {
-        sqliteDb.prepare("UPDATE users SET role = 'member' WHERE email = ?").run(normEmail);
-      }
-
-      if (fs.existsSync(jsonDbPath)) {
+        user = sqliteDb.prepare("SELECT * FROM users WHERE email = ?").get(normEmail);
+      } else if (fs.existsSync(jsonDbPath)) {
         const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
-        if (data[normEmail]) {
-          data[normEmail].role = 'member';
-          fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
-        }
+        user = data[normEmail];
       }
 
-      logEvent((chairEmail as string) || "james.haywood@orderofkpi.org", "COMMITTEE_MEMBER_REMOVED", `Removed Membership Committee access for ${normEmail}`);
+      if (user) {
+        let comms: string[] = [];
+        let roles: Record<string, string> = {};
+        try {
+          if (Array.isArray(user.committees)) comms = user.committees;
+          else if (typeof user.committees === 'string') comms = JSON.parse(user.committees);
+        } catch(e) {}
+        try {
+          if (user.committeeRoles && typeof user.committeeRoles === 'object') roles = user.committeeRoles;
+          else if (user.committee_roles && typeof user.committee_roles === 'object') roles = user.committee_roles;
+          else if (typeof user.committee_roles === 'string') roles = JSON.parse(user.committee_roles);
+          else if (typeof user.committeeRoles === 'string') roles = JSON.parse(user.committeeRoles);
+        } catch(e) {}
 
-      res.json({ success: true, message: "Member removed from Membership Committee." });
+        comms = comms.filter(c => c !== targetSlug);
+        delete roles[targetSlug];
+
+        const commsStr = JSON.stringify(comms);
+        const rolesStr = JSON.stringify(roles);
+
+        if (useSqlite && sqliteDb) {
+          if (targetSlug === 'membership_intake' && (user.role === 'Membership Committee' || user.role === 'Membership Committee Chair')) {
+            sqliteDb.prepare("UPDATE users SET role = 'member', committees = ?, committee_roles = ? WHERE email = ?").run(commsStr, rolesStr, normEmail);
+          } else {
+            sqliteDb.prepare("UPDATE users SET committees = ?, committee_roles = ? WHERE email = ?").run(commsStr, rolesStr, normEmail);
+          }
+        }
+
+        if (fs.existsSync(jsonDbPath)) {
+          const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+          if (data[normEmail]) {
+            data[normEmail].committees = comms;
+            data[normEmail].committeeRoles = roles;
+            if (targetSlug === 'membership_intake' && (data[normEmail].role === 'Membership Committee' || data[normEmail].role === 'Membership Committee Chair')) {
+              data[normEmail].role = 'member';
+            }
+            fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
+          }
+        }
+
+        syncLocalMemberToFirestoreCloud(normEmail);
+      }
+
+      logEvent((chairEmail as string) || "system", "COMMITTEE_MEMBER_REMOVED", `Removed ${targetSlug} committee access for ${normEmail}`);
+
+      res.json({ success: true, message: `Member removed from ${targetSlug} committee.` });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -3279,11 +3535,6 @@ async function startServer() {
 
   // Support both DELETE with path parameter AND DELETE with query/body
   const handleDeanVoteDelete = async (req: express.Request, res: express.Response) => {
-    console.log("DEBUG: handleDeanVoteDelete REQ:", {
-      params: req.params,
-      query: req.query,
-      body: req.body
-    });
     try {
       const id = (req.params.id || req.query.id as string || req.body.id as string || "").trim();
       const email = (req.query.email as string || req.body.email as string || "").toLowerCase().trim();
@@ -3965,7 +4216,7 @@ KP Member Portal`;
         Raw Notes:
         ${rawNotes}`,
         config: {
-          systemInstruction: "You are the Grammateus (Secretary) of a prestigious fraternal organization. Your tone is professional, traditional, and structured.",
+          systemInstruction: "You are the Grammateus (Secretary) of a prestigious organization. Your tone is professional, traditional, and structured.",
         },
       });
 
@@ -3976,9 +4227,22 @@ KP Member Portal`;
     }
   });
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
   });
+
+  const cleanupAndExit = () => {
+    if (sqliteDb) {
+      try {
+        sqliteDb.close();
+        sqliteDb = null;
+      } catch (_) {}
+    }
+    server.close();
+  };
+
+  process.on('SIGTERM', cleanupAndExit);
+  process.on('SIGINT', cleanupAndExit);
 }
 
 startServer();

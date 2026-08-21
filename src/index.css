@@ -16,8 +16,8 @@
   --font-outline: "Anton", sans-serif;
   --font-body: "Manrope", sans-serif;
   
-  --font-fraternal-display: "Playfair Display", serif;
-  --font-fraternal-body: "Plus Jakarta Sans", sans-serif;
+  --font-portal-display: "Playfair Display", serif;
+  --font-portal-body: "Plus Jakarta Sans", sans-serif;
 }
 
 @layer base {

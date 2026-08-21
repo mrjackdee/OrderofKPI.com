@@ -395,10 +395,16 @@ export default function CommitteeChairDashboard() {
     return matchesSearch && matchesStage;
   });
 
-  // Non-committee members for dropdown
-  const availableMembersToAdd = allMembers.filter(
-    m => m.role !== 'Membership Committee' && m.role !== 'Membership Committee Chair' && m.email !== 'james.haywood@orderofkpi.org'
-  );
+  // Non-committee members for dropdown sorted by first name
+  const availableMembersToAdd = allMembers
+    .filter(
+      m => m.role !== 'Membership Committee' && m.role !== 'Membership Committee Chair' && m.email !== 'james.haywood@orderofkpi.org'
+    )
+    .sort((a, b) => {
+      const nameA = (a.first_name || a.name || '').trim().toLowerCase();
+      const nameB = (b.first_name || b.name || '').trim().toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 md:py-20 space-y-10">
@@ -737,11 +743,14 @@ export default function CommitteeChairDashboard() {
                 className="flex-1 px-4 py-3 bg-cream/50 border border-gold/30 rounded-2xl text-xs text-ivy focus:outline-none focus:border-gold cursor-pointer"
               >
                 <option value="">Select active member from directory...</option>
-                {availableMembersToAdd.map((member) => (
-                  <option key={member.email} value={member.email}>
-                    {member.name} ({member.email}) - {member.title || member.role}
-                  </option>
-                ))}
+                {availableMembersToAdd.map((member) => {
+                  const displayName = (member.first_name && member.last_name) ? `${member.first_name} ${member.last_name}` : member.name;
+                  return (
+                    <option key={member.email} value={member.email}>
+                      {displayName}
+                    </option>
+                  );
+                })}
               </select>
 
               <button

@@ -40,7 +40,8 @@ import { prospectiveMembers, fetchAllApplications, syncApplicationsFromFirestore
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import { googleSignIn, getAccessToken } from '../lib/googleAuth';
 import { createGoogleForm, getGoogleForm, getGoogleFormResponses } from '../lib/googleWorkspace';
-import { Chrome, ArrowDownToLine, Check, Database, Key, Lock, RefreshCw, Mail, Send, Inbox } from 'lucide-react';
+import { Chrome, ArrowDownToLine, Check, Database, Key, Lock, RefreshCw, Mail, Send, Inbox, Settings } from 'lucide-react';
+import { useSystemFeatures, updateSystemFeature } from '../lib/settings';
 
 interface SystemLog {
   id?: number;
@@ -64,10 +65,11 @@ interface ApplicationAuditLog {
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'users' | 'candidates' | 'audits' | 'intake' | 'revisions' | 'googleForms' | 'passwordLogs'>(() => {
+  const { features, loading: featuresLoading } = useSystemFeatures();
+  const [activeTab, setActiveTab] = useState<'users' | 'candidates' | 'audits' | 'intake' | 'revisions' | 'googleForms' | 'passwordLogs' | 'systemSettings'>(() => {
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get('tab');
-    if (tabParam && ['users', 'candidates', 'audits', 'intake', 'revisions', 'googleForms', 'passwordLogs'].includes(tabParam)) {
+    if (tabParam && ['users', 'candidates', 'audits', 'intake', 'revisions', 'googleForms', 'passwordLogs', 'systemSettings'].includes(tabParam)) {
       return tabParam as any;
     }
     return 'users';
@@ -76,7 +78,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
-    if (tabParam && ['users', 'candidates', 'audits', 'intake', 'revisions', 'googleForms', 'passwordLogs'].includes(tabParam)) {
+    if (tabParam && ['users', 'candidates', 'audits', 'intake', 'revisions', 'googleForms', 'passwordLogs', 'systemSettings'].includes(tabParam)) {
       setActiveTab(tabParam as any);
     }
   }, [location.search]);
@@ -967,6 +969,15 @@ export default function AdminDashboard() {
             <span className="px-2 py-0.5 rounded-full text-[10px] bg-gold/20 text-gold font-bold">
               {systemLogs.filter(l => l.event_type.includes('PASSWORD')).length}
             </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('systemSettings')}
+            className={`px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+              activeTab === 'systemSettings' ? 'bg-ivy text-cream shadow-md border border-gold/30' : 'bg-white text-ivy/70 hover:bg-gold/10'
+            }`}
+          >
+            <Settings className="w-4 h-4 text-gold" /> Global Settings
           </button>
         </div>
 
@@ -1923,6 +1934,61 @@ export default function AdminDashboard() {
                   </table>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 8: SYSTEM SETTINGS */}
+        {activeTab === 'systemSettings' && (
+          <div className="space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-gold/20 shadow-soft">
+              <div>
+                <h2 className="text-xl font-display font-bold text-ivy uppercase italic flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-gold" />
+                  Global System <span className="text-gold">Configurations</span>
+                </h2>
+                <p className="text-ivy/60 text-xs mt-1">
+                  Manage organization-wide feature toggles, visibility controls, and access parameters.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-3xl border border-gold/20 shadow-soft">
+              <h3 className="font-display font-bold text-ivy text-sm uppercase mb-4 border-b border-gold/10 pb-2">Feature Toggles & Visibility</h3>
+              
+              <div className="space-y-6 max-w-3xl">
+                {/* Committee Feature Toggle */}
+                <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-gold/20 bg-cream/20">
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-ivy text-sm flex items-center gap-2">
+                      <Users className="w-4 h-4 text-gold" /> Standing Committees Visibility
+                    </h4>
+                    <p className="text-xs text-ivy/70">
+                      When disabled, the Standing Committees section in the Member Portal is completely hidden from all general members and officers, keeping it in "stealth" mode (Admins can still view it). When enabled, access is fully restored based on the standard role-based access control.
+                    </p>
+                  </div>
+                  
+                  <button
+                    disabled={featuresLoading}
+                    onClick={async () => {
+                      const newStatus = !features.committee_enabled;
+                      const success = await updateSystemFeature('committee_enabled', newStatus);
+                      if (success) {
+                        showToast('success', `Committee Feature Visibility is now ${newStatus ? 'ENABLED' : 'DISABLED'}.`);
+                      } else {
+                        showToast('error', 'Failed to update feature setting. Please try again.');
+                      }
+                    }}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${features.committee_enabled ? 'bg-green-600' : 'bg-gray-300'}`}
+                  >
+                    <span className="sr-only">Toggle Committee Visibility</span>
+                    <span
+                      aria-hidden="true"
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${features.committee_enabled ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

@@ -367,7 +367,7 @@ export default function StandaloneApplication() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[11px] text-ivy/70 font-bold uppercase tracking-widest block">Are you a member of another fraternity/sorority/society?</label>
+                  <label className="text-[11px] text-ivy/70 font-bold uppercase tracking-widest block">Are you a member of another organization/society?</label>
                   <select
                     value={data.isFraternityMember}
                     onChange={e => updateField('isFraternityMember', e.target.value)}

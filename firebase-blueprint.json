@@ -115,7 +115,16 @@
         "title": { "type": "string" },
         "intake_class": { "type": "string" },
         "financial_status": { "type": "string" },
-        "industry": { "type": "string" }
+        "industry": { "type": "string" },
+        "committees": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of committee slugs this member is assigned to."
+        },
+        "committeeRoles": {
+          "type": "object",
+          "description": "Mapping of committee slug to role: 'chair' or 'member'."
+        }
       },
       "required": ["email", "name", "role"]
     },
