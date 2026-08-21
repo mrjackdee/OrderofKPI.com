@@ -32,9 +32,11 @@ export default function ApplicantLogin() {
     setSuccessMsg('');
     setLoading(true);
 
+    const finalEmail = email.includes('@') ? email : `${email}@orderofkpi.org`;
+
     try {
       if (mode === 'login') {
-        const result = await performApplicantLogin(email, password);
+        const result = await performApplicantLogin(finalEmail, password);
         if (!result.success || !result.user) {
           throw new Error(result.message);
         }
@@ -48,7 +50,7 @@ export default function ApplicantLogin() {
 
         navigate('/applicant-portal', { replace: true });
       } else if (mode === 'reset') {
-        const result = await requestApplicantPasswordReset(email);
+        const result = await requestApplicantPasswordReset(finalEmail);
         if (result.success) {
           setSuccessMsg(result.message);
         } else {

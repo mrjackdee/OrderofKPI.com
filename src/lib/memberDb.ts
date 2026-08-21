@@ -158,6 +158,7 @@ export function is1stAntiBasileus(user?: { email?: string; title?: string; role?
 export function normalizeUserRBAC(user: {
   email?: string;
   role?: string;
+  roles?: string[]; // Added roles
   title?: string;
   committees?: CommitteeSlug[] | string[];
   committeeRoles?: Record<string, CommitteeRole | string>;
@@ -169,17 +170,24 @@ export function normalizeUserRBAC(user: {
   committeeRoles: Record<string, CommitteeRole>;
 } {
   const normEmail = (user.email || '').toLowerCase().trim();
-  const rawRole = (user.role || 'member').trim();
+  
+  // Use first role from roles array, or fallback to legacy role string.
+  // Actually, let's find the "highest" role present in the roles array.
+  const rolesToCheck = (user.roles && user.roles.length > 0) ? user.roles : (user.role ? [user.role] : ['member']);
+  
   let normalizedRole: 'admin' | 'officer' | 'Committee Chair' | 'member' | 'prospective' | 'applicant' = 'member';
   let title = user.title;
   let committees: CommitteeSlug[] = Array.isArray(user.committees) ? [...(user.committees as CommitteeSlug[])] : [];
   let committeeRoles: Record<string, CommitteeRole> = { ...(user.committeeRoles as Record<string, CommitteeRole> || {}) };
 
-  if (rawRole === 'admin' || normEmail === 'admin@orderofkpi.org' || normEmail === 'qa.admin@orderofkpi.org' || normEmail === 'info@kpi2012.org') {
+  // Helper check for any role inclusion in the array
+  const hasRole = (r: string) => rolesToCheck.some(role => role === r || role.toLowerCase().includes(r.toLowerCase()));
+
+  if (hasRole('admin') || normEmail === 'admin@orderofkpi.org' || normEmail === 'qa.admin@orderofkpi.org' || normEmail === 'info@kpi2012.org') {
     normalizedRole = 'admin';
     committees = [...ALL_COMMITTEE_SLUGS];
     ALL_COMMITTEE_SLUGS.forEach(slug => { committeeRoles[slug] = 'chair'; });
-  } else if (rawRole === 'Super Committee Chair' || title === 'Super Committee Chair') {
+  } else if (hasRole('Super Committee') || hasRole('Super Committee Chair') || title === 'Super Committee Chair') {
     normalizedRole = 'officer';
     title = 'Super Committee Chair';
     committees = [...ALL_COMMITTEE_SLUGS];
@@ -188,39 +196,41 @@ export function normalizeUserRBAC(user: {
     normalizedRole = 'officer';
     if (!title) title = '1st Anti-Basileus';
     committees = [...ALL_COMMITTEE_SLUGS];
-  } else if (rawRole === 'Committee Chair' || rawRole === 'Membership Committee Chair' || rawRole.toLowerCase().includes('chair')) {
+  } else if (hasRole('Committee Chair') || hasRole('Membership Committee Chair') || rolesToCheck.some(r => r.toLowerCase().includes('chair'))) {
     normalizedRole = 'Committee Chair';
-    if (!title) title = rawRole;
+    // If not already set, try to derive title from the primary role (first one matching chair criteria)
+    if (!title) title = rolesToCheck.find(r => r.toLowerCase().includes('chair')) || 'Committee Chair';
 
-    const lowerRole = rawRole.toLowerCase();
-    if (lowerRole.includes('digital') || lowerRole.includes('tech')) {
-      if (!committees.includes('digital_technology')) committees.push('digital_technology');
-      committeeRoles['digital_technology'] = 'chair';
-    } else if (lowerRole.includes('scholarship')) {
-      if (!committees.includes('scholarship')) committees.push('scholarship');
-      committeeRoles['scholarship'] = 'chair';
-    } else if (lowerRole.includes('judicial') || lowerRole.includes('ethics')) {
-      if (!committees.includes('judicial_ethics')) committees.push('judicial_ethics');
-      committeeRoles['judicial_ethics'] = 'chair';
-    } else if (lowerRole.includes('annual') || lowerRole.includes('event')) {
-      if (!committees.includes('annual_event')) committees.push('annual_event');
-      committeeRoles['annual_event'] = 'chair';
-    } else if (lowerRole.includes('transfer')) {
-      if (!committees.includes('transfer_member')) committees.push('transfer_member');
-      committeeRoles['transfer_member'] = 'chair';
-    } else if (lowerRole.includes('membership') || lowerRole.includes('intake') || normEmail === 'james.haywood@orderofkpi.org' || normEmail === 'qa.chair@orderofkpi.org') {
-      if (!committees.includes('membership_intake')) committees.push('membership_intake');
-      committeeRoles['membership_intake'] = 'chair';
-    } else {
-      if (committees.length > 0) {
-        committees.forEach(slug => { committeeRoles[slug] = 'chair'; });
+    // Simplified committee logic - if Super Committee is not set, derive from committee roles
+    // We need to be careful not to overwrite explicitly set committees in the user object
+    const chairs = rolesToCheck.filter(r => r.toLowerCase().includes('chair'));
+    chairs.forEach(rawRole => {
+      const lowerRole = rawRole.toLowerCase();
+      if (lowerRole.includes('digital') || lowerRole.includes('tech')) {
+        if (!committees.includes('digital_technology')) committees.push('digital_technology');
+        committeeRoles['digital_technology'] = 'chair';
+      } else if (lowerRole.includes('scholarship')) {
+        if (!committees.includes('scholarship')) committees.push('scholarship');
+        committeeRoles['scholarship'] = 'chair';
+      } else if (lowerRole.includes('judicial') || lowerRole.includes('ethics')) {
+        if (!committees.includes('judicial_ethics')) committees.push('judicial_ethics');
+        committeeRoles['judicial_ethics'] = 'chair';
+      } else if (lowerRole.includes('annual') || lowerRole.includes('event')) {
+        if (!committees.includes('annual_event')) committees.push('annual_event');
+        committeeRoles['annual_event'] = 'chair';
+      } else if (lowerRole.includes('transfer')) {
+        if (!committees.includes('transfer_member')) committees.push('transfer_member');
+        committeeRoles['transfer_member'] = 'chair';
+      } else if (lowerRole.includes('membership') || lowerRole.includes('intake') || normEmail === 'james.haywood@orderofkpi.org' || normEmail === 'qa.chair@orderofkpi.org') {
+        if (!committees.includes('membership_intake')) committees.push('membership_intake');
+        committeeRoles['membership_intake'] = 'chair';
       }
-    }
-  } else if (rawRole === 'officer' || rawRole.toLowerCase().includes('officer')) {
+    });
+  } else if (hasRole('officer')) {
     normalizedRole = 'officer';
-  } else if (rawRole === 'applicant' || rawRole === 'prospective') {
-    normalizedRole = rawRole;
-  } else if (rawRole === 'Membership Committee' || normEmail === 'qa.committee@orderofkpi.org' || normEmail === 'deshaun.safford@orderofkpi.org' || normEmail === 'jason.pilar@orderofkpi.org') {
+  } else if (hasRole('applicant') || hasRole('prospective')) {
+    normalizedRole = rolesToCheck.find(r => r === 'applicant' || r === 'prospective') as 'applicant' | 'prospective';
+  } else if (hasRole('Membership Committee') || normEmail === 'qa.committee@orderofkpi.org' || normEmail === 'deshaun.safford@orderofkpi.org' || normEmail === 'jason.pilar@orderofkpi.org') {
     normalizedRole = 'member';
     if (!committees.includes('membership_intake')) committees.push('membership_intake');
     if (!committeeRoles['membership_intake']) committeeRoles['membership_intake'] = 'member';

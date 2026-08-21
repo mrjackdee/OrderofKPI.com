@@ -45,6 +45,8 @@ export default function Login() {
     setSuccessMsg('');
     setLoading(true);
     
+    const finalEmail = email.includes('@') ? email : `${email}@orderofkpi.org`;
+    
     if (mode === 'login') {
       if (rememberMe) {
         localStorage.setItem('kpi_saved_email', email);
@@ -55,7 +57,7 @@ export default function Login() {
       }
 
       try {
-        const result = await performHybridLogin(email, password);
+        const result = await performHybridLogin(finalEmail, password);
         
         if (!result.success || !result.user) {
           throw new Error(result.message);
@@ -85,7 +87,7 @@ export default function Login() {
       }
     } else {
       try {
-        const result = await requestApplicantPasswordReset(email);
+        const result = await requestApplicantPasswordReset(finalEmail);
         if (result.success) {
           setSuccessMsg(result.message);
         } else {
@@ -209,7 +211,7 @@ export default function Login() {
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-white text-black py-3.5 rounded-xl font-black uppercase tracking-widest text-xs transition-colors mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-fit flex items-center justify-center gap-2 bg-primary hover:bg-white text-black py-3.5 px-10 rounded-xl font-black uppercase tracking-widest text-xs transition-colors mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>

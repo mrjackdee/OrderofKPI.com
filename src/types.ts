@@ -85,6 +85,7 @@ export interface Member {
   first_name?: string;
   last_name?: string;
   role: UserRole;
+  roles?: string[]; // Added roles array for multi-role support
   title?: string;
   committees?: CommitteeSlug[];
   committeeRoles?: Record<string, CommitteeRole>;

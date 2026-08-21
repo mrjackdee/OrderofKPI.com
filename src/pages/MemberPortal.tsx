@@ -54,6 +54,7 @@ export default function MemberPortal() {
 
   const [allMembers, setAllMembers] = useState<Member[]>(defaultMembers as Member[]);
   const [selectedCommitteeModal, setSelectedCommitteeModal] = useState<CommitteeDefinition | null>(null);
+  const [contactCommitteeSlug, setContactCommitteeSlug] = useState<string | null>(null);
 
   const [eligibleVoters, setEligibleVoters] = useState<string[]>([
     "anthony.jones@orderofkpi.org",
@@ -264,14 +265,14 @@ export default function MemberPortal() {
           )}
         </motion.div>
 
-        {/* Standing Committees Directory Table Section */}
+        {/* KP Committees Directory Section */}
         {!isApplicant && (
           <motion.section variants={itemVariants} className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gold/20 pb-4">
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold bg-gold/10 px-2.5 py-0.5 rounded-full">
-                    Standing Committees
+                    KP Committees
                   </span>
                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-ivy/60">
                     Directory ({STANDING_COMMITTEES.length})
@@ -282,282 +283,144 @@ export default function MemberPortal() {
                 </h2>
               </div>
               <p className="text-ivy/60 text-xs max-w-md">
-                Browse standing committees, review leadership rosters, or contact committee chairs to request joining.
+                Browse organizational committees, review rosters, and learn how to join.
               </p>
             </div>
 
-            {/* Mobile Committee Cards (< md) */}
-            <div className="grid grid-cols-1 gap-4 md:hidden">
-              {STANDING_COMMITTEES.map((committee) => {
-                const committeeChairs = getCommitteeChairs(committee.slug);
-                const committeeMembers = getCommitteeMembers(committee.slug);
-                
-                let recipientEmails = 'info@kpi2012.org';
-                let recipientNames = 'Executive Committee';
-                
-                if (committeeChairs.length === 1) {
-                  recipientEmails = committeeChairs[0].email;
-                  recipientNames = committeeChairs[0].name;
-                } else if (committeeChairs.length > 1) {
-                  recipientEmails = committeeChairs.map(c => c.email).join(',');
-                  recipientNames = committeeChairs.map(c => c.name).join(' & ');
-                }
-
-                const mailtoSubject = encodeURIComponent(`Interest in Joining ${committee.name}`);
-                const mailtoBody = encodeURIComponent(`Dear ${recipientNames},\n\nI am interested in joining the ${committee.name}. Please contact me regarding committee meetings and membership steps.\n\nRespectfully,`);
-                const mailtoLink = `mailto:${recipientEmails}?subject=${mailtoSubject}&body=${mailtoBody}`;
-                const userHasAccess = hasCommitteeAccess(committee.slug, normUser);
-
-                return (
-                  <div key={committee.slug} className="bg-white border border-gold/20 rounded-2xl p-5 shadow-soft space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-cream rounded-xl border border-gold/20 text-ivy shadow-xs shrink-0">
-                          <FolderGit2 size={20} />
-                        </div>
-                        <div>
-                          <h3 className="font-display font-bold text-ivy uppercase tracking-wide text-sm">{committee.name}</h3>
-                          <span className="text-[10px] font-body text-ivy/50">{committee.shortName}</span>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-gold bg-gold/10 px-2.5 py-1 rounded-full shrink-0">
-                        Standing
-                      </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {STANDING_COMMITTEES.map((committee) => (
+                <button
+                  key={committee.slug}
+                  onClick={() => setSelectedCommitteeModal(committee)}
+                  className="bg-white border border-gold/20 rounded-2xl p-6 shadow-soft hover:shadow-md transition-all text-left space-y-3 w-full"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-cream rounded-xl border border-gold/20 text-ivy shadow-xs">
+                      <FolderGit2 size={20} />
                     </div>
-
-                    <p className="text-xs text-ivy/70 leading-relaxed font-body">
-                      {committee.description}
-                    </p>
-
-                    <div className="pt-2 border-t border-gold/10 flex flex-col gap-2.5">
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => setSelectedCommitteeModal(committee)}
-                          className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-ivy bg-gold/10 border border-gold/30 hover:bg-gold/20 transition-all cursor-pointer"
-                        >
-                          <Users size={13} className="text-gold" />
-                          <span>Roster ({committeeChairs.length + committeeMembers.length})</span>
-                        </button>
-                        <a
-                          href={mailtoLink}
-                          className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-ivy bg-gold border border-gold hover:bg-ivy hover:text-cream transition-all shadow-xs"
-                        >
-                          <Mail size={13} />
-                          <span>Contact Chair</span>
-                        </a>
-                      </div>
-
-                      {userHasAccess ? (
-                        <Link
-                          to={`/committee/${committee.slug}`}
-                          className="w-full py-2.5 px-4 bg-ivy text-cream hover:bg-gold hover:text-ivy rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-xs"
-                        >
-                          <span>Open Workspace</span>
-                          <ChevronRight size={14} />
-                        </Link>
-                      ) : (
-                        <div className="w-full text-center py-2 text-[10px] uppercase tracking-widest text-ivy/40 font-bold bg-cream rounded-xl border border-gold/10">
-                          Member Contact Only
-                        </div>
-                      )}
+                    <div>
+                      <h3 className="font-display font-bold text-ivy uppercase tracking-wide text-sm">{committee.name}</h3>
+                      <span className="text-[10px] font-body text-ivy/50">{committee.shortName}</span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-
-            {/* Desktop Committees Table (>= md) */}
-            <div className="hidden md:block overflow-x-auto bg-white border border-gold/20 rounded-2xl shadow-soft">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-cream/60 border-b border-gold/20 text-[10px] font-bold uppercase tracking-widest text-ivy/70">
-                    <th className="py-4 px-6">Committee Name</th>
-                    <th className="py-4 px-6 max-w-md">Description</th>
-                    <th className="py-4 px-6 text-center">Roster & Leadership</th>
-                    <th className="py-4 px-6 text-center">Join Committee</th>
-                    <th className="py-4 px-6 text-right">Workspace</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gold/10 text-sm">
-                  {STANDING_COMMITTEES.map((committee) => {
-                    const committeeChairs = getCommitteeChairs(committee.slug);
-                    const committeeMembers = getCommitteeMembers(committee.slug);
-                    
-                    let recipientEmails = 'info@kpi2012.org';
-                    let recipientNames = 'Executive Committee';
-                    
-                    if (committeeChairs.length === 1) {
-                      recipientEmails = committeeChairs[0].email;
-                      recipientNames = committeeChairs[0].name;
-                    } else if (committeeChairs.length > 1) {
-                      recipientEmails = committeeChairs.map(c => c.email).join(',');
-                      recipientNames = committeeChairs.map(c => c.name).join(' & ');
-                    }
-
-                    const mailtoSubject = encodeURIComponent(`Interest in Joining ${committee.name}`);
-                    const mailtoBody = encodeURIComponent(`Dear ${recipientNames},\n\nI am interested in joining the ${committee.name}. Please contact me regarding committee meetings and membership steps.\n\nRespectfully,`);
-                    const mailtoLink = `mailto:${recipientEmails}?subject=${mailtoSubject}&body=${mailtoBody}`;
-                    const userHasAccess = hasCommitteeAccess(committee.slug, normUser);
-
-                    return (
-                      <tr key={committee.slug} className="hover:bg-cream/40 transition-colors">
-                        <td className="py-5 px-6 font-display font-bold text-ivy text-base">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2.5 bg-cream rounded-xl border border-gold/20 text-ivy shadow-xs">
-                              <FolderGit2 size={20} />
-                            </div>
-                            <div>
-                              <span className="block font-bold text-ivy uppercase tracking-wide text-sm">{committee.name}</span>
-                              <span className="text-[10px] font-body font-normal text-ivy/50">{committee.shortName}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-5 px-6 max-w-md text-xs text-ivy/70 leading-relaxed font-body">
-                          {committee.description}
-                        </td>
-                        <td className="py-5 px-6 text-center whitespace-nowrap">
-                          <button
-                            onClick={() => setSelectedCommitteeModal(committee)}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-ivy hover:text-gold bg-gold/10 hover:bg-gold/20 border border-gold/30 transition-all cursor-pointer"
-                          >
-                            <Users size={14} className="text-gold" />
-                            <span>View Roster ({committeeChairs.length + committeeMembers.length})</span>
-                          </button>
-                        </td>
-                        <td className="py-5 px-6 text-center whitespace-nowrap">
-                          <a
-                            href={mailtoLink}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-ivy hover:text-cream bg-gold hover:bg-ivy border border-gold transition-all shadow-xs"
-                          >
-                            <Mail size={13} />
-                            <span>Contact Chair</span>
-                          </a>
-                        </td>
-                        <td className="py-5 px-6 text-right whitespace-nowrap">
-                          {userHasAccess ? (
-                            <Link
-                              to={`/committee/${committee.slug}`}
-                              className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-ivy hover:text-gold transition-colors"
-                            >
-                              <span>Open Workspace</span>
-                              <ChevronRight size={14} />
-                            </Link>
-                          ) : (
-                            <span className="text-[10px] uppercase tracking-widest text-ivy/40 font-bold px-2.5 py-1 bg-cream rounded-lg border border-gold/10">
-                              Member Contact
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                  <p className="text-xs text-ivy/70 leading-relaxed font-body line-clamp-3">
+                    {committee.description}
+                  </p>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-gold pt-2 flex items-center gap-1">
+                    View Details & Join <ChevronRight size={12} />
+                  </div>
+                </button>
+              ))}
             </div>
           </motion.section>
         )}
 
         {/* Officer & Committee Tools */}
-        {!isApplicant && (
-          <motion.section variants={itemVariants} className="mb-20">
-            <h2 className="text-2xl font-display text-ivy mb-8 uppercase tracking-widest border-b border-gold/20 pb-4">Officer & Committee Tools</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                { 
-                  title: 'Member Directory', 
-                  desc: 'View active member accounts and contact emails.', 
-                  icon: ClipboardCheck, 
-                  path: '/member-directory',
-                  color: 'bg-gold text-ivy',
-                  roles: ['admin']
-                },
-                { 
-                  title: 'Admin Dashboard', 
-                  desc: 'Manage member accounts, permissions, and settings.', 
-                  icon: Settings, 
-                  path: '/admin-dashboard',
-                  color: 'bg-ivy text-cream',
-                  roles: ['admin']
-                },
-                { 
-                  title: 'Candidate Tracker', 
-                  desc: 'Track applicant stages and intake progress.', 
-                  icon: Users, 
-                  path: '/candidate-tracker',
-                  color: 'bg-gold text-ivy',
-                  roles: ['admin', 'officer', 'Membership Committee', 'Membership Committee Chair']
-                },
-                { 
-                  title: 'Past Elections & Records', 
-                  desc: 'Official results and archive records from past elections.', 
-                  icon: Archive, 
-                  path: '/governance-archives',
-                  color: 'bg-ivy text-cream',
-                  roles: ['admin', 'officer', 'Membership Committee', 'Membership Committee Chair']
-                },
-                { 
-                  title: 'Member Account Management', 
-                  desc: 'Update member profiles, titles, and permissions.', 
-                  icon: Users, 
-                  path: '/admin-dashboard?tab=users',
-                  color: 'bg-gold text-ivy',
-                  roles: ['admin']
-                },
-                { 
-                  title: 'Membership Dashboard', 
-                  desc: 'Manage applicant stages, review activity, and committee members.', 
-                  icon: ShieldCheck, 
-                  path: '/chair-dashboard',
-                  color: 'bg-gold text-ivy',
-                  roles: features.committee_enabled ? ['admin', 'officer', 'Membership Committee Chair'] : ['admin']
-                },
-                { 
-                  title: 'Review Applications', 
-                  desc: 'Read and review submitted candidate applications.', 
-                  icon: ClipboardCheck, 
-                  path: '/review-applications',
-                  color: 'bg-ivy text-cream',
-                  roles: ['admin', 'Membership Committee', 'Membership Committee Chair']
-                }
-              ]
-              .filter(tool => {
-                const lowerEmail = (userEmail || '').toLowerCase().trim();
-                if ((lowerEmail === 'james.haywood@orderofkpi.org' || lowerEmail === 'brian.johnson@orderofkpi.org') && 
-                    (tool.title === 'Past Elections & Records' || tool.title === 'Membership Dashboard')) {
-                  return true;
-                }
-                if (!tool.roles) return true;
-                if (isAdmin) return true;
-                if (isBrian && tool.roles.includes('brian')) return true;
-                
-                // Check direct role inclusion
-                if (tool.roles.includes(userRole || '')) return true;
-                
-                // Chair falls back to Committee actions
-                if (isChair && (tool.roles.includes('Membership Committee Chair') || tool.roles.includes('Membership Committee'))) return true;
-                
-                // Committee members match committee roles
-                if (isMembershipCommittee && tool.roles.includes('Membership Committee')) return true;
-                
-                return false;
-              })
-              .map((tool) => (
-                <Link
-                  key={tool.title}
-                  to={tool.path}
-                  className={`p-6 rounded-lg shadow-soft hover:scale-[1.02] transition-all border border-gold/10 flex flex-col h-full ${tool.color}`}
-                >
-                  <tool.icon className="w-8 h-8 mb-4 opacity-80" />
-                  <h3 className="text-xl font-display mb-2">{tool.title}</h3>
-                  <p className="text-[10px] opacity-70 font-body mb-6 flex-1">{tool.desc}</p>
-                  <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest group">
-                    Open <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </motion.section>
-        )}
+        {(() => {
+          const lowerEmail = (userEmail || '').toLowerCase().trim();
+          const accessibleTools = [
+            { 
+              title: 'Member Directory', 
+              desc: 'View active member accounts and contact emails.', 
+              icon: ClipboardCheck, 
+              path: '/member-directory',
+              color: 'bg-gold text-ivy',
+              roles: ['admin']
+            },
+            { 
+              title: 'Admin Dashboard', 
+              desc: 'Manage member accounts, permissions, and settings.', 
+              icon: Settings, 
+              path: '/admin-dashboard',
+              color: 'bg-ivy text-cream',
+              roles: ['admin']
+            },
+            { 
+              title: 'Candidate Tracker', 
+              desc: 'Track applicant stages and intake progress.', 
+              icon: Users, 
+              path: '/candidate-tracker',
+              color: 'bg-gold text-ivy',
+              roles: ['admin', 'officer', 'Membership Committee', 'Membership Committee Chair']
+            },
+            { 
+              title: 'Past Elections & Records', 
+              desc: 'Official results and archive records from past elections.', 
+              icon: Archive, 
+              path: '/governance-archives',
+              color: 'bg-ivy text-cream',
+              roles: ['admin', 'officer', 'Membership Committee', 'Membership Committee Chair']
+            },
+            { 
+              title: 'Member Account Management', 
+              desc: 'Update member profiles, titles, and permissions.', 
+              icon: Users, 
+              path: '/admin-dashboard?tab=users',
+              color: 'bg-gold text-ivy',
+              roles: ['admin']
+            },
+            { 
+              title: 'Membership Dashboard', 
+              desc: 'Manage applicant stages, review activity, and committee members.', 
+              icon: ShieldCheck, 
+              path: '/chair-dashboard',
+              color: 'bg-gold text-ivy',
+              roles: features.committee_enabled ? ['admin', 'officer', 'Membership Committee Chair'] : ['admin']
+            },
+            { 
+              title: 'Review Applications', 
+              desc: 'Read and review submitted candidate applications.', 
+              icon: ClipboardCheck, 
+              path: '/review-applications',
+              color: 'bg-ivy text-cream',
+              roles: ['admin', 'Membership Committee', 'Membership Committee Chair']
+            }
+          ].filter(tool => {
+            if ((lowerEmail === 'james.haywood@orderofkpi.org' || lowerEmail === 'brian.johnson@orderofkpi.org') && 
+                (tool.title === 'Past Elections & Records' || tool.title === 'Membership Dashboard')) {
+              return true;
+            }
+            if (!tool.roles) return true;
+            if (isAdmin) return true;
+            if (isBrian && tool.roles.includes('brian')) return true;
+            
+            // Check direct role inclusion
+            if (tool.roles.includes(userRole || '')) return true;
+            
+            // Chair falls back to Committee actions
+            if (isChair && (tool.roles.includes('Membership Committee Chair') || tool.roles.includes('Membership Committee'))) return true;
+            
+            // Committee members match committee roles
+            if (isMembershipCommittee && tool.roles.includes('Membership Committee')) return true;
+            
+            return false;
+          });
+
+          if (!isApplicant && accessibleTools.length > 0) {
+            return (
+              <motion.section variants={itemVariants} className="mb-20">
+                <h2 className="text-2xl font-display text-ivy mb-8 uppercase tracking-widest border-b border-gold/20 pb-4">Officer & Committee Tools</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {accessibleTools.map((tool) => (
+                    <Link
+                      key={tool.title}
+                      to={tool.path}
+                      className={`p-6 rounded-lg shadow-soft hover:scale-[1.02] transition-all border border-gold/10 flex flex-col h-full ${tool.color}`}
+                    >
+                      <tool.icon className="w-8 h-8 mb-4 opacity-80" />
+                      <h3 className="text-xl font-display mb-2">{tool.title}</h3>
+                      <p className="text-[10px] opacity-70 font-body mb-6 flex-1">{tool.desc}</p>
+                      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest group">
+                        Open <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </motion.section>
+            );
+          }
+          return null;
+        })()}
 
         {/* Footer Branding */}
         <motion.div variants={itemVariants} className="pt-12 border-t border-gold/10 flex justify-between items-center text-[10px] uppercase tracking-[0.3em] text-ivy/20 font-bold">
@@ -568,7 +431,9 @@ export default function MemberPortal() {
 
       {/* Committee Roster Popup Modal */}
       <AnimatePresence>
-        {selectedCommitteeModal && (
+        {selectedCommitteeModal ? (() => {
+          const userHasAccess = hasCommitteeAccess(selectedCommitteeModal.slug, normUser);
+          return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -588,8 +453,8 @@ export default function MemberPortal() {
                     {selectedCommitteeModal.description}
                   </p>
                 </div>
-                <button
-                  onClick={() => setSelectedCommitteeModal(null)}
+              <button
+                  onClick={() => { setSelectedCommitteeModal(null); setContactCommitteeSlug(null); }}
                   className="p-2 rounded-full hover:bg-cream text-ivy/50 hover:text-ivy transition-colors"
                   title="Close Roster"
                 >
@@ -672,10 +537,18 @@ export default function MemberPortal() {
                 <p className="text-xs text-ivy/60">
                   Interested in joining? Contact the committee chair directly.
                 </p>
-                <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="flex items-center gap-3 w-fit">
+                  {userHasAccess && (
+                    <Link
+                      to={`/committee/${selectedCommitteeModal.slug}`}
+                      className="px-6 py-2 bg-ivy text-cream rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-gold hover:text-ivy transition-all w-fit"
+                    >
+                      Open Workspace
+                    </Link>
+                  )}
                   <button
                     onClick={() => setSelectedCommitteeModal(null)}
-                    className="px-4 py-2 border border-gold/20 rounded-xl text-xs font-bold uppercase tracking-wider text-ivy hover:bg-cream transition-colors w-full sm:w-auto"
+                    className="px-6 py-2 border border-gold/20 rounded-xl text-xs font-bold uppercase tracking-wider text-ivy hover:bg-cream transition-colors w-fit"
                   >
                     Close
                   </button>
@@ -685,21 +558,54 @@ export default function MemberPortal() {
                     const recipientNames = chairs.length > 0 ? chairs.map(c => c.name).join(' & ') : 'Executive Board';
                     const mailtoSubject = encodeURIComponent(`Interest in Joining ${selectedCommitteeModal.name}`);
                     const mailtoBody = encodeURIComponent(`Dear ${recipientNames},\n\nI am interested in joining the ${selectedCommitteeModal.name}. Please contact me regarding committee meetings and membership steps.\n\nRespectfully,`);
+                    
+                    const showContactModal = contactCommitteeSlug === selectedCommitteeModal.slug;
+
                     return (
-                      <a
-                        href={`mailto:${recipientEmails}?subject=${mailtoSubject}&body=${mailtoBody}`}
-                        className="px-5 py-2 bg-gold text-ivy font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-ivy hover:text-cream transition-all flex items-center justify-center gap-2 w-full sm:w-auto shadow-sm"
-                      >
-                        <Mail size={14} />
-                        <span>Contact Chair to Join</span>
-                      </a>
+                      <>
+                        <button
+                          onClick={() => setContactCommitteeSlug(selectedCommitteeModal.slug)}
+                          className="px-6 py-2 bg-gold text-ivy font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-ivy hover:text-cream transition-all flex items-center justify-center gap-2 w-fit shadow-sm"
+                        >
+                          <Mail size={14} />
+                          <span>Contact Chair to Join</span>
+                        </button>
+                        
+                        {showContactModal && (
+                          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <div className="bg-white p-6 rounded-2xl w-fit min-w-[320px] max-w-sm space-y-4 shadow-2xl">
+                              <h3 className="font-bold text-ivy">Contact Committee Chair(s)</h3>
+                              <p className="text-xs text-ivy/70">
+                                You can email the committee chairs directly or copy their email address to your preferred mail application.
+                              </p>
+                              <div className="p-3 bg-cream rounded-lg text-[10px] break-all font-mono border border-gold/20">
+                                {recipientEmails}
+                              </div>
+                              <div className="flex gap-2">
+                                <a
+                                  href={`mailto:${recipientEmails}?subject=${mailtoSubject}&body=${mailtoBody}`}
+                                  className="px-6 py-2 bg-gold text-ivy text-center font-bold rounded-xl text-xs uppercase w-fit"
+                                >
+                                  Send Email
+                                </a>
+                                <button
+                                  onClick={() => setContactCommitteeSlug(null)}
+                                  className="px-6 py-2 border border-gold/20 rounded-xl text-xs font-bold uppercase w-fit"
+                                >
+                                  Close
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </>
                     );
                   })()}
                 </div>
               </div>
             </motion.div>
           </div>
-        )}
+        )})() : null}
       </AnimatePresence>
     </div>
   );

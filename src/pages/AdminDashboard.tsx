@@ -1975,10 +1975,10 @@ export default function AdminDashboard() {
                 <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-gold/20 bg-cream/20">
                   <div className="space-y-1">
                     <h4 className="font-bold text-ivy text-sm flex items-center gap-2">
-                      <Users className="w-4 h-4 text-gold" /> Standing Committees Visibility
+                      <Users className="w-4 h-4 text-gold" /> KP Committees Visibility
                     </h4>
                     <p className="text-xs text-ivy/70">
-                      When disabled, the Standing Committees section in the Member Portal is completely hidden from all general members and officers, keeping it in "stealth" mode (Admins can still view it). When enabled, access is fully restored based on the standard role-based access control.
+                      When disabled, the KP Committees section in the Member Portal is completely hidden from all general members and officers, keeping it in "stealth" mode (Admins can still view it). When enabled, access is fully restored based on the standard role-based access control.
                     </p>
                   </div>
                   
@@ -2083,25 +2083,27 @@ export default function AdminDashboard() {
                     placeholder="user@orderofkpi.org"
                   />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/60 mb-2">Role</label>
-                  <select
-                    value={editingMember?.role || 'member'}
-                    onChange={e => setEditingMember({...editingMember!, role: e.target.value as any})}
-                    className="w-full px-4 py-2.5 border border-gold/20 rounded-xl focus:ring-2 focus:ring-gold/20 outline-none bg-white cursor-pointer"
-                  >
-                    <option value="member">Member</option>
-                    <option value="officer">Officer</option>
-                    <option value="Committee Chair">Committee Chair</option>
-                    <option value="Digital & Tech Committee Chair">Digital & Tech Committee Chair</option>
-                    <option value="Scholarship Committee Chair">Scholarship Committee Chair</option>
-                    <option value="Judicial & Ethics Committee Chair">Judicial & Ethics Committee Chair</option>
-                    <option value="Annual Event Committee Chair">Annual Event Committee Chair</option>
-                    <option value="Transfer Member Committee Chair">Transfer Member Committee Chair</option>
-                    <option value="Membership Committee Chair">Membership Committee Chair</option>
-                    <option value="Membership Committee">Membership Committee Member</option>
-                    <option value="admin">Administrator</option>
-                  </select>
+                <div className="col-span-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/60 mb-2">Roles</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {['member', 'officer', 'Committee Chair', 'Digital & Tech Committee Chair', 'Scholarship Committee Chair', 'Judicial & Ethics Committee Chair', 'Annual Event Committee Chair', 'Transfer Member Committee Chair', 'Membership Committee Chair', 'Membership Committee', 'Super Committee', 'admin'].map(r => (
+                      <label key={r} className="flex items-center gap-2 text-xs cursor-pointer hover:text-gold">
+                        <input
+                          type="checkbox"
+                          checked={(editingMember?.roles || (editingMember?.role ? [editingMember.role] : [])).includes(r)}
+                          onChange={e => {
+                            const currentRoles = editingMember?.roles || (editingMember?.role ? [editingMember.role] : []);
+                            const newRoles = e.target.checked
+                              ? [...currentRoles, r]
+                              : currentRoles.filter(role => role !== r);
+                            setEditingMember({...editingMember!, roles: newRoles, role: newRoles[0] || 'member'});
+                          }}
+                          className="rounded border-gold/20 text-gold focus:ring-gold/20"
+                        />
+                        {r}
+                      </label>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/60 mb-2">Official Title</label>
