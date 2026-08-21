@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence, useScroll, useSpring } from 'motion/react';
 import EventAddToCalendar from '../components/EventAddToCalendar';
+import { renderFormattedTextWithLinks } from '../lib/linkParser';
 
 const MotionLink = motion(Link);
 
@@ -514,7 +515,7 @@ export default function Agenda() {
                   </div>
                   {event.notes && (
                     <p className="text-xs text-silver/60 italic font-mono bg-pure-black/30 p-2.5 rounded-lg border border-silver/5 mt-1">
-                      {event.notes}
+                      {renderFormattedTextWithLinks(event.notes)}
                     </p>
                   )}
                 </div>
@@ -557,7 +558,7 @@ export default function Agenda() {
 
                       {event.description && (
                         <p className="text-xs md:text-sm text-silver/70 leading-relaxed max-w-2xl font-light">
-                          {event.description}
+                          {renderFormattedTextWithLinks(event.description)}
                         </p>
                       )}
 
@@ -570,7 +571,7 @@ export default function Agenda() {
 
                       {event.notes && (
                         <p className="text-xs text-silver/60 italic font-mono bg-pure-black/30 p-2.5 rounded-lg border border-silver/5 mt-1">
-                          {event.notes}
+                          {renderFormattedTextWithLinks(event.notes)}
                         </p>
                       )}
 

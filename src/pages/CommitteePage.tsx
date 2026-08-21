@@ -38,6 +38,7 @@ import { CommitteeSlug, CommitteeRole, STANDING_COMMITTEES, Member } from '../ty
 import { hasCommitteeAccess, isCommitteeChair, normalizeUserRBAC, defaultMembers, isEligibleFinancialMember } from '../lib/memberDb';
 import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 import { logPortalSectionAccess } from '../lib/auditLogger';
+import { renderFormattedTextWithLinks } from '../lib/linkParser';
 
 interface CommitteeResource {
   id: string;
@@ -1003,7 +1004,7 @@ export default function CommitteePage() {
 
             <div className="bg-white/80 border border-gold/15 rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
               <p className="text-ivy/80 text-xs leading-relaxed line-clamp-2 max-w-4xl">
-                {announcements[0].content}
+                {renderFormattedTextWithLinks(announcements[0].content)}
               </p>
               <div className="flex items-center gap-4 text-[10px] text-ivy/50 shrink-0 uppercase tracking-widest font-semibold border-t md:border-t-0 md:border-l border-gold/20 pt-2 md:pt-0 md:pl-4">
                 <span>By {announcements[0].author}</span>
@@ -1431,7 +1432,7 @@ export default function CommitteePage() {
                     </h4>
 
                     <p className="text-ivy/80 text-sm leading-relaxed whitespace-pre-wrap">
-                      {ann.content}
+                      {renderFormattedTextWithLinks(ann.content)}
                     </p>
                   </div>
 
