@@ -1087,7 +1087,7 @@ export default function AdminDashboard() {
                         <td className="px-6 py-4">
                           <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                             member.role === 'admin' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
-                            member.role === 'Membership Committee Chair' ? 'bg-gold text-ivy font-extrabold' :
+                            (member.role && (member.role.includes('Chair') || member.role === 'Committee Chair')) ? 'bg-gold text-ivy font-extrabold' :
                             member.role === 'Membership Committee' ? 'bg-emerald-100 text-emerald-800' :
                             member.role === 'officer' ? 'bg-blue-100 text-blue-800' :
                             'bg-gray-100 text-gray-800'
@@ -2092,9 +2092,15 @@ export default function AdminDashboard() {
                   >
                     <option value="member">Member</option>
                     <option value="officer">Officer</option>
-                    <option value="admin">Administrator</option>
-                    <option value="Membership Committee">Membership Committee Member</option>
+                    <option value="Committee Chair">Committee Chair</option>
+                    <option value="Digital & Tech Committee Chair">Digital & Tech Committee Chair</option>
+                    <option value="Scholarship Committee Chair">Scholarship Committee Chair</option>
+                    <option value="Judicial & Ethics Committee Chair">Judicial & Ethics Committee Chair</option>
+                    <option value="Annual Event Committee Chair">Annual Event Committee Chair</option>
+                    <option value="Transfer Member Committee Chair">Transfer Member Committee Chair</option>
                     <option value="Membership Committee Chair">Membership Committee Chair</option>
+                    <option value="Membership Committee">Membership Committee Member</option>
+                    <option value="admin">Administrator</option>
                   </select>
                 </div>
                 <div>

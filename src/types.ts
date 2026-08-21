@@ -77,7 +77,7 @@ export const STANDING_COMMITTEES: CommitteeDefinition[] = [
   }
 ];
 
-export type UserRole = 'admin' | 'officer' | 'member' | 'Membership Committee' | 'Membership Committee Chair' | 'prospective' | 'applicant';
+export type UserRole = 'admin' | 'officer' | 'member' | 'Committee Chair' | 'Membership Committee' | 'Membership Committee Chair' | 'prospective' | 'applicant' | (string & {});
 
 export interface Member {
   email: string;

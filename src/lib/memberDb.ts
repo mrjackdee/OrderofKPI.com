@@ -138,6 +138,19 @@ export const defaultMembers: MemberUser[] = [
   return true;
 }) as MemberUser[];
 
+export function is1stAntiBasileus(user?: { email?: string; title?: string; role?: string }): boolean {
+  if (!user) return false;
+  const email = (user.email || '').toLowerCase().trim();
+  const title = (user.title || '').toLowerCase().trim();
+  const role = (user.role || '').toLowerCase().trim();
+  return (
+    email === 'anthony.jones@orderofkpi.org' ||
+    email === 'qa.officer@orderofkpi.org' ||
+    title.includes('1st anti') ||
+    role.includes('1st anti')
+  );
+}
+
 /**
  * Migration & RBAC normalization helper for user roles & committee assignments.
  * Ensures backward compatibility for legacy roles while upgrading to new RBAC schema.
@@ -150,14 +163,14 @@ export function normalizeUserRBAC(user: {
   committeeRoles?: Record<string, CommitteeRole | string>;
 }): {
   email: string;
-  role: 'admin' | 'officer' | 'member' | 'prospective' | 'applicant';
+  role: 'admin' | 'officer' | 'Committee Chair' | 'member' | 'prospective' | 'applicant';
   title?: string;
   committees: CommitteeSlug[];
   committeeRoles: Record<string, CommitteeRole>;
 } {
   const normEmail = (user.email || '').toLowerCase().trim();
   const rawRole = (user.role || 'member').trim();
-  let normalizedRole: 'admin' | 'officer' | 'member' | 'prospective' | 'applicant' = 'member';
+  let normalizedRole: 'admin' | 'officer' | 'Committee Chair' | 'member' | 'prospective' | 'applicant' = 'member';
   let title = user.title;
   let committees: CommitteeSlug[] = Array.isArray(user.committees) ? [...(user.committees as CommitteeSlug[])] : [];
   let committeeRoles: Record<string, CommitteeRole> = { ...(user.committeeRoles as Record<string, CommitteeRole> || {}) };
@@ -165,23 +178,49 @@ export function normalizeUserRBAC(user: {
   if (rawRole === 'admin' || normEmail === 'admin@orderofkpi.org' || normEmail === 'qa.admin@orderofkpi.org' || normEmail === 'info@kpi2012.org') {
     normalizedRole = 'admin';
     committees = [...ALL_COMMITTEE_SLUGS];
+    ALL_COMMITTEE_SLUGS.forEach(slug => { committeeRoles[slug] = 'chair'; });
   } else if (rawRole === 'Super Committee Chair' || title === 'Super Committee Chair' || normEmail === 'brian.johnson@orderofkpi.org') {
     normalizedRole = 'officer';
     title = 'Super Committee Chair';
     committees = [...ALL_COMMITTEE_SLUGS];
-    ALL_COMMITTEE_SLUGS.forEach(slug => {
-      committeeRoles[slug] = 'chair';
-    });
+    ALL_COMMITTEE_SLUGS.forEach(slug => { committeeRoles[slug] = 'chair'; });
+  } else if (is1stAntiBasileus(user)) {
+    normalizedRole = 'officer';
+    if (!title) title = '1st Anti-Basileus';
+    committees = [...ALL_COMMITTEE_SLUGS];
+    ALL_COMMITTEE_SLUGS.forEach(slug => { committeeRoles[slug] = 'chair'; });
+  } else if (rawRole === 'Committee Chair' || rawRole === 'Membership Committee Chair' || rawRole.toLowerCase().includes('chair')) {
+    normalizedRole = 'Committee Chair';
+    if (!title) title = rawRole;
+
+    const lowerRole = rawRole.toLowerCase();
+    if (lowerRole.includes('digital') || lowerRole.includes('tech')) {
+      if (!committees.includes('digital_technology')) committees.push('digital_technology');
+      committeeRoles['digital_technology'] = 'chair';
+    } else if (lowerRole.includes('scholarship')) {
+      if (!committees.includes('scholarship')) committees.push('scholarship');
+      committeeRoles['scholarship'] = 'chair';
+    } else if (lowerRole.includes('judicial') || lowerRole.includes('ethics')) {
+      if (!committees.includes('judicial_ethics')) committees.push('judicial_ethics');
+      committeeRoles['judicial_ethics'] = 'chair';
+    } else if (lowerRole.includes('annual') || lowerRole.includes('event')) {
+      if (!committees.includes('annual_event')) committees.push('annual_event');
+      committeeRoles['annual_event'] = 'chair';
+    } else if (lowerRole.includes('transfer')) {
+      if (!committees.includes('transfer_member')) committees.push('transfer_member');
+      committeeRoles['transfer_member'] = 'chair';
+    } else if (lowerRole.includes('membership') || lowerRole.includes('intake') || normEmail === 'james.haywood@orderofkpi.org' || normEmail === 'qa.chair@orderofkpi.org') {
+      if (!committees.includes('membership_intake')) committees.push('membership_intake');
+      committeeRoles['membership_intake'] = 'chair';
+    } else {
+      if (committees.length > 0) {
+        committees.forEach(slug => { committeeRoles[slug] = 'chair'; });
+      }
+    }
   } else if (rawRole === 'officer' || rawRole.toLowerCase().includes('officer')) {
     normalizedRole = 'officer';
-    // Officers have oversight across committees
   } else if (rawRole === 'applicant' || rawRole === 'prospective') {
     normalizedRole = rawRole;
-  } else if (rawRole === 'Membership Committee Chair' || normEmail === 'james.haywood@orderofkpi.org' || normEmail === 'qa.chair@orderofkpi.org') {
-    normalizedRole = 'officer';
-    if (!title) title = '2nd Anti-Basileus / Committee Chair';
-    if (!committees.includes('membership_intake')) committees.push('membership_intake');
-    committeeRoles['membership_intake'] = 'chair';
   } else if (rawRole === 'Membership Committee' || normEmail === 'qa.committee@orderofkpi.org' || normEmail === 'deshaun.safford@orderofkpi.org' || normEmail === 'jason.pilar@orderofkpi.org') {
     normalizedRole = 'member';
     if (!committees.includes('membership_intake')) committees.push('membership_intake');
@@ -214,7 +253,15 @@ export function hasCommitteeAccess(
   }
 ): boolean {
   const norm = normalizeUserRBAC(user);
-  if (norm.role === 'admin' || norm.role === 'officer' || norm.title === 'Super Committee Chair' || norm.email === 'brian.johnson@orderofkpi.org') return true;
+  if (
+    norm.role === 'admin' ||
+    norm.role === 'officer' ||
+    norm.title === 'Super Committee Chair' ||
+    norm.email === 'brian.johnson@orderofkpi.org' ||
+    is1stAntiBasileus(user) ||
+    is1stAntiBasileus(norm)
+  ) return true;
+  if (norm.role === 'Committee Chair' && norm.committees.includes(committeeSlug)) return true;
   return norm.committees.includes(committeeSlug);
 }
 
@@ -233,8 +280,18 @@ export function isCommitteeChair(
   }
 ): boolean {
   const norm = normalizeUserRBAC(user);
-  if (norm.role === 'admin' || norm.title === 'Super Committee Chair' || norm.email === 'brian.johnson@orderofkpi.org') return true;
-  return norm.committeeRoles[committeeSlug] === 'chair';
+  if (
+    norm.role === 'admin' ||
+    norm.title === 'Super Committee Chair' ||
+    norm.email === 'brian.johnson@orderofkpi.org' ||
+    is1stAntiBasileus(user) ||
+    is1stAntiBasileus(norm)
+  ) {
+    return true;
+  }
+  if (norm.committeeRoles[committeeSlug] === 'chair') return true;
+  if (norm.role === 'Committee Chair' && norm.committees.includes(committeeSlug)) return true;
+  return false;
 }
 
 /**

@@ -35,7 +35,7 @@ import {
 import MemberHeader from '../components/MemberHeader';
 import CommitteeAddToCalendar from '../components/CommitteeAddToCalendar';
 import { CommitteeSlug, CommitteeRole, STANDING_COMMITTEES, Member } from '../types';
-import { hasCommitteeAccess, isCommitteeChair, normalizeUserRBAC, defaultMembers, isEligibleFinancialMember } from '../lib/memberDb';
+import { hasCommitteeAccess, isCommitteeChair, normalizeUserRBAC, defaultMembers, isEligibleFinancialMember, is1stAntiBasileus } from '../lib/memberDb';
 import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import { renderFormattedTextWithLinks } from '../lib/linkParser';
@@ -168,7 +168,9 @@ export default function CommitteePage() {
   const isChair = slug ? isCommitteeChair(slug as CommitteeSlug, normUser) : false;
   const isAdmin = normUser.role === 'admin' || normUser.email === 'admin@orderofkpi.org' || normUser.email === 'qa.admin@orderofkpi.org' || normUser.email === 'info@kpi2012.org';
   const isOfficer = normUser.role === 'officer';
-  const canEdit = isChair || isAdmin || isOfficer;
+  const is1stAnti = is1stAntiBasileus(normUser) || is1stAntiBasileus({ email: userEmail, role: userRole });
+  const isSuperChair = normUser.title === 'Super Committee Chair' || userEmail?.toLowerCase() === 'brian.johnson@orderofkpi.org';
+  const canEdit = isChair || isAdmin || is1stAnti || isSuperChair;
 
   // Active sub-tab state
   const [activeTab, setActiveTab] = useState<'calendar' | 'resources' | 'roster' | 'announcements'>('calendar');
