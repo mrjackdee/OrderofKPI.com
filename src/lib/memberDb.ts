@@ -228,7 +228,8 @@ export function getVisibleCommitteesForUser(user: {
   committeeRoles?: Record<string, CommitteeRole | string>;
 }) {
   const norm = normalizeUserRBAC(user);
-  const isExecutive = norm.role === 'admin' || norm.role === 'officer';
+  const isBrian = (user.email || '').toLowerCase().trim() === 'brian.johnson@orderofkpi.org';
+  const isExecutive = norm.role === 'admin' || norm.role === 'officer' || isBrian;
 
   return STANDING_COMMITTEES.map(def => {
     const isAssigned = norm.committees.includes(def.slug);

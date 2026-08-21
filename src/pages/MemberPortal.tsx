@@ -212,7 +212,7 @@ export default function MemberPortal() {
         </motion.div>
 
         {/* Standing Committees Section (RBAC filtered) */}
-        {!isApplicant && visibleCommittees.length > 0 && (isAdmin || features.committee_enabled) && (
+        {!isApplicant && visibleCommittees.length > 0 && (isAdmin || isBrian) && (
           <motion.section variants={itemVariants} className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gold/20 pb-4">
               <div>
@@ -393,7 +393,7 @@ export default function MemberPortal() {
               .filter(tool => {
                 const lowerEmail = (userEmail || '').toLowerCase().trim();
                 if ((lowerEmail === 'james.haywood@orderofkpi.org' || lowerEmail === 'brian.johnson@orderofkpi.org') && 
-                    (tool.title === 'Dean Voting Results' || tool.title === 'Dean Nomination Results')) {
+                    (tool.title === 'Dean Voting Results' || tool.title === 'Dean Nomination Results' || tool.title === 'Membership Chair Portal')) {
                   return true;
                 }
                 if (!tool.roles) return true;

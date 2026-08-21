@@ -56,20 +56,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   const isAdmin = normUser.role === 'admin';
   const isOfficer = normUser.role === 'officer';
+  const isBrian = normEmail === 'brian.johnson@orderofkpi.org';
 
-  // Committee-level access control
-  if (committeeSlug) {
-    if (!isAdmin && !isOfficer) {
-      const hasAccess = hasCommitteeAccess(committeeSlug, normUser);
-      if (!hasAccess) {
-        return <Navigate to="/member-portal" replace />;
-      }
-      if (requireChair) {
-        const isChair = isCommitteeChair(committeeSlug, normUser);
-        if (!isChair) {
-          return <Navigate to="/member-portal" replace />;
-        }
-      }
+  // Standing committees route protection: only admins and brian.johnson@orderofkpi.org can access committee pages or chair dashboard
+  if (committeeSlug || location.pathname === '/chair-dashboard' || location.pathname.startsWith('/committee/')) {
+    if (!isAdmin && !isBrian) {
+      return <Navigate to="/member-portal" replace />;
     }
   }
 
