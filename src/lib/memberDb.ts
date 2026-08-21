@@ -86,10 +86,10 @@ export const defaultMembers: MemberUser[] = [
   { 
     name: "Brian Johnson", 
     email: "brian.johnson@orderofkpi.org", 
-    role: "member", 
-    title: "Grammateus / Committee Member",
-    committees: ['membership_intake'],
-    committeeRoles: { membership_intake: 'member' }
+    role: "officer", 
+    title: "Super Committee Chair",
+    committees: ['annual_event', 'scholarship', 'judicial_ethics', 'digital_technology', 'membership_intake', 'transfer_member'],
+    committeeRoles: { annual_event: 'chair', scholarship: 'chair', judicial_ethics: 'chair', digital_technology: 'chair', membership_intake: 'chair', transfer_member: 'chair' }
   },
   { 
     name: "Deshaun Safford", 
@@ -164,6 +164,13 @@ export function normalizeUserRBAC(user: {
   if (rawRole === 'admin' || normEmail === 'admin@orderofkpi.org' || normEmail === 'qa.admin@orderofkpi.org' || normEmail === 'info@kpi2012.org') {
     normalizedRole = 'admin';
     committees = [...ALL_COMMITTEE_SLUGS];
+  } else if (rawRole === 'Super Committee Chair' || title === 'Super Committee Chair' || normEmail === 'brian.johnson@orderofkpi.org') {
+    normalizedRole = 'officer';
+    title = 'Super Committee Chair';
+    committees = [...ALL_COMMITTEE_SLUGS];
+    ALL_COMMITTEE_SLUGS.forEach(slug => {
+      committeeRoles[slug] = 'chair';
+    });
   } else if (rawRole === 'officer' || rawRole.toLowerCase().includes('officer')) {
     normalizedRole = 'officer';
     // Officers have oversight across committees
@@ -174,9 +181,8 @@ export function normalizeUserRBAC(user: {
     if (!title) title = '2nd Anti-Basileus / Committee Chair';
     if (!committees.includes('membership_intake')) committees.push('membership_intake');
     committeeRoles['membership_intake'] = 'chair';
-  } else if (rawRole === 'Membership Committee' || normEmail === 'qa.committee@orderofkpi.org' || normEmail === 'brian.johnson@orderofkpi.org' || normEmail === 'deshaun.safford@orderofkpi.org' || normEmail === 'jason.pilar@orderofkpi.org') {
+  } else if (rawRole === 'Membership Committee' || normEmail === 'qa.committee@orderofkpi.org' || normEmail === 'deshaun.safford@orderofkpi.org' || normEmail === 'jason.pilar@orderofkpi.org') {
     normalizedRole = 'member';
-    if (!title && normEmail === 'brian.johnson@orderofkpi.org') title = 'Grammateus / Committee Member';
     if (!committees.includes('membership_intake')) committees.push('membership_intake');
     if (!committeeRoles['membership_intake']) committeeRoles['membership_intake'] = 'member';
   } else {
@@ -201,12 +207,13 @@ export function hasCommitteeAccess(
   user: {
     email?: string;
     role?: string;
+    title?: string;
     committees?: CommitteeSlug[] | string[];
     committeeRoles?: Record<string, CommitteeRole | string>;
   }
 ): boolean {
   const norm = normalizeUserRBAC(user);
-  if (norm.role === 'admin' || norm.role === 'officer') return true;
+  if (norm.role === 'admin' || norm.role === 'officer' || norm.title === 'Super Committee Chair' || norm.email === 'brian.johnson@orderofkpi.org') return true;
   return norm.committees.includes(committeeSlug);
 }
 
@@ -219,12 +226,13 @@ export function isCommitteeChair(
   user: {
     email?: string;
     role?: string;
+    title?: string;
     committees?: CommitteeSlug[] | string[];
     committeeRoles?: Record<string, CommitteeRole | string>;
   }
 ): boolean {
   const norm = normalizeUserRBAC(user);
-  if (norm.role === 'admin') return true;
+  if (norm.role === 'admin' || norm.title === 'Super Committee Chair' || norm.email === 'brian.johnson@orderofkpi.org') return true;
   return norm.committeeRoles[committeeSlug] === 'chair';
 }
 
@@ -234,12 +242,13 @@ export function isCommitteeChair(
 export function getVisibleCommitteesForUser(user: {
   email?: string;
   role?: string;
+  title?: string;
   committees?: CommitteeSlug[] | string[];
   committeeRoles?: Record<string, CommitteeRole | string>;
 }) {
   const norm = normalizeUserRBAC(user);
-  const isBrian = (norm.email || user.email || '').toLowerCase().trim() === 'brian.johnson@orderofkpi.org';
-  const isExecutive = norm.role === 'admin' || norm.role === 'officer' || isBrian;
+  const isSuperChair = norm.title === 'Super Committee Chair' || (norm.email || user.email || '').toLowerCase().trim() === 'brian.johnson@orderofkpi.org';
+  const isExecutive = norm.role === 'admin' || norm.role === 'officer' || isSuperChair;
 
   return STANDING_COMMITTEES.map(def => {
     const isAssigned = norm.committees.includes(def.slug);

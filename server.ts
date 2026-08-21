@@ -436,7 +436,7 @@ const defaultUsers = [
   { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", intake_class: "", financial_status: "active", industry: "Leadership" },
   { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "officer", intake_class: "", financial_status: "active", industry: "Consulting" },
   { name: "DeShaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee", intake_class: "", financial_status: "active", industry: "Education" },
-  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member", intake_class: "", financial_status: "active", industry: "Engineering" },
+  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "officer", title: "Super Committee Chair", intake_class: "", financial_status: "active", industry: "Engineering", committees: ['annual_event', 'scholarship', 'judicial_ethics', 'digital_technology', 'membership_intake', 'transfer_member'], committeeRoles: { annual_event: 'chair', scholarship: 'chair', judicial_ethics: 'chair', digital_technology: 'chair', membership_intake: 'chair', transfer_member: 'chair' } },
   { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "Membership Committee", intake_class: "", financial_status: "active", industry: "Management" },
   { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos", intake_class: "", financial_status: "active", industry: "Finance" },
   { name: "Edward Cook", email: "edward.cook@orderofkpi.org", role: "officer", title: "Epistoleus", intake_class: "", financial_status: "active", industry: "Law" },
@@ -3141,6 +3141,17 @@ async function startServer() {
           if (!roles['membership_intake']) {
             roles['membership_intake'] = (u.role === 'Membership Committee Chair' || u.email === 'james.haywood@orderofkpi.org') ? 'chair' : 'member';
           }
+        }
+
+        const normEmail = (u.email || '').toLowerCase().trim();
+        if (normEmail === 'brian.johnson@orderofkpi.org' || u.title === 'Super Committee Chair') {
+          u.title = 'Super Committee Chair';
+          u.role = 'officer';
+          const allSlugs = ['annual_event', 'scholarship', 'judicial_ethics', 'digital_technology', 'membership_intake', 'transfer_member'];
+          allSlugs.forEach(s => {
+            if (!comms.includes(s)) comms.push(s);
+            roles[s] = 'chair';
+          });
         }
 
         return {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Lock, Key, Check, AlertCircle, X, ShieldAlert, CheckCircle2, LogOut } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Lock, Key, Check, AlertCircle, X, ShieldAlert, CheckCircle2, LogOut, ArrowLeft } from 'lucide-react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { performHybridPasswordChange } from '../lib/memberDb';
 
 export default function MemberHeader() {
@@ -23,6 +23,8 @@ export default function MemberHeader() {
   const [successMessage, setSuccessMessage] = useState('');
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const isNotMemberPortal = location.pathname !== '/member-portal';
 
   useEffect(() => {
     const savedFirstName = sessionStorage.getItem('userFirstName');
@@ -147,6 +149,15 @@ export default function MemberHeader() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {isNotMemberPortal && (
+            <Link
+              to="/member-portal"
+              className="px-4 py-2 text-xs font-bold uppercase tracking-widest bg-[#D4AF37] hover:bg-white text-[#122c14] rounded-xl transition-all flex items-center gap-1.5 shadow-md"
+            >
+              <ArrowLeft size={13} /> Member Portal
+            </Link>
+          )}
+
           <button
             onClick={() => setShowModal(true)}
             className="px-4 py-2 text-xs font-bold uppercase tracking-widest bg-transparent border-2 border-[#B8860B]/40 hover:border-[#B8860B] text-white hover:bg-white/10 rounded-xl transition-all flex items-center gap-1.5"

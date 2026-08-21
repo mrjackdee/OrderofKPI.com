@@ -83,7 +83,7 @@ export default function App() {
           <Route path="membership-application" element={<ProtectedRoute><Application /></ProtectedRoute>} />
           <Route path="standalone-application" element={<StandaloneApplication />} />
           <Route path="review-applications" element={<ProtectedRoute allowedRoles={['admin', 'Membership Committee', 'Membership Committee Chair']}><ReviewApplications /></ProtectedRoute>} />
-          <Route path="chair-dashboard" element={<ProtectedRoute allowedRoles={features.committee_enabled ? ['admin', 'officer', 'Membership Committee Chair'] : ['admin']}><CommitteeChairDashboard /></ProtectedRoute>} />
+          <Route path="chair-dashboard" element={<ProtectedRoute allowedRoles={features.committee_enabled ? ['admin', 'officer', 'Membership Committee Chair', 'Super Committee Chair'] : ['admin']}><CommitteeChairDashboard /></ProtectedRoute>} />
           <Route path="committee/:slug" element={<ProtectedRoute allowedRoles={features.committee_enabled ? undefined : ['admin']}><CommitteePage /></ProtectedRoute>} />
           <Route path="dean-nomination" element={<ProtectedRoute><DeanNominationForm /></ProtectedRoute>} />
           <Route path="dean-nomination-dashboard" element={<ProtectedRoute allowedRoles={['admin', 'Membership Committee', 'Membership Committee Chair']}><DeanNominationDashboard /></ProtectedRoute>} />

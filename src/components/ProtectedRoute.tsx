@@ -57,18 +57,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const isAdmin = normUser.role === 'admin';
   const isOfficer = normUser.role === 'officer';
   const isBrian = normEmail === 'brian.johnson@orderofkpi.org';
+  const isSuperChair = normUser.title === 'Super Committee Chair' || isBrian;
 
-  // Standing committees route protection: only admins and brian.johnson@orderofkpi.org can access committee pages or chair dashboard
+  // Standing committees route protection: only admins and Super Committee Chair can access committee pages or chair dashboard
   if (committeeSlug || location.pathname === '/chair-dashboard' || location.pathname.startsWith('/committee/')) {
-    if (!isAdmin && !isBrian) {
+    if (!isAdmin && !isSuperChair) {
       return <Navigate to="/member-portal" replace />;
     }
   }
 
   // Role-Based Access Control Checks
   if (allowedRoles && allowedRoles.length > 0) {
-    // Admins always bypass checks
-    if (!isAdmin) {
+    // Admins and Super Committee Chair always bypass checks
+    if (!isAdmin && !isSuperChair) {
       const isChair = isCommitteeChair('membership_intake', normUser);
       const isCommittee = hasCommitteeAccess('membership_intake', normUser);
 
@@ -79,6 +80,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         if (role === 'member' && normUser.role !== 'applicant' && normUser.role !== 'prospective') return true;
         if ((role === 'Membership Committee' || role === 'membership_intake') && isCommittee) return true;
         if ((role === 'Membership Committee Chair' || role === 'membership_chair') && isChair) return true;
+        if (role === 'Super Committee Chair') return true;
         return false;
       });
 
