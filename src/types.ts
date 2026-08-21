@@ -25,53 +25,53 @@ export const STANDING_COMMITTEES: CommitteeDefinition[] = [
     slug: 'annual_event',
     name: 'Annual Event Committee',
     shortName: 'Annual Event',
-    description: 'Planning, organizing, and executing annual organizational galas, celebrations, and gatherings.',
-    purpose: 'Oversees logistics, venue coordination, registrations, and celebratory programming for the organization’s annual events.',
+    description: 'Oversees the planning and execution of the annual Founders Day event. Responsibilities include selecting the theme and venue, coordinating decorations, managing award presentations, securing entertainment, and overseeing beverage service.',
+    purpose: 'Oversees the planning and execution of the annual Founders Day event. Responsibilities include selecting the theme and venue, coordinating decorations, managing award presentations, securing entertainment, and overseeing beverage service.',
     icon: 'CalendarDays',
     defaultRoute: '/committee/annual_event'
-  },
-  {
-    slug: 'scholarship',
-    name: 'Scholarship Committee',
-    shortName: 'Scholarship',
-    description: 'Academic excellence endowments, award distribution, and scholarship candidate review.',
-    purpose: 'Administers scholarship endowments, evaluates academic grant applicants, and manages academic mentorship.',
-    icon: 'GraduationCap',
-    defaultRoute: '/committee/scholarship'
-  },
-  {
-    slug: 'judicial_ethics',
-    name: 'Judicial and Ethics Committee',
-    shortName: 'Judicial & Ethics',
-    description: 'Organizational constitution integrity, by-laws governance, and ethical standards oversight.',
-    purpose: 'Ensures compliance with organizational bylaws, handles constitutional amendments, and upholds ethical conduct.',
-    icon: 'Scale',
-    defaultRoute: '/committee/judicial_ethics'
   },
   {
     slug: 'digital_technology',
     name: 'Digital & Technology Committee',
     shortName: 'Digital & Tech',
-    description: 'Member portals, cloud infrastructure, systems security, and digital innovation initiatives.',
-    purpose: 'Engineers portal enhancements, manages digital infrastructure, identity systems, and technological assets.',
+    description: "Manages and maintains the organization's digital infrastructure, including website administration, technology integration, database management, and digital communications strategies.",
+    purpose: "Manages and maintains the organization's digital infrastructure, including website administration, technology integration, database management, and digital communications strategies.",
     icon: 'Laptop',
     defaultRoute: '/committee/digital_technology'
+  },
+  {
+    slug: 'judicial_ethics',
+    name: 'Judicial and Ethics Committee',
+    shortName: 'Judicial & Ethics',
+    description: 'Responsible for maintaining organizational integrity by investigating and addressing non-compliance, policy infractions, and unauthorized functions within Kappa Pi, The Order of KP, Inc., and the Membership Intake Process.',
+    purpose: 'Responsible for maintaining organizational integrity by investigating and addressing non-compliance, policy infractions, and unauthorized functions within Kappa Pi, The Order of KP, Inc., and the Membership Intake Process.',
+    icon: 'Scale',
+    defaultRoute: '/committee/judicial_ethics'
   },
   {
     slug: 'membership_intake',
     name: 'Membership Intake Committee',
     shortName: 'Membership Intake',
-    description: 'Prospective candidate tracking, application reviews, interviews, and Dean onboarding.',
-    purpose: 'Directs the official Membership Intake Process (MIP), candidate reviews, timeline milestones, and evaluations.',
+    description: 'Manages and oversees the membership intake process, ensuring all activities align with the standards and policies of Kappa Pi.',
+    purpose: 'Manages and oversees the membership intake process, ensuring all activities align with the standards and policies of Kappa Pi.',
     icon: 'Users',
     defaultRoute: '/chair-dashboard'
+  },
+  {
+    slug: 'scholarship',
+    name: 'Scholarship Committee',
+    shortName: 'Scholarship',
+    description: 'Governs and manages the scholarship foundation operating under The Order of KP, Inc.',
+    purpose: 'Governs and manages the scholarship foundation operating under The Order of KP, Inc.',
+    icon: 'GraduationCap',
+    defaultRoute: '/committee/scholarship'
   },
   {
     slug: 'transfer_member',
     name: 'Transfer Member Committee',
     shortName: 'Transfer Member',
-    description: 'Cross-chapter transitions, verification of credentials, and active roster reintegration.',
-    purpose: 'Facilitates seamless chapter transitions, credential verifications, and onboarding for transfer members.',
+    description: 'Develops, maintains, and clarifies policy language regarding the transfer and onboarding of members into Kappa Pi.',
+    purpose: 'Develops, maintains, and clarifies policy language regarding the transfer and onboarding of members into Kappa Pi.',
     icon: 'ArrowRightLeft',
     defaultRoute: '/committee/transfer_member'
   }

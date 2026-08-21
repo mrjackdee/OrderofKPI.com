@@ -452,7 +452,8 @@ const defaultUsers = [
   { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
   { name: "Brandon Hunter", email: "brandon.hunter@orderofkpi.org", role: "member", title: "", financial_status: "active", industry: "" },
   { name: "Terrell Singleton", email: "terrell.singleton@orderofkpi.org", role: "member", title: "", financial_status: "active", industry: "" },
-  { name: "Churtis Poulson", email: "churtis.poulson@orderofkpi.org", role: "member", title: "", financial_status: "active", industry: "" }
+  { name: "Churtis Poulson", email: "churtis.poulson@orderofkpi.org", role: "member", title: "", financial_status: "active", industry: "" },
+  { name: "Charles Basham", email: "charles.basham@orderofkpi.org", role: "member", title: "", financial_status: "active", industry: "" }
 ];
 
 const initialCandidates = [
@@ -472,6 +473,7 @@ const initialCandidates = [
 ];
 
 let useSqlite = true;
+let cachedSheetData: { lastFetched: number; data: any } = { lastFetched: 0, data: null };
 let sqliteDb: any = null;
 const jsonDbPath = path.join(process.cwd(), "kpi_members_v2.json");
 const candidatesJsonPath = path.join(process.cwd(), "candidates_fallback.json");
@@ -1164,6 +1166,70 @@ function findUser(email: string): UserRecord | null {
     };
   }
 
+  // Dynamic auto-establishment fallback for financial roster members (e.g., charles.basham@orderofkpi.org)
+  if (!userRecord) {
+    let sheetMatch: any = null;
+    if (cachedSheetData?.data?.members && Array.isArray(cachedSheetData.data.members)) {
+      sheetMatch = cachedSheetData.data.members.find((m: any) => 
+        (m.kpiEmail && m.kpiEmail.toLowerCase().trim() === normEmail) ||
+        (m.personalEmail && m.personalEmail.toLowerCase().trim() === normEmail)
+      );
+    }
+
+    if (sheetMatch || normEmail.endsWith('@orderofkpi.org')) {
+      const rawName = sheetMatch ? sheetMatch.fullName : normEmail.split('@')[0].replace('.', ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+      const firstName = sheetMatch ? sheetMatch.firstName : rawName.split(' ')[0];
+      const lastName = sheetMatch ? sheetMatch.lastName : rawName.split(' ').slice(1).join(' ');
+      const defaultPassHash = hashPassword("atlanta");
+
+      userRecord = {
+        email: normEmail,
+        name: rawName,
+        first_name: firstName,
+        password_hash: defaultPassHash,
+        is_first_login: 1,
+        role: "member",
+        title: ""
+      };
+
+      if (useSqlite && sqliteDb) {
+        try {
+          sqliteDb.prepare(`
+            INSERT INTO users (
+              email, name, first_name, last_name, password_hash, is_first_login, 
+              role, title, financial_status, industry, is_test_credential
+            )
+            VALUES (?, ?, ?, ?, ?, 1, 'member', '', 'active', '', 0)
+          `).run(normEmail, rawName, firstName, lastName, defaultPassHash);
+        } catch (e) {}
+      }
+
+      if (fs.existsSync(jsonDbPath)) {
+        try {
+          const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+          if (!data[normEmail]) {
+            data[normEmail] = {
+              email: normEmail,
+              name: rawName,
+              first_name: firstName,
+              last_name: lastName,
+              password_hash: defaultPassHash,
+              is_first_login: 1,
+              role: 'member',
+              title: '',
+              financial_status: 'active',
+              is_test_credential: 0
+            };
+            fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
+          }
+        } catch (e) {}
+      }
+
+      syncLocalMemberToFirestoreCloud(normEmail).catch(() => {});
+      logEvent("system", "MEMBER_CREDS_AUTO_ESTABLISHED", `Auto-established login credentials for financial member ${rawName} (${normEmail}) with default role: member`);
+    }
+  }
+
   // Apply persistent password override if recorded!
   if (userRecord && globalPasswordOverrides[normEmail]) {
     userRecord.password_hash = globalPasswordOverrides[normEmail].hash;
@@ -1483,7 +1549,6 @@ async function startServer() {
 
   // Google Sheet Live Polling Cache & Listener
   const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1-IMvMUANALE3KC1UY46QwHpmdIeEM268ZXSCK_Amj3s/gviz/tq?tqx=out:csv';
-  let cachedSheetData: { lastFetched: number; data: any } = { lastFetched: 0, data: null };
 
   function parseCSVLine(line: string): string[] {
     const row: string[] = [];
@@ -1507,6 +1572,88 @@ async function startServer() {
     }
     row.push(current.trim());
     return row;
+  }
+
+  function autoProvisionFinancialMembers(membersList: any[]) {
+    if (!Array.isArray(membersList) || membersList.length === 0) return;
+    const defaultPassHash = hashPassword("atlanta");
+
+    for (const member of membersList) {
+      let email = (member.kpiEmail || member.personalEmail || "").toLowerCase().trim();
+      if (!email && member.firstName && member.lastName) {
+        email = `${member.firstName.toLowerCase().trim()}.${member.lastName.toLowerCase().trim()}@orderofkpi.org`;
+      }
+      if (!email) continue;
+
+      let userExistsInSqlite = false;
+      let userExistsInJson = false;
+
+      if (useSqlite && sqliteDb) {
+        try {
+          const row = sqliteDb.prepare("SELECT email FROM users WHERE LOWER(email) = ?").get(email);
+          if (row) userExistsInSqlite = true;
+        } catch (e) {}
+      }
+
+      if (fs.existsSync(jsonDbPath)) {
+        try {
+          const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+          if (data[email]) userExistsInJson = true;
+        } catch (e) {}
+      }
+
+      // DO NOT OVERWRITE or disturb existing user accounts, passwords, or custom roles
+      if (userExistsInSqlite || userExistsInJson) {
+        continue;
+      }
+
+      // New established financial member -> set up by default with role: 'member'
+      const firstName = member.firstName || (member.fullName ? member.fullName.split(" ")[0] : "");
+      const lastName = member.lastName || (member.fullName ? member.fullName.split(" ").slice(1).join(" ") : "");
+      const fullName = member.fullName || `${firstName} ${lastName}`.trim() || email;
+
+      if (useSqlite && sqliteDb) {
+        try {
+          sqliteDb.prepare(`
+            INSERT INTO users (
+              email, name, first_name, last_name, password_hash, is_first_login, 
+              role, title, financial_status, industry, is_test_credential
+            )
+            VALUES (?, ?, ?, ?, ?, 1, 'member', '', 'active', '', 0)
+          `).run(email, fullName, firstName, lastName, defaultPassHash);
+        } catch (e) {
+          console.error(`[AUTO-PROVISION] SQLite insert notice for ${email}:`, e);
+        }
+      }
+
+      if (fs.existsSync(jsonDbPath)) {
+        try {
+          const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+          if (!data[email]) {
+            data[email] = {
+              email,
+              name: fullName,
+              first_name: firstName,
+              last_name: lastName,
+              password_hash: defaultPassHash,
+              is_first_login: 1,
+              role: 'member',
+              title: '',
+              financial_status: 'active',
+              is_test_credential: 0
+            };
+            fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
+          }
+        } catch (e) {
+          console.error(`[AUTO-PROVISION] JSON insert notice for ${email}:`, e);
+        }
+      }
+
+      // Asynchronously sync to Cloud Firestore
+      syncLocalMemberToFirestoreCloud(email).catch(() => {});
+      console.log(`[AUTO-PROVISION] Established login credentials for financial member ${fullName} (${email}) with role: member`);
+      logEvent("system", "MEMBER_CREDS_AUTO_ESTABLISHED", `Auto-established login credentials for financial member ${fullName} (${email}) with default role: member`);
+    }
   }
 
   async function fetchGoogleSheetRosterLive() {
@@ -1574,6 +1721,9 @@ async function startServer() {
 
       eligibleVotersSet.add('admin@orderofkpi.org');
       eligibleVotersSet.add('candidate@gmail.com');
+
+      // Auto-establish user login credentials for newly added financial roster members
+      autoProvisionFinancialMembers(members);
 
       const result = {
         success: true,
@@ -1982,10 +2132,11 @@ async function startServer() {
   // Add a new member
   app.post("/api/members", (req, res) => {
     const { email, name, first_name, last_name, role, title, financial_status, industry, adminEmail, is_test_credential, committees, committeeRoles, committee_roles } = req.body;
-    if (!email || !role) {
-      return res.status(400).json({ success: false, message: "Email and role are required" });
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
     }
 
+    const assignedRole = role || 'member';
     const normEmail = email.toLowerCase().trim();
     const firstName = first_name || name?.split(" ")[0] || "";
     const lastName = last_name || name?.split(" ").slice(1).join(" ") || "";
@@ -2021,7 +2172,7 @@ async function startServer() {
         sqliteDb.prepare(`
           INSERT INTO users (email, name, first_name, last_name, password_hash, is_first_login, role, title, financial_status, industry, is_test_credential, committees, committee_roles)
           VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
-        `).run(normEmail, fullName, firstName, lastName, defaultPasswordHash, role, title || "", financial_status || "inactive", industry || "", isTestVal, commsStr, commRolesStr);
+        `).run(normEmail, fullName, firstName, lastName, defaultPasswordHash, assignedRole, title || "", financial_status || "active", industry || "", isTestVal, commsStr, commRolesStr);
       }
 
       // Sync JSON
@@ -2040,9 +2191,9 @@ async function startServer() {
         last_name: lastName,
         password_hash: defaultPasswordHash,
         is_first_login: 1,
-        role,
+        role: assignedRole,
         title: title || "",
-        financial_status: financial_status || "inactive",
+        financial_status: financial_status || "active",
         industry: industry || "",
         is_test_credential: isTestVal,
         committees: Array.isArray(committees) ? committees : [],
@@ -3425,6 +3576,7 @@ async function startServer() {
         "kameron.whitfield@orderofkpi.org",
         "keith.woods@orderofkpi.org",
         "tobias.bordley@orderofkpi.org",
+        "charles.basham@orderofkpi.org",
         "candidate@gmail.com",
         "admin@orderofkpi.org"
       ];

@@ -126,6 +126,7 @@ export const defaultMembers: MemberUser[] = [
   { name: "Brandon Hunter", email: "brandon.hunter@orderofkpi.org", role: "member", title: "" },
   { name: "Terrell Singleton", email: "terrell.singleton@orderofkpi.org", role: "member", title: "" },
   { name: "Churtis Poulson", email: "churtis.poulson@orderofkpi.org", role: "member", title: "" },
+  { name: "Charles Basham", email: "charles.basham@orderofkpi.org", role: "member", title: "" },
   { name: "Applicant Test", email: "applicant@orderofkpi.org", role: "member" }
 ].filter(m => {
   if (typeof window !== 'undefined' && (import.meta as any).env?.PROD) {
