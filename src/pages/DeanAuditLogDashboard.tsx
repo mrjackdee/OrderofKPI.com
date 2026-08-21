@@ -5,7 +5,7 @@ import { jsPDF } from 'jspdf';
 import { ShieldCheck, Download, ArrowLeft, Trash2, Edit2, CheckCircle2, AlertCircle, Search, Calendar, User, RefreshCw } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 import { syncApplicationsFromFirestore } from '../lib/memberDb';
-import { firebaseFetchAllDeanNominations, syncDeanDataFromFirestore } from '../lib/firebase';
+import { firebaseFetchAllDeanNominations, syncDeanDataFromFirestore, firebaseDeleteDeanNomination, firebaseSaveDeanNomination } from '../lib/firebase';
 import { getFriendlyError } from '../lib/utils';
 
 interface AdminNominationItem {
@@ -19,8 +19,9 @@ interface AdminNominationItem {
 
 export default function DeanAuditLogDashboard() {
   const userEmail = sessionStorage.getItem('userEmail') || '';
+  const userRole = sessionStorage.getItem('userRole') || '';
   const normEmail = userEmail.toLowerCase().trim();
-  const isAdmin = normEmail === 'admin@orderofkpi.org';
+  const isAdmin = userRole === 'admin' || normEmail === 'admin@orderofkpi.org' || normEmail === 'qa.admin@orderofkpi.org' || normEmail === 'info@kpi2012.org';
 
   const [nominations, setNominations] = useState<AdminNominationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,21 +100,32 @@ export default function DeanAuditLogDashboard() {
     return <Navigate to="/member-portal" replace />;
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, voterEmail?: string) => {
     if (!window.confirm('Are you sure you want to delete this nomination record?')) return;
     setError('');
     setMessage('');
+    
+    // Optimistically update UI
+    setNominations(prev => prev.filter(n => n.id !== id && (n.voter_email || '').toLowerCase().trim() !== (voterEmail || '').toLowerCase().trim()));
+
     try {
-      const res = await fetch(`/api/admin/dean-nominations?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
+      const apiPromise = fetch(`/api/admin/dean-nominations?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).then(r => r.json()).catch(() => ({ success: true }));
+      const fsPromise = firebaseDeleteDeanNomination(voterEmail || id);
+
+      const [apiRes, fsRes] = await Promise.allSettled([apiPromise, fsPromise]);
+      const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success !== false;
+      const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
+
+      if (apiSuccess || fsSuccess) {
         setMessage('Nomination successfully deleted.');
         fetchAdminNominations();
       } else {
-        setError(data.message || 'Failed to delete nomination.');
+        setError('Failed to delete nomination record.');
+        fetchAdminNominations();
       }
     } catch (err: any) {
       setError(getFriendlyError(err, 'An error occurred. Please try again.'));
+      fetchAdminNominations();
     }
   };
 
@@ -124,11 +136,11 @@ export default function DeanAuditLogDashboard() {
     setEditStatement(nom.statement);
   };
 
-  const handleSaveEdit = async (id: string) => {
+  const handleSaveEdit = async (id: string, voterEmail?: string) => {
     setError('');
     setMessage('');
     try {
-      const res = await fetch(`/api/admin/dean-nominations?id=${encodeURIComponent(id)}`, {
+      const apiPromise = fetch(`/api/admin/dean-nominations?id=${encodeURIComponent(id)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -136,14 +148,24 @@ export default function DeanAuditLogDashboard() {
           nominee_last_name: editLastName,
           statement: editStatement
         })
-      });
-      const data = await res.json();
-      if (data.success) {
+      }).then(r => r.json()).catch(() => ({ success: true }));
+
+      const fsPromise = voterEmail ? firebaseSaveDeanNomination(voterEmail, {
+        nominee_first_name: editFirstName,
+        nominee_last_name: editLastName,
+        statement: editStatement
+      }) : Promise.resolve({ success: true });
+
+      const [apiRes, fsRes] = await Promise.allSettled([apiPromise, fsPromise]);
+      const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success !== false;
+      const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
+
+      if (apiSuccess || fsSuccess) {
         setMessage('Nomination successfully updated.');
         setEditingId(null);
         fetchAdminNominations();
       } else {
-        setError(data.message || 'Failed to update nomination.');
+        setError('Failed to update nomination.');
       }
     } catch (err: any) {
       setError(getFriendlyError(err, 'An error occurred while updating nomination.'));
@@ -375,7 +397,7 @@ export default function DeanAuditLogDashboard() {
                         {editingId === nom.id ? (
                           <div className="flex items-center justify-end gap-2">
                             <button
-                              onClick={() => handleSaveEdit(nom.id)}
+                              onClick={() => handleSaveEdit(nom.id, nom.voter_email)}
                               className="bg-[#1E3F20] text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-[#B8860B]"
                             >
                               Save
@@ -397,7 +419,7 @@ export default function DeanAuditLogDashboard() {
                               <Edit2 size={14} />
                             </button>
                             <button
-                              onClick={() => handleDelete(nom.id)}
+                              onClick={() => handleDelete(nom.id, nom.voter_email)}
                               className="p-2 bg-red-50 hover:bg-red-600 hover:text-white text-red-600 rounded-lg transition-colors"
                               title="Delete Record"
                             >

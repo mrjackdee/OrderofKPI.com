@@ -41,7 +41,7 @@ This sitemap report provides a comprehensive architectural breakdown of all rout
 | `/intake-calendar` | `IntakeCalendar.tsx` | Membership intake schedule, key dates, and event markers. |
 | `/agenda` | `Agenda.tsx` | Meeting agendas and scheduled brotherhood events. |
 | `/conference-portal` | `ConferencePortal.tsx` | National and regional conference registration and itinerary hub. |
-| `/classroom-portal` | `ClassroomPortal.tsx` | Educational modules and fraternity orientation curriculum. |
+| `/classroom-portal` | `ClassroomPortal.tsx` | Educational modules and organization orientation curriculum. |
 
 ---
 

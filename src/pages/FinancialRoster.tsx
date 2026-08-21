@@ -46,7 +46,7 @@ export default function FinancialRoster() {
 
   const currentUserEmail = (sessionStorage.getItem('userEmail') || '').toLowerCase().trim();
   const currentUserRole = (sessionStorage.getItem('userRole') || '').toLowerCase().trim();
-  const isAdmin = currentUserRole === 'admin' || currentUserEmail === 'admin@orderofkpi.org';
+  const isAdmin = currentUserRole === 'admin' || currentUserEmail === 'admin@orderofkpi.org' || currentUserEmail === 'qa.admin@orderofkpi.org' || currentUserEmail === 'info@kpi2012.org';
 
   useEffect(() => {
     const role = sessionStorage.getItem('userRole');

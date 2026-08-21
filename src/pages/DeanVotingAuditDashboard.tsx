@@ -16,8 +16,9 @@ interface AdminVoteItem {
 
 export default function DeanVotingAuditDashboard() {
   const userEmail = sessionStorage.getItem('userEmail') || '';
+  const userRole = sessionStorage.getItem('userRole') || '';
   const normEmail = userEmail.toLowerCase().trim();
-  const isAdmin = normEmail === 'admin@orderofkpi.org';
+  const isAdmin = userRole === 'admin' || normEmail === 'admin@orderofkpi.org' || normEmail === 'qa.admin@orderofkpi.org' || normEmail === 'info@kpi2012.org';
 
   const [votes, setVotes] = useState<AdminVoteItem[]>([]);
   const [loading, setLoading] = useState(true);

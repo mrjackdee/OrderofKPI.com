@@ -24,7 +24,7 @@ The Order of KPI platform enforces strict **Role-Based Access Control (RBAC)** a
 | :--- | :--- | :--- |
 | `admin` | **Administrator** | Full system control. Can update user roles, access audit logs, manage database synchronization, configure intake forms, review elections, and manage all committee assignments. |
 | `Membership Committee Chair` | **Committee Chair** | Executive leadership of the Membership Intake Committee. Can review candidate applications, manage voting windows, schedule candidate interviews, and access committee document vaults. |
-| `officer` | **Fraternity Officer** | Executive leadership (Basileus, 1st Anti-Basileus, Tamiouchos, Grammateus, Epistoleus, Hodegos, Historian, Super Committee Chair). Elevated access to governance archives, meeting minutes tools, and executive reporting. |
+| `officer` | **Organization Officer** | Executive leadership (Basileus, 1st Anti-Basileus, Tamiouchos, Grammateus, Epistoleus, Hodegos, Historian, Super Committee Chair). Elevated access to governance archives, meeting minutes tools, and executive reporting. |
 | `Membership Committee` | **Committee Member** | Active members assigned to the Membership Intake Committee. Authorized to view candidate applications, cast selection votes, and participate in intake evaluation sessions. |
 | `member` | **Financial Member** | Standard active financial members. Access to Member Portal, Financial Roster, Intake Dean nominations and voting, member directory, event registration, and general portal features. |
 | `prospective` / `candidate` | **Intake Candidate** | Candidates participating in the Membership Intake Process (MIP). Restricted exclusively to the Applicant Portal to submit applications, view schedule milestones, and check submission status. |
@@ -54,7 +54,7 @@ The Order of KPI platform enforces strict **Role-Based Access Control (RBAC)** a
 ---
 
 ### C. Executive Officers (`officer`)
-*Fraternity officers with specialized governance duties.*
+*Organization officers with specialized governance duties.*
 
 | Name | Primary Email | Official Title / Role Context |
 | :--- | :--- | :--- |

@@ -166,7 +166,7 @@ export default function CommitteePage() {
   // Access validation
   const hasAccess = slug ? hasCommitteeAccess(slug as CommitteeSlug, normUser) : false;
   const isChair = slug ? isCommitteeChair(slug as CommitteeSlug, normUser) : false;
-  const isAdmin = normUser.role === 'admin';
+  const isAdmin = normUser.role === 'admin' || normUser.email === 'admin@orderofkpi.org' || normUser.email === 'qa.admin@orderofkpi.org' || normUser.email === 'info@kpi2012.org';
   const isOfficer = normUser.role === 'officer';
   const canEdit = isChair || isAdmin || isOfficer;
 

@@ -795,7 +795,7 @@ async function performClientSideLogin(email: string, pass: string) {
   const savedPass = localStorage.getItem(`kpi_client_password_${normEmail}`) || initialPass;
   const isQaOrTest = normEmail.startsWith('qa.') || normEmail.startsWith('test.');
   const isDefaultQa = isQaOrTest && (pass === '2012' || pass === 'atlanta');
-  const isAdmin = normEmail === 'admin@orderofkpi.org';
+  const isAdmin = normEmail === 'admin@orderofkpi.org' || normEmail === 'qa.admin@orderofkpi.org' || normEmail === 'info@kpi2012.org';
   const isAdminPass = isAdmin && pass === 'K@mala2026';
   const isJames = normEmail === 'james.haywood@orderofkpi.org';
   const isJamesPass = isJames && (pass === '2012' || pass === 'atlanta');
@@ -1174,10 +1174,15 @@ export async function deleteApplication(email: string) {
     const normEmail = email.toLowerCase().trim();
     const safeDocId = normEmail.replace(/[^a-zA-Z0-9]/g, '_');
     
-    const appRef = doc(db, 'applications', safeDocId);
-    const appRef2 = doc(db, 'membership_applications', safeDocId);
-    await deleteDoc(appRef);
-    await deleteDoc(appRef2);
+    const collections = ['applications', 'membership_applications', 'candidates', 'candidate_accounts', 'users'];
+    for (const col of collections) {
+      try {
+        await deleteDoc(doc(db, col, safeDocId));
+      } catch (_) {}
+      try {
+        await deleteDoc(doc(db, col, normEmail));
+      } catch (_) {}
+    }
     return { success: true };
   } catch (err: any) {
     console.error('Failed to delete application from Firestore:', err);

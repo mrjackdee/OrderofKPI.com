@@ -16,7 +16,7 @@ Note that **Membership Roster (Member Directory)**, **Intake Calendar**, **Finan
 | **Membership Committee Chair** | Primary lead for managing intake candidates, coordinating applications reviews, and auditing administrative/user actions. | Candidate Tracker, Review Applications, Membership Chair Portal, Process Timeline. |
 | **Membership Committee** | Committee members responsible for reviewing submitted intake applications and checking status metrics. | Candidate Tracker, Review Applications, Process Timeline. |
 | **Officer** | Chapter officers managing overall member directories, schedules, and financial overviews. | Candidate Tracker, Review Applications, Membership Chair Portal, Process Timeline. *(Admin Dashboard restricted strictly to Admin)* |
-| **Member** | Standard active fraternity members participating in general events, directories, and viewing the intake process roadmap. | Process Timeline (only). |
+| **Member** | Standard active organization members participating in general events, directories, and viewing the intake process roadmap. | Process Timeline (only). |
 | **Prospective / Applicant** | Pre-provisioned applicants going through the intake phase. Isolated entirely from all Member-facing assets. | No Administrative Tools. Access is restricted strictly to the single-screen Candidate Application form and resources. |
 
 ---
