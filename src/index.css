@@ -80,6 +80,34 @@
   }
 }
 
+/* Custom Scrollbars for All Scrollable Elements to Enhance Mobile Navigation */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(184, 134, 11, 0.35); /* gold/35 */
+  border-radius: 9999px;
+  border: 1px solid transparent;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(184, 134, 11, 0.6); /* gold/60 */
+}
+
+/* Specific styling for scrollable containers to ensure visibility on mobile */
+.overflow-x-auto, .overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(184, 134, 11, 0.35) transparent;
+  -webkit-overflow-scrolling: touch; /* smooth scrolling for mobile devices */
+}
+
+
 @media print {
   html, body {
     background-color: #ffffff !important;

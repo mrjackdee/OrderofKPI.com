@@ -97,7 +97,9 @@ export default function MemberPortal() {
     fetch('/api/members')
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (data && data.success && Array.isArray(data.members)) {
+          setAllMembers(data.members);
+        } else if (Array.isArray(data)) {
           setAllMembers(data);
         }
       })
@@ -291,7 +293,7 @@ export default function MemberPortal() {
                 const committeeMembers = getCommitteeMembers(committee.slug);
                 const primaryChair = committeeChairs[0] || { name: 'Executive Committee', email: 'info@kpi2012.org' };
                 const mailtoSubject = encodeURIComponent(`Interest in Joining ${committee.name}`);
-                const mailtoBody = encodeURIComponent(`Dear ${primaryChair.name},\n\nI am interested in joining the ${committee.name}. Please contact me regarding committee meetings and membership steps.\n\nFraternally,`);
+                const mailtoBody = encodeURIComponent(`Dear ${primaryChair.name},\n\nI am interested in joining the ${committee.name}. Please contact me regarding committee meetings and membership steps.\n\nRespectfully,`);
                 const mailtoLink = `mailto:${primaryChair.email}?subject=${mailtoSubject}&body=${mailtoBody}`;
                 const userHasAccess = hasCommitteeAccess(committee.slug, normUser);
 
@@ -371,7 +373,7 @@ export default function MemberPortal() {
                     const committeeMembers = getCommitteeMembers(committee.slug);
                     const primaryChair = committeeChairs[0] || { name: 'Executive Committee', email: 'info@kpi2012.org' };
                     const mailtoSubject = encodeURIComponent(`Interest in Joining ${committee.name}`);
-                    const mailtoBody = encodeURIComponent(`Dear ${primaryChair.name},\n\nI am interested in joining the ${committee.name}. Please contact me regarding committee meetings and membership steps.\n\nFraternally,`);
+                    const mailtoBody = encodeURIComponent(`Dear ${primaryChair.name},\n\nI am interested in joining the ${committee.name}. Please contact me regarding committee meetings and membership steps.\n\nRespectfully,`);
                     const mailtoLink = `mailto:${primaryChair.email}?subject=${mailtoSubject}&body=${mailtoBody}`;
                     const userHasAccess = hasCommitteeAccess(committee.slug, normUser);
 

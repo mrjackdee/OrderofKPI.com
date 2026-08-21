@@ -424,32 +424,32 @@ const QA_EXPLICIT_CREDENTIALS: Record<string, { name: string; role: string; titl
 
 const defaultUsers = [
   { name: "QA Admin Agent", email: "qa.admin@orderofkpi.org", role: "admin", title: "Administrator", financial_status: "active", industry: "" },
-  { name: "QA Chair Agent", email: "qa.chair@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", financial_status: "active", industry: "" },
-  { name: "QA Committee Agent", email: "qa.committee@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member", financial_status: "active", industry: "" },
+  { name: "QA Chair Agent", email: "qa.chair@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", financial_status: "active", industry: "", committees: ["membership_intake"], committee_roles: { membership_intake: "chair" } },
+  { name: "QA Committee Agent", email: "qa.committee@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member", financial_status: "active", industry: "", committees: ["membership_intake"], committee_roles: { membership_intake: "member" } },
   { name: "QA Officer Agent", email: "qa.officer@orderofkpi.org", role: "officer", title: "1st Anti-Basileus", financial_status: "active", industry: "" },
   { name: "QA Member Agent", email: "qa.member@orderofkpi.org", role: "member", title: "", financial_status: "active", industry: "" },
   { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator", financial_status: "active", industry: "" },
-  { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", financial_status: "active", industry: "" },
+  { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", financial_status: "active", industry: "", committees: ["membership_intake"], committee_roles: { membership_intake: "chair" } },
   { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "officer", financial_status: "active", industry: "" },
-  { name: "DeShaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee", financial_status: "active", industry: "" },
+  { name: "DeShaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee", financial_status: "active", industry: "", committees: ["membership_intake"], committee_roles: { membership_intake: "member" } },
   { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "officer", title: "Officer", financial_status: "active", industry: "" },
-  { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "Membership Committee", financial_status: "active", industry: "" },
+  { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "Membership Committee", financial_status: "active", industry: "", committees: ["membership_intake"], committee_roles: { membership_intake: "member" } },
   { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos", financial_status: "active", industry: "" },
-  { name: "Edward Cook", email: "edward.cook@orderofkpi.org", role: "officer", title: "Epistoleus", financial_status: "active", industry: "" },
+  { name: "Edward Cook", email: "edward.cook@orderofkpi.org", role: "officer", title: "Epistoleus", financial_status: "active", industry: "", committees: ["judicial_ethics"], committee_roles: { judicial_ethics: "member" } },
   { name: "Darron Jenkins", email: "darron.jenkins@orderofkpi.org", role: "officer", title: "Hodegos", financial_status: "active", industry: "" },
   { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus", financial_status: "active", industry: "" },
-  { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
-  { name: "Sammie Poe", email: "sammie.poe@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
-  { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
-  { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member", financial_status: "inactive", industry: "" },
+  { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member", financial_status: "active", industry: "", committees: ["annual_event"], committee_roles: { annual_event: "member" } },
+  { name: "Sammie Poe", email: "sammie.poe@orderofkpi.org", role: "member", financial_status: "active", industry: "", committees: ["annual_event"], committee_roles: { annual_event: "member" } },
+  { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member", financial_status: "active", industry: "", committees: ["judicial_ethics"], committee_roles: { judicial_ethics: "member" } },
+  { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member", financial_status: "inactive", industry: "", committees: ["scholarship"], committee_roles: { scholarship: "member" } },
   { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian", financial_status: "active", industry: "" },
   { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus", financial_status: "active", industry: "" },
-  { name: "Alejandro Araujo", email: "alejandro.araujo@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
-  { name: "Demetrist Thomas", email: "demetrist.thomas@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
-  { name: "Denzel Talley", email: "denzel.talley@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
-  { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
+  { name: "Alejandro Araujo", email: "alejandro.araujo@orderofkpi.org", role: "member", financial_status: "active", industry: "", committees: ["digital_technology"], committee_roles: { digital_technology: "member" } },
+  { name: "Demetrist Thomas", email: "demetrist.thomas@orderofkpi.org", role: "member", financial_status: "active", industry: "", committees: ["transfer_member"], committee_roles: { transfer_member: "member" } },
+  { name: "Denzel Talley", email: "denzel.talley@orderofkpi.org", role: "member", financial_status: "active", industry: "", committees: ["scholarship"], committee_roles: { scholarship: "member" } },
+  { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member", financial_status: "active", industry: "", committees: ["digital_technology"], committee_roles: { digital_technology: "member" } },
   { name: "Kevin Jennings", email: "kevin.jennings@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
-  { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
+  { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member", financial_status: "active", industry: "", committees: ["transfer_member"], committee_roles: { transfer_member: "member" } },
   { name: "Brandon Hunter", email: "brandon.hunter@orderofkpi.org", role: "member", title: "", financial_status: "active", industry: "" },
   { name: "Terrell Singleton", email: "terrell.singleton@orderofkpi.org", role: "member", title: "", financial_status: "active", industry: "" },
   { name: "Churtis Poulson", email: "churtis.poulson@orderofkpi.org", role: "member", title: "", financial_status: "active", industry: "" },
@@ -774,12 +774,26 @@ async function initDb() {
         targetIsFirstLogin = 0;
       }
 
+      const defaultComms = (u as any).committees ? JSON.stringify((u as any).committees) : "[]";
+      const defaultRoles = (u as any).committee_roles ? JSON.stringify((u as any).committee_roles) : "{}";
+
       if (existingUser) {
+        let currentComms = "[]";
+        let currentRoles = "{}";
+        const row = sqliteDb.prepare("SELECT committees, committee_roles FROM users WHERE email = ?").get(emailNorm) as any;
+        if (row && row.committees && row.committees !== "[]") {
+          currentComms = row.committees;
+          currentRoles = row.committee_roles || "{}";
+        } else {
+          currentComms = defaultComms;
+          currentRoles = defaultRoles;
+        }
+
         sqliteDb.prepare(`
           UPDATE users 
           SET name = ?, first_name = ?, last_name = ?, role = ?, title = ?, 
               financial_status = ?, password_hash = ?, is_first_login = ?,
-              is_test_credential = ?
+              is_test_credential = ?, committees = ?, committee_roles = ?
           WHERE email = ?
         `).run(
           u.name, 
@@ -791,6 +805,8 @@ async function initDb() {
           targetPasswordHash,
           targetIsFirstLogin,
           isTestCred,
+          currentComms,
+          currentRoles,
           emailNorm
         );
       } else {
@@ -798,9 +814,9 @@ async function initDb() {
           INSERT INTO users (
             email, name, first_name, last_name, password_hash, is_first_login, 
             role, title, 
-            financial_status, industry, is_test_credential
+            financial_status, industry, is_test_credential, committees, committee_roles
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           emailNorm, 
           u.name, 
@@ -812,7 +828,9 @@ async function initDb() {
           u.title || "",
           u.financial_status || "inactive",
           u.industry || "",
-          isTestCred
+          isTestCred,
+          defaultComms,
+          defaultRoles
         );
       }
     }
@@ -3316,12 +3334,12 @@ async function startServer() {
 
   app.post("/api/committee/members", (req, res) => {
     try {
-      const { email, chairEmail, committeeSlug, committeeRole } = req.body;
+      const { email, chairEmail, committeeSlug, committeeRole, role } = req.body;
       if (!email) return res.status(400).json({ success: false, message: "Member email is required" });
 
       const normEmail = email.toLowerCase().trim();
       const targetSlug = committeeSlug || 'membership_intake';
-      const targetRole = committeeRole || 'member';
+      const targetRole = committeeRole || role || 'member';
 
       let user: any = null;
       if (useSqlite && sqliteDb) {

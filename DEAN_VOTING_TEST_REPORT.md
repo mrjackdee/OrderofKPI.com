@@ -17,7 +17,7 @@ This report documents the rigorous QA testing, test scripts, and execution verif
 ### Test Suite A: Intake Dean Nominations
 * **TC-NOM-01: Member Nomination Submission**
   * *Objective:* Verify that a financial member can submit an active nomination for the FY27 Intake Dean position.
-  * *Input:* Nominee First Name ("Marcus"), Last Name ("Garvey"), Statement ("Exceptional leadership and commitment to fraternal standards.").
+  * *Input:* Nominee First Name ("Marcus"), Last Name ("Garvey"), Statement ("Exceptional leadership and commitment to organizational standards.").
   * *Expected Result:* Nomination successfully recorded with timestamp and linked to voter email.
 * **TC-NOM-02: Single Active Nomination Constraint & Update**
   * *Objective:* Verify that each member is restricted to a single active nomination, which can be updated at any time.
