@@ -190,12 +190,12 @@ export default function MemberPortal() {
   };
 
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="min-h-screen bg-cream w-full overflow-x-clip">
       <motion.div 
         initial="hidden"
         animate="visible"
         variants={containerVariants}
-        className="w-full max-w-7xl mx-auto px-6 py-6 md:py-12 space-y-12"
+        className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-12 space-y-10 md:space-y-12"
       >
         <motion.div variants={itemVariants}>
           <MemberHeader />
@@ -280,8 +280,77 @@ export default function MemberPortal() {
               </p>
             </div>
 
-            {/* Committees Table */}
-            <div className="overflow-x-auto bg-white border border-gold/20 rounded-2xl shadow-soft">
+            {/* Mobile Committee Cards (< md) */}
+            <div className="grid grid-cols-1 gap-4 md:hidden">
+              {STANDING_COMMITTEES.map((committee) => {
+                const committeeChairs = getCommitteeChairs(committee.slug);
+                const committeeMembers = getCommitteeMembers(committee.slug);
+                const primaryChair = committeeChairs[0] || { name: 'Executive Committee', email: 'info@kpi2012.org' };
+                const mailtoSubject = encodeURIComponent(`Interest in Joining ${committee.name}`);
+                const mailtoBody = encodeURIComponent(`Dear ${primaryChair.name},\n\nI am interested in joining the ${committee.name}. Please contact me regarding committee meetings and membership steps.\n\nFraternally,`);
+                const mailtoLink = `mailto:${primaryChair.email}?subject=${mailtoSubject}&body=${mailtoBody}`;
+                const userHasAccess = hasCommitteeAccess(committee.slug, normUser);
+
+                return (
+                  <div key={committee.slug} className="bg-white border border-gold/20 rounded-2xl p-5 shadow-soft space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-cream rounded-xl border border-gold/20 text-ivy shadow-xs shrink-0">
+                          <FolderGit2 size={20} />
+                        </div>
+                        <div>
+                          <h3 className="font-display font-bold text-ivy uppercase tracking-wide text-sm">{committee.name}</h3>
+                          <span className="text-[10px] font-body text-ivy/50">{committee.shortName}</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-gold bg-gold/10 px-2.5 py-1 rounded-full shrink-0">
+                        Standing
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-ivy/70 leading-relaxed font-body">
+                      {committee.description}
+                    </p>
+
+                    <div className="pt-2 border-t border-gold/10 flex flex-col gap-2.5">
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => setSelectedCommitteeModal(committee)}
+                          className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-ivy bg-gold/10 border border-gold/30 hover:bg-gold/20 transition-all cursor-pointer"
+                        >
+                          <Users size={13} className="text-gold" />
+                          <span>Roster ({committeeChairs.length + committeeMembers.length})</span>
+                        </button>
+                        <a
+                          href={mailtoLink}
+                          className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-ivy bg-gold border border-gold hover:bg-ivy hover:text-cream transition-all shadow-xs"
+                        >
+                          <Mail size={13} />
+                          <span>Contact Chair</span>
+                        </a>
+                      </div>
+
+                      {userHasAccess ? (
+                        <Link
+                          to={`/committee/${committee.slug}`}
+                          className="w-full py-2.5 px-4 bg-ivy text-cream hover:bg-gold hover:text-ivy rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-xs"
+                        >
+                          <span>Open Workspace</span>
+                          <ChevronRight size={14} />
+                        </Link>
+                      ) : (
+                        <div className="w-full text-center py-2 text-[10px] uppercase tracking-widest text-ivy/40 font-bold bg-cream rounded-xl border border-gold/10">
+                          Member Contact Only
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Committees Table (>= md) */}
+            <div className="hidden md:block overflow-x-auto bg-white border border-gold/20 rounded-2xl shadow-soft">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-cream/60 border-b border-gold/20 text-[10px] font-bold uppercase tracking-widest text-ivy/70">
@@ -472,12 +541,12 @@ export default function MemberPortal() {
       {/* Committee Roster Popup Modal */}
       <AnimatePresence>
         {selectedCommitteeModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white border border-gold/30 rounded-2xl max-w-2xl w-full p-6 md:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto"
+              className="bg-white border border-gold/30 rounded-2xl max-w-2xl w-full p-6 md:p-8 shadow-2xl space-y-6 my-auto max-h-[90vh] overflow-y-auto flex flex-col"
             >
               <div className="flex items-start justify-between border-b border-gold/20 pb-4">
                 <div className="space-y-1">

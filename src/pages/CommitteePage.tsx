@@ -1472,8 +1472,8 @@ export default function CommitteePage() {
 
         {/* MODAL: ADD RESOURCE */}
         {showAddResourceModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between border-b border-gold/10 pb-4">
                 <h3 className="text-lg font-display font-bold uppercase tracking-wider text-ivy">
                   Add Google Shared Drive / Resource Link
@@ -1563,8 +1563,8 @@ export default function CommitteePage() {
 
         {/* MODAL: EDIT RESOURCE */}
         {editingResource && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between border-b border-gold/10 pb-4">
                 <h3 className="text-lg font-display font-bold uppercase tracking-wider text-ivy">
                   Edit Shared Drive / Resource Link
@@ -1654,8 +1654,8 @@ export default function CommitteePage() {
 
         {/* MODAL: SCHEDULE MEETING */}
         {showAddMeetingModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between border-b border-gold/10 pb-4">
                 <h3 className="text-lg font-display font-bold uppercase tracking-wider text-ivy">
                   Schedule Committee Meeting
@@ -1796,8 +1796,8 @@ export default function CommitteePage() {
 
         {/* MODAL: EDIT MEETING */}
         {editingMeeting && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between border-b border-gold/10 pb-4">
                 <h3 className="text-lg font-display font-bold uppercase tracking-wider text-ivy">
                   Edit Committee Meeting
@@ -1943,8 +1943,8 @@ export default function CommitteePage() {
 
         {/* MODAL: POST ANNOUNCEMENT */}
         {showAddAnnouncementModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between border-b border-gold/10 pb-4">
                 <h3 className="text-lg font-display font-bold uppercase tracking-wider text-ivy">
                   Post Committee Announcement
@@ -2005,8 +2005,8 @@ export default function CommitteePage() {
 
         {/* MODAL: EDIT ANNOUNCEMENT */}
         {editingAnnouncement && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between border-b border-gold/10 pb-4">
                 <h3 className="text-lg font-display font-bold uppercase tracking-wider text-ivy">
                   Edit Committee Announcement
@@ -2079,8 +2079,8 @@ export default function CommitteePage() {
             });
 
           return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-              <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
+              <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between border-b border-gold/10 pb-4">
                   <div>
                     <h3 className="text-lg font-display font-bold uppercase tracking-wider text-ivy">

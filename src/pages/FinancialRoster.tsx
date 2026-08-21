@@ -240,7 +240,7 @@ export default function FinancialRoster() {
   });
 
   return (
-    <div className="min-h-screen w-full bg-[#FDFCF0] font-sans pb-20 relative overflow-hidden">
+    <div className="min-h-screen w-full bg-[#FDFCF0] font-sans pb-20 relative overflow-x-clip">
       {/* Draft Watermark */}
       <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-0 opacity-10">
         <h1 className="text-[15rem] md:text-[25rem] font-black uppercase text-[#1E3F20] -rotate-45 select-none whitespace-nowrap">
@@ -562,12 +562,12 @@ export default function FinancialRoster() {
       {/* MEMBER PROFILE MODAL */}
       <AnimatePresence>
         {selectedProfileMember && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="bg-white border-2 border-[#B8860B] rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl relative"
+              className="bg-white border-2 border-[#B8860B] rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl relative my-auto max-h-[90vh] flex flex-col"
             >
               {/* Modal Header Banner */}
               <div className="bg-[#1E3F20] p-6 text-cream relative">

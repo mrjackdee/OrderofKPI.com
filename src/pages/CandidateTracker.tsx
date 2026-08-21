@@ -728,11 +728,11 @@ export default function CandidateTracker() {
 
       {/* Add Candidate Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-ivy/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-ivy/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 z-50 overflow-y-auto">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white w-full max-w-md rounded-lg shadow-2xl border-gold/30 border p-8"
+            className="bg-white w-full max-w-md rounded-lg shadow-2xl border-gold/30 border p-8 my-auto max-h-[90vh] overflow-y-auto"
           >
             <h2 className="text-2xl font-display text-ivy mb-6">Add New Candidate</h2>
             {formError && (

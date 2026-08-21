@@ -825,12 +825,12 @@ export default function CommitteeChairDashboard() {
       {/* ADD CANDIDATE MODAL */}
       <AnimatePresence>
         {showAddCandidateModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl border border-gold/30 p-8 max-w-lg w-full shadow-2xl space-y-6"
+              className="bg-white rounded-3xl border border-gold/30 p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-6 my-auto max-h-[90vh] overflow-y-auto flex flex-col"
             >
               <div className="flex justify-between items-center pb-4 border-b border-gold/10">
                 <h3 className="text-xl font-display font-bold text-ivy flex items-center gap-2">

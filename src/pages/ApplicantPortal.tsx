@@ -962,7 +962,7 @@ export default function ApplicantPortal() {
         )}
 
         {showFirstLoginModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -974,7 +974,7 @@ export default function ApplicantPortal() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white border border-gold/40 rounded-[28px] p-6 md:p-8 max-w-md w-full relative z-10 shadow-2xl space-y-6"
+              className="bg-white border border-gold/40 rounded-[28px] p-6 md:p-8 max-w-md w-full relative z-10 shadow-2xl space-y-6 my-auto max-h-[90vh] overflow-y-auto flex flex-col"
             >
               <button
                 type="button"
