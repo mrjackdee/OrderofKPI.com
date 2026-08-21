@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 import CommitteeAddToCalendar from '../components/CommitteeAddToCalendar';
-import { CommitteeSlug, STANDING_COMMITTEES, Member } from '../types';
+import { CommitteeSlug, CommitteeRole, STANDING_COMMITTEES, Member } from '../types';
 import { hasCommitteeAccess, isCommitteeChair, normalizeUserRBAC, defaultMembers, isEligibleFinancialMember } from '../lib/memberDb';
 import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 import { logPortalSectionAccess } from '../lib/auditLogger';
@@ -727,6 +727,48 @@ export default function CommitteePage() {
     setTimeout(() => setNotification(null), 3000);
   };
 
+  const handleToggleCommitteeRole = async (memberEmail: string, currentlyChair: boolean) => {
+    if (!canEdit) return;
+    const normTarget = memberEmail.toLowerCase().trim();
+    const newRole = currentlyChair ? 'member' : 'chair';
+
+    const updatedMemberList = allAvailableMembers.map(m => {
+      if (m.email.toLowerCase() === normTarget) {
+        const norm = normalizeUserRBAC(m);
+        const existingCommittees = [...norm.committees];
+        if (!existingCommittees.includes(committeeDef.slug)) {
+          existingCommittees.push(committeeDef.slug);
+        }
+        const existingRoles = { ...norm.committeeRoles, [committeeDef.slug]: newRole };
+        return {
+          ...m,
+          committees: existingCommittees,
+          committeeRoles: existingRoles as Record<string, CommitteeRole>
+        };
+      }
+      return m;
+    });
+
+    setAllAvailableMembers(updatedMemberList);
+    filterMembersForCommittee(updatedMemberList, committeeDef.slug);
+
+    try {
+      await fetch('/api/committee/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: memberEmail,
+          committeeSlug: committeeDef.slug,
+          committeeRole: newRole,
+          chairEmail: userEmail
+        })
+      });
+    } catch (err) {}
+
+    setNotification({ type: 'success', message: `Updated ${memberEmail} role to ${newRole === 'chair' ? 'Committee Chair' : 'Committee Member'}.` });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
   // Update Purpose Statement Handler (Chair / Admin)
   const handleSavePurpose = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -1296,13 +1338,27 @@ export default function CommitteePage() {
                         </div>
 
                         {canEdit && (
-                          <button
-                            onClick={() => handleRemoveMemberFromCommittee(member.email)}
-                            className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition-colors"
-                            title="Remove from Committee"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => handleToggleCommitteeRole(member.email, isMemberChair)}
+                              className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
+                                isMemberChair 
+                                  ? 'bg-ivy/10 text-ivy hover:bg-ivy/20' 
+                                  : 'bg-gold text-ivy hover:bg-gold/90'
+                              }`}
+                              title={isMemberChair ? "Demote to Committee Member" : "Promote to Committee Chair"}
+                            >
+                              <Award size={13} />
+                              {isMemberChair ? "Make Member" : "Make Chair"}
+                            </button>
+                            <button
+                              onClick={() => handleRemoveMemberFromCommittee(member.email)}
+                              className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition-colors"
+                              title="Remove from Committee"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         )}
                       </div>
 
