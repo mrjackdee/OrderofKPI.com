@@ -134,7 +134,7 @@ export default function FinancialRoster() {
       const activeFinancialMembers: Member[] = [];
 
       for (const row of sheetData.members) {
-        if (row.fy27Paid && (row.firstName || row.lastName)) {
+        if ((row.fy26Paid || row.fy27Paid) && (row.firstName || row.lastName)) {
           const fullName = row.fullName;
           const email = row.kpiEmail;
 
