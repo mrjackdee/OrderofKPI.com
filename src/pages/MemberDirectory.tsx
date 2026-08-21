@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, 
   Filter, 
@@ -16,7 +16,12 @@ import {
   ExternalLink,
   Camera,
   RefreshCw,
-  Briefcase
+  Briefcase,
+  Trash2,
+  Edit3,
+  Save,
+  X,
+  Check
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Member } from '../types';
@@ -28,6 +33,24 @@ export default function MemberDirectory() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('all');
+
+  // Admin and Super-user authorization checks
+  const currentUserEmail = (sessionStorage.getItem('userEmail') || '').toLowerCase().trim();
+  const currentUserRole = (sessionStorage.getItem('userRole') || '').toLowerCase().trim();
+  const isAdmin = currentUserRole === 'admin' || currentUserEmail === 'admin@orderofkpi.org' || currentUserEmail === 'qa.admin@orderofkpi.org' || currentUserEmail === 'info@kpi2012.org';
+
+  // Administration State
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    role: 'member' as any,
+    title: '',
+    financial_status: 'inactive' as any,
+    industry: ''
+  });
+  const [saving, setSaving] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
   useEffect(() => {
     const role = sessionStorage.getItem('userRole');
     if (!role || role === 'applicant' || role === 'prospective') {
@@ -63,6 +86,74 @@ export default function MemberDirectory() {
       console.error('Error fetching members:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Admin handlers
+  const handleDeleteMember = async (email: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete member "${name}" (${email})? This will delete their database record and cloud backup.`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/members/${encodeURIComponent(email)}?adminEmail=${encodeURIComponent(currentUserEmail)}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMembers(prev => prev.filter(m => m.email.toLowerCase() !== email.toLowerCase()));
+        setToastMessage({ type: 'success', text: `Successfully deleted member "${name}" from the system.` });
+        setTimeout(() => setToastMessage(null), 4000);
+      } else {
+        setToastMessage({ type: 'error', text: data.message || 'Failed to delete member' });
+        setTimeout(() => setToastMessage(null), 4000);
+      }
+    } catch (err) {
+      console.error('Error deleting member:', err);
+      setToastMessage({ type: 'error', text: 'Error connecting to server' });
+      setTimeout(() => setToastMessage(null), 4000);
+    }
+  };
+
+  const handleStartEdit = (member: Member) => {
+    setEditingMember(member);
+    setEditForm({
+      name: member.name || '',
+      role: member.role || 'member',
+      title: member.title || '',
+      financial_status: member.financial_status || 'inactive',
+      industry: member.industry || ''
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingMember) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/members/${encodeURIComponent(editingMember.email)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...editForm,
+          adminEmail: currentUserEmail
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMembers(prev => prev.map(m => m.email.toLowerCase() === editingMember.email.toLowerCase() ? {
+          ...m,
+          ...editForm
+        } : m));
+        setEditingMember(null);
+        setToastMessage({ type: 'success', text: `Successfully updated profile details for "${editForm.name}".` });
+        setTimeout(() => setToastMessage(null), 4000);
+      } else {
+        alert(data.message || 'Failed to save updates');
+      }
+    } catch (err) {
+      console.error('Error updating member:', err);
+      alert('Error connecting to server');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -224,6 +315,26 @@ export default function MemberDirectory() {
                   </div>
                 </div>
               </div>
+
+              {/* Administrative Actions Roster Overlay */}
+              {isAdmin && (
+                <div className="px-6 pb-6 pt-3 flex items-center justify-end gap-3 border-t border-cream/50 bg-cream/5">
+                  <button
+                    onClick={() => handleStartEdit(member)}
+                    className="px-3 py-1.5 bg-ivy/5 text-ivy hover:bg-gold hover:text-ivy text-xs font-bold uppercase tracking-wider rounded border border-gold/20 flex items-center gap-1.5 transition-all cursor-pointer"
+                    title="Edit Account Details"
+                  >
+                    <Edit3 size={12} /> Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteMember(member.email, member.name)}
+                    className="px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white text-xs font-bold uppercase tracking-wider rounded border border-red-200 flex items-center gap-1.5 transition-all cursor-pointer"
+                    title="Delete Account"
+                  >
+                    <Trash2 size={12} /> Delete
+                  </button>
+                </div>
+              )}
             </motion.div>
           ))}
         </div>
@@ -242,6 +353,165 @@ export default function MemberDirectory() {
           </div>
         )}
       </div>
+
+      {/* TOAST NOTIFICATION WINDOW */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.95 }}
+            className="fixed bottom-6 right-6 z-50 p-4 rounded-xl shadow-2xl border border-gold/30 flex items-center gap-3 bg-white"
+          >
+            {toastMessage.type === 'success' ? (
+              <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                <Check size={18} />
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                <X size={18} />
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-bold text-ivy">
+                {toastMessage.type === 'success' ? 'Success' : 'Error'}
+              </p>
+              <p className="text-xs text-ivy/70">{toastMessage.text}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* SUPER-USER ADMINISTRATOR EDIT MODAL */}
+      <AnimatePresence>
+        {editingMember && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white border-2 border-gold rounded-2xl max-w-md w-full overflow-hidden shadow-2xl relative my-auto"
+            >
+              <div className="bg-ivy p-6 text-cream">
+                <button
+                  onClick={() => setEditingMember(null)}
+                  className="absolute top-4 right-4 text-cream/70 hover:text-cream bg-white/10 hover:bg-white/20 rounded-full p-1.5 transition-colors cursor-pointer"
+                  title="Close Modal"
+                >
+                  <X size={18} />
+                </button>
+                <h3 className="text-xl font-display font-bold uppercase tracking-wider text-cream">
+                  Edit Member Account
+                </h3>
+                <p className="text-xs text-cream/70 mt-1">
+                  Database changes sync automatically across server and Firestore backups.
+                </p>
+              </div>
+
+              <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto bg-cream/30">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/60 mb-1">
+                    Email Address (Read-only)
+                  </label>
+                  <input
+                    type="text"
+                    value={editingMember.email}
+                    disabled
+                    className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-ivy/10 bg-ivy/5 text-ivy/60 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/60 mb-1">
+                    Display Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-ivy/20 focus:border-ivy bg-white text-ivy outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/60 mb-1">
+                    Administrative Role
+                  </label>
+                  <select
+                    value={editForm.role}
+                    onChange={e => setEditForm({ ...editForm, role: e.target.value as any })}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-ivy/20 focus:border-ivy bg-white text-ivy outline-none"
+                  >
+                    <option value="member">General Member</option>
+                    <option value="officer">Officer</option>
+                    <option value="Membership Committee">Committee Member</option>
+                    <option value="Membership Committee Chair">Committee Chair</option>
+                    <option value="admin">Administrator</option>
+                    <option value="prospective">Prospective Candidate</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/60 mb-1">
+                    Officer / Roster Title
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.title}
+                    onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                    placeholder="e.g. Grammateus, 2nd Anti-Basileus"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-ivy/20 focus:border-ivy bg-white text-ivy outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/60 mb-1">
+                    Dues & Assessment Status
+                  </label>
+                  <select
+                    value={editForm.financial_status}
+                    onChange={e => setEditForm({ ...editForm, financial_status: e.target.value as any })}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-ivy/20 focus:border-ivy bg-white text-ivy outline-none"
+                  >
+                    <option value="active">Active (Dues Paid)</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1E3F20]/60 mb-1">
+                    Industry / Profession
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.industry}
+                    onChange={e => setEditForm({ ...editForm, industry: e.target.value })}
+                    placeholder="e.g. Financial Services, Corporate Law"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-ivy/20 focus:border-ivy bg-white text-ivy outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 bg-white border-t border-ivy/10 flex items-center justify-end gap-3">
+                <button
+                  onClick={() => setEditingMember(null)}
+                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-ivy/60 hover:text-ivy"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={saving}
+                  className="px-5 py-2 bg-ivy hover:bg-ivy/90 text-cream text-xs font-bold uppercase tracking-widest rounded-lg flex items-center gap-1.5 disabled:opacity-50 transition-all shadow-sm cursor-pointer"
+                >
+                  <Save size={13} className="text-gold" />
+                  <span>{saving ? 'Saving...' : 'Save Changes'}</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

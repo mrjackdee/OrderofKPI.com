@@ -23,7 +23,8 @@ import {
   UserCheck,
   Edit3,
   Save,
-  CheckCheck
+  CheckCheck,
+  Trash2
 } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 import { Member } from '../types';
@@ -80,6 +81,79 @@ export default function FinancialRoster() {
       console.error('Failed to save industry:', e);
     } finally {
       setIsSavingIndustry(false);
+    }
+  };
+
+  // Admin states and handlers for absolute CRUD controls across the Member Portal
+  const [isEditingAdmin, setIsEditingAdmin] = useState(false);
+  const [editAdminForm, setEditAdminForm] = useState({
+    name: '',
+    role: 'member' as any,
+    title: '',
+    financial_status: 'inactive' as any,
+    industry: ''
+  });
+  const [savingAdmin, setSavingAdmin] = useState(false);
+
+  const handleStartAdminEdit = (member: Member) => {
+    setEditAdminForm({
+      name: member.name || '',
+      role: member.role || 'member',
+      title: member.title || '',
+      financial_status: member.financial_status || 'inactive',
+      industry: member.industry || ''
+    });
+    setIsEditingAdmin(true);
+  };
+
+  const handleSaveAdminEdit = async () => {
+    if (!selectedProfileMember) return;
+    setSavingAdmin(true);
+    try {
+      const res = await fetch(`/api/members/${encodeURIComponent(selectedProfileMember.email)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...editAdminForm,
+          adminEmail: currentUserEmail
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSelectedProfileMember(prev => prev ? { ...prev, ...editAdminForm } : null);
+        setMembers(prev => prev.map(m => m.email.toLowerCase() === selectedProfileMember.email.toLowerCase() ? { ...m, ...editAdminForm } : m));
+        setIsEditingAdmin(false);
+      } else {
+        alert(data.message || 'Failed to update member details');
+      }
+    } catch (err) {
+      console.error('Error saving updates:', err);
+      alert('Error connecting to server');
+    } finally {
+      setSavingAdmin(false);
+    }
+  };
+
+  const handleDeleteAdminMember = async () => {
+    if (!selectedProfileMember) return;
+    if (!window.confirm(`Are you sure you want to permanently delete member "${selectedProfileMember.name}" (${selectedProfileMember.email})? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/members/${encodeURIComponent(selectedProfileMember.email)}?adminEmail=${encodeURIComponent(currentUserEmail)}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMembers(prev => prev.filter(m => m.email.toLowerCase() !== selectedProfileMember.email.toLowerCase()));
+        setSelectedProfileMember(null);
+        setIsEditingAdmin(false);
+      } else {
+        alert(data.message || 'Failed to delete member');
+      }
+    } catch (err) {
+      console.error('Error deleting member:', err);
+      alert('Error connecting to server');
     }
   };
 
@@ -619,140 +693,268 @@ export default function FinancialRoster() {
               </div>
 
               {/* Profile Body */}
-              <div className="p-6 space-y-5 bg-[#FDFCF0]/50">
-                {/* Contact Section */}
-                <div className="bg-white rounded-xl p-4 border border-[#B8860B]/20 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#1E3F20]/60 flex items-center gap-1.5">
-                      <Mail size={12} className="text-[#B8860B]" /> Official Email Address
-                    </span>
-                    <button
-                      onClick={() => handleCopyEmail(selectedProfileMember.email)}
-                      className="text-[10px] font-bold text-[#1E3F20] hover:text-[#B8860B] flex items-center gap-1 transition-colors cursor-pointer"
-                    >
-                      {copiedEmail ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
-                      <span>{copiedEmail ? 'Copied' : 'Copy'}</span>
-                    </button>
-                  </div>
-                  <a
-                    href={`mailto:${selectedProfileMember.email}`}
-                    className="text-sm font-semibold text-[#1E3F20] hover:text-[#B8860B] transition-colors block truncate hover:underline"
-                  >
-                    {selectedProfileMember.email}
-                  </a>
-                </div>
-
-                {/* Details Grid */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-white rounded-xl p-3.5 border border-[#B8860B]/20">
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-[#1E3F20]/50 block mb-1">
-                      Membership Status
-                    </span>
-                    <div className="flex items-center gap-1.5 text-[#1E3F20]">
-                      <UserCheck size={14} className="text-green-600" />
-                      <span className="text-xs font-bold">Good Standing</span>
+              <div className="p-6 space-y-5 bg-[#FDFCF0]/50 overflow-y-auto max-h-[60vh]">
+                {isEditingAdmin ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1E3F20]/60 mb-1">
+                        Email Address (Read-only)
+                      </label>
+                      <input
+                        type="text"
+                        value={selectedProfileMember.email}
+                        disabled
+                        className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-[#1E3F20]/10 bg-[#1E3F20]/5 text-[#1E3F20]/60 outline-none"
+                      />
                     </div>
-                  </div>
 
-                  <div className="bg-white rounded-xl p-3.5 border border-[#B8860B]/20">
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-[#1E3F20]/50 block mb-1">
-                      Dues & Assessment
-                    </span>
-                    <div className="flex items-center gap-1.5 text-[#1E3F20]">
-                      <CheckCircle2 size={14} className="text-green-600" />
-                      <span className="text-xs font-bold text-green-700">FY27 Paid</span>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1E3F20]/60 mb-1">
+                        Display Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editAdminForm.name}
+                        onChange={e => setEditAdminForm({ ...editAdminForm, name: e.target.value })}
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-[#1E3F20]/20 focus:border-[#1E3F20] bg-white text-[#1E3F20] outline-none"
+                      />
                     </div>
-                  </div>
 
-                  <div className="bg-white rounded-xl p-3.5 border border-[#B8860B]/20">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-[#1E3F20]/50 block">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1E3F20]/60 mb-1">
+                        Administrative Role
+                      </label>
+                      <select
+                        value={editAdminForm.role}
+                        onChange={e => setEditAdminForm({ ...editAdminForm, role: e.target.value as any })}
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-[#1E3F20]/20 focus:border-[#1E3F20] bg-white text-[#1E3F20] outline-none"
+                      >
+                        <option value="member">General Member</option>
+                        <option value="officer">Officer</option>
+                        <option value="Membership Committee">Committee Member</option>
+                        <option value="Membership Committee Chair">Committee Chair</option>
+                        <option value="admin">Administrator</option>
+                        <option value="prospective">Prospective Candidate</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1E3F20]/60 mb-1">
+                        Officer / Roster Title
+                      </label>
+                      <input
+                        type="text"
+                        value={editAdminForm.title}
+                        onChange={e => setEditAdminForm({ ...editAdminForm, title: e.target.value })}
+                        placeholder="e.g. Grammateus, 2nd Anti-Basileus"
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-[#1E3F20]/20 focus:border-[#1E3F20] bg-white text-[#1E3F20] outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1E3F20]/60 mb-1">
+                        Financial Status
+                      </label>
+                      <select
+                        value={editAdminForm.financial_status}
+                        onChange={e => setEditAdminForm({ ...editAdminForm, financial_status: e.target.value as any })}
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-[#1E3F20]/20 focus:border-[#1E3F20] bg-white text-[#1E3F20] outline-none"
+                      >
+                        <option value="active">Active (Dues Paid)</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1E3F20]/60 mb-1">
                         Industry / Profession
-                      </span>
-                      {(isAdmin || currentUserEmail === selectedProfileMember.email.toLowerCase()) && !isEditingIndustry && (
-                        <button
-                          onClick={() => {
-                            setIndustryInput(selectedProfileMember.industry || '');
-                            setIsEditingIndustry(true);
-                          }}
-                          className="text-[9px] font-bold uppercase tracking-wider text-[#B8860B] hover:text-[#1E3F20] flex items-center gap-1 cursor-pointer"
-                          title="Edit Industry / Profession"
-                        >
-                          <Edit3 size={11} /> Edit
-                        </button>
-                      )}
+                      </label>
+                      <input
+                        type="text"
+                        value={editAdminForm.industry}
+                        onChange={e => setEditAdminForm({ ...editAdminForm, industry: e.target.value })}
+                        placeholder="e.g. Finance, Tech, Medical"
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-[#1E3F20]/20 focus:border-[#1E3F20] bg-white text-[#1E3F20] outline-none"
+                      />
                     </div>
-                    {isEditingIndustry ? (
-                      <div className="space-y-2 mt-1">
-                        <input
-                          type="text"
-                          value={industryInput}
-                          onChange={(e) => setIndustryInput(e.target.value)}
-                          placeholder="e.g. Financial Services, Tech"
-                          className="w-full px-2.5 py-1.5 text-xs rounded border border-[#B8860B]/40 focus:outline-none focus:ring-1 focus:ring-[#B8860B] bg-cream/30 text-[#1E3F20]"
-                          autoFocus
-                        />
-                        <div className="flex items-center gap-1.5 justify-end">
-                          <button
-                            onClick={() => setIsEditingIndustry(false)}
-                            className="px-2 py-1 text-[10px] font-bold text-gray-500 hover:text-gray-700 rounded"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={handleSaveIndustry}
-                            disabled={isSavingIndustry}
-                            className="px-2.5 py-1 text-[10px] font-bold bg-[#1E3F20] text-cream rounded flex items-center gap-1 hover:bg-[#1E3F20]/90 disabled:opacity-50"
-                          >
-                            <Save size={10} className="text-[#B8860B]" />
-                            {isSavingIndustry ? 'Saving...' : 'Save'}
-                          </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Contact Section */}
+                    <div className="bg-white rounded-xl p-4 border border-[#B8860B]/20 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#1E3F20]/60 flex items-center gap-1.5">
+                          <Mail size={12} className="text-[#B8860B]" /> Official Email Address
+                        </span>
+                        <button
+                          onClick={() => handleCopyEmail(selectedProfileMember.email)}
+                          className="text-[10px] font-bold text-[#1E3F20] hover:text-[#B8860B] flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          {copiedEmail ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
+                          <span>{copiedEmail ? 'Copied' : 'Copy'}</span>
+                        </button>
+                      </div>
+                      <a
+                        href={`mailto:${selectedProfileMember.email}`}
+                        className="text-sm font-semibold text-[#1E3F20] hover:text-[#B8860B] transition-colors block truncate hover:underline"
+                      >
+                        {selectedProfileMember.email}
+                      </a>
+                    </div>
+
+                    {/* Details Grid */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-white rounded-xl p-3.5 border border-[#B8860B]/20">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-[#1E3F20]/50 block mb-1">
+                          Membership Status
+                        </span>
+                        <div className="flex items-center gap-1.5 text-[#1E3F20]">
+                          <UserCheck size={14} className="text-green-600" />
+                          <span className="text-xs font-bold">Good Standing</span>
                         </div>
                       </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5 text-[#1E3F20]">
-                        <Briefcase size={14} className="text-[#B8860B]" />
-                        <span className="text-xs font-bold truncate">
-                          {selectedProfileMember.industry || 'Not specified'}
+
+                      <div className="bg-white rounded-xl p-3.5 border border-[#B8860B]/20">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-[#1E3F20]/50 block mb-1">
+                          Dues & Assessment
                         </span>
+                        <div className="flex items-center gap-1.5 text-[#1E3F20]">
+                          <CheckCircle2 size={14} className="text-green-600" />
+                          <span className="text-xs font-bold text-green-700">FY27 Paid</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-xl p-3.5 border border-[#B8860B]/20">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[9px] font-bold uppercase tracking-widest text-[#1E3F20]/50 block">
+                            Industry / Profession
+                          </span>
+                          {(isAdmin || currentUserEmail === selectedProfileMember.email.toLowerCase()) && !isEditingIndustry && (
+                            <button
+                              onClick={() => {
+                                setIndustryInput(selectedProfileMember.industry || '');
+                                setIsEditingIndustry(true);
+                              }}
+                              className="text-[9px] font-bold uppercase tracking-wider text-[#B8860B] hover:text-[#1E3F20] flex items-center gap-1 cursor-pointer"
+                              title="Edit Industry / Profession"
+                            >
+                              <Edit3 size={11} /> Edit
+                            </button>
+                          )}
+                        </div>
+                        {isEditingIndustry ? (
+                          <div className="space-y-2 mt-1">
+                            <input
+                              type="text"
+                              value={industryInput}
+                              onChange={(e) => setIndustryInput(e.target.value)}
+                              placeholder="e.g. Financial Services, Tech"
+                              className="w-full px-2.5 py-1.5 text-xs rounded border border-[#B8860B]/40 focus:outline-none focus:ring-1 focus:ring-[#B8860B] bg-cream/30 text-[#1E3F20]"
+                              autoFocus
+                            />
+                            <div className="flex items-center gap-1.5 justify-end">
+                              <button
+                                onClick={() => setIsEditingIndustry(false)}
+                                className="px-2 py-1 text-[10px] font-bold text-gray-500 hover:text-gray-700 rounded"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={handleSaveIndustry}
+                                disabled={isSavingIndustry}
+                                className="px-2.5 py-1 text-[10px] font-bold bg-[#1E3F20] text-cream rounded flex items-center gap-1 hover:bg-[#1E3F20]/90 disabled:opacity-50"
+                              >
+                                <Save size={10} className="text-[#B8860B]" />
+                                {isSavingIndustry ? 'Saving...' : 'Save'}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-[#1E3F20]">
+                            <Briefcase size={14} className="text-[#B8860B]" />
+                            <span className="text-xs font-bold truncate">
+                              {selectedProfileMember.industry || 'Not specified'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Committees */}
+                    {selectedProfileMember.committees && selectedProfileMember.committees.length > 0 && (
+                      <div className="bg-white rounded-xl p-4 border border-[#B8860B]/20">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#1E3F20]/60 block mb-2">
+                          Committee Appointments
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedProfileMember.committees.map(c => (
+                            <span key={c} className="px-2.5 py-1 bg-[#1E3F20]/5 border border-[#B8860B]/30 rounded-md text-[10px] font-bold text-[#1E3F20] uppercase tracking-wider">
+                              {c.replace(/-/g, ' ')}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
-                  </div>
-                </div>
-
-                {/* Committees */}
-                {selectedProfileMember.committees && selectedProfileMember.committees.length > 0 && (
-                  <div className="bg-white rounded-xl p-4 border border-[#B8860B]/20">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#1E3F20]/60 block mb-2">
-                      Committee Appointments
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedProfileMember.committees.map(c => (
-                        <span key={c} className="px-2.5 py-1 bg-[#1E3F20]/5 border border-[#B8860B]/30 rounded-md text-[10px] font-bold text-[#1E3F20] uppercase tracking-wider">
-                          {c.replace(/-/g, ' ')}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                  </>
                 )}
               </div>
 
               {/* Modal Footer */}
-              <div className="p-4 bg-white border-t border-[#B8860B]/20 flex items-center justify-between gap-3">
-                <a
-                  href={`mailto:${selectedProfileMember.email}`}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#1E3F20] text-cream text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-[#1E3F20]/90 transition-all shadow-sm"
-                >
-                  <Mail size={14} className="text-[#B8860B]" />
-                  <span>Send Email</span>
-                </a>
+              <div className="p-4 bg-white border-t border-[#B8860B]/20 flex flex-wrap items-center justify-between gap-3">
+                {isEditingAdmin ? (
+                  <>
+                    <button
+                      onClick={handleDeleteAdminMember}
+                      className="px-3 py-2 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white text-xs font-bold uppercase tracking-wider rounded border border-red-200 flex items-center gap-1 transition-all cursor-pointer"
+                    >
+                      <Trash2 size={13} /> Delete Member
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setIsEditingAdmin(false)}
+                        className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#1E3F20]/70 hover:text-[#1E3F20]"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSaveAdminEdit}
+                        disabled={savingAdmin}
+                        className="px-4 py-2 bg-[#1E3F20] text-cream text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-[#1E3F20]/90 disabled:opacity-50 flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <Save size={13} className="text-[#B8860B]" />
+                        <span>{savingAdmin ? 'Saving...' : 'Save'}</span>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={`mailto:${selectedProfileMember.email}`}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#1E3F20] text-cream text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-[#1E3F20]/90 transition-all shadow-sm"
+                      >
+                        <Mail size={14} className="text-[#B8860B]" />
+                        <span>Send Email</span>
+                      </a>
+                      
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleStartAdminEdit(selectedProfileMember)}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 border border-[#B8860B]/30 rounded-lg text-xs font-bold text-[#1E3F20] bg-gold/10 hover:bg-gold/20 uppercase tracking-wider transition-all cursor-pointer"
+                        >
+                          <Edit3 size={13} /> Edit Profile
+                        </button>
+                      )}
+                    </div>
 
-                <button
-                  onClick={() => setSelectedProfileMember(null)}
-                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#1E3F20]/70 hover:text-[#1E3F20] transition-colors"
-                >
-                  Close
-                </button>
+                    <button
+                      onClick={() => setSelectedProfileMember(null)}
+                      className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#1E3F20]/70 hover:text-[#1E3F20] transition-colors"
+                    >
+                      Close
+                    </button>
+                  </>
+                )}
               </div>
             </motion.div>
           </div>
