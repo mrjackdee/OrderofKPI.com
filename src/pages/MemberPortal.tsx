@@ -291,10 +291,21 @@ export default function MemberPortal() {
               {STANDING_COMMITTEES.map((committee) => {
                 const committeeChairs = getCommitteeChairs(committee.slug);
                 const committeeMembers = getCommitteeMembers(committee.slug);
-                const primaryChair = committeeChairs[0] || { name: 'Executive Committee', email: 'info@kpi2012.org' };
+                
+                let recipientEmails = 'info@kpi2012.org';
+                let recipientNames = 'Executive Committee';
+                
+                if (committeeChairs.length === 1) {
+                  recipientEmails = committeeChairs[0].email;
+                  recipientNames = committeeChairs[0].name;
+                } else if (committeeChairs.length > 1) {
+                  recipientEmails = committeeChairs.map(c => c.email).join(',');
+                  recipientNames = committeeChairs.map(c => c.name).join(' & ');
+                }
+
                 const mailtoSubject = encodeURIComponent(`Interest in Joining ${committee.name}`);
-                const mailtoBody = encodeURIComponent(`Dear ${primaryChair.name},\n\nI am interested in joining the ${committee.name}. Please contact me regarding committee meetings and membership steps.\n\nRespectfully,`);
-                const mailtoLink = `mailto:${primaryChair.email}?subject=${mailtoSubject}&body=${mailtoBody}`;
+                const mailtoBody = encodeURIComponent(`Dear ${recipientNames},\n\nI am interested in joining the ${committee.name}. Please contact me regarding committee meetings and membership steps.\n\nRespectfully,`);
+                const mailtoLink = `mailto:${recipientEmails}?subject=${mailtoSubject}&body=${mailtoBody}`;
                 const userHasAccess = hasCommitteeAccess(committee.slug, normUser);
 
                 return (
@@ -371,10 +382,21 @@ export default function MemberPortal() {
                   {STANDING_COMMITTEES.map((committee) => {
                     const committeeChairs = getCommitteeChairs(committee.slug);
                     const committeeMembers = getCommitteeMembers(committee.slug);
-                    const primaryChair = committeeChairs[0] || { name: 'Executive Committee', email: 'info@kpi2012.org' };
+                    
+                    let recipientEmails = 'info@kpi2012.org';
+                    let recipientNames = 'Executive Committee';
+                    
+                    if (committeeChairs.length === 1) {
+                      recipientEmails = committeeChairs[0].email;
+                      recipientNames = committeeChairs[0].name;
+                    } else if (committeeChairs.length > 1) {
+                      recipientEmails = committeeChairs.map(c => c.email).join(',');
+                      recipientNames = committeeChairs.map(c => c.name).join(' & ');
+                    }
+
                     const mailtoSubject = encodeURIComponent(`Interest in Joining ${committee.name}`);
-                    const mailtoBody = encodeURIComponent(`Dear ${primaryChair.name},\n\nI am interested in joining the ${committee.name}. Please contact me regarding committee meetings and membership steps.\n\nRespectfully,`);
-                    const mailtoLink = `mailto:${primaryChair.email}?subject=${mailtoSubject}&body=${mailtoBody}`;
+                    const mailtoBody = encodeURIComponent(`Dear ${recipientNames},\n\nI am interested in joining the ${committee.name}. Please contact me regarding committee meetings and membership steps.\n\nRespectfully,`);
+                    const mailtoLink = `mailto:${recipientEmails}?subject=${mailtoSubject}&body=${mailtoBody}`;
                     const userHasAccess = hasCommitteeAccess(committee.slug, normUser);
 
                     return (
@@ -657,13 +679,22 @@ export default function MemberPortal() {
                   >
                     Close
                   </button>
-                  <a
-                    href={`mailto:${getCommitteeChairs(selectedCommitteeModal.slug)[0]?.email || 'info@kpi2012.org'}?subject=${encodeURIComponent(`Interest in Joining ${selectedCommitteeModal.name}`)}`}
-                    className="px-5 py-2 bg-gold text-ivy font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-ivy hover:text-cream transition-all flex items-center justify-center gap-2 w-full sm:w-auto shadow-sm"
-                  >
-                    <Mail size={14} />
-                    <span>Contact Chair to Join</span>
-                  </a>
+                  {(() => {
+                    const chairs = getCommitteeChairs(selectedCommitteeModal.slug);
+                    const recipientEmails = chairs.length > 0 ? chairs.map(c => c.email).join(',') : 'info@kpi2012.org';
+                    const recipientNames = chairs.length > 0 ? chairs.map(c => c.name).join(' & ') : 'Executive Board';
+                    const mailtoSubject = encodeURIComponent(`Interest in Joining ${selectedCommitteeModal.name}`);
+                    const mailtoBody = encodeURIComponent(`Dear ${recipientNames},\n\nI am interested in joining the ${selectedCommitteeModal.name}. Please contact me regarding committee meetings and membership steps.\n\nRespectfully,`);
+                    return (
+                      <a
+                        href={`mailto:${recipientEmails}?subject=${mailtoSubject}&body=${mailtoBody}`}
+                        className="px-5 py-2 bg-gold text-ivy font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-ivy hover:text-cream transition-all flex items-center justify-center gap-2 w-full sm:w-auto shadow-sm"
+                      >
+                        <Mail size={14} />
+                        <span>Contact Chair to Join</span>
+                      </a>
+                    );
+                  })()}
                 </div>
               </div>
             </motion.div>

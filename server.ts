@@ -727,13 +727,6 @@ async function initDb() {
       // Ignore
     }
 
-    // Force clear intake_class for all existing users to clean incorrect data
-    try {
-      sqliteDb.prepare("UPDATE users SET intake_class = ''").run();
-    } catch (e) {
-      console.error("Error clearing intake_class in DB:", e);
-    }
-
     // SQLite Cleanup (Only log, do not delete dynamically added members)
     const existingRows = sqliteDb.prepare("SELECT email FROM users").all() as { email: string }[];
     for (const row of existingRows) {
@@ -2077,7 +2070,11 @@ async function startServer() {
     try {
       let members: any[] = [];
       if (useSqlite && sqliteDb) {
-        members = sqliteDb.prepare("SELECT * FROM users").all();
+        members = sqliteDb.prepare("SELECT * FROM users").all().map((u: any) => ({
+          ...u,
+          committees: JSON.parse(u.committees || '[]'),
+          committeeRoles: JSON.parse(u.committee_roles || '{}')
+        }));
       } else if (fs.existsSync(jsonDbPath)) {
         const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
         members = Object.values(data).map((u: any) => ({
