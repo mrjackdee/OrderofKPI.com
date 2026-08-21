@@ -278,11 +278,13 @@ export function isCommitteeChair(
   }
 ): boolean {
   const norm = normalizeUserRBAC(user);
+  // Admins and Super Committee Chairs retain full access behind the scenes
+  // but are never publicly listed or evaluated as a specific committee's chair.
   if (
     norm.role === 'admin' ||
     norm.title === 'Super Committee Chair'
   ) {
-    return true;
+    return false;
   }
   if (norm.committeeRoles[committeeSlug] === 'chair') return true;
   if (norm.role === 'Committee Chair' && norm.committees.includes(committeeSlug)) return true;

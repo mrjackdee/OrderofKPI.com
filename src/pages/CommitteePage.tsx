@@ -1316,7 +1316,9 @@ export default function CommitteePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {members.map(member => {
                 const norm = normalizeUserRBAC(member);
-                const isMemberChair = norm.committeeRoles[committeeDef.slug] === 'chair' || norm.role === 'admin';
+                const isMemberAdmin = norm.role === 'admin';
+                const isMemberSuperChair = norm.title === 'Super Committee Chair';
+                const isMemberChair = !isMemberAdmin && !isMemberSuperChair && norm.committeeRoles[committeeDef.slug] === 'chair';
                 return (
                   <div
                     key={member.email}
@@ -1326,9 +1328,13 @@ export default function CommitteePage() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <span className={`inline-block text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full ${
+                            isMemberAdmin ? 'bg-red-600 text-white' :
+                            isMemberSuperChair ? 'bg-ivy text-cream border border-gold/20' :
                             isMemberChair ? 'bg-gold text-ivy' : 'bg-ivy/10 text-ivy'
                           }`}>
-                            {isMemberChair ? 'Committee Chair' : 'Committee Member'}
+                            {isMemberAdmin ? 'Administrator' :
+                             isMemberSuperChair ? 'Super Committee' :
+                             isMemberChair ? 'Committee Chair' : 'Committee Member'}
                           </span>
                           <h4 className="text-base font-display font-bold uppercase tracking-wider text-ivy mt-2">
                             {member.name}
@@ -1340,7 +1346,7 @@ export default function CommitteePage() {
                           )}
                         </div>
 
-                        {canEdit && (
+                        {canEdit && !isMemberAdmin && !isMemberSuperChair && (
                           <div className="flex items-center gap-1.5">
                             <button
                               onClick={() => handleToggleCommitteeRole(member.email, isMemberChair)}
@@ -1361,6 +1367,13 @@ export default function CommitteePage() {
                             >
                               <Trash2 size={16} />
                             </button>
+                          </div>
+                        )}
+                        
+                        {/* If it's an admin or super committee chair in the list, show a subtle lock/shield indicator instead of modification tools */}
+                        {canEdit && (isMemberAdmin || isMemberSuperChair) && (
+                          <div className="p-1.5 bg-cream rounded border border-gold/20 text-gold" title="System Administrator">
+                            <ShieldCheck size={16} />
                           </div>
                         )}
                       </div>

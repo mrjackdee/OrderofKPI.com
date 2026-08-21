@@ -115,6 +115,10 @@ export default function MemberPortal() {
 
   const getCommitteeChairs = (slug: CommitteeSlug) => {
     const chairsFromDb = allMembers.filter(m => {
+      const norm = normalizeUserRBAC(m);
+      if (norm.role === 'admin' || norm.title === 'Super Committee Chair') {
+        return false;
+      }
       return isCommitteeChair(slug, m) || m.committeeRoles?.[slug] === 'chair' || (m.role && m.role.toLowerCase().includes('chair') && m.committees?.includes(slug));
     });
 
