@@ -20,7 +20,10 @@ import {
   Check,
   Award,
   Briefcase,
-  UserCheck
+  UserCheck,
+  Edit3,
+  Save,
+  CheckCheck
 } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 import { Member } from '../types';
@@ -37,6 +40,13 @@ export default function FinancialRoster() {
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isEditingIndustry, setIsEditingIndustry] = useState(false);
+  const [industryInput, setIndustryInput] = useState('');
+  const [isSavingIndustry, setIsSavingIndustry] = useState(false);
+
+  const currentUserEmail = (sessionStorage.getItem('userEmail') || '').toLowerCase().trim();
+  const currentUserRole = (sessionStorage.getItem('userRole') || '').toLowerCase().trim();
+  const isAdmin = currentUserRole === 'admin' || currentUserEmail === 'admin@orderofkpi.org';
 
   useEffect(() => {
     const role = sessionStorage.getItem('userRole');
@@ -48,6 +58,30 @@ export default function FinancialRoster() {
       fetchMembers();
     });
   }, [navigate]);
+
+  const handleSaveIndustry = async () => {
+    if (!selectedProfileMember) return;
+    setIsSavingIndustry(true);
+    try {
+      const res = await fetch(`/api/members/${encodeURIComponent(selectedProfileMember.email)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          industry: industryInput.trim(),
+          adminEmail: currentUserEmail
+        })
+      });
+      if (res.ok) {
+        setSelectedProfileMember(prev => prev ? { ...prev, industry: industryInput.trim() } : null);
+        setMembers(prev => prev.map(m => m.email.toLowerCase() === selectedProfileMember.email.toLowerCase() ? { ...m, industry: industryInput.trim() } : m));
+        setIsEditingIndustry(false);
+      }
+    } catch (e) {
+      console.error('Failed to save industry:', e);
+    } finally {
+      setIsSavingIndustry(false);
+    }
+  };
 
   const isOfficer = (member: Member): boolean => {
     if (!member) return false;
@@ -83,7 +117,7 @@ export default function FinancialRoster() {
         return isTest || isAdmin || isApplicantOrCandidate || email === 'brandon.addison@orderofkpi.org';
       };
 
-      // 1. Fetch directory members from backend API for metadata (role, title, profile_photo, intake_class)
+      // 1. Fetch directory members from backend API for metadata (role, title, profile_photo, industry)
       let dirMembers: Member[] = [];
       try {
         const response = await fetch('/api/members');
@@ -118,7 +152,6 @@ export default function FinancialRoster() {
             role: matchedDirMember?.role || 'member',
             title: matchedDirMember?.title || '',
             is_first_login: false,
-            intake_class: matchedDirMember?.intake_class || 'Member',
             financial_status: 'active',
             profile_photo: matchedDirMember?.profile_photo || '',
             industry: matchedDirMember?.industry || '',
@@ -226,13 +259,10 @@ export default function FinancialRoster() {
               <CalendarDays size={14} /> Intake Calendar
             </Link>
             <div className="px-5 py-2 rounded-full bg-[#1E3F20] text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-md">
-              <Users size={14} /> Financial Membership Roster
+              <Users size={14} /> Membership Dues & Status
             </div>
-            <Link to="/gantt-chart" className="px-5 py-2 rounded-full border border-[#B8860B]/30 text-[#1E3F20] text-xs font-bold uppercase tracking-widest hover:bg-[#B8860B]/10 transition-colors flex items-center gap-2">
-              <LayoutList size={14} /> Intake Plan
-            </Link>
             <Link to="/member-directory" className="px-5 py-2 rounded-full border border-[#B8860B]/30 text-[#1E3F20] text-xs font-bold uppercase tracking-widest hover:bg-[#B8860B]/10 transition-colors flex items-center gap-2">
-              <Users size={14} /> Access Directory
+              <Users size={14} /> Member Directory
             </Link>
           </div>
         </div>
@@ -250,7 +280,7 @@ export default function FinancialRoster() {
             <div className="h-px w-16 bg-[#B8860B]" />
           </div>
           <h1 className="text-4xl md:text-6xl font-display text-[#1E3F20] tracking-wider uppercase text-center max-w-4xl">
-            Financial Membership Roster
+            Membership Dues & Status
           </h1>
           <p className="text-[#1E3F20]/70 text-xs md:text-sm mt-2 max-w-xl font-medium">
             Active financial members in good standing. Click any member name to view their profile.
@@ -635,27 +665,58 @@ export default function FinancialRoster() {
                   </div>
 
                   <div className="bg-white rounded-xl p-3.5 border border-[#B8860B]/20">
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-[#1E3F20]/50 block mb-1">
-                      Class / Affiliation
-                    </span>
-                    <div className="flex items-center gap-1.5 text-[#1E3F20]">
-                      <Award size={14} className="text-[#B8860B]" />
-                      <span className="text-xs font-bold truncate">
-                        {selectedProfileMember.intake_class || 'General Member'}
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[#1E3F20]/50 block">
+                        Industry / Profession
                       </span>
+                      {(isAdmin || currentUserEmail === selectedProfileMember.email.toLowerCase()) && !isEditingIndustry && (
+                        <button
+                          onClick={() => {
+                            setIndustryInput(selectedProfileMember.industry || '');
+                            setIsEditingIndustry(true);
+                          }}
+                          className="text-[9px] font-bold uppercase tracking-wider text-[#B8860B] hover:text-[#1E3F20] flex items-center gap-1 cursor-pointer"
+                          title="Edit Industry / Profession"
+                        >
+                          <Edit3 size={11} /> Edit
+                        </button>
+                      )}
                     </div>
-                  </div>
-
-                  <div className="bg-white rounded-xl p-3.5 border border-[#B8860B]/20">
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-[#1E3F20]/50 block mb-1">
-                      Industry / Profession
-                    </span>
-                    <div className="flex items-center gap-1.5 text-[#1E3F20]">
-                      <Briefcase size={14} className="text-[#B8860B]" />
-                      <span className="text-xs font-bold truncate">
-                        {selectedProfileMember.industry || 'Active Professional'}
-                      </span>
-                    </div>
+                    {isEditingIndustry ? (
+                      <div className="space-y-2 mt-1">
+                        <input
+                          type="text"
+                          value={industryInput}
+                          onChange={(e) => setIndustryInput(e.target.value)}
+                          placeholder="e.g. Financial Services, Tech"
+                          className="w-full px-2.5 py-1.5 text-xs rounded border border-[#B8860B]/40 focus:outline-none focus:ring-1 focus:ring-[#B8860B] bg-cream/30 text-[#1E3F20]"
+                          autoFocus
+                        />
+                        <div className="flex items-center gap-1.5 justify-end">
+                          <button
+                            onClick={() => setIsEditingIndustry(false)}
+                            className="px-2 py-1 text-[10px] font-bold text-gray-500 hover:text-gray-700 rounded"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleSaveIndustry}
+                            disabled={isSavingIndustry}
+                            className="px-2.5 py-1 text-[10px] font-bold bg-[#1E3F20] text-cream rounded flex items-center gap-1 hover:bg-[#1E3F20]/90 disabled:opacity-50"
+                          >
+                            <Save size={10} className="text-[#B8860B]" />
+                            {isSavingIndustry ? 'Saving...' : 'Save'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-[#1E3F20]">
+                        <Briefcase size={14} className="text-[#B8860B]" />
+                        <span className="text-xs font-bold truncate">
+                          {selectedProfileMember.industry || 'Not specified'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -143,7 +143,7 @@ export default function MemberHeader() {
             </div>
 
             <p className="text-[10px] md:text-xs text-white/80 uppercase font-bold tracking-[0.2em] mt-3">
-              Kappa Pi Active Financial Portal
+              Order of Kappa Pi Member Portal
             </p>
           </div>
         </div>
@@ -220,10 +220,10 @@ export default function MemberHeader() {
                     </div>
                     <div>
                       <h2 className="text-lg font-black text-white uppercase tracking-wider">
-                        {isFirstLogin ? 'Secure Your Account' : 'Change Password'}
+                        {isFirstLogin ? 'Set Your Password' : 'Change Password'}
                       </h2>
                       <p className="text-[10px] text-silver/60 uppercase tracking-widest font-bold">
-                        {isFirstLogin ? 'First login password configuration' : 'Self-service password update'}
+                        {isFirstLogin ? 'Create your personal account password' : 'Update your current login password'}
                       </p>
                     </div>
                   </div>
@@ -232,7 +232,7 @@ export default function MemberHeader() {
                     <div className="mb-5 p-3.5 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-3">
                       <ShieldAlert size={16} className="text-primary shrink-0 mt-0.5" />
                       <p className="text-[10px] text-primary uppercase tracking-wider font-bold leading-normal">
-                        Security Notice: Since this is your first login, you are required to change your default password before accessing portal content.
+                        Welcome! Please choose a new password before exploring the member portal.
                       </p>
                     </div>
                   )}
@@ -288,7 +288,7 @@ export default function MemberHeader() {
 
                     {/* Requirements validation indicator checklist */}
                     <div className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-2">
-                      <span className="text-[9px] text-silver/40 uppercase tracking-widest font-bold block mb-1">Complexity Requirements:</span>
+                      <span className="text-[9px] text-silver/40 uppercase tracking-widest font-bold block mb-1">Password Requirements:</span>
                       
                       <div className="flex items-center gap-2">
                         <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border ${hasMinLength ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-400' : 'border-silver/20 text-silver/30'}`}>

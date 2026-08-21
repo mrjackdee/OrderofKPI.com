@@ -6,12 +6,21 @@ import {
   Users, Coffee, Edit3, ClipboardCheck, Mail, Video, 
   ThumbsUp, Star, Hand, Wallet, Shield, UserCheck, 
   Leaf, Download, CalendarDays, LayoutList, Calendar,
-  AlertTriangle, CheckCircle2, RefreshCw, LogOut, Plus
+  AlertTriangle, CheckCircle2, Check, RefreshCw, LogOut, Plus
 } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 import { initAuth, googleSignIn, getAccessToken, logout as googleLogout } from '../lib/googleAuth';
 
-const events = [
+export interface EventItem {
+  step: number;
+  title: string;
+  date: string;
+  time: string;
+  category?: string;
+  icon: any;
+}
+
+const events: EventItem[] = [
   { step: 1, title: 'Interest Meeting #1', date: '8/2/2026', time: '1:00 PM ET', category: 'Interest Meetings', icon: Users },
   { step: 2, title: 'Interest Meeting #2', date: '8/3/2026', time: '9:08 PM ET', category: 'Interest Meetings', icon: Users },
   { step: 3, title: 'Applications Distributed', date: 'After each interest meeting', time: 'Distributed to attendees', category: 'Applications & Scoring', icon: Mail },
@@ -30,7 +39,7 @@ const events = [
   { step: 16, title: 'First Initiation Payment Due', date: '9/11/2026', time: 'Due from candidates for membership', category: 'Voting & Next Steps', icon: Wallet },
 ];
 
-const deanEvents = [
+const deanEvents: EventItem[] = [
   { step: 1, title: 'Chapter Notification & Nominations Open', date: '8/7/2026', time: 'Chapter notification of Dean process and opening of nomination submissions', icon: Mail },
   { step: 2, title: 'Dean Nominations Accepted', date: '8/10/2026 - 8/12/2026', time: 'Closes 9:08 PM ET on August 12', icon: Edit3 },
   { step: 3, title: 'Member Intake Team Special Meeting', date: '8/16/2026', time: '7:00 PM ET', icon: Users },
@@ -39,6 +48,60 @@ const deanEvents = [
   { step: 6, title: 'Dean Selects Asst Dean & Team', date: '8/24/2026 - 8/28/2026', time: 'Assistant Dean of Pledges and Dean team', icon: UserCheck },
   { step: 7, title: 'Drop Date for Dean Team', date: '8/28/2026', time: 'Drop date for Dean team', icon: Shield },
 ];
+
+export interface EventStatus {
+  isPassed: boolean;
+  isToday: boolean;
+  isUpcoming: boolean;
+  statusLabel: 'Completed' | 'Today' | 'Upcoming';
+}
+
+export const getEventDateRange = (dateStr: string): { startDate: Date; endDate: Date } => {
+  if (dateStr.toLowerCase().includes('after each interest meeting')) {
+    // Interest meetings conclude Aug 3, 2026
+    const start = new Date(2026, 7, 3, 0, 0, 0, 0);
+    const end = new Date(2026, 7, 3, 23, 59, 59, 999);
+    return { startDate: start, endDate: end };
+  }
+
+  const parts = dateStr.split('-').map(s => s.trim());
+  
+  const parseSingleDate = (str: string, isEndOfDay: boolean): Date => {
+    const match = str.match(/(\d+)\/(\d+)\/(\d+)/);
+    if (match) {
+      const m = parseInt(match[1], 10) - 1;
+      const d = parseInt(match[2], 10);
+      const y = parseInt(match[3], 10);
+      if (isEndOfDay) {
+        return new Date(y, m, d, 23, 59, 59, 999);
+      }
+      return new Date(y, m, d, 0, 0, 0, 0);
+    }
+    return new Date();
+  };
+
+  const startDate = parseSingleDate(parts[0], false);
+  const endDate = parts.length > 1 ? parseSingleDate(parts[1], true) : parseSingleDate(parts[0], true);
+
+  return { startDate, endDate };
+};
+
+export const getEventStatus = (dateStr: string, customNow = new Date()): EventStatus => {
+  const { startDate, endDate } = getEventDateRange(dateStr);
+  const nowTime = customNow.getTime();
+  
+  // If the end date/time has passed
+  if (nowTime > endDate.getTime()) {
+    return { isPassed: true, isToday: false, isUpcoming: false, statusLabel: 'Completed' };
+  }
+
+  // If currently active today (between start 00:00 and end 23:59)
+  if (nowTime >= startDate.getTime() && nowTime <= endDate.getTime()) {
+    return { isPassed: false, isToday: true, isUpcoming: false, statusLabel: 'Today' };
+  }
+
+  return { isPassed: false, isToday: false, isUpcoming: true, statusLabel: 'Upcoming' };
+};
 
 export default function IntakeCalendar() {
   const navigate = useNavigate();
@@ -341,11 +404,17 @@ export default function IntakeCalendar() {
       y += 8;
 
       sec.events.forEach((ev) => {
+        const evStatus = getEventStatus(ev.date);
+        const statusPrefix = evStatus.isPassed ? '[✓ COMPLETED] ' : evStatus.isToday ? '[TODAY] ' : '';
         // Prepare left side text and right side text
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(9);
-        doc.setTextColor(30, 63, 32);
-        const leftLines = doc.splitTextToSize(`• #${ev.step} - ${ev.title}`, 98);
+        if (evStatus.isPassed) {
+          doc.setTextColor(30, 100, 45);
+        } else {
+          doc.setTextColor(30, 63, 32);
+        }
+        const leftLines = doc.splitTextToSize(`• #${ev.step} - ${statusPrefix}${ev.title}`, 98);
 
         doc.setFont('Helvetica', 'normal');
         doc.setFontSize(8);
@@ -363,7 +432,11 @@ export default function IntakeCalendar() {
         // Render left lines
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(9);
-        doc.setTextColor(30, 63, 32);
+        if (evStatus.isPassed) {
+          doc.setTextColor(30, 100, 45);
+        } else {
+          doc.setTextColor(30, 63, 32);
+        }
         leftLines.forEach((line: string, index: number) => {
           doc.text(line, 18, y + (index * 4.5));
         });
@@ -395,11 +468,17 @@ export default function IntakeCalendar() {
     y += 8;
 
     deanEvents.forEach((ev) => {
+      const evStatus = getEventStatus(ev.date);
+      const statusPrefix = evStatus.isPassed ? '[✓ COMPLETED] ' : evStatus.isToday ? '[TODAY] ' : '';
       // Prepare left side text and right side text
       doc.setFont('Helvetica', 'bold');
       doc.setFontSize(9);
-      doc.setTextColor(30, 63, 32);
-      const leftLines = doc.splitTextToSize(`• #${ev.step} - ${ev.title}`, 98);
+      if (evStatus.isPassed) {
+        doc.setTextColor(30, 100, 45);
+      } else {
+        doc.setTextColor(30, 63, 32);
+      }
+      const leftLines = doc.splitTextToSize(`• #${ev.step} - ${statusPrefix}${ev.title}`, 98);
 
       doc.setFont('Helvetica', 'normal');
       doc.setFontSize(8);
@@ -417,7 +496,11 @@ export default function IntakeCalendar() {
       // Render left lines
       doc.setFont('Helvetica', 'bold');
       doc.setFontSize(9);
-      doc.setTextColor(30, 63, 32);
+      if (evStatus.isPassed) {
+        doc.setTextColor(30, 100, 45);
+      } else {
+        doc.setTextColor(30, 63, 32);
+      }
       leftLines.forEach((line: string, index: number) => {
         doc.text(line, 18, y + (index * 4.5));
       });
@@ -458,13 +541,10 @@ export default function IntakeCalendar() {
             <CalendarDays size={14} /> Intake Calendar
           </div>
           <Link to="/financial-roster" className="px-5 py-2 rounded-full border border-[#B8860B]/30 text-[#1E3F20] text-xs font-bold uppercase tracking-widest hover:bg-[#B8860B]/10 transition-colors flex items-center gap-2">
-            <Users size={14} /> Financial Membership Roster
-          </Link>
-          <Link to="/gantt-chart" className="px-5 py-2 rounded-full border border-[#B8860B]/30 text-[#1E3F20] text-xs font-bold uppercase tracking-widest hover:bg-[#B8860B]/10 transition-colors flex items-center gap-2">
-            <LayoutList size={14} /> Intake Plan
+            <Users size={14} /> Membership Dues & Status
           </Link>
           <Link to="/member-directory" className="px-5 py-2 rounded-full border border-[#B8860B]/30 text-[#1E3F20] text-xs font-bold uppercase tracking-widest hover:bg-[#B8860B]/10 transition-colors flex items-center gap-2">
-            <Users size={14} /> Access Directory
+            <Users size={14} /> Member Directory
           </Link>
         </div>
 
@@ -498,7 +578,7 @@ export default function IntakeCalendar() {
         </div>
 
         {/* PDF Export & Google Calendar Sign-In */}
-        <div className="flex flex-col items-center justify-center gap-4 mb-10 px-4">
+        <div className="flex flex-col items-center justify-center gap-4 mb-8 px-4">
           <button
             onClick={exportToPDF}
             className="bg-[#B8860B] hover:bg-[#1E3F20] text-white px-6 py-3 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-md transition-all cursor-pointer hover:scale-105"
@@ -506,6 +586,53 @@ export default function IntakeCalendar() {
             <Download size={14} /> Export to PDF
           </button>
         </div>
+
+        {/* Progress & Completion Overview Banner */}
+        {(() => {
+          const completedEventsCount = events.filter(e => getEventStatus(e.date).isPassed).length;
+          const completedDeanCount = deanEvents.filter(e => getEventStatus(e.date).isPassed).length;
+          const totalTasks = events.length + deanEvents.length;
+          const totalCompleted = completedEventsCount + completedDeanCount;
+          const progressPercent = Math.round((totalCompleted / totalTasks) * 100);
+
+          return (
+            <div className="max-w-[1400px] mx-auto px-4 md:px-8 mb-8">
+              <div className="bg-white border border-emerald-200/80 rounded-2xl p-5 md:p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 flex items-center justify-center shrink-0 shadow-xs">
+                    <CheckCircle2 size={24} className="text-emerald-700" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-sm md:text-base font-bold text-[#1E3F20] uppercase tracking-wider">
+                        Intake Timeline Progress
+                      </h3>
+                      <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                        {totalCompleted} of {totalTasks} Tasks Passed ({progressPercent}%)
+                      </span>
+                    </div>
+                    <p className="text-xs text-ivy/60 mt-0.5">
+                      Milestones that have passed the current date are automatically checked off and marked as completed.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="w-full md:w-72 flex flex-col items-end gap-1.5">
+                  <div className="flex justify-between w-full text-[10px] font-bold uppercase tracking-wider text-ivy/60">
+                    <span>Overall Completion</span>
+                    <span className="text-emerald-700 font-extrabold">{progressPercent}%</span>
+                  </div>
+                  <div className="w-full bg-emerald-50 rounded-full h-3.5 overflow-hidden border border-emerald-200">
+                    <div 
+                      className="bg-emerald-600 h-full rounded-full transition-all duration-1000 ease-out"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Interactive Grid & Section Breakdown Layout */}
         <div className="max-w-[1400px] mx-auto px-4 md:px-8 space-y-12">
@@ -541,45 +668,97 @@ export default function IntakeCalendar() {
                   </h2>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {section.events.map((event) => (
-                      <div 
-                        key={event.step}
-                        className="bg-[#FDFCF0] border border-[#B8860B]/30 rounded-xl p-5 flex flex-col justify-between hover:border-[#1E3F20] transition-all duration-300 relative group shadow-sm hover:shadow-md"
-                      >
-                        <div>
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="bg-[#1E3F20] text-white text-xs font-bold px-2.5 py-1 rounded-full">
-                              Step #{event.step}
-                            </span>
-                            <event.icon size={22} className="text-[#B8860B] group-hover:scale-110 transition-transform" />
-                          </div>
-                          
-                          <h3 className="text-[#1E3F20] font-bold text-base mb-2 leading-snug">
-                            {event.title}
-                          </h3>
-                        </div>
-
-                        <div className="mt-4 pt-3 border-t border-[#B8860B]/20 flex items-end justify-between gap-2">
+                    {section.events.map((event) => {
+                      const status = getEventStatus(event.date);
+                      return (
+                        <div 
+                          key={event.step}
+                          className={`border rounded-xl p-5 flex flex-col justify-between transition-all duration-300 relative group shadow-sm hover:shadow-md ${
+                            status.isPassed 
+                              ? 'bg-[#F6FBF7] border-emerald-300/90 hover:border-emerald-600' 
+                              : status.isToday
+                              ? 'bg-[#FFFDF5] border-amber-400 ring-2 ring-amber-400/20 hover:border-amber-500'
+                              : 'bg-[#FDFCF0] border-[#B8860B]/30 hover:border-[#1E3F20]'
+                          }`}
+                        >
                           <div>
-                            <p className="text-[#1E3F20] font-bold text-xs uppercase tracking-wider">
-                              {event.date}
-                            </p>
-                            <p className="text-[#B8860B] text-xs font-semibold mt-0.5">
-                              {event.time}
-                            </p>
+                            <div className="flex items-start justify-between gap-2 mb-3">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                                  status.isPassed 
+                                    ? 'bg-emerald-800 text-white' 
+                                    : status.isToday
+                                    ? 'bg-[#B8860B] text-white'
+                                    : 'bg-[#1E3F20] text-white'
+                                }`}>
+                                  Step #{event.step}
+                                </span>
+
+                                {status.isPassed && (
+                                  <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                                    <CheckCircle2 size={11} className="text-emerald-700" /> Completed
+                                  </span>
+                                )}
+                                {status.isToday && (
+                                  <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /> Today
+                                  </span>
+                                )}
+                                {status.isUpcoming && (
+                                  <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 border border-gray-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                    Upcoming
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <div
+                                  className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
+                                    status.isPassed
+                                      ? 'bg-emerald-600 border border-emerald-700 text-white shadow-xs'
+                                      : status.isToday
+                                      ? 'bg-amber-100 border border-amber-400 text-amber-700'
+                                      : 'bg-white border border-gray-300 text-transparent'
+                                  }`}
+                                  title={status.isPassed ? "Task Completed" : status.isToday ? "Task Active Today" : "Upcoming Task"}
+                                >
+                                  {status.isPassed ? (
+                                    <Check size={14} strokeWidth={3} />
+                                  ) : status.isToday ? (
+                                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                  ) : null}
+                                </div>
+                                <event.icon size={20} className={`${status.isPassed ? 'text-emerald-700' : 'text-[#B8860B]'} group-hover:scale-110 transition-transform`} />
+                              </div>
+                            </div>
+                            
+                            <h3 className="text-[#1E3F20] font-bold text-base mb-2 leading-snug">
+                              {event.title}
+                            </h3>
                           </div>
-                          {googleToken && (
-                            <button
-                              onClick={() => addSingleEventToGoogleCalendar(event)}
-                              title="Add to Google Calendar"
-                              className="bg-[#1E3F20] hover:bg-[#B8860B] text-white p-2 rounded-xl transition-all cursor-pointer hover:scale-105 shadow-sm shrink-0 flex items-center justify-center"
-                            >
-                              <Plus size={14} />
-                            </button>
-                          )}
+
+                          <div className={`mt-4 pt-3 border-t flex items-end justify-between gap-2 ${status.isPassed ? 'border-emerald-200/80' : 'border-[#B8860B]/20'}`}>
+                            <div>
+                              <p className="text-[#1E3F20] font-bold text-xs uppercase tracking-wider">
+                                {event.date}
+                              </p>
+                              <p className={`${status.isPassed ? 'text-emerald-700 font-semibold' : 'text-[#B8860B] font-semibold'} text-xs mt-0.5`}>
+                                {event.time}
+                              </p>
+                            </div>
+                            {googleToken && (
+                              <button
+                                onClick={() => addSingleEventToGoogleCalendar(event)}
+                                title="Add to Google Calendar"
+                                className="bg-[#1E3F20] hover:bg-[#B8860B] text-white p-2 rounded-xl transition-all cursor-pointer hover:scale-105 shadow-sm shrink-0 flex items-center justify-center"
+                              >
+                                <Plus size={14} />
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -593,45 +772,97 @@ export default function IntakeCalendar() {
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {deanEvents.map((event) => (
-                  <div 
-                    key={event.step}
-                    className="bg-[#FDFCF0] border border-[#B8860B]/30 rounded-xl p-5 flex flex-col justify-between hover:border-[#1E3F20] transition-all duration-300 relative group shadow-sm hover:shadow-md"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="bg-[#1E3F20] text-white text-xs font-bold px-2.5 py-1 rounded-full">
-                          Dean Step #{event.step}
-                        </span>
-                        <event.icon size={22} className="text-[#B8860B] group-hover:scale-110 transition-transform" />
-                      </div>
-                      
-                      <h3 className="text-[#1E3F20] font-bold text-base mb-2 leading-snug">
-                        {event.title}
-                      </h3>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-[#B8860B]/20 flex items-end justify-between gap-2">
+                {deanEvents.map((event) => {
+                  const status = getEventStatus(event.date);
+                  return (
+                    <div 
+                      key={event.step}
+                      className={`border rounded-xl p-5 flex flex-col justify-between transition-all duration-300 relative group shadow-sm hover:shadow-md ${
+                        status.isPassed 
+                          ? 'bg-[#F6FBF7] border-emerald-300/90 hover:border-emerald-600' 
+                          : status.isToday
+                          ? 'bg-[#FFFDF5] border-amber-400 ring-2 ring-amber-400/20 hover:border-amber-500'
+                          : 'bg-[#FDFCF0] border-[#B8860B]/30 hover:border-[#1E3F20]'
+                      }`}
+                    >
                       <div>
-                        <p className="text-[#1E3F20] font-bold text-xs uppercase tracking-wider">
-                          {event.date}
-                        </p>
-                        <p className="text-[#B8860B] text-xs font-semibold mt-0.5">
-                          {event.time}
-                        </p>
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                              status.isPassed 
+                                ? 'bg-emerald-800 text-white' 
+                                : status.isToday
+                                ? 'bg-[#B8860B] text-white'
+                                : 'bg-[#1E3F20] text-white'
+                            }`}>
+                              Dean Step #{event.step}
+                            </span>
+
+                            {status.isPassed && (
+                              <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                                <CheckCircle2 size={11} className="text-emerald-700" /> Completed
+                              </span>
+                            )}
+                            {status.isToday && (
+                              <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /> Today
+                              </span>
+                            )}
+                            {status.isUpcoming && (
+                              <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 border border-gray-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                Upcoming
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <div
+                              className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
+                                status.isPassed
+                                  ? 'bg-emerald-600 border border-emerald-700 text-white shadow-xs'
+                                  : status.isToday
+                                  ? 'bg-amber-100 border border-amber-400 text-amber-700'
+                                  : 'bg-white border border-gray-300 text-transparent'
+                              }`}
+                              title={status.isPassed ? "Task Completed" : status.isToday ? "Task Active Today" : "Upcoming Task"}
+                            >
+                              {status.isPassed ? (
+                                <Check size={14} strokeWidth={3} />
+                              ) : status.isToday ? (
+                                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                              ) : null}
+                            </div>
+                            <event.icon size={20} className={`${status.isPassed ? 'text-emerald-700' : 'text-[#B8860B]'} group-hover:scale-110 transition-transform`} />
+                          </div>
+                        </div>
+                        
+                        <h3 className="text-[#1E3F20] font-bold text-base mb-2 leading-snug">
+                          {event.title}
+                        </h3>
                       </div>
-                      {googleToken && (
-                        <button
-                          onClick={() => addSingleEventToGoogleCalendar(event)}
-                          title="Add to Google Calendar"
-                          className="bg-[#1E3F20] hover:bg-[#B8860B] text-white p-2 rounded-xl transition-all cursor-pointer hover:scale-105 shadow-sm shrink-0 flex items-center justify-center"
-                        >
-                          <Plus size={14} />
-                        </button>
-                      )}
+
+                      <div className={`mt-4 pt-3 border-t flex items-end justify-between gap-2 ${status.isPassed ? 'border-emerald-200/80' : 'border-[#B8860B]/20'}`}>
+                        <div>
+                          <p className="text-[#1E3F20] font-bold text-xs uppercase tracking-wider">
+                            {event.date}
+                          </p>
+                          <p className={`${status.isPassed ? 'text-emerald-700 font-semibold' : 'text-[#B8860B] font-semibold'} text-xs mt-0.5`}>
+                            {event.time}
+                          </p>
+                        </div>
+                        {googleToken && (
+                          <button
+                            onClick={() => addSingleEventToGoogleCalendar(event)}
+                            title="Add to Google Calendar"
+                            className="bg-[#1E3F20] hover:bg-[#B8860B] text-white p-2 rounded-xl transition-all cursor-pointer hover:scale-105 shadow-sm shrink-0 flex items-center justify-center"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

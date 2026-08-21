@@ -140,13 +140,13 @@ export default function ReviewApplications() {
         <div className="space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-gold/10 border border-gold/20 rounded-full">
             <ShieldCheck size={12} className="text-gold" />
-            <span className="text-[9px] font-bold text-ivy uppercase tracking-[0.2em]">Administrative Review</span>
+            <span className="text-[9px] font-bold text-ivy uppercase tracking-[0.2em]">Application Review</span>
           </div>
           <h1 className="text-5xl md:text-6xl font-display font-bold text-ivy tracking-tighter uppercase italic">
-            Application <span className="text-gold">Vault</span>
+            Candidate <span className="text-gold">Applications</span>
           </h1>
           <p className="text-ivy/40 text-sm max-w-xl font-body">
-            Reviewing new member submissions for the FY27 Intake Class. All information is sensitive and strictly for internal use.
+            Review submitted candidate applications for the FY27 intake class.
           </p>
         </div>
 

@@ -14,7 +14,8 @@ import {
   RefreshCw,
   FolderGit2,
   Edit3,
-  Layers
+  Layers,
+  Archive
 } from 'lucide-react';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import MemberHeader from '../components/MemberHeader';
@@ -122,16 +123,16 @@ export default function MemberPortal() {
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold/10 border border-gold/20 rounded-full mb-1">
             <ShieldCheck size={14} className="text-gold" />
             <span className="text-[10px] font-bold text-ivy uppercase tracking-[0.2em]">
-              Secure Member Access
+              Member Access
             </span>
           </div>
           <h1 className="text-5xl md:text-6xl font-display font-bold uppercase tracking-tighter text-ivy">
-            Membership <span className="text-gold">Portal</span>
+            Member <span className="text-gold">Portal</span>
           </h1>
         </motion.div>
 
         {/* Core Member Tools Grid */}
-        <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Link
             to="/financial-roster"
             className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
@@ -140,8 +141,8 @@ export default function MemberPortal() {
               <Users size={28} />
             </div>
             <div>
-              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Financial Membership Roster</h4>
-              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Active Financial Members</p>
+              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Membership Dues & Status</h4>
+              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Active members & dues standing</p>
             </div>
           </Link>
 
@@ -153,12 +154,10 @@ export default function MemberPortal() {
               <CalendarDays size={28} />
             </div>
             <div>
-              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Intake Calendar</h4>
-              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Process Schedule</p>
+              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Intake Schedule & Calendar</h4>
+              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Key dates, meetings & tea time</p>
             </div>
           </Link>
-
-
 
           {isAdmin && (
             <Link
@@ -169,46 +168,11 @@ export default function MemberPortal() {
                 <Award size={28} />
               </div>
               <div>
-                <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Voting Portal</h4>
-                <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Selection Committee</p>
+                <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Candidate Intake Voting</h4>
+                <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Cast and submit intake votes</p>
               </div>
             </Link>
           )}
-
-          {isAdmin && (
-            <Link
-              to="/dean-nomination"
-              className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
-            >
-              <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
-                <Award size={28} />
-              </div>
-              <div>
-                <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Intake Dean Nominees</h4>
-                <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Roster & Status (Closed)</p>
-              </div>
-            </Link>
-          )}
-
-          {(() => {
-            const normEmail = (userEmail || '').toLowerCase().trim();
-            const isEligibleVoter = isAdmin || eligibleVoters.includes(normEmail);
-            if (!isEligibleVoter) return null;
-            return (
-              <Link
-                to="/dean-voting"
-                className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
-              >
-                <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
-                  <Award size={28} />
-                </div>
-                <div>
-                  <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Vote for Intake Dean</h4>
-                  <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Team Voting Ballot</p>
-                </div>
-              </Link>
-            );
-          })()}
         </motion.div>
 
         {/* Standing Committees Section (RBAC filtered) */}
@@ -218,20 +182,20 @@ export default function MemberPortal() {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold bg-gold/10 px-2.5 py-0.5 rounded-full">
-                    Role-Based Access
+                    Committees
                   </span>
                   {(normUser.role === 'admin' || normUser.role === 'officer') && (
                     <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-ivy/60">
-                      Organization-Wide View ({visibleCommittees.length} Committees)
+                      All Committees ({visibleCommittees.length})
                     </span>
                   )}
                 </div>
                 <h2 className="text-2xl font-display text-ivy uppercase tracking-widest mt-1">
-                  Standing Committees
+                  My Committees
                 </h2>
               </div>
               <p className="text-ivy/60 text-xs max-w-md">
-                Access your assigned committee workspaces, Google Shared Drive links, calendars, and working files.
+                Open committee workspaces, shared files, calendars, and announcements.
               </p>
             </div>
 
@@ -255,7 +219,7 @@ export default function MemberPortal() {
                           {chairStatus ? (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-gold text-ivy shadow-sm">
                               <Edit3 size={10} />
-                              Chair Access
+                              Committee Chair
                             </span>
                           ) : (normUser.role === 'admin' || normUser.role === 'officer') ? (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-ivy/10 text-ivy">
@@ -284,7 +248,7 @@ export default function MemberPortal() {
                         Workspace
                       </span>
                       <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gold group-hover:text-ivy transition-colors">
-                        <span>Enter Workspace</span>
+                        <span>Open Workspace</span>
                         <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                       </div>
                     </div>
@@ -295,15 +259,15 @@ export default function MemberPortal() {
           </motion.section>
         )}
 
-        {/* Administrative Tools */}
+        {/* Officer & Committee Tools */}
         {!isApplicant && (
           <motion.section variants={itemVariants} className="mb-20">
-            <h2 className="text-2xl font-display text-ivy mb-8 uppercase tracking-widest border-b border-gold/20 pb-4">Administrative Tools</h2>
+            <h2 className="text-2xl font-display text-ivy mb-8 uppercase tracking-widest border-b border-gold/20 pb-4">Officer & Committee Tools</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
                 { 
-                  title: 'Access Directory', 
-                  desc: 'All system logins and member accounts.', 
+                  title: 'Member Directory', 
+                  desc: 'View active member accounts and contact emails.', 
                   icon: ClipboardCheck, 
                   path: '/member-directory',
                   color: 'bg-gold text-ivy',
@@ -311,7 +275,7 @@ export default function MemberPortal() {
                 },
                 { 
                   title: 'Admin Dashboard', 
-                  desc: 'Member & system management.', 
+                  desc: 'Manage member accounts, permissions, and settings.', 
                   icon: Settings, 
                   path: '/admin-dashboard',
                   color: 'bg-ivy text-cream',
@@ -319,71 +283,39 @@ export default function MemberPortal() {
                 },
                 { 
                   title: 'Candidate Tracker', 
-                  desc: 'Manage membership intake.', 
+                  desc: 'Track applicant stages and intake progress.', 
                   icon: Users, 
                   path: '/candidate-tracker',
                   color: 'bg-gold text-ivy',
                   roles: ['admin', 'officer', 'Membership Committee', 'Membership Committee Chair']
                 },
                 { 
-                  title: 'Dean Audit & Management', 
-                  desc: 'Admin log mapping voters to nominees with edit/delete.', 
-                  icon: ShieldCheck, 
-                  path: '/dean-audit-dashboard',
-                  color: 'bg-gold text-ivy',
-                  roles: ['admin']
-                },
-                { 
-                  title: 'Dean Nomination Results', 
-                  desc: 'Anonymous aggregated nominee tallies.', 
-                  icon: Award, 
-                  path: '/dean-nomination-dashboard',
+                  title: 'Past Elections & Records', 
+                  desc: 'Official results and archive records from past elections.', 
+                  icon: Archive, 
+                  path: '/governance-archives',
                   color: 'bg-ivy text-cream',
-                  roles: ['admin']
+                  roles: ['admin', 'officer', 'Membership Committee', 'Membership Committee Chair']
                 },
                 { 
-                  title: 'Dean Voting Audit & Mgmt', 
-                  desc: 'Admin log mapping voters to votes with edit/delete.', 
-                  icon: ShieldCheck, 
-                  path: '/dean-voting-audit',
-                  color: 'bg-gold text-ivy',
-                  roles: ['admin']
-                },
-                { 
-                  title: 'Dean Voting Results', 
-                  desc: 'Anonymous aggregated vote tallies.', 
-                  icon: Award, 
-                  path: '/dean-voting-dashboard',
-                  color: 'bg-ivy text-cream',
-                  roles: ['admin']
-                },
-                { 
-                  title: 'Member Directory Administration', 
-                  desc: 'Provision member accounts, roles, and 2-way cloud sync.', 
+                  title: 'Member Account Management', 
+                  desc: 'Update member profiles, titles, and permissions.', 
                   icon: Users, 
                   path: '/admin-dashboard?tab=users',
                   color: 'bg-gold text-ivy',
                   roles: ['admin']
                 },
                 { 
-                  title: 'Membership Chair Portal', 
-                  desc: 'Review audit logs, committee access & candidate removal.', 
+                  title: 'Membership Dashboard', 
+                  desc: 'Manage applicant stages, review activity, and committee members.', 
                   icon: ShieldCheck, 
                   path: '/chair-dashboard',
                   color: 'bg-gold text-ivy',
                   roles: features.committee_enabled ? ['admin', 'officer', 'Membership Committee Chair'] : ['admin']
                 },
                 { 
-                  title: 'Process Timeline', 
-                  desc: 'FY27 MIP Strategic Roadmap.', 
-                  icon: LayoutGrid, 
-                  path: '/gantt-chart',
-                  color: 'bg-ivy text-cream',
-                  roles: ['admin', 'officer', 'Membership Committee', 'Membership Committee Chair', 'member']
-                },
-                { 
                   title: 'Review Applications', 
-                  desc: 'Review intake submissions.', 
+                  desc: 'Read and review submitted candidate applications.', 
                   icon: ClipboardCheck, 
                   path: '/review-applications',
                   color: 'bg-ivy text-cream',
@@ -393,7 +325,7 @@ export default function MemberPortal() {
               .filter(tool => {
                 const lowerEmail = (userEmail || '').toLowerCase().trim();
                 if ((lowerEmail === 'james.haywood@orderofkpi.org' || lowerEmail === 'brian.johnson@orderofkpi.org') && 
-                    (tool.title === 'Dean Voting Results' || tool.title === 'Dean Nomination Results' || tool.title === 'Membership Chair Portal')) {
+                    (tool.title === 'Past Elections & Records' || tool.title === 'Membership Dashboard')) {
                   return true;
                 }
                 if (!tool.roles) return true;
@@ -421,7 +353,7 @@ export default function MemberPortal() {
                   <h3 className="text-xl font-display mb-2">{tool.title}</h3>
                   <p className="text-[10px] opacity-70 font-body mb-6 flex-1">{tool.desc}</p>
                   <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest group">
-                    Enter Tool <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                    Open <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </Link>
               ))}

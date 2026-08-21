@@ -95,11 +95,11 @@ export default function SelectionVoting() {
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-gold/20 text-gold px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-6">
             <ShieldCheck className="w-4 h-4" />
-            Secure Voting Portal
+            Member Voting
           </div>
-          <h1 className="text-4xl md:text-5xl font-display text-cream mb-4">Selection Committee</h1>
+          <h1 className="text-4xl md:text-5xl font-display text-cream mb-4">Candidate Intake Voting</h1>
           <p className="text-cream/70 font-body max-w-2xl mx-auto">
-            Review candidate dossiers and cast your secure, anonymous vote for the FY27 Intake Class.
+            Review candidate applications and cast your vote for the FY27 intake class.
           </p>
         </div>
       </div>
@@ -133,12 +133,12 @@ export default function SelectionVoting() {
                           </span>
                           <span className="flex items-center gap-1">
                             <FileText className="w-3 h-3" />
-                            Dossier Complete
+                            Application Submitted
                           </span>
                         </div>
                       </div>
-                      <button className="flex items-center gap-2 text-ivy border-2 border-ivy px-6 py-2 rounded-md font-bold uppercase tracking-widest text-xs hover:bg-ivy hover:text-cream transition-all">
-                        View Full Dossier
+                      <button className="flex items-center gap-2 text-ivy border-2 border-ivy px-6 py-2 rounded-md font-bold uppercase tracking-widest text-xs hover:bg-ivy hover:text-cream transition-all cursor-pointer">
+                        View Application
                       </button>
                     </div>
 

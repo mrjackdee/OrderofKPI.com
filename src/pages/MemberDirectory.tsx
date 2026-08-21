@@ -15,7 +15,8 @@ import {
   XCircle,
   ExternalLink,
   Camera,
-  RefreshCw
+  RefreshCw,
+  Briefcase
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Member } from '../types';
@@ -27,7 +28,6 @@ export default function MemberDirectory() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('all');
-  const [selectedClass, setSelectedClass] = useState<string>('all');
   useEffect(() => {
     const role = sessionStorage.getItem('userRole');
     if (!role || role === 'applicant' || role === 'prospective') {
@@ -70,19 +70,18 @@ export default function MemberDirectory() {
     const name = member.name || '';
     const email = member.email || '';
     const title = member.title || '';
+    const industry = member.industry || '';
     
     const matchesSearch = 
       name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      title.toLowerCase().includes(searchQuery.toLowerCase());
+      title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      industry.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesRole = selectedRole === 'all' || member.role === selectedRole;
-    const matchesClass = selectedClass === 'all' || member.intake_class === selectedClass;
 
-    return matchesSearch && matchesRole && matchesClass;
+    return matchesSearch && matchesRole;
   });
-
-  const intakeClasses = Array.from(new Set(members.map(m => m.intake_class).filter(Boolean))) as string[];
 
   return (
     <div className="min-h-screen bg-cream pb-12 w-full overflow-x-hidden">
@@ -94,7 +93,7 @@ export default function MemberDirectory() {
             animate={{ opacity: 1, y: 0 }}
             className="text-4xl md:text-5xl font-display text-cream mb-4"
           >
-            Access Directory
+            Member Directory
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
@@ -102,7 +101,7 @@ export default function MemberDirectory() {
             transition={{ delay: 0.1 }}
             className="text-cream/80 max-w-2xl mx-auto font-body"
           >
-            List of All users with Login access.
+            Directory of active member accounts and contact emails.
           </motion.p>
         </div>
       </div>
@@ -175,7 +174,7 @@ export default function MemberDirectory() {
                       </span>
                       {(member.is_test_credential === 1 || member.is_test_credential === true || member.email?.toLowerCase().startsWith('qa.') || member.email?.toLowerCase().startsWith('test.')) && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-[9px] font-black uppercase tracking-widest text-amber-700">
-                          Test Credential
+                          Test Account
                         </span>
                       )}
                       {isOfficer(member) && (
@@ -185,10 +184,17 @@ export default function MemberDirectory() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 text-ivy/60 text-sm">
-                      <Mail className="w-4 h-4" />
+                    <div className="flex items-center gap-2 text-ivy/60 text-sm mb-1.5">
+                      <Mail className="w-4 h-4 text-gold/70" />
                       <span className="truncate">{member.email}</span>
                     </div>
+
+                    {member.industry && (
+                      <div className="flex items-center gap-2 text-ivy/70 text-xs font-medium">
+                        <Briefcase className="w-3.5 h-3.5 text-gold" />
+                        <span className="truncate">{member.industry}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

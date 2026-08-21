@@ -113,7 +113,6 @@
         "last_name": { "type": "string" },
         "role": { "type": "string" },
         "title": { "type": "string" },
-        "intake_class": { "type": "string" },
         "financial_status": { "type": "string" },
         "industry": { "type": "string" },
         "committees": {

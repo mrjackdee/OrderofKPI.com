@@ -89,7 +89,6 @@ export interface Member {
   committees?: CommitteeSlug[];
   committeeRoles?: Record<string, CommitteeRole>;
   is_first_login: boolean;
-  intake_class?: string;
   financial_status?: 'active' | 'inactive';
   profile_photo?: string;
   industry?: string;

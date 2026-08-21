@@ -443,9 +443,9 @@ export default function CommitteePage() {
         },
         {
           id: 'res-mi-2',
-          title: 'FY27 MIP Strategic Roadmap & Gantt Schedule',
-          url: '/gantt-chart',
-          description: 'Interactive high-precision Gantt roadmap outlining all intake stages from inquiry to initiation.',
+          title: 'FY27 Membership Intake Calendar & Schedule',
+          url: '/intake-calendar',
+          description: 'Official intake schedule, key dates, meetings, and Dean process timeline.',
           type: 'link',
           addedBy: 'Membership Committee Chair',
           addedAt: '2026-01-15'
@@ -970,7 +970,7 @@ export default function CommitteePage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.2em] px-2.5 py-0.5 rounded-full bg-gold text-ivy">
-                      Key Dispatch
+                      Latest Notice
                     </span>
                     <span className="text-[10px] font-bold uppercase tracking-widest text-ivy/60">
                       Latest Announcements ({announcements.length})

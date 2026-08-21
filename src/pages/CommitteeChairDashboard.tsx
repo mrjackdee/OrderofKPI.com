@@ -19,7 +19,8 @@ import {
   ExternalLink,
   Shield,
   Layers,
-  Award
+  Award,
+  Archive
 } from 'lucide-react';
 import { Candidate, Member } from '../types';
 import { firebaseUpdateCandidateStatus } from '../lib/firebase';
@@ -415,13 +416,13 @@ export default function CommitteeChairDashboard() {
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-gold/20 border border-gold/40 rounded-full text-gold">
               <ShieldCheck size={14} />
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Membership Committee Chair Control Center</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Membership Committee Chair Dashboard</span>
             </div>
             <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tight uppercase italic">
-              Membership <span className="text-gold">Chair Portal</span>
+              Membership <span className="text-gold">Committee Dashboard</span>
             </h1>
             <p className="text-cream/70 text-sm max-w-2xl font-body">
-              Chairmanship administrative controls for James Haywood Jr (<span className="text-gold font-bold">james.haywood@orderofkpi.org</span>). Oversee application review audit trails, direct applicant statuses, execute removals, and grant committee access permissions.
+              Committee management for James Haywood Jr (<span className="text-gold font-bold">james.haywood@orderofkpi.org</span>). View application review logs, update applicant stages, and manage committee members.
             </p>
           </div>
 
@@ -431,6 +432,12 @@ export default function CommitteeChairDashboard() {
               className="px-5 py-3 bg-gold text-ivy hover:bg-gold-light border border-gold rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-md hover:scale-105"
             >
               <Users size={16} /> Open Candidate Tracker
+            </Link>
+            <Link 
+              to="/governance-archives"
+              className="px-5 py-3 bg-cream/15 hover:bg-gold/20 text-cream border border-gold/30 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
+            >
+              <Archive size={16} className="text-gold" /> Past Elections
             </Link>
             <button 
               onClick={loadAllData}
@@ -473,7 +480,7 @@ export default function CommitteeChairDashboard() {
           }`}
         >
           <Clock size={16} className={activeTab === 'audit' ? 'text-gold' : ''} />
-          Application Review Audit Logs
+          Review Activity Logs
           <span className="px-2 py-0.5 rounded-full text-[10px] bg-gold/20 text-gold font-bold">{auditLogs.length}</span>
         </button>
 
@@ -486,7 +493,7 @@ export default function CommitteeChairDashboard() {
           }`}
         >
           <UserX size={16} className={activeTab === 'candidates' ? 'text-gold' : ''} />
-          Candidate Status & Removal
+          Candidate Stages & Status
           <span className="px-2 py-0.5 rounded-full text-[10px] bg-gold/20 text-gold font-bold">{candidates.length}</span>
         </button>
 
@@ -499,7 +506,7 @@ export default function CommitteeChairDashboard() {
           }`}
         >
           <UserCheck size={16} className={activeTab === 'committee' ? 'text-gold' : ''} />
-          Membership Committee Roster
+          Committee Members
           <span className="px-2 py-0.5 rounded-full text-[10px] bg-gold/20 text-gold font-bold">{committeeMembers.length}</span>
         </button>
       </div>
@@ -510,10 +517,10 @@ export default function CommitteeChairDashboard() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-gold/20 shadow-soft">
             <div>
               <h3 className="font-display font-bold text-xl text-ivy uppercase italic">
-                Application Review <span className="text-gold">Access Logs</span>
+                Application Review <span className="text-gold">Activity Logs</span>
               </h3>
               <p className="text-ivy/60 text-xs mt-1">
-                Real-time audit record showing which committee members have accessed or reviewed candidate applications.
+                Record showing when committee members have viewed or reviewed candidate applications.
               </p>
             </div>
 

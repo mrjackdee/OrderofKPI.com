@@ -66,7 +66,7 @@ export default function GanttChart() {
 
     doc.setFontSize(11);
     doc.setTextColor(COLOR_GOLD[0], COLOR_GOLD[1], COLOR_GOLD[2]);
-    doc.text('FY27 Membership Intake Process (MIP) Strategic Roadmap', 105, 21, { align: 'center' });
+    doc.text('FY27 Membership Intake Process (MIP) Timeline & Milestones', 105, 21, { align: 'center' });
 
     doc.setFont('Helvetica', 'normal');
     doc.setFontSize(8);
@@ -122,7 +122,7 @@ export default function GanttChart() {
         doc.setTextColor(COLOR_CREAM[0], COLOR_CREAM[1], COLOR_CREAM[2]);
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(10);
-        doc.text('ORDER OF KPI - FY27 MIP Strategic Roadmap', 14, 12);
+        doc.text('ORDER OF KPI - FY27 MIP Timeline & Milestones', 14, 12);
         
         doc.setFillColor(COLOR_GOLD[0], COLOR_GOLD[1], COLOR_GOLD[2]);
         doc.rect(0, 20, 210, 1, 'F');
@@ -351,9 +351,9 @@ export default function GanttChart() {
       <div className="bg-ivy py-16 px-4 mb-12 w-full">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
           <div className="w-full md:w-auto">
-            <h1 className="text-4xl md:text-5xl font-display text-cream mb-4 break-words">Process Timeline</h1>
+            <h1 className="text-4xl md:text-5xl font-display text-cream mb-4 break-words">Intake Timeline & Milestones</h1>
             <p className="text-cream/70 font-body max-w-2xl break-words">
-              FY27 Membership Intake Process (MIP) Strategic Roadmap. Visualizing every milestone from preparation to orientation.
+              FY27 Membership Intake Process (MIP) Schedule & Milestones. Key dates and steps from preparation to orientation.
             </p>
           </div>
           <div className="flex flex-wrap gap-4 w-full md:w-auto justify-start md:justify-end">

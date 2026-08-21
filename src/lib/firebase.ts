@@ -994,7 +994,6 @@ export async function firebaseSyncPortalMember(member: {
   name: string;
   role: string;
   title?: string;
-  intake_class?: string;
   financial_status?: string;
   industry?: string;
 }) {
@@ -1009,7 +1008,6 @@ export async function firebaseSyncPortalMember(member: {
       last_name: member.name.split(' ').slice(1).join(' ') || '',
       role: member.role,
       title: member.title || '',
-      intake_class: member.intake_class || '',
       financial_status: member.financial_status || 'active',
       industry: member.industry || '',
       updatedAt: new Date().toISOString()

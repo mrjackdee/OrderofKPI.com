@@ -33,7 +33,8 @@ import {
   Eye, 
   AlertTriangle,
   Award,
-  Sparkles
+  Sparkles,
+  Archive
 } from 'lucide-react';
 import { Member, Candidate } from '../types';
 import { prospectiveMembers, fetchAllApplications, syncApplicationsFromFirestore } from '../lib/memberDb';
@@ -293,17 +294,17 @@ export default function AdminDashboard() {
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error?.message || 'Failed to dispatch email via Gmail API.');
+          throw new Error(errData.error?.message || 'Failed to send email via Gmail.');
         }
 
-        setNotification({ type: 'success', text: `Email successfully sent via Gmail API to ${gmailRecipient}!` });
+        setNotification({ type: 'success', text: `Email successfully sent to ${gmailRecipient}!` });
         setGmailSubject('');
         setGmailBody('');
       } else {
-        setNotification({ type: 'error', text: 'Please authorize with Google Workspace first to use Gmail API.' });
+        setNotification({ type: 'error', text: 'Please connect your Google Workspace account first to send emails.' });
       }
     } catch (err: any) {
-      setNotification({ type: 'error', text: err.message || 'Gmail dispatch failed.' });
+      setNotification({ type: 'error', text: err.message || 'Email failed to send.' });
     } finally {
       setGmailSending(false);
     }
@@ -442,7 +443,7 @@ export default function AdminDashboard() {
         })
       });
       await response.json();
-      setNotification({ type: 'success', text: 'Database persistence ping dispatched! Real-time audit log captured.' });
+      setNotification({ type: 'success', text: 'Database connection verified! System audit log recorded.' });
     } catch (err) {
       console.error(err);
     } finally {
@@ -829,13 +830,13 @@ export default function AdminDashboard() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-gold text-ivy font-bold rounded-full text-[10px] uppercase tracking-widest shadow-md">
               <ShieldCheck className="w-3.5 h-3.5 text-ivy" />
-              Super User Administration Console
+              Admin Management Console
             </div>
             <h1 className="text-3xl md:text-5xl font-display font-bold tracking-tight uppercase italic">
-              Portal <span className="text-gold">Administrator</span>
+              Admin <span className="text-gold">Dashboard</span>
             </h1>
             <p className="text-cream/70 text-xs md:text-sm font-body max-w-2xl">
-              Logged in as <span className="text-gold font-bold">admin@orderofkpi.org</span>. Full administrative authorization to oversee directory users, candidate pipelines, status transitions, and comprehensive system access audits.
+              Manage member accounts, candidate intake pipeline, permissions, and system activity logs.
             </p>
           </div>
 
@@ -877,12 +878,12 @@ export default function AdminDashboard() {
         <div className="bg-white p-6 rounded-3xl border border-gold/20 shadow-soft space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-display font-bold text-sm text-ivy uppercase tracking-wider flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-gold" /> Super User Quick Access Portals
+              <Sparkles className="w-4 h-4 text-gold" /> Quick Shortcuts
             </h3>
-            <span className="text-[10px] text-ivy/40 uppercase font-mono">Full Permission Authorization Active</span>
+            <span className="text-[10px] text-ivy/40 uppercase font-mono">Admin Access</span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
             <Link to="/member-portal" className="p-3.5 bg-cream/40 hover:bg-gold/10 border border-gold/20 rounded-2xl text-center space-y-1 transition-all group">
               <Users className="w-5 h-5 text-ivy mx-auto group-hover:scale-110 transition-transform" />
               <p className="text-[11px] font-bold text-ivy">Member Portal</p>
@@ -897,11 +898,15 @@ export default function AdminDashboard() {
             </Link>
             <Link to="/chair-dashboard" className="p-3.5 bg-cream/40 hover:bg-gold/10 border border-gold/20 rounded-2xl text-center space-y-1 transition-all group">
               <ShieldCheck className="w-5 h-5 text-gold mx-auto group-hover:scale-110 transition-transform" />
-              <p className="text-[11px] font-bold text-ivy">Chair Portal</p>
+              <p className="text-[11px] font-bold text-ivy">Membership Dashboard</p>
             </Link>
             <Link to="/selection-voting" className="p-3.5 bg-cream/40 hover:bg-gold/10 border border-gold/20 rounded-2xl text-center space-y-1 transition-all group">
               <CheckSquare className="w-5 h-5 text-ivy mx-auto group-hover:scale-110 transition-transform" />
-              <p className="text-[11px] font-bold text-ivy">Selection Voting</p>
+              <p className="text-[11px] font-bold text-ivy">Intake Voting</p>
+            </Link>
+            <Link to="/governance-archives" className="p-3.5 bg-cream/40 hover:bg-gold/10 border border-gold/20 rounded-2xl text-center space-y-1 transition-all group">
+              <Archive className="w-5 h-5 text-ivy mx-auto group-hover:scale-110 transition-transform" />
+              <p className="text-[11px] font-bold text-ivy">Past Elections</p>
             </Link>
             <Link to="/membership-application" className="p-3.5 bg-cream/40 hover:bg-gold/10 border border-gold/20 rounded-2xl text-center space-y-1 transition-all group">
               <Edit2 className="w-5 h-5 text-gold mx-auto group-hover:scale-110 transition-transform" />
@@ -1034,7 +1039,6 @@ export default function AdminDashboard() {
                       last_name: '',
                       name: '',
                       title: '',
-                      intake_class: '',
                       industry: '',
                       is_test_credential: 0
                     });
@@ -1054,7 +1058,7 @@ export default function AdminDashboard() {
                     <tr>
                       <th className="px-6 py-4">User Details</th>
                       <th className="px-6 py-4">Assigned Role</th>
-                      <th className="px-6 py-4">Title / Intake Class</th>
+                      <th className="px-6 py-4">Official Title</th>
                       <th className="px-6 py-4">Financial Status</th>
                       <th className="px-6 py-4 text-right">Actions</th>
                     </tr>
@@ -1095,7 +1099,7 @@ export default function AdminDashboard() {
                           <p className="font-bold text-gold">
                             {member.title && member.title.toLowerCase() !== 'member' && member.title.toLowerCase() !== 'candidate' ? member.title : '-'}
                           </p>
-                          <p className="text-[10px] text-ivy/50">{member.intake_class || 'Member'}</p>
+                          <p className="text-[10px] text-ivy/50">{member.industry ? `Industry: ${member.industry}` : 'General Member'}</p>
                         </td>
                         <td className="px-6 py-4">
                           <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest ${
@@ -1455,10 +1459,10 @@ export default function AdminDashboard() {
                 <div>
                   <h2 className="text-xl font-display font-bold text-ivy uppercase italic flex items-center gap-2">
                     <Mail className="w-5 h-5 text-gold" />
-                    Google Workspace & Gmail <span className="text-gold">Integration Console</span>
+                    Google Workspace & Email <span className="text-gold">Notifications</span>
                   </h2>
                   <p className="text-ivy/60 text-xs mt-1">
-                    Manage Google Workspace OAuth, dispatch official notifications via Gmail API, and synchronize Google Forms into Firebase.
+                    Manage Google Workspace account connection, send official notifications via Gmail, and synchronize Google Forms into the organization database.
                   </p>
                 </div>
                 <div>
@@ -1472,7 +1476,7 @@ export default function AdminDashboard() {
                   ) : (
                     <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 text-green-800 rounded-xl text-xs font-bold">
                       <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                      Google & Gmail API Connected
+                      Google & Gmail Connected
                     </div>
                   )}
                 </div>
@@ -1484,21 +1488,21 @@ export default function AdminDashboard() {
                     <Mail className="w-6 h-6 text-gold" />
                   </div>
                   <div className="max-w-md mx-auto space-y-2">
-                    <h3 className="font-display font-bold text-ivy text-sm uppercase">Google Workspace & Gmail Authentication</h3>
+                    <h3 className="font-display font-bold text-ivy text-sm uppercase">Google Workspace & Gmail Connection</h3>
                     <p className="text-xs text-ivy/60 leading-relaxed">
-                      To access Gmail API email dispatching and official Google Forms synchronization, please sign in with your Google Workspace administrative account.
+                      To send emails directly and synchronize Google Forms, please connect your Google Workspace account.
                     </p>
                   </div>
                   <button
                     onClick={handleAuthorizeGoogle}
                     className="px-6 py-2.5 bg-ivy text-cream hover:bg-ivy/90 rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
                   >
-                    Authenticate Workspace & Gmail &rarr;
+                    Connect Workspace & Gmail &rarr;
                   </button>
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* GMAIL API DIRECT DISPATCH CONSOLE */}
+                  {/* GMAIL API EMAIL SENDER */}
                   <div className="p-6 bg-[#FAF9F5] border border-gold/20 rounded-2xl space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gold/10 pb-3">
                       <div className="flex items-center gap-2.5">
@@ -1507,15 +1511,15 @@ export default function AdminDashboard() {
                         </div>
                         <div>
                           <h3 className="font-display font-bold text-ivy text-sm uppercase tracking-wider">
-                            Gmail Direct Dispatch Console
+                            Send Member & Candidate Emails
                           </h3>
                           <p className="text-[11px] text-ivy/60">
-                            Dispatch official candidate notifications, invitations, or member communications directly via Google Workspace Gmail API.
+                            Send official candidate notifications, invitations, or member communications directly through your Google Workspace Gmail.
                           </p>
                         </div>
                       </div>
                       <span className="text-[10px] font-bold uppercase bg-green-100 text-green-800 px-2.5 py-1 rounded-full border border-green-200 flex items-center gap-1">
-                        <Check className="w-3 h-3 text-green-600" /> Gmail API Active
+                        <Check className="w-3 h-3 text-green-600" /> Gmail Active
                       </span>
                     </div>
 
@@ -1560,7 +1564,7 @@ export default function AdminDashboard() {
                         className="px-6 py-2.5 bg-ivy text-cream hover:bg-ivy/90 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-md disabled:opacity-50"
                       >
                         <Send className="w-4 h-4 text-gold" />
-                        {gmailSending ? 'Dispatching Message...' : 'Dispatch Email via Gmail API'}
+                        {gmailSending ? 'Sending Email...' : 'Send Email via Gmail'}
                       </button>
                     </div>
                   </div>
@@ -2101,16 +2105,6 @@ export default function AdminDashboard() {
                     onChange={e => setEditingMember({...editingMember!, title: e.target.value})}
                     className="w-full px-4 py-2.5 border border-gold/20 rounded-xl focus:ring-2 focus:ring-gold/20 outline-none"
                     placeholder="e.g. Grammateus / Administrator"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/60 mb-2">Intake Class</label>
-                  <input
-                    type="text"
-                    value={editingMember?.intake_class || ''}
-                    onChange={e => setEditingMember({...editingMember!, intake_class: e.target.value})}
-                    className="w-full px-4 py-2.5 border border-gold/20 rounded-xl focus:ring-2 focus:ring-gold/20 outline-none"
-                    placeholder="e.g. Spring 2026"
                   />
                 </div>
                 <div>

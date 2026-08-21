@@ -222,7 +222,6 @@ async function syncPortalMembersFromFirestoreCloud() {
         const last_name = fields.last_name?.stringValue || name.split(" ").slice(1).join(" ") || "";
         const role = fields.role?.stringValue || "member";
         const title = fields.title?.stringValue || "";
-        const intake_class = fields.intake_class?.stringValue || "";
         const financial_status = fields.financial_status?.stringValue || "inactive";
         const industry = fields.industry?.stringValue || "";
         const profile_photo = fields.profile_photo?.stringValue || "";
@@ -257,15 +256,15 @@ async function syncPortalMembersFromFirestoreCloud() {
               if (existingUser) {
                 sqliteDb.prepare(`
                   UPDATE users 
-                  SET name = ?, first_name = ?, last_name = ?, role = ?, title = ?, intake_class = ?, financial_status = ?, industry = ?, profile_photo = ?, is_test_credential = ?, committees = ?, committee_roles = ?
+                  SET name = ?, first_name = ?, last_name = ?, role = ?, title = ?, financial_status = ?, industry = ?, profile_photo = ?, is_test_credential = ?, committees = ?, committee_roles = ?
                   WHERE email = ?
-                `).run(name, first_name, last_name, role, title, intake_class, financial_status, industry, profile_photo, is_test_val, committeesStr, committeeRolesStr, normEmail);
+                `).run(name, first_name, last_name, role, title, financial_status, industry, profile_photo, is_test_val, committeesStr, committeeRolesStr, normEmail);
               } else {
                 const defaultPasswordHash = hashPassword("atlanta");
                 sqliteDb.prepare(`
-                  INSERT INTO users (email, name, first_name, last_name, password_hash, is_first_login, role, title, intake_class, financial_status, industry, profile_photo, is_test_credential, committees, committee_roles)
-                  VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                `).run(normEmail, name, first_name, last_name, defaultPasswordHash, role, title, intake_class, financial_status, industry, profile_photo, is_test_val, committeesStr, committeeRolesStr);
+                  INSERT INTO users (email, name, first_name, last_name, password_hash, is_first_login, role, title, financial_status, industry, profile_photo, is_test_credential, committees, committee_roles)
+                  VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)
+                `).run(normEmail, name, first_name, last_name, defaultPasswordHash, role, title, financial_status, industry, profile_photo, is_test_val, committeesStr, committeeRolesStr);
               }
             } catch (e) {
               console.error("[PORTAL MEMBERS Cloud Sync] SQLite sync err:", e);
@@ -285,7 +284,6 @@ async function syncPortalMembersFromFirestoreCloud() {
                   is_first_login: 1,
                   role,
                   title,
-                  intake_class,
                   financial_status,
                   industry,
                   profile_photo,
@@ -299,7 +297,6 @@ async function syncPortalMembersFromFirestoreCloud() {
                 jsonUsers[normEmail].last_name = last_name;
                 jsonUsers[normEmail].role = role;
                 jsonUsers[normEmail].title = title;
-                jsonUsers[normEmail].intake_class = intake_class;
                 jsonUsers[normEmail].financial_status = financial_status;
                 jsonUsers[normEmail].industry = industry;
                 jsonUsers[normEmail].profile_photo = profile_photo;
@@ -370,7 +367,6 @@ async function syncLocalMemberToFirestoreCloud(email: string) {
           last_name: { stringValue: member.last_name || "" },
           role: { stringValue: member.role || "member" },
           title: { stringValue: member.title || "" },
-          intake_class: { stringValue: member.intake_class || "" },
           financial_status: { stringValue: member.financial_status || "inactive" },
           industry: { stringValue: member.industry || "" },
           profile_photo: { stringValue: member.profile_photo || "" },
@@ -427,36 +423,36 @@ const QA_EXPLICIT_CREDENTIALS: Record<string, { name: string; role: string; titl
 };
 
 const defaultUsers = [
-  { name: "QA Admin Agent", email: "qa.admin@orderofkpi.org", role: "admin", title: "Administrator", intake_class: "", financial_status: "active", industry: "QA Testing" },
-  { name: "QA Chair Agent", email: "qa.chair@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", intake_class: "", financial_status: "active", industry: "QA Testing" },
-  { name: "QA Committee Agent", email: "qa.committee@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member", intake_class: "", financial_status: "active", industry: "QA Testing" },
-  { name: "QA Officer Agent", email: "qa.officer@orderofkpi.org", role: "officer", title: "1st Anti-Basileus", intake_class: "", financial_status: "active", industry: "QA Testing" },
-  { name: "QA Member Agent", email: "qa.member@orderofkpi.org", role: "member", title: "", intake_class: "", financial_status: "active", industry: "QA Testing" },
-  { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator", intake_class: "", financial_status: "active", industry: "Technology" },
-  { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", intake_class: "", financial_status: "active", industry: "Leadership" },
-  { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "officer", intake_class: "", financial_status: "active", industry: "Consulting" },
-  { name: "DeShaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee", intake_class: "", financial_status: "active", industry: "Education" },
-  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "officer", title: "Super Committee Chair", intake_class: "", financial_status: "active", industry: "Engineering", committees: ['annual_event', 'scholarship', 'judicial_ethics', 'digital_technology', 'membership_intake', 'transfer_member'], committeeRoles: { annual_event: 'chair', scholarship: 'chair', judicial_ethics: 'chair', digital_technology: 'chair', membership_intake: 'chair', transfer_member: 'chair' } },
-  { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "Membership Committee", intake_class: "", financial_status: "active", industry: "Management" },
-  { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos", intake_class: "", financial_status: "active", industry: "Finance" },
-  { name: "Edward Cook", email: "edward.cook@orderofkpi.org", role: "officer", title: "Epistoleus", intake_class: "", financial_status: "active", industry: "Law" },
-  { name: "Darron Jenkins", email: "darron.jenkins@orderofkpi.org", role: "officer", title: "Hodegos", intake_class: "", financial_status: "active", industry: "Public Service" },
-  { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus", intake_class: "", financial_status: "active", industry: "Leadership" },
-  { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
-  { name: "Sammie Poe", email: "sammie.poe@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
-  { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
-  { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member", intake_class: "", financial_status: "inactive", industry: "Arts" },
-  { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian", intake_class: "", financial_status: "active", industry: "Journalism" },
-  { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus", intake_class: "", financial_status: "active" },
-  { name: "Alejandro Araujo", email: "alejandro.araujo@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
-  { name: "Demetrist Thomas", email: "demetrist.thomas@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
-  { name: "Denzel Talley", email: "denzel.talley@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
-  { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
-  { name: "Kevin Jennings", email: "kevin.jennings@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
-  { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member", intake_class: "", financial_status: "active" },
-  { name: "Brandon Hunter", email: "brandon.hunter@orderofkpi.org", role: "member", title: "", intake_class: "", financial_status: "active", industry: "" },
-  { name: "Terrell Singleton", email: "terrell.singleton@orderofkpi.org", role: "member", title: "", intake_class: "", financial_status: "active", industry: "" },
-  { name: "Churtis Poulson", email: "churtis.poulson@orderofkpi.org", role: "member", title: "", intake_class: "", financial_status: "active", industry: "" }
+  { name: "QA Admin Agent", email: "qa.admin@orderofkpi.org", role: "admin", title: "Administrator", financial_status: "active", industry: "" },
+  { name: "QA Chair Agent", email: "qa.chair@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", financial_status: "active", industry: "" },
+  { name: "QA Committee Agent", email: "qa.committee@orderofkpi.org", role: "Membership Committee", title: "Grammateus / Committee Member", financial_status: "active", industry: "" },
+  { name: "QA Officer Agent", email: "qa.officer@orderofkpi.org", role: "officer", title: "1st Anti-Basileus", financial_status: "active", industry: "" },
+  { name: "QA Member Agent", email: "qa.member@orderofkpi.org", role: "member", title: "", financial_status: "active", industry: "" },
+  { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator", financial_status: "active", industry: "" },
+  { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", financial_status: "active", industry: "" },
+  { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "officer", financial_status: "active", industry: "" },
+  { name: "DeShaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee", financial_status: "active", industry: "" },
+  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "officer", title: "Super Committee Chair", financial_status: "active", industry: "", committees: ['annual_event', 'scholarship', 'judicial_ethics', 'digital_technology', 'membership_intake', 'transfer_member'], committeeRoles: { annual_event: 'chair', scholarship: 'chair', judicial_ethics: 'chair', digital_technology: 'chair', membership_intake: 'chair', transfer_member: 'chair' } },
+  { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "Membership Committee", financial_status: "active", industry: "" },
+  { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos", financial_status: "active", industry: "" },
+  { name: "Edward Cook", email: "edward.cook@orderofkpi.org", role: "officer", title: "Epistoleus", financial_status: "active", industry: "" },
+  { name: "Darron Jenkins", email: "darron.jenkins@orderofkpi.org", role: "officer", title: "Hodegos", financial_status: "active", industry: "" },
+  { name: "Brian Goings", email: "brian.goings@orderofkpi.org", role: "officer", title: "Basileus", financial_status: "active", industry: "" },
+  { name: "Keith Woods", email: "keith.woods@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
+  { name: "Sammie Poe", email: "sammie.poe@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
+  { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
+  { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member", financial_status: "inactive", industry: "" },
+  { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian", financial_status: "active", industry: "" },
+  { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus", financial_status: "active", industry: "" },
+  { name: "Alejandro Araujo", email: "alejandro.araujo@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
+  { name: "Demetrist Thomas", email: "demetrist.thomas@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
+  { name: "Denzel Talley", email: "denzel.talley@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
+  { name: "Kameron Whitfield", email: "kameron.whitfield@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
+  { name: "Kevin Jennings", email: "kevin.jennings@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
+  { name: "Tobias Bordley", email: "tobias.bordley@orderofkpi.org", role: "member", financial_status: "active", industry: "" },
+  { name: "Brandon Hunter", email: "brandon.hunter@orderofkpi.org", role: "member", title: "", financial_status: "active", industry: "" },
+  { name: "Terrell Singleton", email: "terrell.singleton@orderofkpi.org", role: "member", title: "", financial_status: "active", industry: "" },
+  { name: "Churtis Poulson", email: "churtis.poulson@orderofkpi.org", role: "member", title: "", financial_status: "active", industry: "" }
 ];
 
 const initialCandidates = [
@@ -598,7 +594,6 @@ async function initDb() {
         is_first_login INTEGER DEFAULT 1,
         role TEXT,
         title TEXT,
-        intake_class TEXT,
         financial_status TEXT DEFAULT 'inactive',
         profile_photo TEXT,
         industry TEXT,
@@ -781,8 +776,7 @@ async function initDb() {
         sqliteDb.prepare(`
           UPDATE users 
           SET name = ?, first_name = ?, last_name = ?, role = ?, title = ?, 
-              intake_class = ?, 
-              financial_status = ?, industry = ?, password_hash = ?, is_first_login = ?,
+              financial_status = ?, password_hash = ?, is_first_login = ?,
               is_test_credential = ?
           WHERE email = ?
         `).run(
@@ -791,9 +785,7 @@ async function initDb() {
           u.name.split(" ").slice(1).join(" ") || "",
           u.role, 
           u.title || "", 
-          u.intake_class || null, 
           u.financial_status || "inactive", 
-          u.industry || null, 
           targetPasswordHash,
           targetIsFirstLogin,
           isTestCred,
@@ -803,10 +795,10 @@ async function initDb() {
         sqliteDb.prepare(`
           INSERT INTO users (
             email, name, first_name, last_name, password_hash, is_first_login, 
-            role, title, intake_class, 
+            role, title, 
             financial_status, industry, is_test_credential
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           emailNorm, 
           u.name, 
@@ -816,9 +808,8 @@ async function initDb() {
           targetIsFirstLogin,
           u.role, 
           u.title || "",
-          u.intake_class || null,
           u.financial_status || "inactive",
-          u.industry || null,
+          u.industry || "",
           isTestCred
         );
       }
@@ -841,10 +832,10 @@ async function initDb() {
         sqliteDb.prepare(`
           INSERT INTO users (
             email, name, first_name, password_hash, is_first_login, 
-            role, title, intake_class, 
+            role, title, 
             financial_status, is_test_credential
           )
-          VALUES (?, ?, ?, ?, 0, 'prospective', 'Candidate', '', 'inactive', ?)
+          VALUES (?, ?, ?, ?, 0, 'prospective', 'Candidate', 'inactive', ?)
         `).run(emailNorm, c.name, firstName, passHash, isTestCred);
       } else {
         sqliteDb.prepare(`
@@ -1204,9 +1195,9 @@ function updateUserPassword(email: string, newHash: string): boolean {
         sqliteDb.prepare(`
           INSERT INTO users (
             email, name, first_name, password_hash, is_first_login, 
-            role, title, intake_class, financial_status
+            role, title, financial_status
           )
-          VALUES (?, ?, ?, ?, 0, ?, ?, 'FY27 Candidate', 'inactive')
+          VALUES (?, ?, ?, ?, 0, ?, ?, 'inactive')
         `).run(normEmail, userName, firstName, newHash, userRole, userTitle);
         success = true;
       }
@@ -1378,8 +1369,8 @@ async function startServer() {
     if (useSqlite && sqliteDb) {
       try {
         sqliteDb.prepare(`
-          INSERT INTO users (email, name, first_name, password_hash, is_first_login, role, intake_class, financial_status)
-          VALUES (?, ?, ?, ?, 0, 'prospective', 'FY27 Candidate', 'inactive')
+          INSERT INTO users (email, name, first_name, password_hash, is_first_login, role, financial_status)
+          VALUES (?, ?, ?, ?, 0, 'prospective', 'inactive')
         `).run(normEmail, name, firstName, passwordHash);
       } catch (e: any) {
         console.error("SQLite insert error for applicant:", e);
@@ -1397,7 +1388,6 @@ async function startServer() {
           password_hash: passwordHash,
           is_first_login: 0,
           role: 'prospective',
-          intake_class: '',
           financial_status: 'inactive'
         };
         fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
@@ -1930,7 +1920,6 @@ async function startServer() {
           role: u.role,
           title: u.title || "",
           is_first_login: u.is_first_login,
-          intake_class: u.intake_class || "",
           financial_status: u.financial_status || "inactive",
           industry: u.industry || "",
           profile_photo: u.profile_photo || "",
@@ -1992,7 +1981,7 @@ async function startServer() {
 
   // Add a new member
   app.post("/api/members", (req, res) => {
-    const { email, name, first_name, last_name, role, title, intake_class, financial_status, industry, adminEmail, is_test_credential, committees, committeeRoles, committee_roles } = req.body;
+    const { email, name, first_name, last_name, role, title, financial_status, industry, adminEmail, is_test_credential, committees, committeeRoles, committee_roles } = req.body;
     if (!email || !role) {
       return res.status(400).json({ success: false, message: "Email and role are required" });
     }
@@ -2030,9 +2019,9 @@ async function startServer() {
       // Insert to SQLite
       if (useSqlite && sqliteDb) {
         sqliteDb.prepare(`
-          INSERT INTO users (email, name, first_name, last_name, password_hash, is_first_login, role, title, intake_class, financial_status, industry, is_test_credential, committees, committee_roles)
-          VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(normEmail, fullName, firstName, lastName, defaultPasswordHash, role, title || "", intake_class || "", financial_status || "inactive", industry || "", isTestVal, commsStr, commRolesStr);
+          INSERT INTO users (email, name, first_name, last_name, password_hash, is_first_login, role, title, financial_status, industry, is_test_credential, committees, committee_roles)
+          VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
+        `).run(normEmail, fullName, firstName, lastName, defaultPasswordHash, role, title || "", financial_status || "inactive", industry || "", isTestVal, commsStr, commRolesStr);
       }
 
       // Sync JSON
@@ -2053,7 +2042,6 @@ async function startServer() {
         is_first_login: 1,
         role,
         title: title || "",
-        intake_class: intake_class || "",
         financial_status: financial_status || "inactive",
         industry: industry || "",
         is_test_credential: isTestVal,
@@ -2076,7 +2064,7 @@ async function startServer() {
   // Edit a member
   const handleMemberPut = (req: express.Request, res: express.Response) => {
     const email = req.params.email || req.query.email as string || req.body.email as string || "";
-    const { name, first_name, last_name, role, title, intake_class, financial_status, industry, profile_photo, adminEmail, is_test_credential, committees, committeeRoles, committee_roles } = req.body;
+    const { name, first_name, last_name, role, title, financial_status, industry, profile_photo, adminEmail, is_test_credential, committees, committeeRoles, committee_roles } = req.body;
     if (!email) {
       return res.status(400).json({ success: false, message: "Email is required" });
     }
@@ -2100,7 +2088,6 @@ async function startServer() {
               last_name = COALESCE(?, last_name), 
               role = COALESCE(?, role), 
               title = COALESCE(?, title),
-              intake_class = COALESCE(?, intake_class),
               financial_status = COALESCE(?, financial_status),
               industry = COALESCE(?, industry),
               profile_photo = COALESCE(?, profile_photo),
@@ -2114,7 +2101,6 @@ async function startServer() {
           resolvedLastName || null, 
           role || null, 
           title !== undefined ? title : null, 
-          intake_class !== undefined ? intake_class : null, 
           financial_status || null, 
           industry !== undefined ? industry : null, 
           profile_photo || null, 
@@ -2134,7 +2120,6 @@ async function startServer() {
           if (resolvedLastName) data[normEmail].last_name = resolvedLastName;
           if (role) data[normEmail].role = role;
           if (title !== undefined) data[normEmail].title = title;
-          if (intake_class !== undefined) data[normEmail].intake_class = intake_class;
           if (financial_status) data[normEmail].financial_status = financial_status;
           if (industry !== undefined) data[normEmail].industry = industry;
           if (profile_photo) data[normEmail].profile_photo = profile_photo;
@@ -2821,9 +2806,9 @@ async function startServer() {
             sqliteDb.prepare(`
               INSERT INTO users (
                 email, name, first_name, password_hash, is_first_login,
-                role, title, intake_class, financial_status
+                role, title, financial_status
               )
-              VALUES (?, ?, ?, ?, 0, 'applicant', 'Candidate', 'FY27 Candidate', 'inactive')
+              VALUES (?, ?, ?, ?, 0, 'applicant', 'Candidate', 'inactive')
             `).run(emailNorm, name, displayFirstName, passHash);
           } else {
             sqliteDb.prepare(`
