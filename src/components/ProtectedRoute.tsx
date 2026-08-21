@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { CommitteeSlug } from '../types';
-import { hasCommitteeAccess, isCommitteeChair, normalizeUserRBAC } from '../lib/memberDb';
+import { hasCommitteeAccess, isCommitteeChair, normalizeUserRBAC, is1stAntiBasileus } from '../lib/memberDb';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -57,19 +57,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const isAdmin = normUser.role === 'admin';
   const isOfficer = normUser.role === 'officer';
   const isBrian = normEmail === 'brian.johnson@orderofkpi.org';
-  const isSuperChair = normUser.title === 'Super Committee Chair' || isBrian;
+  const isSuperChair = normUser.title === 'Super Committee Chair';
+  const is1stAnti = is1stAntiBasileus(normUser) || is1stAntiBasileus({ email: normEmail, role: userRole });
 
-  // Standing committees route protection: only admins and Super Committee Chair can access committee pages or chair dashboard
+  // Standing committees route protection: admins, Super Committee Chair, and 1st Anti-Basileus can access committee pages or chair dashboard
   if (committeeSlug || location.pathname === '/chair-dashboard' || location.pathname.startsWith('/committee/')) {
-    if (!isAdmin && !isSuperChair) {
+    if (!isAdmin && !isSuperChair && !is1stAnti) {
       return <Navigate to="/member-portal" replace />;
     }
   }
 
   // Role-Based Access Control Checks
   if (allowedRoles && allowedRoles.length > 0) {
-    // Admins and Super Committee Chair always bypass checks
-    if (!isAdmin && !isSuperChair) {
+    // Admins, Super Committee Chair, and 1st Anti-Basileus always bypass checks
+    if (!isAdmin && !isSuperChair && !is1stAnti) {
       const isChair = isCommitteeChair('membership_intake', normUser);
       const isCommittee = hasCommitteeAccess('membership_intake', normUser);
 

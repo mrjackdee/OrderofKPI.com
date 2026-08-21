@@ -128,26 +128,6 @@ export default function MemberPortal() {
           is_first_login: false
         });
       }
-    } else {
-      if (!chairsFromDb.some(c => c.email.toLowerCase() === 'brian.johnson@orderofkpi.org')) {
-        chairsFromDb.unshift({
-          name: 'Brian Johnson',
-          email: 'brian.johnson@orderofkpi.org',
-          role: 'officer' as any,
-          title: 'Super Committee Chair',
-          is_first_login: false
-        });
-      }
-    }
-
-    if (!chairsFromDb.some(c => c.email.toLowerCase() === 'anthony.jones@orderofkpi.org')) {
-      chairsFromDb.push({
-        name: 'Anthony Jones',
-        email: 'anthony.jones@orderofkpi.org',
-        role: 'officer' as any,
-        title: '1st Anti-Basileus',
-        is_first_login: false
-      });
     }
 
     return chairsFromDb;
@@ -316,7 +296,7 @@ export default function MemberPortal() {
                   {STANDING_COMMITTEES.map((committee) => {
                     const committeeChairs = getCommitteeChairs(committee.slug);
                     const committeeMembers = getCommitteeMembers(committee.slug);
-                    const primaryChair = committeeChairs[0] || { name: 'Anthony Jones', email: 'anthony.jones@orderofkpi.org' };
+                    const primaryChair = committeeChairs[0] || { name: 'Executive Committee', email: 'info@kpi2012.org' };
                     const mailtoSubject = encodeURIComponent(`Interest in Joining ${committee.name}`);
                     const mailtoBody = encodeURIComponent(`Dear ${primaryChair.name},\n\nI am interested in joining the ${committee.name}. Please contact me regarding committee meetings and membership steps.\n\nFraternally,`);
                     const mailtoLink = `mailto:${primaryChair.email}?subject=${mailtoSubject}&body=${mailtoBody}`;
@@ -527,22 +507,39 @@ export default function MemberPortal() {
                   <span>Committee Chair(s)</span>
                 </h4>
                 <div className="space-y-2">
-                  {getCommitteeChairs(selectedCommitteeModal.slug).map((chair, idx) => (
-                    <div key={idx} className="p-3.5 bg-cream/60 border border-gold/20 rounded-xl flex items-center justify-between">
+                  {getCommitteeChairs(selectedCommitteeModal.slug).length > 0 ? (
+                    getCommitteeChairs(selectedCommitteeModal.slug).map((chair, idx) => (
+                      <div key={idx} className="p-3.5 bg-cream/60 border border-gold/20 rounded-xl flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-ivy text-sm">{chair.name}</p>
+                          <p className="text-[11px] text-gold font-semibold">{chair.title || 'Committee Chair'}</p>
+                          <p className="text-xs text-ivy/60 font-body">{chair.email}</p>
+                        </div>
+                        <a
+                          href={`mailto:${chair.email}?subject=${encodeURIComponent(`Interest in Joining ${selectedCommitteeModal.name}`)}`}
+                          className="px-3.5 py-1.5 bg-ivy text-cream hover:bg-gold hover:text-ivy rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
+                        >
+                          <Mail size={12} />
+                          <span>Email Chair</span>
+                        </a>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-3.5 bg-cream/60 border border-gold/20 rounded-xl flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-ivy text-sm">{chair.name}</p>
-                        <p className="text-[11px] text-gold font-semibold">{chair.title || 'Committee Chair'}</p>
-                        <p className="text-xs text-ivy/60 font-body">{chair.email}</p>
+                        <p className="font-bold text-ivy text-sm">Executive Committee Oversight</p>
+                        <p className="text-[11px] text-gold font-semibold">Executive Board</p>
+                        <p className="text-xs text-ivy/60 font-body">info@kpi2012.org</p>
                       </div>
                       <a
-                        href={`mailto:${chair.email}?subject=${encodeURIComponent(`Interest in Joining ${selectedCommitteeModal.name}`)}`}
+                        href={`mailto:info@kpi2012.org?subject=${encodeURIComponent(`Interest in Joining ${selectedCommitteeModal.name}`)}`}
                         className="px-3.5 py-1.5 bg-ivy text-cream hover:bg-gold hover:text-ivy rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
                       >
                         <Mail size={12} />
-                        <span>Email Chair</span>
+                        <span>Email Board</span>
                       </a>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
@@ -586,7 +583,7 @@ export default function MemberPortal() {
                     Close
                   </button>
                   <a
-                    href={`mailto:${getCommitteeChairs(selectedCommitteeModal.slug)[0]?.email || 'anthony.jones@orderofkpi.org'}?subject=${encodeURIComponent(`Interest in Joining ${selectedCommitteeModal.name}`)}`}
+                    href={`mailto:${getCommitteeChairs(selectedCommitteeModal.slug)[0]?.email || 'info@kpi2012.org'}?subject=${encodeURIComponent(`Interest in Joining ${selectedCommitteeModal.name}`)}`}
                     className="px-5 py-2 bg-gold text-ivy font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-ivy hover:text-cream transition-all flex items-center justify-center gap-2 w-full sm:w-auto shadow-sm"
                   >
                     <Mail size={14} />

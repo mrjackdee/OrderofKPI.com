@@ -87,9 +87,9 @@ export const defaultMembers: MemberUser[] = [
     name: "Brian Johnson", 
     email: "brian.johnson@orderofkpi.org", 
     role: "officer", 
-    title: "Super Committee Chair",
-    committees: ['annual_event', 'scholarship', 'judicial_ethics', 'digital_technology', 'membership_intake', 'transfer_member'],
-    committeeRoles: { annual_event: 'chair', scholarship: 'chair', judicial_ethics: 'chair', digital_technology: 'chair', membership_intake: 'chair', transfer_member: 'chair' }
+    title: "Officer",
+    committees: [],
+    committeeRoles: {}
   },
   { 
     name: "Deshaun Safford", 
@@ -179,7 +179,7 @@ export function normalizeUserRBAC(user: {
     normalizedRole = 'admin';
     committees = [...ALL_COMMITTEE_SLUGS];
     ALL_COMMITTEE_SLUGS.forEach(slug => { committeeRoles[slug] = 'chair'; });
-  } else if (rawRole === 'Super Committee Chair' || title === 'Super Committee Chair' || normEmail === 'brian.johnson@orderofkpi.org') {
+  } else if (rawRole === 'Super Committee Chair' || title === 'Super Committee Chair') {
     normalizedRole = 'officer';
     title = 'Super Committee Chair';
     committees = [...ALL_COMMITTEE_SLUGS];
@@ -188,7 +188,6 @@ export function normalizeUserRBAC(user: {
     normalizedRole = 'officer';
     if (!title) title = '1st Anti-Basileus';
     committees = [...ALL_COMMITTEE_SLUGS];
-    ALL_COMMITTEE_SLUGS.forEach(slug => { committeeRoles[slug] = 'chair'; });
   } else if (rawRole === 'Committee Chair' || rawRole === 'Membership Committee Chair' || rawRole.toLowerCase().includes('chair')) {
     normalizedRole = 'Committee Chair';
     if (!title) title = rawRole;
@@ -257,7 +256,6 @@ export function hasCommitteeAccess(
     norm.role === 'admin' ||
     norm.role === 'officer' ||
     norm.title === 'Super Committee Chair' ||
-    norm.email === 'brian.johnson@orderofkpi.org' ||
     is1stAntiBasileus(user) ||
     is1stAntiBasileus(norm)
   ) return true;
@@ -282,10 +280,7 @@ export function isCommitteeChair(
   const norm = normalizeUserRBAC(user);
   if (
     norm.role === 'admin' ||
-    norm.title === 'Super Committee Chair' ||
-    norm.email === 'brian.johnson@orderofkpi.org' ||
-    is1stAntiBasileus(user) ||
-    is1stAntiBasileus(norm)
+    norm.title === 'Super Committee Chair'
   ) {
     return true;
   }
@@ -305,8 +300,9 @@ export function getVisibleCommitteesForUser(user: {
   committeeRoles?: Record<string, CommitteeRole | string>;
 }) {
   const norm = normalizeUserRBAC(user);
-  const isSuperChair = norm.title === 'Super Committee Chair' || (norm.email || user.email || '').toLowerCase().trim() === 'brian.johnson@orderofkpi.org';
-  const isExecutive = norm.role === 'admin' || norm.role === 'officer' || isSuperChair;
+  const isSuperChair = norm.title === 'Super Committee Chair';
+  const is1stAnti = is1stAntiBasileus(user) || is1stAntiBasileus(norm);
+  const isExecutive = norm.role === 'admin' || norm.role === 'officer' || isSuperChair || is1stAnti;
 
   return STANDING_COMMITTEES.map(def => {
     const isAssigned = norm.committees.includes(def.slug);

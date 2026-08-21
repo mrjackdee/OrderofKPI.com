@@ -169,7 +169,7 @@ export default function CommitteePage() {
   const isAdmin = normUser.role === 'admin' || normUser.email === 'admin@orderofkpi.org' || normUser.email === 'qa.admin@orderofkpi.org' || normUser.email === 'info@kpi2012.org';
   const isOfficer = normUser.role === 'officer';
   const is1stAnti = is1stAntiBasileus(normUser) || is1stAntiBasileus({ email: userEmail, role: userRole });
-  const isSuperChair = normUser.title === 'Super Committee Chair' || userEmail?.toLowerCase() === 'brian.johnson@orderofkpi.org';
+  const isSuperChair = normUser.title === 'Super Committee Chair';
   const canEdit = isChair || isAdmin || is1stAnti || isSuperChair;
 
   // Active sub-tab state

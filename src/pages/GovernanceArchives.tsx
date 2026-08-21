@@ -48,7 +48,7 @@ export default function GovernanceArchives() {
   });
 
   const isAdmin = normUser.role === 'admin' || normEmail === 'admin@orderofkpi.org' || normEmail === 'info@kpi2012.org';
-  const isSuperChair = normUser.title === 'Super Committee Chair' || normEmail === 'brian.johnson@orderofkpi.org';
+  const isSuperChair = normUser.title === 'Super Committee Chair';
   const isChair = normEmail === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair' || isSuperChair || isAdmin;
 
   const [activeTab, setActiveTab] = useState<'voting' | 'nominations' | 'audits'>('voting');

@@ -432,7 +432,7 @@ const defaultUsers = [
   { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", financial_status: "active", industry: "" },
   { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "officer", financial_status: "active", industry: "" },
   { name: "DeShaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee", financial_status: "active", industry: "" },
-  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "officer", title: "Super Committee Chair", financial_status: "active", industry: "", committees: ['annual_event', 'scholarship', 'judicial_ethics', 'digital_technology', 'membership_intake', 'transfer_member'], committeeRoles: { annual_event: 'chair', scholarship: 'chair', judicial_ethics: 'chair', digital_technology: 'chair', membership_intake: 'chair', transfer_member: 'chair' } },
+  { name: "Brian Johnson", email: "brian.johnson@orderofkpi.org", role: "officer", title: "Officer", financial_status: "active", industry: "" },
   { name: "Jason Pilar", email: "jason.pilar@orderofkpi.org", role: "Membership Committee", financial_status: "active", industry: "" },
   { name: "Ishmeal Allensworth", email: "ishmeal.allensworth@orderofkpi.org", role: "officer", title: "Tamiouchos", financial_status: "active", industry: "" },
   { name: "Edward Cook", email: "edward.cook@orderofkpi.org", role: "officer", title: "Epistoleus", financial_status: "active", industry: "" },
@@ -3280,7 +3280,7 @@ async function startServer() {
         }
 
         const normEmail = (u.email || '').toLowerCase().trim();
-        if (normEmail === 'brian.johnson@orderofkpi.org' || u.title === 'Super Committee Chair') {
+        if (u.title === 'Super Committee Chair') {
           u.title = 'Super Committee Chair';
           u.role = 'officer';
           const allSlugs = ['annual_event', 'scholarship', 'judicial_ethics', 'digital_technology', 'membership_intake', 'transfer_member'];
