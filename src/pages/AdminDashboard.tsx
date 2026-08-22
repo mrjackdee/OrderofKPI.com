@@ -2085,7 +2085,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="col-span-2">
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/60 mb-2">Roles</label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {['member', 'officer', 'Committee Chair', 'Digital & Tech Committee Chair', 'Scholarship Committee Chair', 'Judicial & Ethics Committee Chair', 'Annual Event Committee Chair', 'Transfer Member Committee Chair', 'Membership Committee Chair', 'Membership Committee', 'Super Committee', 'admin'].map(r => (
                       <label key={r} className="flex items-center gap-2 text-xs cursor-pointer hover:text-gold">
                         <input

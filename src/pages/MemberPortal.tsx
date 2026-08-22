@@ -266,7 +266,7 @@ export default function MemberPortal() {
         </motion.div>
 
         {/* KP Committees Directory Section */}
-        {!isApplicant && (
+        {(features.committee_enabled || isAdmin) && !isApplicant && (
           <motion.section variants={itemVariants} className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gold/20 pb-4">
               <div>
