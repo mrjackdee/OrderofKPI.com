@@ -15,6 +15,7 @@ export interface MemberUser {
   name: string;
   email: string;
   role: 'admin' | 'member' | 'officer' | 'prospective' | 'applicant' | 'Membership Committee' | 'Membership Committee Chair';
+  roles?: string[];
   title?: string;
   committees?: CommitteeSlug[];
   committeeRoles?: Record<string, CommitteeRole>;
@@ -502,6 +503,7 @@ export async function performHybridLogin(email: string, pass: string): Promise<{
         };
         try {
           sessionStorage.setItem('userRole', norm.role);
+          sessionStorage.setItem('userRoles', JSON.stringify(data.user.roles || [norm.role]));
           sessionStorage.setItem('userCommittees', JSON.stringify(norm.committees));
           sessionStorage.setItem('userCommitteeRoles', JSON.stringify(norm.committeeRoles));
         } catch (e) {}
@@ -545,6 +547,7 @@ export async function performHybridLogin(email: string, pass: string): Promise<{
             const norm = normalizeUserRBAC(member);
             try {
               sessionStorage.setItem('userRole', norm.role);
+              sessionStorage.setItem('userRoles', JSON.stringify(member.roles || [norm.role]));
               sessionStorage.setItem('userCommittees', JSON.stringify(norm.committees));
               sessionStorage.setItem('userCommitteeRoles', JSON.stringify(norm.committeeRoles));
             } catch (e) {}
@@ -888,6 +891,7 @@ async function performClientSideLogin(email: string, pass: string) {
 
   try {
     sessionStorage.setItem('userRole', norm.role);
+    sessionStorage.setItem('userRoles', JSON.stringify(member.roles || [norm.role]));
     sessionStorage.setItem('userCommittees', JSON.stringify(norm.committees));
     sessionStorage.setItem('userCommitteeRoles', JSON.stringify(norm.committeeRoles));
   } catch (e) {}

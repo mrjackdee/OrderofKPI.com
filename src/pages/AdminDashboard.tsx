@@ -916,7 +916,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex flex-wrap items-center gap-3 border-b border-gold/20 pb-4">
+        <div className="flex flex-nowrap overflow-x-auto pb-4 gap-3 border-b border-gold/20 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <button
             onClick={() => setActiveTab('users')}
             className={`px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${

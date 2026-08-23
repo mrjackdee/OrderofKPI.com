@@ -35,17 +35,21 @@ export default function MemberPortal() {
   const { features } = useSystemFeatures();
   let userCommittees: CommitteeSlug[] = [];
   let userCommitteeRoles: Record<string, 'chair' | 'member'> = {};
+  let userRoles: string[] = [];
 
   try {
     const rawCommittees = sessionStorage.getItem('userCommittees');
     if (rawCommittees) userCommittees = JSON.parse(rawCommittees);
-    const rawRoles = sessionStorage.getItem('userCommitteeRoles');
-    if (rawRoles) userCommitteeRoles = JSON.parse(rawRoles);
+    const rawCommitteeRoles = sessionStorage.getItem('userCommitteeRoles');
+    if (rawCommitteeRoles) userCommitteeRoles = JSON.parse(rawCommitteeRoles);
+    const rawRoles = sessionStorage.getItem('userRoles');
+    if (rawRoles) userRoles = JSON.parse(rawRoles);
   } catch (e) {}
 
   const normUser = normalizeUserRBAC({
     email: userEmail || '',
     role: userRole || 'member',
+    roles: userRoles.length > 0 ? userRoles : (userRole ? [userRole] : ['member']),
     committees: userCommittees,
     committeeRoles: userCommitteeRoles
   });
@@ -86,10 +90,27 @@ export default function MemberPortal() {
   }
 
   const normalizedRole = (userRole || '').toLowerCase();
-  const isAdmin = normUser.role === 'admin' || userRole === 'admin' || userEmail?.toLowerCase() === 'admin@orderofkpi.org' || userEmail?.toLowerCase() === 'qa.admin@orderofkpi.org' || userEmail?.toLowerCase() === 'info@kpi2012.org';
-  const isChair = userEmail?.toLowerCase() === 'james.haywood@orderofkpi.org' || userRole === 'Membership Committee Chair' || normalizedRole.includes('chair') || isAdmin;
+  const isAdmin = normUser.role === 'admin' || userRoles.includes('admin') || userEmail?.toLowerCase() === 'admin@orderofkpi.org' || userEmail?.toLowerCase() === 'qa.admin@orderofkpi.org' || userEmail?.toLowerCase() === 'info@kpi2012.org';
+  const isChair = userEmail?.toLowerCase() === 'james.haywood@orderofkpi.org' || 
+                  userRoles.some(r => {
+                    const low = r.toLowerCase();
+                    return low.includes('chair') || low === 'super committee' || low === 'officer';
+                  }) || 
+                  normalizedRole.includes('chair') || 
+                  normalizedRole === 'super committee' || 
+                  normalizedRole === 'officer' || 
+                  isAdmin;
   const isBrian = normUser.email === 'brian.johnson@orderofkpi.org' || userEmail?.toLowerCase() === 'brian.johnson@orderofkpi.org';
-  const isMembershipCommittee = userRole === 'Membership Committee' || normalizedRole.includes('membership committee') || normalizedRole.includes('committee') || isChair || isAdmin;
+  const isMembershipCommittee = 
+    userRoles.some(r => {
+      const low = r.toLowerCase();
+      return low === 'membership committee' || low === 'membership committee chair' || low === 'super committee';
+    }) || 
+    normalizedRole === 'membership committee' || 
+    normalizedRole === 'membership committee chair' || 
+    normalizedRole === 'super committee' || 
+    isChair || 
+    isAdmin;
   
   useEffect(() => {
     logPortalSectionAccess('Member Portal');
@@ -266,7 +287,7 @@ export default function MemberPortal() {
         </motion.div>
 
         {/* KP Committees Directory Section */}
-        {(features.committee_enabled || isAdmin) && !isApplicant && (
+        {features.committee_enabled && !isApplicant && (
           <motion.section variants={itemVariants} className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gold/20 pb-4">
               <div>
@@ -385,6 +406,7 @@ export default function MemberPortal() {
             if (isBrian && tool.roles.includes('brian')) return true;
             
             // Check direct role inclusion
+            if (userRoles.some(r => tool.roles.includes(r))) return true;
             if (tool.roles.includes(userRole || '')) return true;
             
             // Chair falls back to Committee actions

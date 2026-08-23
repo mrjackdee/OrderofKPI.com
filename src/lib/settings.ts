@@ -19,7 +19,7 @@ export function useSystemFeatures() {
     
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
-        setFeatures(docSnap.data() as SystemFeatures);
+        setFeatures({ ...DEFAULT_FEATURES, ...docSnap.data() } as SystemFeatures);
       } else {
         // If doc doesn't exist, we can assume defaults
         setFeatures(DEFAULT_FEATURES);

@@ -24,6 +24,7 @@ interface UserRecord {
   password_hash: string;
   is_first_login: number;
   role: string;
+  roles?: string;
   title?: string;
   is_test_credential?: number;
 }
@@ -443,7 +444,7 @@ const defaultUsers = [
   { name: "Donald Mitchell", email: "donald.mitchell@orderofkpi.org", role: "member", financial_status: "active", industry: "", committees: ["judicial_ethics"], committee_roles: { judicial_ethics: "member" } },
   { name: "Dominic Goodman", email: "dominic.goodman@orderofkpi.org", role: "member", financial_status: "inactive", industry: "", committees: ["scholarship"], committee_roles: { scholarship: "member" } },
   { name: "Brandon Owens", email: "brandon.owens@orderofkpi.org", role: "officer", title: "Historian", financial_status: "active", industry: "" },
-  { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "officer", title: "1st Anti-Basileus", financial_status: "active", industry: "" },
+  { name: "Anthony Jones", email: "anthony.jones@orderofkpi.org", role: "Super Committee", title: "1st Anti-Basileus", financial_status: "active", industry: "", roles: ["officer", "Super Committee"] },
   { name: "Alejandro Araujo", email: "alejandro.araujo@orderofkpi.org", role: "member", financial_status: "active", industry: "", committees: ["digital_technology"], committee_roles: { digital_technology: "member" } },
   { name: "Demetrist Thomas", email: "demetrist.thomas@orderofkpi.org", role: "member", financial_status: "active", industry: "", committees: ["transfer_member"], committee_roles: { transfer_member: "member" } },
   { name: "Denzel Talley", email: "denzel.talley@orderofkpi.org", role: "member", financial_status: "active", industry: "", committees: ["scholarship"], committee_roles: { scholarship: "member" } },
@@ -627,6 +628,12 @@ async function initDb() {
       // Column already exists
     }
 
+    try {
+      sqliteDb.exec("ALTER TABLE users ADD COLUMN roles TEXT");
+    } catch (e) {
+      // Column already exists
+    }
+
     sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS candidates (
         id TEXT PRIMARY KEY,
@@ -769,22 +776,27 @@ async function initDb() {
 
       const defaultComms = (u as any).committees ? JSON.stringify((u as any).committees) : "[]";
       const defaultRoles = (u as any).committee_roles ? JSON.stringify((u as any).committee_roles) : "{}";
+      const defaultMultiRoles = JSON.stringify((u as any).roles || [u.role]);
 
       if (existingUser) {
-        let currentComms = "[]";
-        let currentRoles = "{}";
-        const row = sqliteDb.prepare("SELECT committees, committee_roles FROM users WHERE email = ?").get(emailNorm) as any;
-        if (row && row.committees && row.committees !== "[]") {
-          currentComms = row.committees;
-          currentRoles = row.committee_roles || "{}";
-        } else {
-          currentComms = defaultComms;
-          currentRoles = defaultRoles;
+        let currentRole = u.role;
+        let currentRoles = defaultMultiRoles;
+        let currentTitle = u.title || "";
+        let currentComms = defaultComms;
+        let currentCommitteeRoles = defaultRoles;
+
+        const row = sqliteDb.prepare("SELECT role, roles, title, committees, committee_roles FROM users WHERE email = ?").get(emailNorm) as any;
+        if (row) {
+          currentRole = row.role || u.role;
+          currentRoles = row.roles || JSON.stringify([currentRole]);
+          currentTitle = row.title !== null && row.title !== undefined ? row.title : (u.title || "");
+          currentComms = row.committees !== null && row.committees !== undefined && row.committees !== "[]" ? row.committees : defaultComms;
+          currentCommitteeRoles = row.committee_roles !== null && row.committee_roles !== undefined && row.committee_roles !== "{}" ? row.committee_roles : defaultRoles;
         }
 
         sqliteDb.prepare(`
           UPDATE users 
-          SET name = ?, first_name = ?, last_name = ?, role = ?, title = ?, 
+          SET name = ?, first_name = ?, last_name = ?, role = ?, roles = ?, title = ?, 
               financial_status = ?, password_hash = ?, is_first_login = ?,
               is_test_credential = ?, committees = ?, committee_roles = ?
           WHERE email = ?
@@ -792,24 +804,25 @@ async function initDb() {
           u.name, 
           firstName, 
           u.name.split(" ").slice(1).join(" ") || "",
-          u.role, 
-          u.title || "", 
+          currentRole, 
+          currentRoles,
+          currentTitle, 
           u.financial_status || "inactive", 
           targetPasswordHash,
           targetIsFirstLogin,
           isTestCred,
           currentComms,
-          currentRoles,
+          currentCommitteeRoles,
           emailNorm
         );
       } else {
         sqliteDb.prepare(`
           INSERT INTO users (
             email, name, first_name, last_name, password_hash, is_first_login, 
-            role, title, 
+            role, roles, title, 
             financial_status, industry, is_test_credential, committees, committee_roles
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           emailNorm, 
           u.name, 
@@ -818,6 +831,7 @@ async function initDb() {
           targetPasswordHash, 
           targetIsFirstLogin,
           u.role, 
+          defaultMultiRoles,
           u.title || "",
           u.financial_status || "inactive",
           u.industry || "",
@@ -1079,6 +1093,7 @@ function findUser(email: string): UserRecord | null {
           password_hash: row.password_hash,
           is_first_login: row.is_first_login,
           role: row.role,
+          roles: row.roles,
           title: row.title
         };
       }
@@ -2070,34 +2085,55 @@ async function startServer() {
     try {
       let members: any[] = [];
       if (useSqlite && sqliteDb) {
-        members = sqliteDb.prepare("SELECT * FROM users").all().map((u: any) => ({
-          ...u,
-          committees: JSON.parse(u.committees || '[]'),
-          committeeRoles: JSON.parse(u.committee_roles || '{}')
-        }));
+        members = sqliteDb.prepare("SELECT * FROM users").all().map((u: any) => {
+          let rolesParsed = [];
+          if (u.roles) {
+            try { rolesParsed = JSON.parse(u.roles); } catch(e) {}
+          }
+          if (rolesParsed.length === 0 && u.role) {
+            rolesParsed = [u.role];
+          }
+          return {
+            ...u,
+            roles: rolesParsed,
+            committees: JSON.parse(u.committees || '[]'),
+            committeeRoles: JSON.parse(u.committee_roles || '{}')
+          };
+        });
       } else if (fs.existsSync(jsonDbPath)) {
         const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
-        members = Object.values(data).map((u: any) => ({
-          email: u.email,
-          name: u.name,
-          first_name: u.first_name,
-          last_name: u.last_name || "",
-          role: u.role,
-          title: u.title || "",
-          is_first_login: u.is_first_login,
-          financial_status: u.financial_status || "inactive",
-          industry: u.industry || "",
-          profile_photo: u.profile_photo || "",
-          is_test_credential: u.is_test_credential || 0,
-          committees: u.committees || [],
-          committeeRoles: u.committeeRoles || u.committee_roles || {}
-        }));
+        members = Object.values(data).map((u: any) => {
+          let rolesParsed = u.roles || [];
+          if (typeof rolesParsed === 'string') {
+            try { rolesParsed = JSON.parse(rolesParsed); } catch(e) {}
+          }
+          if (!Array.isArray(rolesParsed)) {
+            rolesParsed = [u.role || 'member'];
+          }
+          return {
+            email: u.email,
+            name: u.name,
+            first_name: u.first_name,
+            last_name: u.last_name || "",
+            role: u.role,
+            roles: rolesParsed,
+            title: u.title || "",
+            is_first_login: u.is_first_login,
+            financial_status: u.financial_status || "inactive",
+            industry: u.industry || "",
+            profile_photo: u.profile_photo || "",
+            is_test_credential: u.is_test_credential || 0,
+            committees: u.committees || [],
+            committeeRoles: u.committeeRoles || u.committee_roles || {}
+          };
+        });
       } else {
         members = defaultUsers.map(u => ({
           email: u.email,
           name: u.name,
           first_name: u.name.split(" ")[0],
           role: u.role,
+          roles: (u as any).roles || [u.role],
           title: u.title || "",
           is_first_login: 1,
           is_test_credential: (u.email.toLowerCase().startsWith("qa.") || u.email.toLowerCase().startsWith("test.")) ? 1 : 0
@@ -2108,14 +2144,22 @@ async function startServer() {
       members = members.map((m: any) => {
         let parsedCommittees = m.committees;
         let parsedRoles = m.committeeRoles || m.committee_roles;
+        let parsedMultiRoles = m.roles;
         if (typeof parsedCommittees === 'string') {
           try { parsedCommittees = JSON.parse(parsedCommittees); } catch(e) { parsedCommittees = []; }
         }
         if (typeof parsedRoles === 'string') {
           try { parsedRoles = JSON.parse(parsedRoles); } catch(e) { parsedRoles = {}; }
         }
+        if (typeof parsedMultiRoles === 'string') {
+          try { parsedMultiRoles = JSON.parse(parsedMultiRoles); } catch(e) { parsedMultiRoles = [m.role || 'member']; }
+        }
+        if (!Array.isArray(parsedMultiRoles)) {
+          parsedMultiRoles = [m.role || 'member'];
+        }
         return {
           ...m,
+          roles: parsedMultiRoles,
           committees: Array.isArray(parsedCommittees) ? parsedCommittees : [],
           committeeRoles: (parsedRoles && typeof parsedRoles === 'object') ? parsedRoles : {}
         };
@@ -2146,7 +2190,7 @@ async function startServer() {
 
   // Add a new member
   app.post("/api/members", (req, res) => {
-    const { email, name, first_name, last_name, role, title, financial_status, industry, adminEmail, is_test_credential, committees, committeeRoles, committee_roles } = req.body;
+    const { email, name, first_name, last_name, role, roles, title, financial_status, industry, adminEmail, is_test_credential, committees, committeeRoles, committee_roles } = req.body;
     if (!email) {
       return res.status(400).json({ success: false, message: "Email is required" });
     }
@@ -2166,6 +2210,8 @@ async function startServer() {
     const commsStr = JSON.stringify(Array.isArray(committees) ? committees : []);
     const commRolesObj = committeeRoles || committee_roles || {};
     const commRolesStr = JSON.stringify(typeof commRolesObj === 'object' ? commRolesObj : {});
+    const rolesArr = Array.isArray(roles) ? roles : [assignedRole];
+    const rolesStr = JSON.stringify(rolesArr);
 
     try {
       // Check if user already exists
@@ -2185,9 +2231,9 @@ async function startServer() {
       // Insert to SQLite
       if (useSqlite && sqliteDb) {
         sqliteDb.prepare(`
-          INSERT INTO users (email, name, first_name, last_name, password_hash, is_first_login, role, title, financial_status, industry, is_test_credential, committees, committee_roles)
-          VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
-        `).run(normEmail, fullName, firstName, lastName, defaultPasswordHash, assignedRole, title || "", financial_status || "active", industry || "", isTestVal, commsStr, commRolesStr);
+          INSERT INTO users (email, name, first_name, last_name, password_hash, is_first_login, role, roles, title, financial_status, industry, is_test_credential, committees, committee_roles)
+          VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(normEmail, fullName, firstName, lastName, defaultPasswordHash, assignedRole, rolesStr, title || "", financial_status || "active", industry || "", isTestVal, commsStr, commRolesStr);
       }
 
       // Sync JSON
@@ -2207,6 +2253,7 @@ async function startServer() {
         password_hash: defaultPasswordHash,
         is_first_login: 1,
         role: assignedRole,
+        roles: rolesArr,
         title: title || "",
         financial_status: financial_status || "active",
         industry: industry || "",
@@ -2230,7 +2277,7 @@ async function startServer() {
   // Edit a member
   const handleMemberPut = (req: express.Request, res: express.Response) => {
     const email = req.params.email || req.query.email as string || req.body.email as string || "";
-    const { name, first_name, last_name, role, title, financial_status, industry, profile_photo, adminEmail, is_test_credential, committees, committeeRoles, committee_roles } = req.body;
+    const { name, first_name, last_name, role, roles, title, financial_status, industry, profile_photo, adminEmail, is_test_credential, committees, committeeRoles, committee_roles } = req.body;
     if (!email) {
       return res.status(400).json({ success: false, message: "Email is required" });
     }
@@ -2243,6 +2290,7 @@ async function startServer() {
     const commsStr = committees !== undefined ? JSON.stringify(Array.isArray(committees) ? committees : []) : null;
     const commRolesObj = committeeRoles !== undefined ? committeeRoles : (committee_roles !== undefined ? committee_roles : null);
     const commRolesStr = commRolesObj !== null ? JSON.stringify(commRolesObj) : null;
+    const rolesStr = Array.isArray(roles) ? JSON.stringify(roles) : null;
 
     try {
       // Update SQLite
@@ -2253,6 +2301,7 @@ async function startServer() {
               first_name = COALESCE(?, first_name), 
               last_name = COALESCE(?, last_name), 
               role = COALESCE(?, role), 
+              roles = COALESCE(?, roles), 
               title = COALESCE(?, title),
               financial_status = COALESCE(?, financial_status),
               industry = COALESCE(?, industry),
@@ -2266,6 +2315,7 @@ async function startServer() {
           resolvedFirstName || null, 
           resolvedLastName || null, 
           role || null, 
+          rolesStr, 
           title !== undefined ? title : null, 
           financial_status || null, 
           industry !== undefined ? industry : null, 
@@ -2285,6 +2335,7 @@ async function startServer() {
           if (resolvedFirstName) data[normEmail].first_name = resolvedFirstName;
           if (resolvedLastName) data[normEmail].last_name = resolvedLastName;
           if (role) data[normEmail].role = role;
+          if (roles !== undefined && Array.isArray(roles)) data[normEmail].roles = roles;
           if (title !== undefined) data[normEmail].title = title;
           if (financial_status) data[normEmail].financial_status = financial_status;
           if (industry !== undefined) data[normEmail].industry = industry;

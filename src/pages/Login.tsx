@@ -68,6 +68,7 @@ export default function Login() {
         sessionStorage.setItem('userName', user.name);
         sessionStorage.setItem('userFirstName', user.firstName);
         sessionStorage.setItem('userRole', user.role);
+        sessionStorage.setItem('userRoles', JSON.stringify(user.roles || [user.role]));
         if (user.title) {
           sessionStorage.setItem('userTitle', user.title);
         } else {
