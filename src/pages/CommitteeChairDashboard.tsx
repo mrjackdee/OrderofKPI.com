@@ -20,7 +20,8 @@ import {
   Shield,
   Layers,
   Award,
-  Archive
+  Archive,
+  Save
 } from 'lucide-react';
 import { Candidate, Member } from '../types';
 import { firebaseUpdateCandidateStatus } from '../lib/firebase';
@@ -288,6 +289,8 @@ export default function CommitteeChairDashboard() {
     }
   };
 
+  const [isAddingCommitteeMember, setIsAddingCommitteeMember] = useState(false);
+
   // Add Member to Membership Committee
   const handleAddCommitteeMember = async () => {
     if (!selectedMemberToAdd) {
@@ -295,26 +298,31 @@ export default function CommitteeChairDashboard() {
       return;
     }
 
+    setIsAddingCommitteeMember(true);
     try {
       const res = await fetch('/api/committee/members', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: selectedMemberToAdd,
+          committeeSlug: 'membership_intake',
+          committeeRole: 'member',
           chairEmail: currentUserEmail
         })
       });
       const data = await res.json();
       if (data.success) {
-        showNotification('success', `Successfully granted Membership Committee access to "${selectedMemberToAdd}" and updated the permissions database!`);
+        showNotification('success', `Successfully saved Membership Committee assignment for "${selectedMemberToAdd}" to the database!`);
         setSelectedMemberToAdd('');
-        fetchCommitteeMembers();
-        fetchAllMembers();
+        await fetchCommitteeMembers();
+        await fetchAllMembers();
       } else {
         showNotification('error', data.message || 'We were unable to add this member to the committee. Please try again.');
       }
     } catch (err) {
-      showNotification('error', 'We had trouble updating the committee roster. Please verify your connection and try again.');
+      showNotification('error', 'We had trouble updating the committee roster in the database. Please verify your connection and try again.');
+    } finally {
+      setIsAddingCommitteeMember(false);
     }
   };
 
@@ -784,9 +792,11 @@ export default function CommitteeChairDashboard() {
 
               <button
                 onClick={handleAddCommitteeMember}
-                className="px-6 py-3 bg-ivy hover:bg-ivy/90 text-cream rounded-2xl text-xs font-bold uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2"
+                disabled={!selectedMemberToAdd || isAddingCommitteeMember}
+                className="px-6 py-3 bg-ivy hover:bg-ivy/90 text-cream rounded-2xl text-xs font-bold uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <UserPlus size={16} className="text-gold" /> Grant Committee Access
+                <Save size={16} className="text-gold" />
+                <span>{isAddingCommitteeMember ? 'Saving to Database...' : 'SAVE ASSIGNMENT'}</span>
               </button>
             </div>
           </div>

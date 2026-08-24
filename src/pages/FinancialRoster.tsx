@@ -27,8 +27,8 @@ import {
   Trash2
 } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
-import { Member } from '../types';
-import { syncApplicationsFromFirestore } from '../lib/memberDb';
+import { Member, STANDING_COMMITTEES, CommitteeSlug, CommitteeRole } from '../types';
+import { syncApplicationsFromFirestore, normalizeUserRBAC } from '../lib/memberDb';
 import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 
 export default function FinancialRoster() {
@@ -44,6 +44,7 @@ export default function FinancialRoster() {
   const [isEditingIndustry, setIsEditingIndustry] = useState(false);
   const [industryInput, setIndustryInput] = useState('');
   const [isSavingIndustry, setIsSavingIndustry] = useState(false);
+  const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const currentUserEmail = (sessionStorage.getItem('userEmail') || '').toLowerCase().trim();
   const currentUserRole = (sessionStorage.getItem('userRole') || '').toLowerCase().trim();
@@ -86,22 +87,35 @@ export default function FinancialRoster() {
 
   // Admin states and handlers for absolute CRUD controls across the Member Portal
   const [isEditingAdmin, setIsEditingAdmin] = useState(false);
-  const [editAdminForm, setEditAdminForm] = useState({
+  const [editAdminForm, setEditAdminForm] = useState<{
+    name: string;
+    role: any;
+    title: string;
+    financial_status: any;
+    industry: string;
+    committees: string[];
+    committeeRoles: Record<string, string>;
+  }>({
     name: '',
-    role: 'member' as any,
+    role: 'member',
     title: '',
-    financial_status: 'inactive' as any,
-    industry: ''
+    financial_status: 'inactive',
+    industry: '',
+    committees: [],
+    committeeRoles: {}
   });
   const [savingAdmin, setSavingAdmin] = useState(false);
 
   const handleStartAdminEdit = (member: Member) => {
+    const norm = normalizeUserRBAC(member);
     setEditAdminForm({
       name: member.name || '',
       role: member.role || 'member',
       title: member.title || '',
       financial_status: member.financial_status || 'inactive',
-      industry: member.industry || ''
+      industry: member.industry || '',
+      committees: [...norm.committees],
+      committeeRoles: { ...norm.committeeRoles }
     });
     setIsEditingAdmin(true);
   };
@@ -120,9 +134,18 @@ export default function FinancialRoster() {
       });
       const data = await res.json();
       if (data.success) {
-        setSelectedProfileMember(prev => prev ? { ...prev, ...editAdminForm } : null);
-        setMembers(prev => prev.map(m => m.email.toLowerCase() === selectedProfileMember.email.toLowerCase() ? { ...m, ...editAdminForm } : m));
+        const updatedCommittees = editAdminForm.committees as CommitteeSlug[];
+        const updatedRoles = editAdminForm.committeeRoles as Record<string, CommitteeRole>;
+        const merged = {
+          ...editAdminForm,
+          committees: updatedCommittees,
+          committeeRoles: updatedRoles
+        };
+        setSelectedProfileMember(prev => prev ? { ...prev, ...merged } : null);
+        setMembers(prev => prev.map(m => m.email.toLowerCase() === selectedProfileMember.email.toLowerCase() ? { ...m, ...merged } : m));
         setIsEditingAdmin(false);
+        setActionMessage({ type: 'success', text: `Member details and committee assignments for "${editAdminForm.name || selectedProfileMember.email}" successfully saved to database!` });
+        setTimeout(() => setActionMessage(null), 5000);
       } else {
         alert(data.message || 'Failed to update member details');
       }
@@ -776,6 +799,49 @@ export default function FinancialRoster() {
                         placeholder="e.g. Finance, Tech, Medical"
                         className="w-full px-3 py-2 text-xs rounded-lg border border-[#1E3F20]/20 focus:border-[#1E3F20] bg-white text-[#1E3F20] outline-none"
                       />
+                    </div>
+
+                    <div className="col-span-1 md:col-span-2 pt-3 border-t border-[#1E3F20]/10 mt-2">
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-[#1E3F20]/60 mb-2">
+                        Standing Committee Assignments
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-[#FDFCF0] p-3 rounded-lg border border-[#B8860B]/20">
+                        {STANDING_COMMITTEES.map(c => {
+                          const isAssigned = (editAdminForm.committees || []).includes(c.slug);
+                          const currentRole = (editAdminForm.committeeRoles || {})[c.slug] || 'member';
+                          return (
+                            <div key={c.slug} className="flex flex-col gap-1.5 p-2 bg-white rounded border border-[#1E3F20]/10">
+                              <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#1E3F20]">
+                                <input
+                                  type="checkbox"
+                                  checked={isAssigned}
+                                  onChange={e => {
+                                    const nextComms = e.target.checked
+                                      ? [...(editAdminForm.committees || []), c.slug]
+                                      : (editAdminForm.committees || []).filter(item => item !== c.slug);
+                                    setEditAdminForm({ ...editAdminForm, committees: nextComms });
+                                  }}
+                                  className="rounded text-[#1E3F20] focus:ring-0"
+                                />
+                                <span>{c.name}</span>
+                              </label>
+                              {isAssigned && (
+                                <select
+                                  value={currentRole}
+                                  onChange={e => {
+                                    const nextRoles = { ...(editAdminForm.committeeRoles || {}), [c.slug]: e.target.value };
+                                    setEditAdminForm({ ...editAdminForm, committeeRoles: nextRoles });
+                                  }}
+                                  className="text-[10px] px-2 py-1 bg-[#FDFCF0] border border-[#1E3F20]/20 rounded font-bold text-[#1E3F20]"
+                                >
+                                  <option value="member">General Member</option>
+                                  <option value="chair">Committee Chair</option>
+                                </select>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 ) : (

@@ -33,19 +33,24 @@ export default function CandidateVotingForm() {
     // 1. Fetch live roster for eligibility
     getLiveGoogleSheetRoster()
       .then(res => {
+        const eligibleSet = new Set<string>();
+        if (res && Array.isArray(res.eligibleVoters)) {
+          res.eligibleVoters.forEach((e: string) => eligibleSet.add(e.toLowerCase().trim()));
+        }
         if (res && Array.isArray(res.members)) {
-          const eligibleSet = new Set<string>();
           res.members.forEach((m: any) => {
             if (m.fy27MipEligible) {
               if (m.kpiEmail) eligibleSet.add(m.kpiEmail.toLowerCase().trim());
               if (m.personalEmail) eligibleSet.add(m.personalEmail.toLowerCase().trim());
             }
           });
-          const list = Array.from(eligibleSet);
-          setEligibleVoters(list);
-          if (isAdmin || list.includes(normEmail) || normEmail === 'candidate@gmail.com') {
-            setIsEligible(true);
-          }
+        }
+        const list = Array.from(eligibleSet);
+        setEligibleVoters(list);
+        if (isAdmin || normEmail === 'candidate@gmail.com' || normEmail === 'qa.admin@orderofkpi.org' || normEmail === 'info@kpi2012.org' || list.includes(normEmail)) {
+          setIsEligible(true);
+        } else {
+          setIsEligible(false);
         }
       })
       .catch(err => console.warn('Roster fetch error:', err));
@@ -173,6 +178,43 @@ export default function CandidateVotingForm() {
             <div className="bg-amber-50 border border-amber-200/80 rounded-lg p-4 max-w-md mx-auto text-amber-900 text-xs font-semibold mb-6">
               {votingStatus.message}
             </div>
+            <Link
+              to="/member-portal"
+              className="inline-flex items-center px-5 py-2.5 bg-stone-800 text-white rounded-lg text-sm font-medium hover:bg-stone-900 transition-colors"
+            >
+              Return to Member Portal
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!loading && !isEligible) {
+    return (
+      <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
+        <MemberHeader />
+        <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-12">
+          <Link 
+            to="/member-portal" 
+            className="inline-flex items-center text-sm font-medium text-amber-700 hover:text-amber-800 transition-colors mb-6"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to Member Portal
+          </Link>
+          <div className="bg-white rounded-xl border border-stone-200 p-10 shadow-sm text-center">
+            <div className="w-16 h-16 bg-red-100 text-red-800 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+            <h1 className="text-2xl font-serif font-bold text-stone-900 mb-2">FY27 Candidate Voting Restricted</h1>
+            <p className="text-stone-600 max-w-lg mx-auto mb-4 text-sm leading-relaxed">
+              Candidate voting is restricted to members with FY27 MIP Eligibility confirmed on the master roster.
+            </p>
+            <p className="text-stone-600 max-w-lg mx-auto mb-6 text-sm leading-relaxed">
+              If you have any questions, please reach out to{' '}
+              <a href="mailto:james.haywood@orderofkpi.org" className="text-amber-700 underline font-semibold hover:text-amber-800">
+                JR Haywood
+              </a>.
+            </p>
             <Link
               to="/member-portal"
               className="inline-flex items-center px-5 py-2.5 bg-stone-800 text-white rounded-lg text-sm font-medium hover:bg-stone-900 transition-colors"

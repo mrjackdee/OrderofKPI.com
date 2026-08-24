@@ -80,25 +80,27 @@ export default function MemberPortal() {
   const [contactCommitteeSlug, setContactCommitteeSlug] = useState<string | null>(null);
 
   const [eligibleVoters, setEligibleVoters] = useState<string[]>([
-    "anthony.jones@orderofkpi.org",
-    "brandon.owens@orderofkpi.org",
-    "brian.johnson@orderofkpi.org",
-    "brian.goings@orderofkpi.org",
-    "darron.jenkins@orderofkpi.org",
-    "denzel.talley@orderofkpi.org",
-    "deshaun.safford@orderofkpi.org",
-    "dominic.goodman@orderofkpi.org",
-    "donald.mitchell@orderofkpi.org",
-    "edward.cook@orderofkpi.org",
-    "ishmeal.allensworth@orderofkpi.org",
-    "jack.dee@orderofkpi.org",
-    "james.haywood@orderofkpi.org",
-    "jason.pilar@orderofkpi.org",
-    "kameron.whitfield@orderofkpi.org",
-    "keith.woods@orderofkpi.org",
-    "tobias.bordley@orderofkpi.org",
+    "anthony.jones@orderofkpi.org", "antjones_cpm@yahoo.com",
+    "brandon.owens@orderofkpi.org", "bmusicallyinclined@gmail.com",
+    "brian.johnson@orderofkpi.org", "brianojohnson80@gmail.com",
+    "brian.goings@orderofkpi.org", "brianbgoings@gmail.com",
+    "darron.jenkins@orderofkpi.org", "dajenkins06@gmail.com",
+    "denzel.talley@orderofkpi.org", "denzeltalley@gmail.com",
+    "deshaun.safford@orderofkpi.org", "dsafford06@yahoo.com",
+    "dominic.goodman@orderofkpi.org", "dominicsgoodman@gmail.com",
+    "donald.mitchell@orderofkpi.org", "dmitchell02@gmail.com",
+    "edward.cook@orderofkpi.org", "edward.j.cook@gmail.com",
+    "ishmeal.allensworth@orderofkpi.org", "imallenswort@gmail.com",
+    "jack.dee@orderofkpi.org", "jackdee@att.net",
+    "james.haywood@orderofkpi.org", "jhaywood2008@gmail.com",
+    "jason.pilar@orderofkpi.org", "jpilar06@gmail.com",
+    "kameron.whitfield@orderofkpi.org", "kmaurw@gmail.com",
+    "keith.woods@orderofkpi.org", "kwoods509@gmail.com",
+    "tobias.bordley@orderofkpi.org", "c.tbordley@gmail.com",
     "candidate@gmail.com",
-    "admin@orderofkpi.org"
+    "admin@orderofkpi.org",
+    "qa.admin@orderofkpi.org",
+    "info@kpi2012.org"
   ]);
 
   const isApplicant = userRole === 'applicant' || userRole === 'prospective';
@@ -163,8 +165,22 @@ export default function MemberPortal() {
     // Poll live Google Sheet for real-time voter eligibility criteria
     getLiveGoogleSheetRoster()
       .then(res => {
-        if (res && Array.isArray(res.eligibleVoters) && res.eligibleVoters.length > 0) {
-          setEligibleVoters(res.eligibleVoters);
+        if (res) {
+          const set = new Set<string>();
+          if (Array.isArray(res.eligibleVoters)) {
+            res.eligibleVoters.forEach(e => set.add(e.toLowerCase().trim()));
+          }
+          if (Array.isArray(res.members)) {
+            res.members.forEach((m: any) => {
+              if (m.fy27MipEligible) {
+                if (m.kpiEmail) set.add(m.kpiEmail.toLowerCase().trim());
+                if (m.personalEmail) set.add(m.personalEmail.toLowerCase().trim());
+              }
+            });
+          }
+          if (set.size > 0) {
+            setEligibleVoters(Array.from(set));
+          }
         }
       })
       .catch(err => console.warn('Live Google Sheet fetch notice:', err));
@@ -206,6 +222,12 @@ export default function MemberPortal() {
   };
 
   const candidateVotingStatus = getCandidateVotingStatus(userEmail || '', userRole || '');
+  const normUserEmail = (userEmail || '').toLowerCase().trim();
+  const isCandidateVoterEligible = isAdmin || 
+    normUserEmail === 'candidate@gmail.com' || 
+    normUserEmail === 'qa.admin@orderofkpi.org' || 
+    normUserEmail === 'info@kpi2012.org' ||
+    eligibleVoters.some(e => e.toLowerCase().trim() === normUserEmail);
 
   return (
     <div className="min-h-screen bg-cream w-full overflow-x-clip">
@@ -260,7 +282,7 @@ export default function MemberPortal() {
             </div>
           </Link>
 
-          {!isApplicant && (
+          {!isApplicant && isCandidateVoterEligible && (
             <Link
               to="/candidate-voting"
               className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft relative overflow-hidden"

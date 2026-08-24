@@ -234,6 +234,8 @@ export default function CommitteePage() {
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [selectedMemberEmail, setSelectedMemberEmail] = useState('');
   const [selectedMemberRole, setSelectedMemberRole] = useState<'chair' | 'member'>('member');
+  const [isSavingMember, setIsSavingMember] = useState(false);
+  const [savingRoleForEmail, setSavingRoleForEmail] = useState<string | null>(null);
 
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -685,11 +687,12 @@ export default function CommitteePage() {
   // Add Member to Committee Handler (Chair / Admin)
   const handleAddMemberToCommittee = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedMemberEmail) return;
+    if (!selectedMemberEmail || isSavingMember) return;
 
     const memberToUpdate = allAvailableMembers.find(m => m.email.toLowerCase() === selectedMemberEmail.toLowerCase());
     if (!memberToUpdate) return;
 
+    setIsSavingMember(true);
     const norm = normalizeUserRBAC(memberToUpdate);
     const existingCommittees = [...norm.committees];
     if (!existingCommittees.includes(committeeDef.slug)) {
@@ -697,149 +700,131 @@ export default function CommitteePage() {
     }
     const existingRoles = { ...norm.committeeRoles, [committeeDef.slug]: selectedMemberRole };
 
-    // Update in local state
-    const updatedMemberList = allAvailableMembers.map(m => {
-      if (m.email.toLowerCase() === selectedMemberEmail.toLowerCase()) {
-        return {
-          ...m,
-          committees: existingCommittees,
-          committeeRoles: existingRoles
-        };
-      }
-      return m;
-    });
-
-    setAllAvailableMembers(updatedMemberList);
-    filterMembersForCommittee(updatedMemberList, committeeDef.slug);
-
-    // Call server API and Firestore for committee assignment
     try {
-      firebaseSyncPortalMember({
-        email: memberToUpdate.email,
-        name: memberToUpdate.name,
-        role: memberToUpdate.role || 'member',
-        title: memberToUpdate.title,
-        financial_status: memberToUpdate.financial_status,
-        industry: memberToUpdate.industry,
-        committees: existingCommittees,
-        committeeRoles: existingRoles
-      }).catch(() => {});
-
-      await fetch('/api/committee/members', {
+      const res = await fetch('/api/committee/members', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: selectedMemberEmail,
           committeeSlug: committeeDef.slug,
-          role: selectedMemberRole,
+          committeeRole: selectedMemberRole,
           chairEmail: userEmail
         })
       });
-    } catch (err) {}
 
-    setShowAddMemberModal(false);
-    setSelectedMemberEmail('');
-    setNotification({ type: 'success', message: `Added member to ${committeeDef.name} as ${selectedMemberRole}.` });
-    setTimeout(() => setNotification(null), 4000);
+      const data = await res.json();
+      if (data.success) {
+        firebaseSyncPortalMember({
+          email: memberToUpdate.email,
+          name: memberToUpdate.name,
+          role: memberToUpdate.role || 'member',
+          title: memberToUpdate.title,
+          financial_status: memberToUpdate.financial_status,
+          industry: memberToUpdate.industry,
+          committees: existingCommittees,
+          committeeRoles: existingRoles
+        }).catch(() => {});
+
+        const updatedMemberList = allAvailableMembers.map(m => {
+          if (m.email.toLowerCase() === selectedMemberEmail.toLowerCase()) {
+            return {
+              ...m,
+              committees: existingCommittees,
+              committeeRoles: existingRoles
+            };
+          }
+          return m;
+        });
+
+        setAllAvailableMembers(updatedMemberList);
+        filterMembersForCommittee(updatedMemberList, committeeDef.slug);
+        setShowAddMemberModal(false);
+        setSelectedMemberEmail('');
+        setNotification({ 
+          type: 'success', 
+          message: `Committee assignment for "${memberToUpdate.name || selectedMemberEmail}" as ${selectedMemberRole === 'chair' ? 'Committee Chair' : 'Committee Member'} successfully saved to the database!` 
+        });
+        setTimeout(() => setNotification(null), 5000);
+      } else {
+        setNotification({ type: 'error', message: data.message || 'Unable to save committee assignment. Please try again.' });
+      }
+    } catch (err: any) {
+      setNotification({ type: 'error', message: 'Connection error while saving committee assignment to database.' });
+    } finally {
+      setIsSavingMember(false);
+    }
   };
 
-  const handleRemoveMemberFromCommittee = async (memberEmail: string) => {
+  const handleRemoveMemberFromCommittee = async (memberEmail: string, memberName?: string) => {
     if (!canEdit) return;
     const normTarget = memberEmail.toLowerCase().trim();
+    const displayName = memberName || memberEmail;
 
-    const updatedMemberList = allAvailableMembers.map(m => {
-      if (m.email.toLowerCase() === normTarget) {
-        const norm = normalizeUserRBAC(m);
-        const filteredCommittees = norm.committees.filter(c => c !== committeeDef.slug);
-        const filteredRoles = { ...norm.committeeRoles };
-        delete filteredRoles[committeeDef.slug];
-        return {
-          ...m,
-          committees: filteredCommittees,
-          committeeRoles: filteredRoles
-        };
-      }
-      return m;
-    });
-
-    setAllAvailableMembers(updatedMemberList);
-    filterMembersForCommittee(updatedMemberList, committeeDef.slug);
-
-    const targetMember = allAvailableMembers.find(m => m.email.toLowerCase() === normTarget);
-    if (targetMember) {
-      const norm = normalizeUserRBAC(targetMember);
-      const filteredCommittees = norm.committees.filter(c => c !== committeeDef.slug);
-      const filteredRoles = { ...norm.committeeRoles };
-      delete filteredRoles[committeeDef.slug];
-      firebaseSyncPortalMember({
-        email: targetMember.email,
-        name: targetMember.name,
-        role: targetMember.role || 'member',
-        title: targetMember.title,
-        financial_status: targetMember.financial_status,
-        industry: targetMember.industry,
-        committees: filteredCommittees,
-        committeeRoles: filteredRoles
-      }).catch(() => {});
+    if (!window.confirm(`Are you sure you want to remove ${displayName} from ${committeeDef.name}?`)) {
+      return;
     }
 
+    setSavingRoleForEmail(normTarget);
     try {
-      await fetch(`/api/committee/members/${encodeURIComponent(normTarget)}?slug=${committeeDef.slug}&chairEmail=${encodeURIComponent(userEmail)}`, {
+      const res = await fetch(`/api/committee/members/${encodeURIComponent(normTarget)}?slug=${committeeDef.slug}&chairEmail=${encodeURIComponent(userEmail)}`, {
         method: 'DELETE'
       });
-    } catch (err) {}
+      const data = await res.json();
+      if (data.success) {
+        const targetMember = allAvailableMembers.find(m => m.email.toLowerCase() === normTarget);
+        let updatedMemberList = allAvailableMembers;
+        if (targetMember) {
+          const norm = normalizeUserRBAC(targetMember);
+          const filteredCommittees = norm.committees.filter(c => c !== committeeDef.slug);
+          const filteredRoles = { ...norm.committeeRoles };
+          delete filteredRoles[committeeDef.slug];
 
-    setNotification({ type: 'success', message: `Member removed from ${committeeDef.name}.` });
-    setTimeout(() => setNotification(null), 3000);
+          firebaseSyncPortalMember({
+            email: targetMember.email,
+            name: targetMember.name,
+            role: targetMember.role || 'member',
+            title: targetMember.title,
+            financial_status: targetMember.financial_status,
+            industry: targetMember.industry,
+            committees: filteredCommittees,
+            committeeRoles: filteredRoles
+          }).catch(() => {});
+
+          updatedMemberList = allAvailableMembers.map(m => {
+            if (m.email.toLowerCase() === normTarget) {
+              return {
+                ...m,
+                committees: filteredCommittees,
+                committeeRoles: filteredRoles
+              };
+            }
+            return m;
+          });
+        }
+
+        setAllAvailableMembers(updatedMemberList);
+        filterMembersForCommittee(updatedMemberList, committeeDef.slug);
+        setNotification({ type: 'success', message: `Member "${displayName}" removed from ${committeeDef.name} and saved to database.` });
+        setTimeout(() => setNotification(null), 5000);
+      } else {
+        setNotification({ type: 'error', message: data.message || 'Failed to remove member from committee.' });
+      }
+    } catch (err) {
+      setNotification({ type: 'error', message: 'Error connecting to database to remove committee assignment.' });
+    } finally {
+      setSavingRoleForEmail(null);
+    }
   };
 
-  const handleToggleCommitteeRole = async (memberEmail: string, currentlyChair: boolean) => {
+  const handleToggleCommitteeRole = async (memberEmail: string, currentlyChair: boolean, memberName?: string) => {
     if (!canEdit) return;
     const normTarget = memberEmail.toLowerCase().trim();
     const newRole = currentlyChair ? 'member' : 'chair';
+    const displayName = memberName || memberEmail;
 
-    const updatedMemberList = allAvailableMembers.map(m => {
-      if (m.email.toLowerCase() === normTarget) {
-        const norm = normalizeUserRBAC(m);
-        const existingCommittees = [...norm.committees];
-        if (!existingCommittees.includes(committeeDef.slug)) {
-          existingCommittees.push(committeeDef.slug);
-        }
-        const existingRoles = { ...norm.committeeRoles, [committeeDef.slug]: newRole };
-        return {
-          ...m,
-          committees: existingCommittees,
-          committeeRoles: existingRoles as Record<string, CommitteeRole>
-        };
-      }
-      return m;
-    });
-
-    setAllAvailableMembers(updatedMemberList);
-    filterMembersForCommittee(updatedMemberList, committeeDef.slug);
-
-    const targetMember = allAvailableMembers.find(m => m.email.toLowerCase() === normTarget);
-    if (targetMember) {
-      const norm = normalizeUserRBAC(targetMember);
-      const existingCommittees = [...norm.committees];
-      if (!existingCommittees.includes(committeeDef.slug)) {
-        existingCommittees.push(committeeDef.slug);
-      }
-      const existingRoles = { ...norm.committeeRoles, [committeeDef.slug]: newRole };
-      firebaseSyncPortalMember({
-        email: targetMember.email,
-        name: targetMember.name,
-        role: targetMember.role || 'member',
-        title: targetMember.title,
-        financial_status: targetMember.financial_status,
-        industry: targetMember.industry,
-        committees: existingCommittees,
-        committeeRoles: existingRoles
-      }).catch(() => {});
-    }
-
+    setSavingRoleForEmail(normTarget);
     try {
-      await fetch('/api/committee/members', {
+      const res = await fetch('/api/committee/members', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -849,10 +834,57 @@ export default function CommitteePage() {
           chairEmail: userEmail
         })
       });
-    } catch (err) {}
 
-    setNotification({ type: 'success', message: `Updated ${memberEmail} role to ${newRole === 'chair' ? 'Committee Chair' : 'Committee Member'}.` });
-    setTimeout(() => setNotification(null), 3000);
+      const data = await res.json();
+      if (data.success) {
+        const targetMember = allAvailableMembers.find(m => m.email.toLowerCase() === normTarget);
+        let updatedMemberList = allAvailableMembers;
+        if (targetMember) {
+          const norm = normalizeUserRBAC(targetMember);
+          const existingCommittees = [...norm.committees];
+          if (!existingCommittees.includes(committeeDef.slug)) {
+            existingCommittees.push(committeeDef.slug);
+          }
+          const existingRoles = { ...norm.committeeRoles, [committeeDef.slug]: newRole };
+
+          firebaseSyncPortalMember({
+            email: targetMember.email,
+            name: targetMember.name,
+            role: targetMember.role || 'member',
+            title: targetMember.title,
+            financial_status: targetMember.financial_status,
+            industry: targetMember.industry,
+            committees: existingCommittees,
+            committeeRoles: existingRoles
+          }).catch(() => {});
+
+          updatedMemberList = allAvailableMembers.map(m => {
+            if (m.email.toLowerCase() === normTarget) {
+              return {
+                ...m,
+                committees: existingCommittees,
+                committeeRoles: existingRoles as Record<string, CommitteeRole>
+              };
+            }
+            return m;
+          });
+        }
+
+        setAllAvailableMembers(updatedMemberList);
+        filterMembersForCommittee(updatedMemberList, committeeDef.slug);
+        setNotification({ 
+          type: 'success', 
+          message: `Role assignment for "${displayName}" updated to ${newRole === 'chair' ? 'Committee Chair' : 'Committee Member'} and saved to database!` 
+        });
+        setTimeout(() => setNotification(null), 5000);
+      } else {
+        setNotification({ type: 'error', message: data.message || 'Failed to update committee role.' });
+      }
+    } catch (err) {
+      setNotification({ type: 'error', message: 'Error saving committee role change to database.' });
+    } finally {
+      setSavingRoleForEmail(null);
+    }
   };
 
   // Update Purpose Statement Handler (Chair / Admin)
@@ -1432,20 +1464,26 @@ export default function CommitteePage() {
                         {canEdit && !isMemberAdmin && !isMemberSuperChair && (
                           <div className="flex items-center gap-1.5">
                             <button
-                              onClick={() => handleToggleCommitteeRole(member.email, isMemberChair)}
-                              className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
+                              onClick={() => handleToggleCommitteeRole(member.email, isMemberChair, member.name)}
+                              disabled={savingRoleForEmail === member.email.toLowerCase()}
+                              className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-xs cursor-pointer ${
                                 isMemberChair 
                                   ? 'bg-ivy/10 text-ivy hover:bg-ivy/20' 
                                   : 'bg-gold text-ivy hover:bg-gold/90'
-                              }`}
-                              title={isMemberChair ? "Demote to Committee Member" : "Promote to Committee Chair"}
+                              } disabled:opacity-50`}
+                              title={isMemberChair ? "Change role to Committee Member" : "Change role to Committee Chair"}
                             >
-                              <Award size={13} />
-                              {isMemberChair ? "Make Member" : "Make Chair"}
+                              <Save size={12} className="text-ivy" />
+                              <span>
+                                {savingRoleForEmail === member.email.toLowerCase() 
+                                  ? 'Saving...' 
+                                  : isMemberChair ? 'Make Member' : 'Make Chair'}
+                              </span>
                             </button>
                             <button
-                              onClick={() => handleRemoveMemberFromCommittee(member.email)}
-                              className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition-colors"
+                              onClick={() => handleRemoveMemberFromCommittee(member.email, member.name)}
+                              disabled={savingRoleForEmail === member.email.toLowerCase()}
+                              className="text-red-400 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors disabled:opacity-50 cursor-pointer"
                               title="Remove from Committee"
                             >
                               <Trash2 size={16} />
@@ -2257,10 +2295,11 @@ export default function CommitteePage() {
                     </button>
                     <button
                       type="submit"
-                      disabled={!selectedMemberEmail || eligibleFinancialMembers.length === 0}
-                      className="px-5 py-2 bg-ivy text-cream text-xs font-bold uppercase tracking-widest rounded hover:bg-ivy/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs"
+                      disabled={!selectedMemberEmail || eligibleFinancialMembers.length === 0 || isSavingMember}
+                      className="px-5 py-2.5 bg-ivy text-cream text-xs font-bold uppercase tracking-widest rounded hover:bg-ivy/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs flex items-center gap-2 cursor-pointer"
                     >
-                      Confirm Assignment
+                      <Save size={14} className="text-gold" />
+                      <span>{isSavingMember ? 'Saving to Database...' : 'SAVE ASSIGNMENT'}</span>
                     </button>
                   </div>
                 </form>

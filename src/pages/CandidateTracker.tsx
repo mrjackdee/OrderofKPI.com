@@ -45,6 +45,18 @@ export default function CandidateTracker() {
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Collapsed stages state (default passed stages collapsed)
+  const [collapsedStages, setCollapsedStages] = useState<Record<string, boolean>>({
+    'Inquiry': true,
+    'Applied': true,
+    'Tea Time': true,
+    'Interview': true,
+  });
+
+  const toggleStageCollapse = (stage: string) => {
+    setCollapsedStages(prev => ({ ...prev, [stage]: !prev[stage] }));
+  };
+
   const handleSyncData = async () => {
     setIsSyncing(true);
     try {
@@ -518,16 +530,41 @@ export default function CandidateTracker() {
           })}
         </div>
 
-        {/* Search Bar */}
-        <div className="mb-8 relative max-w-xl">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ivy/40 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Search candidates by name or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-white border border-ivy/10 rounded-lg shadow-soft focus:ring-2 focus:ring-ivy/20 focus:border-ivy outline-none transition-all text-sm"
-          />
+        {/* Search Bar & Stage Controls */}
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="relative max-w-xl flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ivy/40 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search candidates by name or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-white border border-ivy/10 rounded-lg shadow-soft focus:ring-2 focus:ring-ivy/20 focus:border-ivy outline-none transition-all text-sm"
+            />
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setCollapsedStages({ 'Inquiry': true, 'Applied': true, 'Tea Time': true, 'Interview': true })}
+              className="px-3 py-2 bg-white/80 hover:bg-gold/10 text-ivy text-xs font-bold rounded-lg border border-gold/20 transition-all shadow-xs"
+            >
+              Collapse Passed Stages
+            </button>
+            <button
+              type="button"
+              onClick={() => setCollapsedStages({})}
+              className="px-3 py-2 bg-white/80 hover:bg-gold/10 text-ivy text-xs font-bold rounded-lg border border-gold/20 transition-all shadow-xs"
+            >
+              Expand All
+            </button>
+            <button
+              type="button"
+              onClick={() => setCollapsedStages(STAGES.reduce((acc, s) => ({ ...acc, [s]: true }), {}))}
+              className="px-3 py-2 bg-white/80 hover:bg-gold/10 text-ivy text-xs font-bold rounded-lg border border-gold/20 transition-all shadow-xs"
+            >
+              Collapse All
+            </button>
+          </div>
         </div>
 
         {/* Kanban Board */}
@@ -535,19 +572,54 @@ export default function CandidateTracker() {
           <span>← Swipe horizontally to view process stages →</span>
         </div>
 
-        <div className="flex gap-6 overflow-x-auto pb-6 scroll-smooth touch-pan-x">
+        <div className="flex gap-4 overflow-x-auto pb-6 scroll-smooth touch-pan-x items-start">
           {STAGES.map(stage => {
             const stageCfg = getStatusBadgeConfig(stage);
+            const count = filteredCandidates.filter(c => c.status === stage).length;
+            const isCollapsed = !!collapsedStages[stage];
+
+            if (isCollapsed) {
+              return (
+                <div 
+                  key={stage}
+                  onClick={() => toggleStageCollapse(stage)}
+                  className="w-16 min-w-[64px] flex-shrink-0 flex flex-col items-center justify-between bg-white/80 backdrop-blur-xs rounded-xl border border-gold/20 p-3 hover:bg-gold/10 hover:border-gold cursor-pointer transition-all shadow-soft group select-none min-h-[420px]"
+                  title={`Click to expand ${stage}`}
+                >
+                  <div className="flex flex-col items-center gap-2 pt-1">
+                    <span className={`w-3 h-3 rounded-full ${stageCfg.dot}`} />
+                    <span className="bg-ivy/10 text-ivy px-2 py-0.5 rounded-full text-xs font-bold">
+                      {count}
+                    </span>
+                  </div>
+                  <div className="[writing-mode:vertical-lr] rotate-180 font-bold uppercase tracking-widest text-ivy text-xs group-hover:text-gold transition-colors py-4 text-center">
+                    {stage}
+                  </div>
+                  <div className="text-[10px] text-ivy/50 font-bold group-hover:text-ivy transition-colors flex items-center gap-1">
+                    Expand ➔
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div key={stage} className="min-w-[320px] flex-1 flex flex-col gap-4">
-                <div className="flex items-center justify-between px-2 py-1.5 bg-white/60 backdrop-blur-xs rounded-xl border border-gold/10">
+                <div className="flex items-center justify-between px-3 py-2 bg-white/60 backdrop-blur-xs rounded-xl border border-gold/10">
                   <div className="flex items-center gap-2">
                     <span className={`w-2.5 h-2.5 rounded-full ${stageCfg.dot}`} />
                     <h2 className="text-sm font-bold uppercase tracking-widest text-ivy">{stage}</h2>
                     <span className="bg-ivy/10 text-ivy px-2 py-0.5 rounded-full text-xs font-bold">
-                      {filteredCandidates.filter(c => c.status === stage).length}
+                      {count}
                     </span>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleStageCollapse(stage)}
+                    className="text-ivy/40 hover:text-ivy p-1 rounded hover:bg-gold/10 transition-colors text-xs font-bold flex items-center gap-1 cursor-pointer"
+                    title="Collapse Stage"
+                  >
+                    Collapse ✕
+                  </button>
                 </div>
 
                 <div className="flex flex-col gap-4 min-h-[400px]">

@@ -3529,20 +3529,26 @@ async function startServer() {
       const uFin = (user.financial_status || '').toLowerCase();
 
       let isFinancial = false;
-      let sheetLoaded = false;
+      if (
+        uFin === 'active' || 
+        uRole === 'admin' || 
+        uRole === 'officer' || 
+        uRole === 'member' ||
+        uRole === 'committee chair' ||
+        uRole.includes('membership committee') ||
+        normEmail === 'admin@orderofkpi.org' ||
+        normEmail === 'qa.admin@orderofkpi.org' ||
+        normEmail === 'info@kpi2012.org'
+      ) {
+        isFinancial = true;
+      }
+
       if (cachedSheetData?.data?.members && Array.isArray(cachedSheetData.data.members)) {
-        sheetLoaded = true;
         const sm = cachedSheetData.data.members.find((m: any) => 
           (m.kpiEmail && m.kpiEmail.toLowerCase().trim() === normEmail) ||
           (m.personalEmail && m.personalEmail.toLowerCase().trim() === normEmail)
         );
-        if (sm && sm.fy27Paid) {
-          isFinancial = true;
-        }
-      }
-
-      if (!sheetLoaded) {
-        if (uFin === 'active' || uRole === 'admin' || uRole === 'officer') {
+        if (sm && (sm.fy27Paid || sm.fy26Paid || sm.fy27MipEligible || sm.isEligibleVoter)) {
           isFinancial = true;
         }
       }
@@ -3768,28 +3774,29 @@ async function startServer() {
       }
       const set = new Set<string>();
 
-      // Populate with pre-approved/default eligible dean voters as resilient baseline
+      // Populate with pre-approved/default eligible voters as resilient baseline
       const DEFAULT_ELIGIBLE_DEAN_VOTERS = [
-        "anthony.jones@orderofkpi.org",
-        "brandon.owens@orderofkpi.org",
-        "brian.johnson@orderofkpi.org",
-        "brian.goings@orderofkpi.org",
-        "darron.jenkins@orderofkpi.org",
-        "denzel.talley@orderofkpi.org",
-        "deshaun.safford@orderofkpi.org",
-        "dominic.goodman@orderofkpi.org",
-        "donald.mitchell@orderofkpi.org",
-        "edward.cook@orderofkpi.org",
-        "ishmeal.allensworth@orderofkpi.org",
-        "jack.dee@orderofkpi.org",
-        "james.haywood@orderofkpi.org",
-        "jason.pilar@orderofkpi.org",
-        "kameron.whitfield@orderofkpi.org",
-        "keith.woods@orderofkpi.org",
-        "tobias.bordley@orderofkpi.org",
-        "charles.basham@orderofkpi.org",
+        "anthony.jones@orderofkpi.org", "antjones_cpm@yahoo.com",
+        "brandon.owens@orderofkpi.org", "bmusicallyinclined@gmail.com",
+        "brian.johnson@orderofkpi.org", "brianojohnson80@gmail.com",
+        "brian.goings@orderofkpi.org", "brianbgoings@gmail.com",
+        "darron.jenkins@orderofkpi.org", "dajenkins06@gmail.com",
+        "denzel.talley@orderofkpi.org", "denzeltalley@gmail.com",
+        "deshaun.safford@orderofkpi.org", "dsafford06@yahoo.com",
+        "dominic.goodman@orderofkpi.org", "dominicsgoodman@gmail.com",
+        "donald.mitchell@orderofkpi.org", "dmitchell02@gmail.com",
+        "edward.cook@orderofkpi.org", "edward.j.cook@gmail.com",
+        "ishmeal.allensworth@orderofkpi.org", "imallenswort@gmail.com",
+        "jack.dee@orderofkpi.org", "jackdee@att.net",
+        "james.haywood@orderofkpi.org", "jhaywood2008@gmail.com",
+        "jason.pilar@orderofkpi.org", "jpilar06@gmail.com",
+        "kameron.whitfield@orderofkpi.org", "kmaurw@gmail.com",
+        "keith.woods@orderofkpi.org", "kwoods509@gmail.com",
+        "tobias.bordley@orderofkpi.org", "c.tbordley@gmail.com",
         "candidate@gmail.com",
-        "admin@orderofkpi.org"
+        "admin@orderofkpi.org",
+        "qa.admin@orderofkpi.org",
+        "info@kpi2012.org"
       ];
       for (const email of DEFAULT_ELIGIBLE_DEAN_VOTERS) {
         set.add(email.toLowerCase().trim());
@@ -3797,12 +3804,8 @@ async function startServer() {
 
       if (cachedSheetData.data && Array.isArray(cachedSheetData.data.members)) {
         for (const member of cachedSheetData.data.members) {
-          const fy26Paid = !!member.fy26Paid;
-          const fy27Paid = !!member.fy27Paid;
-          const mipCert = !!member.mipCert;
           const fy27MipEligible = !!member.fy27MipEligible;
-          
-          const isEligible = fy27MipEligible || (fy26Paid && fy27Paid && mipCert);
+          const isEligible = fy27MipEligible;
           
           if (isEligible) {
             if (member.kpiEmail) set.add(member.kpiEmail.toLowerCase().trim());
@@ -4378,7 +4381,7 @@ KP Member Portal`;
       }
 
       const legitEmails = await getLegitimateVoterEmails();
-      const isAdminEmail = emailNorm === 'admin@orderofkpi.org' || emailNorm === 'candidate@gmail.com';
+      const isAdminEmail = emailNorm === 'admin@orderofkpi.org' || emailNorm === 'candidate@gmail.com' || emailNorm === 'qa.admin@orderofkpi.org' || emailNorm === 'info@kpi2012.org';
       if (!legitEmails.has(emailNorm) && !isAdminEmail) {
         return res.status(403).json({ success: false, message: "Only eligible members (FY27 MIP Eligible) may cast candidate votes." });
       }
