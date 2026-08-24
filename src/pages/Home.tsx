@@ -30,7 +30,7 @@ export default function Home() {
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className="w-full max-w-[1200px] flex flex-col items-center px-4 py-8 gap-12"
+      className="w-full max-w-[1200px] mx-auto my-auto min-h-[calc(100vh-260px)] flex flex-col items-center justify-center px-4 py-8 md:py-12 gap-8 md:gap-12"
     >
       <motion.div variants={itemVariants} className="w-full relative rounded-xl overflow-hidden @container border border-primary">
         <div 
