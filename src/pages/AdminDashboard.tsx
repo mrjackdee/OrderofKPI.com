@@ -134,6 +134,12 @@ export default function AdminDashboard() {
   const [showCandidateModal, setShowCandidateModal] = useState(false);
   const [newCandidate, setNewCandidate] = useState({ firstName: '', lastName: '', email: '', phone: '', status: 'Inquiry' });
 
+  // Helper for notifications
+  const showToast = (type: 'success' | 'error', text: string) => {
+    setNotification({ type, text });
+    setTimeout(() => setNotification(null), 5000);
+  };
+
   const currentUserEmail = sessionStorage.getItem('userEmail') || 'admin@orderofkpi.org';
 
   useEffect(() => {
@@ -513,11 +519,6 @@ export default function AdminDashboard() {
         setApplications(res.applications);
       }
     } catch (err) {}
-  };
-
-  const showToast = (type: 'success' | 'error', text: string) => {
-    setNotification({ type, text });
-    setTimeout(() => setNotification(null), 4000);
   };
 
   const fetchMembers = async () => {
@@ -1043,6 +1044,34 @@ export default function AdminDashboard() {
                 >
                   📥 Download Credentials (.md)
                 </a>
+
+                <button
+                  onClick={async () => {
+                    if (!window.confirm("ARE YOU SURE? This will remove ALL committee assignments for ALL members in production. This action cannot be undone.")) return;
+                    setActionLoading(true);
+                    try {
+                      const response = await fetch('/api/admin/clear-all-committees', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ adminEmail: currentUserEmail })
+                      });
+                      const data = await response.json();
+                      if (data.success) {
+                        showToast('success', 'Successfully cleared all committee assignments!');
+                        loadAllData();
+                      } else {
+                        showToast('error', data.message || 'Failed to clear committees.');
+                      }
+                    } catch (e) {
+                      showToast('error', 'Connection error.');
+                    } finally {
+                      setActionLoading(false);
+                    }
+                  }}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-sm"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Cleanse All Committee Assignments
+                </button>
 
                 <div className="relative">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ivy/30 w-4 h-4" />

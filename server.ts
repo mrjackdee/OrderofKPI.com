@@ -3736,6 +3736,56 @@ async function startServer() {
   app.delete("/api/committee/members/:email", handleCommitteeMemberDelete);
   app.delete("/api/committee/members", handleCommitteeMemberDelete);
 
+  // --- ADMIN: CLEAR ALL COMMITTEES ---
+  app.post("/api/admin/clear-all-committees", async (req, res) => {
+    try {
+      const { adminEmail } = req.body;
+      if (!adminEmail) return res.status(400).json({ success: false, message: "Admin email is required" });
+
+      // RBAC: Check if admin
+      let user: any = null;
+      if (useSqlite && sqliteDb) {
+        user = sqliteDb.prepare("SELECT * FROM users WHERE email = ?").get(adminEmail.toLowerCase().trim());
+      } else if (fs.existsSync(jsonDbPath)) {
+        const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+        user = data[adminEmail.toLowerCase().trim()];
+      }
+      
+      if (!user || (user.role !== 'admin' && adminEmail !== 'info@kpi2012.org')) {
+        return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
+      }
+
+      // Perform cleanup
+      let usersToSync: string[] = [];
+      if (useSqlite && sqliteDb) {
+        usersToSync = sqliteDb.prepare("SELECT email FROM users").all().map((u: any) => u.email);
+        sqliteDb.prepare("UPDATE users SET committees = '[]', committee_roles = '{}'").run();
+      }
+      
+      if (fs.existsSync(jsonDbPath)) {
+        const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+        usersToSync = Object.keys(data);
+        for (const email in data) {
+          data[email].committees = [];
+          data[email].committeeRoles = {};
+          data[email].committee_roles = {};
+        }
+        fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
+      }
+
+      // Sync all members to Firestore
+      for (const email of usersToSync) {
+        syncLocalMemberToFirestoreCloud(email);
+      }
+      
+      logEvent(adminEmail, "ADMIN_CLEAR_ALL_COMMITTEES", "Cleared all committee assignments for all members");
+      res.json({ success: true, message: "All committee assignments cleared and Firestore synchronized." });
+    } catch (err: any) {
+      console.error("Clear all committees error:", err);
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
   // --- VOTING ENDPOINTS ---
 
   app.get("/api/votes", (req, res) => {
