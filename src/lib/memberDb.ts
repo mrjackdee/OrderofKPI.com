@@ -1251,7 +1251,7 @@ export async function syncApplicationsFromFirestore() {
           overrides.push({
             email: data.email,
             hash: data.hash,
-            isFirstLogin: data.isFirstLogin ? 1 : 0
+            isFirstLogin: (data.isFirstLogin === true || data.isFirstLogin === 1 || data.isFirstLogin === '1' || data.isFirstLogin === 'true') ? 1 : 0
           });
         }
       });

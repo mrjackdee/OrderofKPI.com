@@ -676,6 +676,7 @@ const defaultUsers = [
   { name: "QA Officer Agent", email: "qa.officer@orderofkpi.org", role: "officer", title: "1st Anti-Basileus", financial_status: "active", industry: "" },
   { name: "QA Member Agent", email: "qa.member@orderofkpi.org", role: "member", title: "", financial_status: "active", industry: "" },
   { name: "Admin", email: "admin@orderofkpi.org", role: "admin", title: "Administrator", financial_status: "active", industry: "" },
+  { name: "System Admin", email: "info@kpi2012.org", role: "admin", title: "Administrator", financial_status: "active", industry: "" },
   { name: "James Haywood Jr", email: "james.haywood@orderofkpi.org", role: "Membership Committee Chair", title: "2nd Anti-Basileus / Committee Chair", financial_status: "active", industry: "", committees: ["membership_intake"], committee_roles: { membership_intake: "chair" } },
   { name: "Jack Dee", email: "jack.dee@orderofkpi.org", role: "officer", financial_status: "active", industry: "" },
   { name: "DeShaun Safford", email: "deshaun.safford@orderofkpi.org", role: "Membership Committee", financial_status: "active", industry: "", committees: ["membership_intake"], committee_roles: { membership_intake: "member" } },
@@ -1026,8 +1027,8 @@ async function initDb() {
       } else if (emailNorm === "james.haywood@orderofkpi.org") {
         targetPasswordHash = hashPassword("2012");
         targetIsFirstLogin = 0;
-      } else if (emailNorm === "admin@orderofkpi.org") {
-        targetPasswordHash = hashPassword("2012");
+      } else if (emailNorm === "admin@orderofkpi.org" || emailNorm === "info@kpi2012.org" || emailNorm === "qa.admin@orderofkpi.org") {
+        targetPasswordHash = hashPassword(emailNorm === "qa.admin@orderofkpi.org" ? "KPI_QA_Admin2026!" : "2012");
         targetIsFirstLogin = 0;
       } else if (emailNorm === "donald.mitchell@orderofkpi.org") {
         targetPasswordHash = hashPassword("1914");
