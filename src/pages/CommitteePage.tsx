@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, Navigate, useNavigate } from 'react-router-dom';
+import { useParams, Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ShieldCheck, 
@@ -35,10 +35,11 @@ import {
 import MemberHeader from '../components/MemberHeader';
 import CommitteeAddToCalendar from '../components/CommitteeAddToCalendar';
 import { CommitteeSlug, CommitteeRole, STANDING_COMMITTEES, Member } from '../types';
-import { hasCommitteeAccess, isCommitteeChair, normalizeUserRBAC, defaultMembers, isEligibleFinancialMember, is1stAntiBasileus } from '../lib/memberDb';
+import { hasCommitteeAccess, isCommitteeChair, normalizeUserRBAC, defaultMembers, isEligibleFinancialMember, is1stAntiBasileus, isTestUser } from '../lib/memberDb';
 import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import { renderFormattedTextWithLinks } from '../lib/linkParser';
+import { firebaseSyncPortalMember } from '../lib/firebase';
 
 interface CommitteeResource {
   id: string;
@@ -144,36 +145,52 @@ export default function CommitteePage() {
 
   const userEmail = sessionStorage.getItem('userEmail') || '';
   const userRole = sessionStorage.getItem('userRole') || 'member';
-  let userCommittees: CommitteeSlug[] = [];
-  let userCommitteeRoles: Record<string, 'chair' | 'member'> = {};
-  
-  try {
-    const rawCommittees = sessionStorage.getItem('userCommittees');
-    if (rawCommittees) userCommittees = JSON.parse(rawCommittees);
-    const rawRoles = sessionStorage.getItem('userCommitteeRoles');
-    if (rawRoles) userCommitteeRoles = JSON.parse(rawRoles);
-  } catch (e) {}
 
-  const normUser = normalizeUserRBAC({
-    email: userEmail,
-    role: userRole,
-    committees: userCommittees,
-    committeeRoles: userCommitteeRoles
+  const [currentUser, setCurrentUser] = useState(() => {
+    let userCommittees: CommitteeSlug[] = [];
+    let userCommitteeRoles: Record<string, 'chair' | 'member'> = {};
+    
+    try {
+      const rawCommittees = sessionStorage.getItem('userCommittees');
+      if (rawCommittees) userCommittees = JSON.parse(rawCommittees);
+      const rawRoles = sessionStorage.getItem('userCommitteeRoles');
+      if (rawRoles) userCommitteeRoles = JSON.parse(rawRoles);
+    } catch (e) {}
+
+    return normalizeUserRBAC({
+      email: userEmail,
+      role: userRole,
+      committees: userCommittees,
+      committeeRoles: userCommitteeRoles
+    });
   });
 
   const committeeDef = STANDING_COMMITTEES.find(c => c.slug === slug);
 
   // Access validation
-  const hasAccess = slug ? hasCommitteeAccess(slug as CommitteeSlug, normUser) : false;
-  const isChair = slug ? isCommitteeChair(slug as CommitteeSlug, normUser) : false;
-  const isAdmin = normUser.role === 'admin' || normUser.email === 'admin@orderofkpi.org' || normUser.email === 'qa.admin@orderofkpi.org' || normUser.email === 'info@kpi2012.org';
-  const isOfficer = normUser.role === 'officer';
-  const is1stAnti = is1stAntiBasileus(normUser) || is1stAntiBasileus({ email: userEmail, role: userRole });
-  const isSuperChair = normUser.title === 'Super Committee Chair';
+  const hasAccess = slug ? hasCommitteeAccess(slug as CommitteeSlug, currentUser) : false;
+  const isChair = slug ? isCommitteeChair(slug as CommitteeSlug, currentUser) : false;
+  const isAdmin = currentUser.role === 'admin' || currentUser.email === 'admin@orderofkpi.org' || currentUser.email === 'qa.admin@orderofkpi.org' || currentUser.email === 'info@kpi2012.org';
+  const isOfficer = currentUser.role === 'officer';
+  const is1stAnti = is1stAntiBasileus(currentUser) || is1stAntiBasileus({ email: userEmail, role: userRole });
+  const isSuperChair = currentUser.title === 'Super Committee Chair';
   const canEdit = isChair || isAdmin || is1stAnti || isSuperChair;
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab');
+  const validTabs: Array<'calendar' | 'resources' | 'roster' | 'announcements'> = ['calendar', 'resources', 'roster', 'announcements'];
+  
   // Active sub-tab state
-  const [activeTab, setActiveTab] = useState<'calendar' | 'resources' | 'roster' | 'announcements'>('calendar');
+  const [activeTab, setActiveTab] = useState<'calendar' | 'resources' | 'roster' | 'announcements'>(
+    (initialTab && validTabs.includes(initialTab as any)) ? (initialTab as any) : 'calendar'
+  );
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && validTabs.includes(tabParam as any) && tabParam !== activeTab) {
+      setActiveTab(tabParam as any);
+    }
+  }, [searchParams]);
 
   // Committee data states
   const [resources, setResources] = useState<CommitteeResource[]>([]);
@@ -319,6 +336,19 @@ export default function CommitteePage() {
       if (membersRes.status === 'fulfilled' && membersRes.value?.success && Array.isArray(membersRes.value.members)) {
         setAllAvailableMembers(membersRes.value.members);
         filterMembersForCommittee(membersRes.value.members, committeeSlug);
+        if (userEmail) {
+          const myRec = membersRes.value.members.find((m: any) => m.email && m.email.toLowerCase().trim() === userEmail.toLowerCase().trim());
+          if (myRec) {
+            const updated = normalizeUserRBAC(myRec);
+            setCurrentUser(updated);
+            try {
+              sessionStorage.setItem('userRole', updated.role);
+              sessionStorage.setItem('userRoles', JSON.stringify(myRec.roles || [updated.role]));
+              sessionStorage.setItem('userCommittees', JSON.stringify(updated.committees));
+              sessionStorage.setItem('userCommitteeRoles', JSON.stringify(updated.committeeRoles));
+            } catch (e) {}
+          }
+        }
       } else {
         fallbackMembers(committeeSlug);
       }
@@ -345,8 +375,12 @@ export default function CommitteePage() {
 
   const filterMembersForCommittee = (memberList: Member[], committeeSlug: CommitteeSlug) => {
     const assigned = memberList.filter(m => {
+      if (isTestUser(m)) return false;
       const norm = normalizeUserRBAC(m);
-      return norm.committees.includes(committeeSlug);
+      if (norm.role === 'admin' || norm.title === 'Super Committee Chair') {
+        return (m.committees && m.committees.includes(committeeSlug)) || (m.committeeRoles && m.committeeRoles[committeeSlug] !== undefined);
+      }
+      return norm.committees.includes(committeeSlug) || norm.committeeRoles?.[committeeSlug] !== undefined;
     });
     setMembers(assigned);
   };
@@ -678,8 +712,19 @@ export default function CommitteePage() {
     setAllAvailableMembers(updatedMemberList);
     filterMembersForCommittee(updatedMemberList, committeeDef.slug);
 
-    // Call server API for committee assignment
+    // Call server API and Firestore for committee assignment
     try {
+      firebaseSyncPortalMember({
+        email: memberToUpdate.email,
+        name: memberToUpdate.name,
+        role: memberToUpdate.role || 'member',
+        title: memberToUpdate.title,
+        financial_status: memberToUpdate.financial_status,
+        industry: memberToUpdate.industry,
+        committees: existingCommittees,
+        committeeRoles: existingRoles
+      }).catch(() => {});
+
       await fetch('/api/committee/members', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -720,6 +765,24 @@ export default function CommitteePage() {
     setAllAvailableMembers(updatedMemberList);
     filterMembersForCommittee(updatedMemberList, committeeDef.slug);
 
+    const targetMember = allAvailableMembers.find(m => m.email.toLowerCase() === normTarget);
+    if (targetMember) {
+      const norm = normalizeUserRBAC(targetMember);
+      const filteredCommittees = norm.committees.filter(c => c !== committeeDef.slug);
+      const filteredRoles = { ...norm.committeeRoles };
+      delete filteredRoles[committeeDef.slug];
+      firebaseSyncPortalMember({
+        email: targetMember.email,
+        name: targetMember.name,
+        role: targetMember.role || 'member',
+        title: targetMember.title,
+        financial_status: targetMember.financial_status,
+        industry: targetMember.industry,
+        committees: filteredCommittees,
+        committeeRoles: filteredRoles
+      }).catch(() => {});
+    }
+
     try {
       await fetch(`/api/committee/members/${encodeURIComponent(normTarget)}?slug=${committeeDef.slug}&chairEmail=${encodeURIComponent(userEmail)}`, {
         method: 'DELETE'
@@ -754,6 +817,26 @@ export default function CommitteePage() {
 
     setAllAvailableMembers(updatedMemberList);
     filterMembersForCommittee(updatedMemberList, committeeDef.slug);
+
+    const targetMember = allAvailableMembers.find(m => m.email.toLowerCase() === normTarget);
+    if (targetMember) {
+      const norm = normalizeUserRBAC(targetMember);
+      const existingCommittees = [...norm.committees];
+      if (!existingCommittees.includes(committeeDef.slug)) {
+        existingCommittees.push(committeeDef.slug);
+      }
+      const existingRoles = { ...norm.committeeRoles, [committeeDef.slug]: newRole };
+      firebaseSyncPortalMember({
+        email: targetMember.email,
+        name: targetMember.name,
+        role: targetMember.role || 'member',
+        title: targetMember.title,
+        financial_status: targetMember.financial_status,
+        industry: targetMember.industry,
+        committees: existingCommittees,
+        committeeRoles: existingRoles
+      }).catch(() => {});
+    }
 
     try {
       await fetch('/api/committee/members', {

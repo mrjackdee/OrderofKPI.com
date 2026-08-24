@@ -132,6 +132,14 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /candidate_votes/{voteId} {
+      allow read, write: if true;
+    }
+
+    match /candidate_votes_dev/{voteId} {
+      allow read, write: if true;
+    }
+
     match /candidate_accounts/{accountId} {
       allow read, write: if true;
     }

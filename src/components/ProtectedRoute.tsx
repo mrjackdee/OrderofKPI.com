@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { CommitteeSlug } from '../types';
+import { CommitteeSlug, STANDING_COMMITTEES } from '../types';
 import { hasCommitteeAccess, isCommitteeChair, normalizeUserRBAC, is1stAntiBasileus } from '../lib/memberDb';
 
 interface ProtectedRouteProps {
@@ -56,13 +56,25 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   const isAdmin = normUser.role === 'admin';
   const isOfficer = normUser.role === 'officer';
-  const isBrian = normEmail === 'brian.johnson@orderofkpi.org';
   const isSuperChair = normUser.title === 'Super Committee Chair';
   const is1stAnti = is1stAntiBasileus(normUser) || is1stAntiBasileus({ email: normEmail, role: userRole });
 
-  // Standing committees route protection: admins, Super Committee Chair, and 1st Anti-Basileus can access committee pages or chair dashboard
-  if (committeeSlug || location.pathname === '/chair-dashboard' || location.pathname.startsWith('/committee/')) {
-    if (!isAdmin && !isSuperChair && !is1stAnti) {
+  // Standing committees route protection:
+  if (location.pathname.startsWith('/committee/')) {
+    const routeSlug = location.pathname.replace('/committee/', '').split('/')[0] as CommitteeSlug;
+    const targetSlug = committeeSlug || routeSlug;
+    if (targetSlug && !hasCommitteeAccess(targetSlug, normUser)) {
+      return <Navigate to="/member-portal" replace />;
+    }
+  } else if (committeeSlug) {
+    if (!hasCommitteeAccess(committeeSlug, normUser)) {
+      return <Navigate to="/member-portal" replace />;
+    }
+  }
+
+  if (location.pathname === '/chair-dashboard') {
+    const isAnyChair = STANDING_COMMITTEES.some(c => isCommitteeChair(c.slug, normUser));
+    if (!isAdmin && !isOfficer && !isSuperChair && !is1stAnti && !isAnyChair) {
       return <Navigate to="/member-portal" replace />;
     }
   }

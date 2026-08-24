@@ -24,7 +24,8 @@ import {
 } from 'lucide-react';
 import { Candidate, Member } from '../types';
 import { firebaseUpdateCandidateStatus } from '../lib/firebase';
-import { prospectiveMembers, fetchAllApplications, syncApplicationsFromFirestore } from '../lib/memberDb';
+import { prospectiveMembers, fetchAllApplications, syncApplicationsFromFirestore, isEligibleFinancialMember } from '../lib/memberDb';
+import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 
 interface AuditLog {
@@ -62,6 +63,7 @@ export default function CommitteeChairDashboard() {
   // Committee roster state
   const [committeeMembers, setCommitteeMembers] = useState<Member[]>([]);
   const [allMembers, setAllMembers] = useState<Member[]>([]);
+  const [financialEmails, setFinancialEmails] = useState<Set<string>>(new Set());
   const [selectedMemberToAdd, setSelectedMemberToAdd] = useState('');
   
   const [loading, setLoading] = useState(true);
@@ -81,6 +83,20 @@ export default function CommitteeChairDashboard() {
     } catch (e) {
       console.warn('Sync applications error during loadAllData:', e);
     }
+    try {
+      const sheetRes = await getLiveGoogleSheetRoster().catch(() => null);
+      if (sheetRes && Array.isArray(sheetRes.members)) {
+        const financialSet = new Set<string>();
+        for (const sm of sheetRes.members) {
+          if (sm.fy27Paid) {
+            if (sm.kpiEmail) financialSet.add(sm.kpiEmail.toLowerCase().trim());
+            if (sm.personalEmail) financialSet.add(sm.personalEmail.toLowerCase().trim());
+          }
+        }
+        setFinancialEmails(financialSet);
+      }
+    } catch (e) {}
+
     await Promise.all([
       fetchAuditLogs(),
       fetchCandidates(),
@@ -398,9 +414,15 @@ export default function CommitteeChairDashboard() {
 
   // Non-committee members for dropdown sorted by first name
   const availableMembersToAdd = allMembers
-    .filter(
-      m => m.role !== 'Membership Committee' && m.role !== 'Membership Committee Chair' && m.email !== 'james.haywood@orderofkpi.org'
-    )
+    .filter(m => {
+      if (m.role === 'Membership Committee' || m.role === 'Membership Committee Chair' || m.email === 'james.haywood@orderofkpi.org') {
+        return false;
+      }
+      if (committeeMembers.some(cm => cm.email.toLowerCase() === m.email.toLowerCase())) {
+        return false;
+      }
+      return isEligibleFinancialMember(m, financialEmails);
+    })
     .sort((a, b) => {
       const nameA = (a.first_name || a.name || '').trim().toLowerCase();
       const nameB = (b.first_name || b.name || '').trim().toLowerCase();

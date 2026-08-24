@@ -73,8 +73,8 @@ export const defaultMembers: MemberUser[] = [
     email: "admin@orderofkpi.org", 
     role: "admin", 
     title: "Administrator",
-    committees: ['annual_event', 'scholarship', 'judicial_ethics', 'digital_technology', 'membership_intake', 'transfer_member'],
-    committeeRoles: { annual_event: 'chair', scholarship: 'chair', judicial_ethics: 'chair', digital_technology: 'chair', membership_intake: 'chair', transfer_member: 'chair' }
+    committees: [],
+    committeeRoles: {}
   },
   { 
     name: "James Haywood Jr", 
@@ -153,6 +153,33 @@ export function is1stAntiBasileus(user?: { email?: string; title?: string; role?
 }
 
 /**
+ * Robust filter to identify QA, test, candidate, or applicant accounts.
+ * Prevents test records from polluting official rosters in production and client views.
+ */
+export function isTestUser(member?: {
+  email?: string;
+  name?: string;
+  role?: string;
+  title?: string;
+  is_test_credential?: boolean | number;
+}): boolean {
+  if (!member) return true;
+  const email = (member.email || '').toLowerCase().trim();
+  const name = (member.name || '').toLowerCase().trim();
+  const role = (member.role || '').toLowerCase().trim();
+  const title = (member.title || '').toLowerCase().trim();
+
+  if (member.is_test_credential === 1 || member.is_test_credential === true) return true;
+  if (email.startsWith('qa.') || email.startsWith('test.') || email.startsWith('qa_') || email.startsWith('test_')) return true;
+  if (email === 'candidate@gmail.com' || email === 'applicant@orderofkpi.org' || email === 'demills_10@yahoo.com') return true;
+  if (email.includes('candidate') || email.includes('applicant') || email.includes('prospective')) return true;
+  if (role === 'applicant' || role === 'prospective' || role === 'candidate') return true;
+  if (title === 'candidate') return true;
+  if (name.startsWith('qa ') || name.startsWith('test ') || name.includes('agent') || name.includes('test user')) return true;
+  return false;
+}
+
+/**
  * Migration & RBAC normalization helper for user roles & committee assignments.
  * Ensures backward compatibility for legacy roles while upgrading to new RBAC schema.
  */
@@ -172,8 +199,6 @@ export function normalizeUserRBAC(user: {
 } {
   const normEmail = (user.email || '').toLowerCase().trim();
   
-  // Use first role from roles array, or fallback to legacy role string.
-  // Actually, let's find the "highest" role present in the roles array.
   const rolesToCheck = (user.roles && user.roles.length > 0) ? user.roles : (user.role ? [user.role] : ['member']);
   
   let normalizedRole: 'admin' | 'officer' | 'Committee Chair' | 'member' | 'prospective' | 'applicant' = 'member';
@@ -181,29 +206,28 @@ export function normalizeUserRBAC(user: {
   let committees: CommitteeSlug[] = Array.isArray(user.committees) ? [...(user.committees as CommitteeSlug[])] : [];
   let committeeRoles: Record<string, CommitteeRole> = { ...(user.committeeRoles as Record<string, CommitteeRole> || {}) };
 
+  // Ensure committee assignments from committeeRoles map are included in committees list
+  Object.keys(committeeRoles).forEach(k => {
+    if (ALL_COMMITTEE_SLUGS.includes(k as CommitteeSlug) && !committees.includes(k as CommitteeSlug)) {
+      committees.push(k as CommitteeSlug);
+    }
+  });
+
   // Helper check for any role inclusion in the array
   const hasRole = (r: string) => rolesToCheck.some(role => role === r || role.toLowerCase().includes(r.toLowerCase()));
 
   if (hasRole('admin') || normEmail === 'admin@orderofkpi.org' || normEmail === 'qa.admin@orderofkpi.org' || normEmail === 'info@kpi2012.org') {
     normalizedRole = 'admin';
-    committees = [...ALL_COMMITTEE_SLUGS];
-    ALL_COMMITTEE_SLUGS.forEach(slug => { committeeRoles[slug] = 'chair'; });
   } else if (hasRole('Super Committee') || hasRole('Super Committee Chair') || title === 'Super Committee Chair') {
     normalizedRole = 'officer';
     title = 'Super Committee Chair';
-    committees = [...ALL_COMMITTEE_SLUGS];
-    ALL_COMMITTEE_SLUGS.forEach(slug => { committeeRoles[slug] = 'chair'; });
   } else if (is1stAntiBasileus(user)) {
     normalizedRole = 'officer';
     if (!title) title = '1st Anti-Basileus';
-    committees = [...ALL_COMMITTEE_SLUGS];
   } else if (hasRole('Committee Chair') || hasRole('Membership Committee Chair') || rolesToCheck.some(r => r.toLowerCase().includes('chair'))) {
     normalizedRole = 'Committee Chair';
-    // If not already set, try to derive title from the primary role (first one matching chair criteria)
     if (!title) title = rolesToCheck.find(r => r.toLowerCase().includes('chair')) || 'Committee Chair';
 
-    // Simplified committee logic - if Super Committee is not set, derive from committee roles
-    // We need to be careful not to overwrite explicitly set committees in the user object
     const chairs = rolesToCheck.filter(r => r.toLowerCase().includes('chair'));
     chairs.forEach(rawRole => {
       const lowerRole = rawRole.toLowerCase();
@@ -239,6 +263,13 @@ export function normalizeUserRBAC(user: {
     normalizedRole = 'member';
   }
 
+  // Canonical James Haywood membership intake chair assignment
+  if (normEmail === 'james.haywood@orderofkpi.org' || normEmail === 'qa.chair@orderofkpi.org') {
+    if (!committees.includes('membership_intake')) committees.push('membership_intake');
+    committeeRoles['membership_intake'] = 'chair';
+    if (normalizedRole === 'member') normalizedRole = 'officer';
+  }
+
   return {
     email: normEmail,
     role: normalizedRole,
@@ -249,29 +280,41 @@ export function normalizeUserRBAC(user: {
 }
 
 /**
- * Checks if a user has access to a specific standing committee.
+ * Checks if a user has access to a specific standing committee workspace.
  * Admins and Officers have organizational oversight access across all standing committees.
+ * Committee chairs and assigned members have access to their respective committees.
  */
 export function hasCommitteeAccess(
   committeeSlug: CommitteeSlug,
   user: {
     email?: string;
     role?: string;
+    roles?: string[];
     title?: string;
     committees?: CommitteeSlug[] | string[];
     committeeRoles?: Record<string, CommitteeRole | string>;
   }
 ): boolean {
+  if (!user) return false;
   const norm = normalizeUserRBAC(user);
-  if (
-    norm.role === 'admin' ||
-    norm.role === 'officer' ||
-    norm.title === 'Super Committee Chair' ||
-    is1stAntiBasileus(user) ||
-    is1stAntiBasileus(norm)
-  ) return true;
-  if (norm.role === 'Committee Chair' && norm.committees.includes(committeeSlug)) return true;
-  return norm.committees.includes(committeeSlug);
+  const normEmail = (norm.email || user.email || '').toLowerCase().trim();
+  const isAdmin = norm.role === 'admin' || normEmail === 'admin@orderofkpi.org' || normEmail === 'qa.admin@orderofkpi.org' || normEmail === 'info@kpi2012.org';
+  const isSuperChair = norm.title === 'Super Committee Chair' || (user.roles || []).some(r => r.toLowerCase().includes('super committee'));
+  const is1stAnti = is1stAntiBasileus(user) || is1stAntiBasileus(norm);
+  const isOfficer = norm.role === 'officer';
+
+  // Authorized leadership / admin users can access all standing committees
+  if (isAdmin || isSuperChair || is1stAnti || isOfficer) return true;
+
+  // Committee chairs for this committee can access
+  if (isCommitteeChair(committeeSlug, user)) return true;
+
+  // Assigned committee members can access
+  if (norm.committees.includes(committeeSlug) || norm.committeeRoles[committeeSlug] === 'member' || norm.committeeRoles[committeeSlug] === 'chair') {
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -283,22 +326,29 @@ export function isCommitteeChair(
   user: {
     email?: string;
     role?: string;
+    roles?: string[];
     title?: string;
     committees?: CommitteeSlug[] | string[];
     committeeRoles?: Record<string, CommitteeRole | string>;
   }
 ): boolean {
+  if (!user) return false;
   const norm = normalizeUserRBAC(user);
-  // Admins and Super Committee Chairs retain full access behind the scenes
-  // but are never publicly listed or evaluated as a specific committee's chair.
-  if (
-    norm.role === 'admin' ||
-    norm.title === 'Super Committee Chair'
-  ) {
+  const normEmail = (norm.email || user.email || '').toLowerCase().trim();
+
+  // Admins and Super Committee Chairs retain oversight access behind the scenes
+  // but are never publicly listed or evaluated as a specific committee's chair unless explicitly assigned.
+  if (norm.role === 'admin' || norm.title === 'Super Committee Chair') {
     return false;
   }
+
   if (norm.committeeRoles[committeeSlug] === 'chair') return true;
   if (norm.role === 'Committee Chair' && norm.committees.includes(committeeSlug)) return true;
+  
+  if (committeeSlug === 'membership_intake' && (normEmail === 'james.haywood@orderofkpi.org' || normEmail === 'qa.chair@orderofkpi.org')) {
+    return true;
+  }
+
   return false;
 }
 
@@ -377,28 +427,17 @@ export function isEligibleFinancialMember(
     return false;
   }
 
-  // 4. Verify Financial Status
-  // If financialEmailsSet from live Google Sheet roster is provided:
+  // 4. Verify Financial Status (Strictly require FY27 active financial status from Google Sheet roster if provided)
   if (financialEmailsSet && financialEmailsSet.size > 0) {
-    if (financialEmailsSet.has(email)) return true;
+    return financialEmailsSet.has(email);
   }
 
-  // If explicitly active
+  // Fallback if google sheet roster is not provided/loaded: check financial_status
   if ((member.financial_status || '').toLowerCase() === 'active') {
     return true;
   }
 
-  // If marked explicitly inactive, they are not financial
-  if ((member.financial_status || '').toLowerCase() === 'inactive') {
-    return false;
-  }
-
-  // Officers, Admins, and Organization Members in good standing
-  if (role === 'admin' || role === 'officer' || role === 'membership committee chair' || role === 'membership committee') {
-    return true;
-  }
-
-  return role === 'member';
+  return false;
 }
 
 export const prospectiveMembers: MemberUser[] = [

@@ -6,7 +6,7 @@ import {
   Users, Coffee, Edit3, ClipboardCheck, Mail, Video, 
   ThumbsUp, Star, Hand, Wallet, Shield, UserCheck, 
   Leaf, Download, CalendarDays, LayoutList, Calendar,
-  AlertTriangle, CheckCircle2, Check, RefreshCw, LogOut, Plus
+  AlertTriangle, CheckCircle2, Check, RefreshCw, LogOut, Plus, Flag
 } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 import { initAuth, googleSignIn, getAccessToken, logout as googleLogout } from '../lib/googleAuth';
@@ -30,23 +30,24 @@ const events: EventItem[] = [
   { step: 7, title: 'Tea Time Period', date: '8/12/2026 - 8/16/2026', time: 'Tea Time period', category: 'Tea Time', icon: Coffee },
   { step: 8, title: 'Group Opens in Facebook', date: '8/12/2026 - 8/16/2026', time: 'Opens Aug 12 at 7:00 PM ET', category: 'Tea Time', icon: Users },
   { step: 9, title: 'Tea Time Zoom Call', date: '8/13/2026', time: '8:00 PM – 9:30 PM ET', category: 'Tea Time', icon: Video },
-  { step: 10, title: 'Candidate Interviews', date: '8/19/2026 - 8/21/2026', time: '20 minutes each (times TBD)', category: 'Interviews & Review', icon: UserCheck },
-  { step: 11, title: 'Makeup Interviews', date: '8/24/2026', time: 'If needed', category: 'Interviews & Review', icon: UserCheck },
-  { step: 12, title: 'Interview Reviews', date: '8/25/2026 - 8/28/2026', time: 'Review by active members', category: 'Interviews & Review', icon: Video },
-  { step: 13, title: 'MIP Voting', date: '8/31/2026 - 9/2/2026', time: 'MIP voting period', category: 'Voting & Next Steps', icon: ThumbsUp },
-  { step: 14, title: 'Candidate Notifications', date: '9/4/2026', time: 'Candidate notifications', category: 'Voting & Next Steps', icon: Star },
-  { step: 15, title: 'No Contact Period Begins', date: '9/7/2026', time: 'No contact period begins', category: 'Voting & Next Steps', icon: Hand },
-  { step: 16, title: 'First Initiation Payment Due', date: '9/11/2026', time: 'Due from candidates for membership', category: 'Voting & Next Steps', icon: Wallet },
+  { step: 10, title: 'Candidate Interviews', date: '8/19/2026 - 8/20/2026', time: 'Candidate interviews, 20 minutes each (times TBD)', category: 'Interviews & Review', icon: UserCheck },
+  { step: 11, title: 'Makeup Interviews', date: '8/24/2026', time: 'Makeup interviews, if needed', category: 'Interviews & Review', icon: UserCheck },
+  { step: 12, title: 'Interview Video Review', date: '8/21/2026 - 8/26/2026', time: 'Interview video review by active members (Fri, Aug 21 – 5:00 PM Wed, Aug 26)', category: 'Interviews & Review', icon: Video },
+  { step: 13, title: 'MIP Voting Period', date: '8/26/2026 - 8/28/2026', time: 'MIP voting period', category: 'Voting & Next Steps', icon: ThumbsUp },
+  { step: 14, title: 'Candidate Notifications', date: '8/28/2026', time: 'Candidate notifications', category: 'Voting & Next Steps', icon: Star },
+  { step: 15, title: 'No Contact Period Begins', date: '8/31/2026', time: 'No contact period begins / hand off to Dean', category: 'Voting & Next Steps', icon: Hand },
+  { step: 16, title: 'First Initiation Payment Due', date: '9/11/2026', time: 'First initiation payment due from candidates for membership', category: 'Voting & Next Steps', icon: Wallet },
 ];
 
 const deanEvents: EventItem[] = [
   { step: 1, title: 'Chapter Notification & Nominations Open', date: '8/7/2026', time: 'Chapter notification of Dean process and opening of nomination submissions', icon: Mail },
   { step: 2, title: 'Dean Nominations Accepted', date: '8/10/2026 - 8/12/2026', time: 'Closes 9:08 PM ET on August 12', icon: Edit3 },
-  { step: 3, title: 'Member Intake Team Special Meeting', date: '8/16/2026', time: '7:00 PM ET', icon: Users },
+  { step: 3, title: 'Special Meeting', date: '8/16/2026', time: '7:00 PM ET', icon: Users },
   { step: 4, title: 'Dean Team Voting', date: '8/17/2026 - 8/19/2026', time: 'Dean team voting', icon: ThumbsUp },
-  { step: 5, title: 'Announcement of Dean', date: '8/21/2026', time: 'Announcement of Dean', icon: Star },
-  { step: 6, title: 'Dean Selects Asst Dean & Team', date: '8/24/2026 - 8/28/2026', time: 'Assistant Dean of Pledges and Dean team', icon: UserCheck },
-  { step: 7, title: 'Drop Date for Dean Team', date: '8/28/2026', time: 'Drop date for Dean team', icon: Shield },
+  { step: 5, title: 'Announcement of Dean', date: '8/20/2026', time: 'Announcement of Dean', icon: Star },
+  { step: 6, title: 'Dean Selects Assistant Dean & Team', date: '8/24/2026 - 8/26/2026', time: 'Dean selects Assistant Dean of Pledges and Dean team', icon: UserCheck },
+  { step: 7, title: 'Dean Team Announcement', date: '8/28/2026', time: 'Dean team announcement', icon: Shield },
+  { step: 8, title: 'Dean Process Begins', date: '8/31/2026', time: 'Dean process begins', icon: Flag },
 ];
 
 export interface EventStatus {

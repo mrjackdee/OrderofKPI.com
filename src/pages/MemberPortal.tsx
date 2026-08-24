@@ -13,7 +13,8 @@ import {
   Archive,
   Mail,
   X,
-  UserCheck
+  UserCheck,
+  AlertCircle
 } from 'lucide-react';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import MemberHeader from '../components/MemberHeader';
@@ -23,11 +24,14 @@ import {
   isCommitteeChair, 
   hasCommitteeAccess, 
   normalizeUserRBAC,
+  isTestUser,
+  is1stAntiBasileus,
   defaultMembers
 } from '../lib/memberDb';
 import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 import { CommitteeSlug, STANDING_COMMITTEES, CommitteeDefinition, Member } from '../types';
 import { useSystemFeatures } from '../lib/settings';
+import { getCandidateVotingStatus, CANDIDATE_VOTING_WINDOW_TEXT } from '../lib/votingWindow';
 
 export default function MemberPortal() {
   const userRole = sessionStorage.getItem('userRole');
@@ -46,15 +50,30 @@ export default function MemberPortal() {
     if (rawRoles) userRoles = JSON.parse(rawRoles);
   } catch (e) {}
 
-  const normUser = normalizeUserRBAC({
-    email: userEmail || '',
-    role: userRole || 'member',
-    roles: userRoles.length > 0 ? userRoles : (userRole ? [userRole] : ['member']),
-    committees: userCommittees,
-    committeeRoles: userCommitteeRoles
+  const [currentUser, setCurrentUser] = useState(() => {
+    let userCommittees: CommitteeSlug[] = [];
+    let userCommitteeRoles: Record<string, 'chair' | 'member'> = {};
+    let userRoles: string[] = [];
+
+    try {
+      const rawCommittees = sessionStorage.getItem('userCommittees');
+      if (rawCommittees) userCommittees = JSON.parse(rawCommittees);
+      const rawCommitteeRoles = sessionStorage.getItem('userCommitteeRoles');
+      if (rawCommitteeRoles) userCommitteeRoles = JSON.parse(rawCommitteeRoles);
+      const rawRoles = sessionStorage.getItem('userRoles');
+      if (rawRoles) userRoles = JSON.parse(rawRoles);
+    } catch (e) {}
+
+    return normalizeUserRBAC({
+      email: userEmail || '',
+      role: userRole || 'member',
+      roles: userRoles.length > 0 ? userRoles : (userRole ? [userRole] : ['member']),
+      committees: userCommittees,
+      committeeRoles: userCommitteeRoles
+    });
   });
 
-  const visibleCommittees = getVisibleCommitteesForUser(normUser);
+  const visibleCommittees = getVisibleCommitteesForUser(currentUser);
 
   const [allMembers, setAllMembers] = useState<Member[]>(defaultMembers as Member[]);
   const [selectedCommitteeModal, setSelectedCommitteeModal] = useState<CommitteeDefinition | null>(null);
@@ -90,7 +109,7 @@ export default function MemberPortal() {
   }
 
   const normalizedRole = (userRole || '').toLowerCase();
-  const isAdmin = normUser.role === 'admin' || userRoles.includes('admin') || userEmail?.toLowerCase() === 'admin@orderofkpi.org' || userEmail?.toLowerCase() === 'qa.admin@orderofkpi.org' || userEmail?.toLowerCase() === 'info@kpi2012.org';
+  const isAdmin = currentUser.role === 'admin' || userRoles.includes('admin') || userEmail?.toLowerCase() === 'admin@orderofkpi.org' || userEmail?.toLowerCase() === 'qa.admin@orderofkpi.org' || userEmail?.toLowerCase() === 'info@kpi2012.org';
   const isChair = userEmail?.toLowerCase() === 'james.haywood@orderofkpi.org' || 
                   userRoles.some(r => {
                     const low = r.toLowerCase();
@@ -100,7 +119,7 @@ export default function MemberPortal() {
                   normalizedRole === 'super committee' || 
                   normalizedRole === 'officer' || 
                   isAdmin;
-  const isBrian = normUser.email === 'brian.johnson@orderofkpi.org' || userEmail?.toLowerCase() === 'brian.johnson@orderofkpi.org';
+  const isBrian = currentUser.email === 'brian.johnson@orderofkpi.org' || userEmail?.toLowerCase() === 'brian.johnson@orderofkpi.org';
   const isMembershipCommittee = 
     userRoles.some(r => {
       const low = r.toLowerCase();
@@ -119,10 +138,24 @@ export default function MemberPortal() {
     fetch('/api/members')
       .then(res => res.json())
       .then(data => {
-        if (data && data.success && Array.isArray(data.members)) {
-          setAllMembers(data.members);
-        } else if (Array.isArray(data)) {
-          setAllMembers(data);
+        const memberList = data && data.success && Array.isArray(data.members) ? data.members : (Array.isArray(data) ? data : []);
+        if (memberList.length > 0) {
+          setAllMembers(memberList);
+          if (userEmail) {
+            const myEmail = userEmail.toLowerCase().trim();
+            const myRecord = memberList.find((m: any) => m.email && m.email.toLowerCase().trim() === myEmail);
+            if (myRecord) {
+              const updatedNorm = normalizeUserRBAC(myRecord);
+              setCurrentUser(updatedNorm);
+              try {
+                sessionStorage.setItem('userRole', updatedNorm.role);
+                sessionStorage.setItem('userRoles', JSON.stringify(myRecord.roles || [updatedNorm.role]));
+                sessionStorage.setItem('userCommittees', JSON.stringify(updatedNorm.committees));
+                sessionStorage.setItem('userCommitteeRoles', JSON.stringify(updatedNorm.committeeRoles));
+                if (myRecord.title) sessionStorage.setItem('userTitle', myRecord.title);
+              } catch (e) {}
+            }
+          }
         }
       })
       .catch(() => {});
@@ -138,73 +171,28 @@ export default function MemberPortal() {
   }, []);
 
   const getCommitteeChairs = (slug: CommitteeSlug) => {
-    const chairsFromDb = allMembers.filter(m => {
+    return allMembers.filter(m => {
+      if (isTestUser(m)) return false;
       const norm = normalizeUserRBAC(m);
       if (norm.role === 'admin' || norm.title === 'Super Committee Chair') {
         return false;
       }
-      return isCommitteeChair(slug, m) || m.committeeRoles?.[slug] === 'chair' || (m.role && m.role.toLowerCase().includes('chair') && m.committees?.includes(slug));
+      return isCommitteeChair(slug, m) || norm.committeeRoles?.[slug] === 'chair';
     });
-
-    if (slug === 'membership_intake') {
-      if (!chairsFromDb.some(c => c.email.toLowerCase() === 'james.haywood@orderofkpi.org')) {
-        chairsFromDb.unshift({
-          name: 'James Haywood Jr',
-          email: 'james.haywood@orderofkpi.org',
-          role: 'officer' as any,
-          title: '2nd Anti-Basileus / Committee Chair',
-          is_first_login: false
-        });
-      }
-    }
-
-    return chairsFromDb;
   };
 
   const getCommitteeMembers = (slug: CommitteeSlug) => {
     const chairs = getCommitteeChairs(slug);
-    const chairEmails = new Set(chairs.map(c => c.email.toLowerCase()));
+    const chairEmails = new Set(chairs.map(c => (c.email || '').toLowerCase().trim()));
 
-    let membersFromDb = allMembers.filter(m => {
-      if (chairEmails.has(m.email.toLowerCase())) return false;
-      return m.committees?.includes(slug) || m.committeeRoles?.[slug] === 'member';
+    return allMembers.filter(m => {
+      if (isTestUser(m)) return false;
+      const norm = normalizeUserRBAC(m);
+      const email = (m.email || '').toLowerCase().trim();
+      if (chairEmails.has(email)) return false;
+      if (norm.role === 'admin' || norm.title === 'Super Committee Chair') return false;
+      return norm.committees.includes(slug) || norm.committeeRoles?.[slug] === 'member';
     });
-
-    if (membersFromDb.length === 0) {
-      if (slug === 'membership_intake') {
-        membersFromDb = [
-          { name: 'Deshaun Safford', email: 'deshaun.safford@orderofkpi.org', role: 'member', title: 'Intake Member', is_first_login: false },
-          { name: 'Jason Pilar', email: 'jason.pilar@orderofkpi.org', role: 'member', title: 'Intake Member', is_first_login: false }
-        ];
-      } else if (slug === 'annual_event') {
-        membersFromDb = [
-          { name: 'Keith Woods', email: 'keith.woods@orderofkpi.org', role: 'member', title: 'Event Planning Member', is_first_login: false },
-          { name: 'Sammie Poe', email: 'sammie.poe@orderofkpi.org', role: 'member', title: 'Event Coordinator', is_first_login: false }
-        ];
-      } else if (slug === 'digital_technology') {
-        membersFromDb = [
-          { name: 'Alejandro Araujo', email: 'alejandro.araujo@orderofkpi.org', role: 'member', title: 'Tech Infrastructure Lead', is_first_login: false },
-          { name: 'Kameron Whitfield', email: 'kameron.whitfield@orderofkpi.org', role: 'member', title: 'Digital Media Specialist', is_first_login: false }
-        ];
-      } else if (slug === 'judicial_ethics') {
-        membersFromDb = [
-          { name: 'Edward Cook', email: 'edward.cook@orderofkpi.org', role: 'officer', title: 'Epistoleus / Ethics Member', is_first_login: false },
-          { name: 'Donald Mitchell', email: 'donald.mitchell@orderofkpi.org', role: 'member', title: 'Compliance Auditor', is_first_login: false }
-        ];
-      } else if (slug === 'scholarship') {
-        membersFromDb = [
-          { name: 'Dominic Goodman', email: 'dominic.goodman@orderofkpi.org', role: 'member', title: 'Foundation Trustee', is_first_login: false },
-          { name: 'Denzel Talley', email: 'denzel.talley@orderofkpi.org', role: 'member', title: 'Scholarship Reviewer', is_first_login: false }
-        ];
-      } else if (slug === 'transfer_member') {
-        membersFromDb = [
-          { name: 'Demetrist Thomas', email: 'demetrist.thomas@orderofkpi.org', role: 'member', title: 'Onboarding Specialist', is_first_login: false },
-          { name: 'Tobias Bordley', email: 'tobias.bordley@orderofkpi.org', role: 'member', title: 'Transfer Liaison', is_first_login: false }
-        ];
-      }
-    }
-
-    return membersFromDb;
   };
 
   const containerVariants = {
@@ -216,6 +204,8 @@ export default function MemberPortal() {
     hidden: { y: 20, opacity: 0 },
     visible: { y: 0, opacity: 1, transition: { duration: 0.6 } }
   };
+
+  const candidateVotingStatus = getCandidateVotingStatus(userEmail || '', userRole || '');
 
   return (
     <div className="min-h-screen bg-cream w-full overflow-x-clip">
@@ -270,17 +260,39 @@ export default function MemberPortal() {
             </div>
           </Link>
 
-          {isAdmin && (
+          {!isApplicant && (
             <Link
-              to="/selection-voting"
-              className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
+              to="/candidate-voting"
+              className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft relative overflow-hidden"
             >
-              <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
+              <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500 shrink-0">
                 <Award size={28} />
               </div>
-              <div>
-                <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Candidate Intake Voting</h4>
-                <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Cast and submit intake votes</p>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">FY27 Candidate Voting</h4>
+                  {!candidateVotingStatus.isOpen && (
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
+                      Voting Scheduled
+                    </span>
+                  )}
+                </div>
+                <p className="text-ivy/60 text-[11px] font-medium mt-1 leading-snug">
+                  {!candidateVotingStatus.isOpen ? (
+                    <>
+                      Voting will open Wed, Aug 26, 2026 at 5:00 PM ET and close on Fri August 28, 2026 at 8:00 AM ET. If you have any questions, please reach out to{' '}
+                      <a 
+                        href="mailto:james.haywood@orderofkpi.org" 
+                        onClick={(e) => e.stopPropagation()} 
+                        className="underline hover:text-ivy font-semibold text-amber-900"
+                      >
+                        JR Haywood
+                      </a>.
+                    </>
+                  ) : (
+                    "Cast and submit candidate votes"
+                  )}
+                </p>
               </div>
             </Link>
           )}
@@ -309,29 +321,76 @@ export default function MemberPortal() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {STANDING_COMMITTEES.map((committee) => (
-                <button
-                  key={committee.slug}
-                  onClick={() => setSelectedCommitteeModal(committee)}
-                  className="bg-white border border-gold/20 rounded-2xl p-6 shadow-soft hover:shadow-md transition-all text-left space-y-3 w-full"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-cream rounded-xl border border-gold/20 text-ivy shadow-xs">
-                      <FolderGit2 size={20} />
+              {STANDING_COMMITTEES.map((committee) => {
+                const userHasAccess = hasCommitteeAccess(committee.slug, currentUser);
+                const userIsChair = isCommitteeChair(committee.slug, currentUser);
+
+                return (
+                  <div
+                    key={committee.slug}
+                    id={`committee-card-${committee.slug}`}
+                    className="bg-white border border-gold/20 rounded-2xl p-6 shadow-soft hover:shadow-md transition-all flex flex-col justify-between space-y-4 text-left"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 bg-cream rounded-xl border border-gold/20 text-ivy shadow-xs shrink-0">
+                            <FolderGit2 size={20} />
+                          </div>
+                          <div>
+                            <h3 className="font-display font-bold text-ivy uppercase tracking-wide text-sm">{committee.name}</h3>
+                            <span className="text-[10px] font-body text-ivy/50">{committee.shortName}</span>
+                          </div>
+                        </div>
+                        {userIsChair ? (
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-gold/20 text-ivy border border-gold/40 rounded-full shrink-0">
+                            Chair
+                          </span>
+                        ) : userHasAccess && currentUser.committees.includes(committee.slug) ? (
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-ivy/10 text-ivy border border-ivy/20 rounded-full shrink-0">
+                            Member
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="text-xs text-ivy/70 leading-relaxed font-body line-clamp-3">
+                        {committee.description}
+                      </p>
                     </div>
-                    <div>
-                      <h3 className="font-display font-bold text-ivy uppercase tracking-wide text-sm">{committee.name}</h3>
-                      <span className="text-[10px] font-body text-ivy/50">{committee.shortName}</span>
+
+                    <div className="pt-3 border-t border-gold/15 flex items-center gap-2">
+                      {userHasAccess ? (
+                        <>
+                          <Link
+                            id={`open-workspace-${committee.slug}`}
+                            to={`/committee/${committee.slug}`}
+                            className="flex-1 py-2 px-3.5 bg-ivy text-cream text-center text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-gold hover:text-ivy transition-all flex items-center justify-center gap-1.5 shadow-xs"
+                          >
+                            <span>Open Workspace</span>
+                            <ChevronRight size={13} />
+                          </Link>
+                          <button
+                            id={`view-details-${committee.slug}`}
+                            onClick={() => setSelectedCommitteeModal(committee)}
+                            className="py-2 px-3 bg-cream border border-gold/30 text-ivy text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-gold/10 transition-all text-center shrink-0"
+                            title="View Roster & Leadership Details"
+                          >
+                            Details
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          id={`view-details-${committee.slug}`}
+                          onClick={() => setSelectedCommitteeModal(committee)}
+                          className="w-full py-2.5 px-4 bg-cream border border-gold/30 text-ivy hover:bg-gold hover:text-ivy text-xs font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-xs"
+                        >
+                          <span>View Details & Join</span>
+                          <ChevronRight size={13} />
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <p className="text-xs text-ivy/70 leading-relaxed font-body line-clamp-3">
-                    {committee.description}
-                  </p>
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-gold pt-2 flex items-center gap-1">
-                    View Details & Join <ChevronRight size={12} />
-                  </div>
-                </button>
-              ))}
+                );
+              })}
             </div>
           </motion.section>
         )}
@@ -395,10 +454,26 @@ export default function MemberPortal() {
               path: '/review-applications',
               color: 'bg-ivy text-cream',
               roles: ['admin', 'Membership Committee', 'Membership Committee Chair']
+            },
+            {
+              title: 'FY27 Candidate Voting Mgmt & Audit',
+              desc: 'Admin audit log and management for candidate voting records.',
+              icon: ShieldCheck,
+              path: '/candidate-voting-audit',
+              color: 'bg-ivy text-cream',
+              roles: ['admin']
+            },
+            {
+              title: 'FY27 Candidate Voting Report',
+              desc: 'Rolled-up candidate voting results calculated at the 50.1% threshold.',
+              icon: Award,
+              path: '/candidate-voting-report',
+              color: 'bg-gold text-ivy',
+              roles: ['admin', 'Membership Committee Chair', 'officer']
             }
           ].filter(tool => {
             if ((lowerEmail === 'james.haywood@orderofkpi.org' || lowerEmail === 'brian.johnson@orderofkpi.org') && 
-                (tool.title === 'Past Elections & Records' || tool.title === 'Membership Dashboard')) {
+                (tool.title === 'Past Elections & Records' || tool.title === 'Membership Dashboard' || tool.title === 'FY27 Candidate Voting Report')) {
               return true;
             }
             if (!tool.roles) return true;
@@ -454,7 +529,13 @@ export default function MemberPortal() {
       {/* Committee Roster Popup Modal */}
       <AnimatePresence>
         {selectedCommitteeModal ? (() => {
-          const userHasAccess = hasCommitteeAccess(selectedCommitteeModal.slug, normUser);
+          const userHasAccess = hasCommitteeAccess(selectedCommitteeModal.slug, currentUser);
+          const isSuperChair = currentUser.title === 'Super Committee Chair' || userRoles.some(r => r.toLowerCase().includes('super committee'));
+          const is1stAnti = is1stAntiBasileus(currentUser) || is1stAntiBasileus({ email: userEmail || '', role: userRole || '' });
+          const canManageLeadership = isAdmin || currentUser.role === 'officer' || isSuperChair || is1stAnti;
+          const chairs = getCommitteeChairs(selectedCommitteeModal.slug);
+          const members = getCommitteeMembers(selectedCommitteeModal.slug);
+
           return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
             <motion.div
@@ -486,42 +567,56 @@ export default function MemberPortal() {
 
               {/* Committee Chairs */}
               <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-ivy/80 flex items-center gap-2">
-                  <UserCheck size={16} className="text-gold" />
-                  <span>Committee Chair(s)</span>
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-ivy/80 flex items-center gap-2">
+                    <UserCheck size={16} className="text-gold" />
+                    <span>Committee Chair(s)</span>
+                  </h4>
+                  {chairs.length === 0 && canManageLeadership && (
+                    <Link
+                      to={`/committee/${selectedCommitteeModal.slug}?tab=roster`}
+                      className="text-[11px] font-bold uppercase tracking-wider text-gold hover:text-ivy transition-colors flex items-center gap-1"
+                    >
+                      <span>Assign Interim Chair</span>
+                      <ChevronRight size={13} />
+                    </Link>
+                  )}
+                </div>
+
                 <div className="space-y-2">
-                  {getCommitteeChairs(selectedCommitteeModal.slug).length > 0 ? (
-                    getCommitteeChairs(selectedCommitteeModal.slug).map((chair, idx) => (
+                  {chairs.length > 0 ? (
+                    chairs.map((chair, idx) => (
                       <div key={idx} className="p-3.5 bg-cream/60 border border-gold/20 rounded-xl flex items-center justify-between">
                         <div>
                           <p className="font-bold text-ivy text-sm">{chair.name}</p>
                           <p className="text-[11px] text-gold font-semibold">{chair.title || 'Committee Chair'}</p>
                           <p className="text-xs text-ivy/60 font-body">{chair.email}</p>
                         </div>
-                        <a
-                          href={`mailto:${chair.email}?subject=${encodeURIComponent(`Interest in Joining ${selectedCommitteeModal.name}`)}`}
-                          className="px-3.5 py-1.5 bg-ivy text-cream hover:bg-gold hover:text-ivy rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
-                        >
-                          <Mail size={12} />
-                          <span>Email Chair</span>
-                        </a>
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 bg-gold text-ivy rounded-full">
+                          Chair
+                        </span>
                       </div>
                     ))
                   ) : (
-                    <div className="p-3.5 bg-cream/60 border border-gold/20 rounded-xl flex items-center justify-between">
-                      <div>
-                        <p className="font-bold text-ivy text-sm">Executive Committee Oversight</p>
-                        <p className="text-[11px] text-gold font-semibold">Executive Board</p>
-                        <p className="text-xs text-ivy/60 font-body">info@kpi2012.org</p>
+                    <div className="p-4 bg-cream/80 border border-gold/20 rounded-xl flex items-start gap-3.5">
+                      <AlertCircle size={20} className="text-gold shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="font-bold text-ivy text-xs uppercase tracking-wider">No Committee Chair Currently Assigned</p>
+                        <p className="text-xs text-ivy/70 font-body leading-relaxed">
+                          A committee chair has not yet been appointed to this standing committee. Direct join inquiries via email are temporarily unavailable until a chair is designated.
+                        </p>
+                        {canManageLeadership && (
+                          <div className="pt-2">
+                            <Link
+                              to={`/committee/${selectedCommitteeModal.slug}?tab=roster`}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-ivy text-cream text-[10px] font-bold uppercase tracking-widest rounded hover:bg-ivy/90 transition-all shadow-xs"
+                            >
+                              <span>Assign Chair in Workspace</span>
+                              <ChevronRight size={12} />
+                            </Link>
+                          </div>
+                        )}
                       </div>
-                      <a
-                        href={`mailto:info@kpi2012.org?subject=${encodeURIComponent(`Interest in Joining ${selectedCommitteeModal.name}`)}`}
-                        className="px-3.5 py-1.5 bg-ivy text-cream hover:bg-gold hover:text-ivy rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
-                      >
-                        <Mail size={12} />
-                        <span>Email Board</span>
-                      </a>
                     </div>
                   )}
                 </div>
@@ -533,9 +628,9 @@ export default function MemberPortal() {
                   <Users size={16} className="text-gold" />
                   <span>Current Committee Members</span>
                 </h4>
-                {getCommitteeMembers(selectedCommitteeModal.slug).length > 0 ? (
+                {members.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {getCommitteeMembers(selectedCommitteeModal.slug).map((member, idx) => (
+                    {members.map((member, idx) => (
                       <div key={idx} className="p-3 bg-cream/30 border border-gold/15 rounded-xl flex items-center justify-between">
                         <div>
                           <p className="font-bold text-ivy text-xs">{member.name}</p>
@@ -549,7 +644,9 @@ export default function MemberPortal() {
                   </div>
                 ) : (
                   <p className="text-xs text-ivy/50 italic p-4 bg-cream/20 rounded-xl border border-dashed border-gold/20 text-center">
-                    No general members currently listed. Contact the chair to request joining!
+                    {chairs.length > 0 
+                      ? "No general members currently listed. Contact the chair to request joining!"
+                      : "No general members currently assigned to this committee."}
                   </p>
                 )}
               </div>
@@ -557,72 +654,55 @@ export default function MemberPortal() {
               {/* Footer CTA */}
               <div className="pt-4 border-t border-gold/20 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <p className="text-xs text-ivy/60">
-                  Interested in joining? Contact the committee chair directly.
+                  {chairs.length > 0 
+                    ? `Interested in joining? Express interest to the committee ${chairs.length > 1 ? 'chairs' : 'chair'}.`
+                    : 'A committee chair has not been assigned yet.'}
                 </p>
-                <div className="flex items-center gap-3 w-fit">
+                <div className="flex flex-wrap items-center gap-3 w-fit">
+                  {chairs.length > 0 ? (() => {
+                    const recipientEmails = chairs.map(c => c.email).join(',');
+                    const recipientNames = chairs.map(c => c.name).join(' & ');
+                    const mailtoSubject = encodeURIComponent(`Interest in Joining ${selectedCommitteeModal.name}`);
+                    const mailtoBody = encodeURIComponent(`Dear ${recipientNames},\n\nI am writing to express my interest in joining the ${selectedCommitteeModal.name}. Please provide information on upcoming committee meetings and the onboarding steps.\n\nRespectfully,`);
+
+                    return (
+                      <a
+                        id={`join-interest-${selectedCommitteeModal.slug}`}
+                        href={`mailto:${recipientEmails}?subject=${mailtoSubject}&body=${mailtoBody}`}
+                        className="px-5 py-2 bg-gold text-ivy font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-ivy hover:text-cream transition-all flex items-center gap-2 shadow-xs"
+                      >
+                        <Mail size={14} />
+                        <span>Interested in Joining</span>
+                      </a>
+                    );
+                  })() : (
+                    <button
+                      id={`join-interest-disabled-${selectedCommitteeModal.slug}`}
+                      disabled
+                      className="px-4 py-2 bg-ivy/10 text-ivy/40 font-bold rounded-xl text-xs uppercase tracking-wider cursor-not-allowed flex items-center gap-2"
+                      title="Email inquiries are disabled until a committee chair is assigned."
+                    >
+                      <Mail size={14} className="opacity-40" />
+                      <span>Chair Not Assigned</span>
+                    </button>
+                  )}
+
                   {userHasAccess && (
                     <Link
+                      id={`open-workspace-modal-${selectedCommitteeModal.slug}`}
                       to={`/committee/${selectedCommitteeModal.slug}`}
-                      className="px-6 py-2 bg-ivy text-cream rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-gold hover:text-ivy transition-all w-fit"
+                      className="px-5 py-2 bg-ivy text-cream rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-gold hover:text-ivy transition-all w-fit"
                     >
                       Open Workspace
                     </Link>
                   )}
+
                   <button
                     onClick={() => setSelectedCommitteeModal(null)}
-                    className="px-6 py-2 border border-gold/20 rounded-xl text-xs font-bold uppercase tracking-wider text-ivy hover:bg-cream transition-colors w-fit"
+                    className="px-5 py-2 border border-gold/20 rounded-xl text-xs font-bold uppercase tracking-wider text-ivy hover:bg-cream transition-colors w-fit"
                   >
                     Close
                   </button>
-                  {(() => {
-                    const chairs = getCommitteeChairs(selectedCommitteeModal.slug);
-                    const recipientEmails = chairs.length > 0 ? chairs.map(c => c.email).join(',') : 'info@kpi2012.org';
-                    const recipientNames = chairs.length > 0 ? chairs.map(c => c.name).join(' & ') : 'Executive Board';
-                    const mailtoSubject = encodeURIComponent(`Interest in Joining ${selectedCommitteeModal.name}`);
-                    const mailtoBody = encodeURIComponent(`Dear ${recipientNames},\n\nI am interested in joining the ${selectedCommitteeModal.name}. Please contact me regarding committee meetings and membership steps.\n\nRespectfully,`);
-                    
-                    const showContactModal = contactCommitteeSlug === selectedCommitteeModal.slug;
-
-                    return (
-                      <>
-                        <button
-                          onClick={() => setContactCommitteeSlug(selectedCommitteeModal.slug)}
-                          className="px-6 py-2 bg-gold text-ivy font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-ivy hover:text-cream transition-all flex items-center justify-center gap-2 w-fit shadow-sm"
-                        >
-                          <Mail size={14} />
-                          <span>Contact Chair to Join</span>
-                        </button>
-                        
-                        {showContactModal && (
-                          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-              <div className="bg-white p-6 rounded-2xl w-fit min-w-[320px] max-w-sm space-y-4 shadow-2xl">
-                              <h3 className="font-bold text-ivy">Contact Committee Chair(s)</h3>
-                              <p className="text-xs text-ivy/70">
-                                You can email the committee chairs directly or copy their email address to your preferred mail application.
-                              </p>
-                              <div className="p-3 bg-cream rounded-lg text-[10px] break-all font-mono border border-gold/20">
-                                {recipientEmails}
-                              </div>
-                              <div className="flex gap-2">
-                                <a
-                                  href={`mailto:${recipientEmails}?subject=${mailtoSubject}&body=${mailtoBody}`}
-                                  className="px-6 py-2 bg-gold text-ivy text-center font-bold rounded-xl text-xs uppercase w-fit"
-                                >
-                                  Send Email
-                                </a>
-                                <button
-                                  onClick={() => setContactCommitteeSlug(null)}
-                                  className="px-6 py-2 border border-gold/20 rounded-xl text-xs font-bold uppercase w-fit"
-                                >
-                                  Close
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
                 </div>
               </div>
             </motion.div>

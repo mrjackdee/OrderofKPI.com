@@ -1,0 +1,269 @@
+import React, { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
+import { Link, Navigate } from 'react-router-dom';
+import { jsPDF } from 'jspdf';
+import { BarChart3, Download, ArrowLeft, CheckCircle2, XCircle, Award, RefreshCw } from 'lucide-react';
+import MemberHeader from '../components/MemberHeader';
+import { 
+  firebaseFetchAllCandidateVotes, 
+  syncCandidateVotesFromFirestore 
+} from '../lib/firebase';
+
+interface CandidateResult {
+  candidateId: string;
+  candidateName: string;
+  yesVotes: number;
+  noVotes: number;
+  totalVotesCast: number;
+  approvalPercentage: number;
+  passed: boolean;
+}
+
+export default function CandidateVotingReport() {
+  const userEmail = sessionStorage.getItem('userEmail') || '';
+  const userRole = sessionStorage.getItem('userRole') || '';
+  const normEmail = userEmail.toLowerCase().trim();
+  
+  const isAdmin = userRole === 'admin' || normEmail === 'admin@orderofkpi.org';
+  const isCommitteeChair = userRole === 'Membership Committee Chair' || userRole === 'officer';
+  const isBrian = normEmail === 'brian.johnson@orderofkpi.org';
+  const hasAccess = isAdmin || isCommitteeChair || isBrian;
+
+  const [results, setResults] = useState<CandidateResult[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const fetchReportData = async () => {
+    try {
+      let votes: any[] = [];
+      let candidatesList: any[] = [];
+      const [serverRes, fsRes, candRes] = await Promise.allSettled([
+        fetch('/api/candidate-votes').then(r => r.json()),
+        firebaseFetchAllCandidateVotes(),
+        fetch('/api/candidates').then(r => r.json())
+      ]);
+
+      if (serverRes.status === 'fulfilled' && serverRes.value?.success && Array.isArray(serverRes.value.votes)) {
+        votes = serverRes.value.votes;
+      } else if (fsRes.status === 'fulfilled' && fsRes.value?.success && Array.isArray(fsRes.value.votes)) {
+        votes = fsRes.value.votes;
+      }
+      if (candRes.status === 'fulfilled' && candRes.value?.success && Array.isArray(candRes.value.candidates)) {
+        candidatesList = candRes.value.candidates.filter((c: any) => c.status && c.status.toLowerCase() === 'selection');
+      }
+
+      const selectionCandidateIds = new Set(candidatesList.map(c => String(c.id || c.name).toLowerCase().trim()));
+      const selectionCandidateNames = new Set(candidatesList.map(c => String(c.name || '').toLowerCase().trim()));
+
+      // Group votes by candidate, strictly filtering for candidates where status = selection
+      const candidateMap = new Map<string, { name: string; yes: number; no: number }>();
+
+      votes.forEach(v => {
+        const cId = String(v.candidate_id || v.candidate_name || 'Unknown');
+        const cName = String(v.candidate_name || v.candidate_id || 'Candidate');
+
+        if (candidatesList.length > 0) {
+          const isMatch = selectionCandidateIds.has(cId.toLowerCase().trim()) || selectionCandidateNames.has(cName.toLowerCase().trim());
+          if (!isMatch) return;
+        }
+
+        if (!candidateMap.has(cId)) {
+          candidateMap.set(cId, { name: cName, yes: 0, no: 0 });
+        }
+        const entry = candidateMap.get(cId)!;
+        if ((v.decision || '').toLowerCase() === 'yes') {
+          entry.yes += 1;
+        } else if ((v.decision || '').toLowerCase() === 'no') {
+          entry.no += 1;
+        }
+      });
+
+      const aggregated: CandidateResult[] = [];
+      candidateMap.forEach((val, cId) => {
+        const totalVotesCast = val.yes + val.no;
+        const approvalPercentage = totalVotesCast > 0 ? (val.yes / totalVotesCast) * 100 : 0;
+        const passed = approvalPercentage >= 50.1;
+
+        aggregated.push({
+          candidateId: cId,
+          candidateName: val.name,
+          yesVotes: val.yes,
+          noVotes: val.no,
+          totalVotesCast,
+          approvalPercentage,
+          passed
+        });
+      });
+
+      setResults(aggregated);
+    } catch (err) {
+      console.error('Error fetching candidate voting report:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    await syncCandidateVotesFromFirestore().catch(() => {});
+    await fetchReportData();
+    setIsSyncing(false);
+  };
+
+  useEffect(() => {
+    if (hasAccess) {
+      fetchReportData();
+      syncCandidateVotesFromFirestore().then(() => fetchReportData());
+    }
+  }, [hasAccess]);
+
+  if (!hasAccess) {
+    return <Navigate to="/member-portal" replace />;
+  }
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("FY27 Candidate Voting Roll-Up Report", 14, 20);
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+    doc.text(`Passing Threshold: 50.1% of Total Votes Cast (For + Against)`, 14, 34);
+
+    let y = 44;
+    doc.setFont("helvetica", "bold");
+    doc.text("Candidate Name", 14, y);
+    doc.text("For", 90, y);
+    doc.text("Against", 115, y);
+    doc.text("Total Cast", 140, y);
+    doc.text("Approval %", 165, y);
+    doc.text("Status", 185, y);
+
+    y += 6;
+    doc.setLineWidth(0.5);
+    doc.line(14, y, 196, y);
+    y += 8;
+
+    doc.setFont("helvetica", "normal");
+    results.forEach((r) => {
+      if (y > 275) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.text(r.candidateName.substring(0, 30), 14, y);
+      doc.text(r.yesVotes.toString(), 90, y);
+      doc.text(r.noVotes.toString(), 115, y);
+      doc.text(r.totalVotesCast.toString(), 140, y);
+      doc.text(`${r.approvalPercentage.toFixed(1)}%`, 165, y);
+      doc.text(r.passed ? "PASS" : "FAIL", 185, y);
+      y += 8;
+    });
+
+    doc.save("FY27_Candidate_Voting_Report.pdf");
+  };
+
+  return (
+    <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
+      <MemberHeader />
+
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8">
+        <div className="mb-6 flex items-center justify-between">
+          <Link 
+            to="/member-portal" 
+            className="inline-flex items-center text-sm font-medium text-amber-700 hover:text-amber-800 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to Member Portal
+          </Link>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={handleSync}
+              disabled={isSyncing}
+              className="inline-flex items-center px-3 py-2 bg-white border border-stone-300 text-stone-700 rounded-lg text-sm font-medium hover:bg-stone-50 transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 mr-1.5 ${isSyncing ? 'animate-spin' : ''}`} /> Sync Data
+            </button>
+            <button
+              onClick={exportPDF}
+              className="inline-flex items-center px-4 py-2 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors shadow-sm"
+            >
+              <Download className="w-4 h-4 mr-2" /> Export Report PDF
+            </button>
+          </div>
+        </div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 12 }} 
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-xl shadow-sm border border-stone-200 p-8 mb-8"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-3 bg-amber-50 text-amber-700 rounded-lg">
+                <BarChart3 className="w-6 h-6" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-serif font-bold text-stone-900">FY27 Candidate Voting Report</h1>
+                <p className="text-sm text-stone-600">Candidate approval rollup report calculated at the 50.1% majority threshold (For + Against).</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="border border-stone-200 rounded-lg overflow-hidden">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-stone-100 text-stone-700 text-xs uppercase tracking-wider font-semibold border-b border-stone-200">
+                  <th className="py-3 px-4">Candidate Name</th>
+                  <th className="py-3 px-4">Total For (Yes)</th>
+                  <th className="py-3 px-4">Total Against (No)</th>
+                  <th className="py-3 px-4">Total Votes Cast</th>
+                  <th className="py-3 px-4">Approval %</th>
+                  <th className="py-3 px-4 text-right">Pass / Fail (50.1%)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-200 text-sm">
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-stone-500">Calculating voting results...</td>
+                  </tr>
+                ) : results.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-stone-500">No candidate votes recorded yet.</td>
+                  </tr>
+                ) : (
+                  results.map((r) => (
+                    <tr key={r.candidateId} className="hover:bg-stone-50/50 transition-colors">
+                      <td className="py-3 px-4 font-bold text-stone-900">{r.candidateName}</td>
+                      <td className="py-3 px-4 text-emerald-700 font-semibold">{r.yesVotes}</td>
+                      <td className="py-3 px-4 text-rose-700 font-semibold">{r.noVotes}</td>
+                      <td className="py-3 px-4 text-stone-700">{r.totalVotesCast}</td>
+                      <td className="py-3 px-4 font-semibold text-stone-900">{r.approvalPercentage.toFixed(1)}%</td>
+                      <td className="py-3 px-4 text-right">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
+                          r.passed 
+                            ? 'bg-emerald-100 text-emerald-800' 
+                            : 'bg-rose-100 text-rose-800'
+                        }`}>
+                          {r.passed ? (
+                            <>
+                              <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> PASS (≥ 50.1%)
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="w-3.5 h-3.5 mr-1" /> FAIL (&lt; 50.1%)
+                            </>
+                          )}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      </main>
+    </div>
+  );
+}

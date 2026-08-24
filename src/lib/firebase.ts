@@ -645,6 +645,96 @@ const isDevEnvironment = () => {
 
 const getVotesCollectionName = () => isDevEnvironment() ? 'dean_votes_dev' : 'dean_votes';
 const getNominationsCollectionName = () => isDevEnvironment() ? 'dean_nominations_dev' : 'dean_nominations';
+const getCandidateVotesCollectionName = () => isDevEnvironment() ? 'candidate_votes_dev' : 'candidate_votes';
+
+export async function firebaseSaveCandidateVote(voterEmail: string, candidateId: string, candidateName: string, decision: 'yes' | 'no'): Promise<{ success: boolean; message: string }> {
+  const normEmail = voterEmail.toLowerCase().trim();
+  const safeDocId = `${normEmail.replace(/[^a-zA-Z0-9]/g, '_')}_${candidateId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const targetCol = getCandidateVotesCollectionName();
+  try {
+    const savePromise = (async () => {
+      const docRef = doc(db, targetCol, safeDocId);
+      const now = new Date().toISOString();
+      const payload = {
+        id: safeDocId,
+        voter_email: normEmail,
+        candidate_id: candidateId,
+        candidate_name: candidateName,
+        decision,
+        timestamp: now,
+        is_dev: isDevEnvironment()
+      };
+      await setDoc(docRef, payload, { merge: true });
+      return { success: true, message: 'Candidate vote saved to Firestore successfully' };
+    })();
+
+    const timeoutPromise = new Promise<{ success: boolean; message: string }>((resolve) => {
+      setTimeout(() => resolve({ success: false, message: 'Firestore candidate vote write timed out' }), 3500);
+    });
+
+    return await Promise.race([savePromise, timeoutPromise]);
+  } catch (err: any) {
+    console.error('Failed to save Candidate Vote to Firestore:', err);
+    return { success: false, message: err.message || 'Firestore write failed' };
+  }
+}
+
+export async function firebaseFetchAllCandidateVotes(): Promise<{ success: boolean; votes?: any[]; message?: string }> {
+  const targetCol = getCandidateVotesCollectionName();
+  try {
+    const fetchPromise = (async () => {
+      const querySnapshot = await getDocs(collection(db, targetCol));
+      const list: any[] = [];
+      querySnapshot.forEach((docSnapshot) => {
+        const data = docSnapshot.data();
+        if (data && data.voter_email) {
+          list.push({ id: docSnapshot.id, ...data });
+        }
+      });
+      return { success: true, votes: list };
+    })();
+
+    const timeoutPromise = new Promise<{ success: boolean; votes?: any[]; message: string }>((resolve) => {
+      setTimeout(() => resolve({ success: false, message: 'Firestore all candidate votes fetch timed out' }), 3500);
+    });
+
+    return await Promise.race([fetchPromise, timeoutPromise]);
+  } catch (err: any) {
+    console.error('Failed to fetch all Candidate Votes from Firestore:', err);
+    return { success: false, message: err.message || 'Firestore fetch failed' };
+  }
+}
+
+export async function firebaseDeleteCandidateVote(idOrKey: string): Promise<{ success: boolean; message?: string }> {
+  const collections = ['candidate_votes', 'candidate_votes_dev'];
+  try {
+    for (const colName of collections) {
+      try {
+        const docRef = doc(db, colName, idOrKey);
+        await deleteDoc(docRef);
+      } catch (e) {}
+    }
+    return { success: true, message: 'Candidate vote deleted successfully' };
+  } catch (err: any) {
+    return { success: false, message: err.message };
+  }
+}
+
+export async function syncCandidateVotesFromFirestore() {
+  try {
+    const res = await firebaseFetchAllCandidateVotes();
+    if (res.success && res.votes) {
+      await fetch('/api/candidate-votes/sync-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ votes: res.votes })
+      }).catch(() => {});
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, message: err?.message };
+  }
+}
 
 /**
  * Saves a Dean Nomination to Cloud Firestore.
@@ -996,12 +1086,14 @@ export async function firebaseSyncPortalMember(member: {
   title?: string;
   financial_status?: string;
   industry?: string;
+  committees?: string[];
+  committeeRoles?: Record<string, string>;
 }) {
   try {
     const normEmail = member.email.toLowerCase().trim();
     const docId = normEmail.replace(/\//g, '_');
     const memberRef = doc(db, 'portal_members', docId);
-    const payload = {
+    const payload: any = {
       email: normEmail,
       name: member.name,
       first_name: member.name.split(' ')[0] || '',
@@ -1012,6 +1104,12 @@ export async function firebaseSyncPortalMember(member: {
       industry: member.industry || '',
       updatedAt: new Date().toISOString()
     };
+    if (member.committees) {
+      payload.committees = member.committees;
+    }
+    if (member.committeeRoles) {
+      payload.committeeRoles = member.committeeRoles;
+    }
     await setDoc(memberRef, payload, { merge: true });
     return { success: true };
   } catch (err: any) {

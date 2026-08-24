@@ -43,6 +43,9 @@ import DeanAuditLogDashboard from './pages/DeanAuditLogDashboard';
 import DeanVotingForm from './pages/DeanVotingForm';
 import DeanVotingDashboard from './pages/DeanVotingDashboard';
 import DeanVotingAuditDashboard from './pages/DeanVotingAuditDashboard';
+import CandidateVotingForm from './pages/CandidateVotingForm';
+import CandidateVotingAuditDashboard from './pages/CandidateVotingAuditDashboard';
+import CandidateVotingReport from './pages/CandidateVotingReport';
 import GovernanceArchives from './pages/GovernanceArchives';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -92,6 +95,9 @@ export default function App() {
           <Route path="dean-voting" element={<ProtectedRoute><DeanVotingForm /></ProtectedRoute>} />
           <Route path="dean-voting-dashboard" element={<ProtectedRoute allowedRoles={['admin', 'Membership Committee', 'Membership Committee Chair']}><DeanVotingDashboard /></ProtectedRoute>} />
           <Route path="dean-voting-audit" element={<ProtectedRoute allowedRoles={['admin']}><DeanVotingAuditDashboard /></ProtectedRoute>} />
+          <Route path="candidate-voting" element={<ProtectedRoute><CandidateVotingForm /></ProtectedRoute>} />
+          <Route path="candidate-voting-audit" element={<ProtectedRoute allowedRoles={['admin']}><CandidateVotingAuditDashboard /></ProtectedRoute>} />
+          <Route path="candidate-voting-report" element={<ProtectedRoute allowedRoles={['admin', 'Membership Committee', 'Membership Committee Chair', 'officer']}><CandidateVotingReport /></ProtectedRoute>} />
           <Route path="governance-archives" element={<ProtectedRoute><GovernanceArchives /></ProtectedRoute>} />
           <Route path="privacy-policy" element={<PrivacyPolicy />} />
           <Route path="terms-of-service" element={<TermsOfService />} />

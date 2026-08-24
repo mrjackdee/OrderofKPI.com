@@ -21,12 +21,19 @@ interface UserRecord {
   email: string;
   name: string;
   first_name: string;
+  last_name?: string;
   password_hash: string;
   is_first_login: number;
   role: string;
-  roles?: string;
+  roles?: string[] | string;
   title?: string;
+  financial_status?: string;
+  industry?: string;
+  profile_photo?: string;
   is_test_credential?: number;
+  committees?: string[] | string;
+  committeeRoles?: Record<string, string> | string;
+  committee_roles?: Record<string, string> | string;
 }
 
 const passwordOverridesPath = path.join(process.cwd(), "user_password_overrides.json");
@@ -697,6 +704,17 @@ async function initDb() {
     `);
 
     sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS candidate_votes (
+        id TEXT PRIMARY KEY,
+        voter_email TEXT,
+        candidate_id TEXT,
+        candidate_name TEXT,
+        decision TEXT,
+        timestamp TEXT
+      )
+    `);
+
+    sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS system_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
@@ -1086,15 +1104,46 @@ function findUser(email: string): UserRecord | null {
     try {
       const row = sqliteDb.prepare("SELECT * FROM users WHERE LOWER(email) = ?").get(normEmail) as any;
       if (row) {
+        let comms: string[] = [];
+        let commRoles: Record<string, string> = {};
+        let rolesParsed: string[] = [];
+        try {
+          if (row.committees) {
+            comms = typeof row.committees === 'string' ? JSON.parse(row.committees) : row.committees;
+          }
+        } catch(e) {}
+        try {
+          if (row.committee_roles) {
+            commRoles = typeof row.committee_roles === 'string' ? JSON.parse(row.committee_roles) : row.committee_roles;
+          } else if (row.committeeRoles) {
+            commRoles = typeof row.committeeRoles === 'string' ? JSON.parse(row.committeeRoles) : row.committeeRoles;
+          }
+        } catch(e) {}
+        try {
+          if (row.roles) {
+            rolesParsed = typeof row.roles === 'string' ? JSON.parse(row.roles) : row.roles;
+          }
+        } catch(e) {}
+        if (!Array.isArray(rolesParsed) || rolesParsed.length === 0) {
+          rolesParsed = [row.role || 'member'];
+        }
+
         userRecord = {
           email: row.email,
           name: row.name,
           first_name: row.first_name,
+          last_name: row.last_name,
           password_hash: row.password_hash,
           is_first_login: row.is_first_login,
           role: row.role,
-          roles: row.roles,
-          title: row.title
+          roles: rolesParsed,
+          title: row.title,
+          financial_status: row.financial_status,
+          industry: row.industry,
+          profile_photo: row.profile_photo,
+          is_test_credential: row.is_test_credential,
+          committees: Array.isArray(comms) ? comms : [],
+          committeeRoles: (commRoles && typeof commRoles === 'object') ? commRoles : {}
         };
       }
     } catch (e) {
@@ -1105,9 +1154,50 @@ function findUser(email: string): UserRecord | null {
   // JSON fallback
   if (!userRecord && fs.existsSync(jsonDbPath)) {
     try {
-      const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8")) as Record<string, UserRecord>;
+      const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8")) as Record<string, any>;
       if (data[normEmail]) {
-        userRecord = data[normEmail];
+        const u = data[normEmail];
+        let comms: string[] = [];
+        let commRoles: Record<string, string> = {};
+        let rolesParsed: string[] = [];
+        try {
+          if (u.committees) {
+            comms = typeof u.committees === 'string' ? JSON.parse(u.committees) : u.committees;
+          }
+        } catch(e) {}
+        try {
+          if (u.committeeRoles) {
+            commRoles = typeof u.committeeRoles === 'string' ? JSON.parse(u.committeeRoles) : u.committeeRoles;
+          } else if (u.committee_roles) {
+            commRoles = typeof u.committee_roles === 'string' ? JSON.parse(u.committee_roles) : u.committee_roles;
+          }
+        } catch(e) {}
+        try {
+          if (u.roles) {
+            rolesParsed = typeof u.roles === 'string' ? JSON.parse(u.roles) : u.roles;
+          }
+        } catch(e) {}
+        if (!Array.isArray(rolesParsed) || rolesParsed.length === 0) {
+          rolesParsed = [u.role || 'member'];
+        }
+
+        userRecord = {
+          email: u.email,
+          name: u.name,
+          first_name: u.first_name,
+          last_name: u.last_name,
+          password_hash: u.password_hash,
+          is_first_login: u.is_first_login,
+          role: u.role,
+          roles: rolesParsed,
+          title: u.title,
+          financial_status: u.financial_status,
+          industry: u.industry,
+          profile_photo: u.profile_photo,
+          is_test_credential: u.is_test_credential,
+          committees: Array.isArray(comms) ? comms : [],
+          committeeRoles: (commRoles && typeof commRoles === 'object') ? commRoles : {}
+        };
       }
     } catch (e) {
       console.error("JSON read error", e);
@@ -1126,7 +1216,10 @@ function findUser(email: string): UserRecord | null {
         password_hash: passHash,
         is_first_login: 0,
         role: "prospective",
-        title: "Candidate"
+        roles: ["prospective"],
+        title: "Candidate",
+        committees: [],
+        committeeRoles: {}
       };
     }
   }
@@ -1146,7 +1239,10 @@ function findUser(email: string): UserRecord | null {
             : hashPassword("atlanta"),
         is_first_login: (normEmail === "james.haywood@orderofkpi.org" || normEmail === "donald.mitchell@orderofkpi.org" || normEmail === "sammie.poe@orderofkpi.org") ? 0 : 1,
         role: defaultU.role,
-        title: defaultU.title
+        roles: (defaultU as any).roles || [defaultU.role],
+        title: defaultU.title,
+        committees: (defaultU as any).committees || [],
+        committeeRoles: (defaultU as any).committee_roles || (defaultU as any).committeeRoles || {}
       };
     }
   }
@@ -1161,12 +1257,17 @@ function findUser(email: string): UserRecord | null {
       password_hash: hashPassword(qa.pass),
       is_first_login: 0,
       role: qa.role,
-      title: qa.title
+      roles: [qa.role],
+      title: qa.title,
+      committees: qa.role.includes("Chair") ? ["membership_intake"] : (qa.role.includes("Committee") ? ["membership_intake"] : []),
+      committeeRoles: qa.role.includes("Chair") ? { membership_intake: "chair" } : (qa.role.includes("Committee") ? { membership_intake: "member" } : {})
     };
   } else if (!userRecord && (normEmail.startsWith("qa.") || normEmail.startsWith("test."))) {
     let role = "prospective";
     let name = "QA Candidate";
     let title = "Candidate";
+    let comms: string[] = [];
+    let commRoles: Record<string, string> = {};
 
     if (normEmail.includes("admin")) {
       role = "admin";
@@ -1176,9 +1277,12 @@ function findUser(email: string): UserRecord | null {
       role = "Membership Committee Chair";
       name = "QA Committee Chair";
       title = "Committee Chair";
+      comms = ["membership_intake"];
+      commRoles = { membership_intake: "chair" };
     } else if (normEmail.includes("member")) {
       role = "member";
       name = "QA Member";
+      title = "Member";
     }
 
     userRecord = {
@@ -1188,7 +1292,10 @@ function findUser(email: string): UserRecord | null {
       password_hash: hashPassword("2012"), // E2E tests can use "2012"
       is_first_login: 0,
       role,
-      title
+      roles: [role],
+      title,
+      committees: comms,
+      committeeRoles: commRoles
     };
   }
 
@@ -1425,6 +1532,19 @@ async function startServer() {
 
       console.log(`[AUTH] Login successful: ${email} (FirstLogin: ${user.is_first_login === 1})`);
       logEvent(email, "LOGIN_SUCCESS", `User logged in successfully${user.is_first_login === 1 ? ' (First Login)' : ''}`);
+      let parsedCommittees = user.committees || [];
+      if (typeof parsedCommittees === 'string') {
+        try { parsedCommittees = JSON.parse(parsedCommittees); } catch(e) { parsedCommittees = []; }
+      }
+      let parsedCommitteeRoles = user.committeeRoles || user.committee_roles || {};
+      if (typeof parsedCommitteeRoles === 'string') {
+        try { parsedCommitteeRoles = JSON.parse(parsedCommitteeRoles); } catch(e) { parsedCommitteeRoles = {}; }
+      }
+      let parsedRoles = user.roles || [user.role];
+      if (typeof parsedRoles === 'string') {
+        try { parsedRoles = JSON.parse(parsedRoles); } catch(e) { parsedRoles = [user.role]; }
+      }
+
       return res.json({
         success: true,
         user: {
@@ -1432,7 +1552,10 @@ async function startServer() {
           name: user.name,
           firstName: user.first_name,
           role: user.role,
+          roles: parsedRoles,
           title: user.title,
+          committees: parsedCommittees,
+          committeeRoles: parsedCommitteeRoles,
           isFirstLogin: user.is_first_login === 1
         }
       });
@@ -3403,17 +3526,39 @@ async function startServer() {
 
       const uRole = (user.role || '').toLowerCase();
       const uTitle = (user.title || '').toLowerCase();
+      const uFin = (user.financial_status || '').toLowerCase();
+
+      let isFinancial = false;
+      let sheetLoaded = false;
+      if (cachedSheetData?.data?.members && Array.isArray(cachedSheetData.data.members)) {
+        sheetLoaded = true;
+        const sm = cachedSheetData.data.members.find((m: any) => 
+          (m.kpiEmail && m.kpiEmail.toLowerCase().trim() === normEmail) ||
+          (m.personalEmail && m.personalEmail.toLowerCase().trim() === normEmail)
+        );
+        if (sm && sm.fy27Paid) {
+          isFinancial = true;
+        }
+      }
+
+      if (!sheetLoaded) {
+        if (uFin === 'active' || uRole === 'admin' || uRole === 'officer') {
+          isFinancial = true;
+        }
+      }
+
       if (
         uRole === 'applicant' || 
         uRole === 'prospective' || 
         uRole === 'candidate' || 
         uTitle === 'candidate' || 
         normEmail === 'candidate@gmail.com' ||
-        normEmail.includes('candidate')
+        normEmail.includes('candidate') ||
+        !isFinancial
       ) {
         return res.status(403).json({ 
           success: false, 
-          message: "Aspirant or candidate accounts are ineligible for committee assignments per organization constitution and bylaws." 
+          message: "Non-financial members, aspirants, or candidates are ineligible for committee assignments per organization constitution and bylaws. Members must have FY27 financial status checked in the official Google Sheet roster." 
         });
       }
 
@@ -4153,6 +4298,168 @@ KP Member Portal`;
 
       saveFallbackDeanVotes(list);
       res.json({ success: true, message: "Votes bulk sync completed successfully." });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // --- CANDIDATE VOTING ENDPOINTS ---
+  const candidateVotesJsonPath = path.join(process.cwd(), "candidate_votes_fallback.json");
+  function getFallbackCandidateVotes(): any[] {
+    try {
+      if (fs.existsSync(candidateVotesJsonPath)) {
+        return JSON.parse(fs.readFileSync(candidateVotesJsonPath, "utf-8"));
+      }
+    } catch (e) {}
+    return [];
+  }
+  function saveFallbackCandidateVotes(list: any[]) {
+    try {
+      fs.writeFileSync(candidateVotesJsonPath, JSON.stringify(list, null, 2));
+    } catch (e) {}
+  }
+
+  app.get("/api/candidate-votes", async (req, res) => {
+    try {
+      let votes: any[] = [];
+      if (useSqlite && sqliteDb) {
+        try {
+          votes = sqliteDb.prepare("SELECT id, voter_email, candidate_id, candidate_name, decision, timestamp FROM candidate_votes").all();
+        } catch (dbErr) {
+          votes = getFallbackCandidateVotes();
+        }
+      } else {
+        votes = getFallbackCandidateVotes();
+      }
+      const legitEmails = await getLegitimateVoterEmails();
+      const filtered = votes.filter(v => {
+        const email = (v.voter_email || "").toLowerCase().trim();
+        if (email === "admin@orderofkpi.org" || email === "candidate@gmail.com") return true;
+        return legitEmails.has(email);
+      });
+      res.json({ success: true, votes: filtered });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.get("/api/candidate-votes/user", async (req, res) => {
+    try {
+      const email = (req.query.email as string || "").toLowerCase().trim();
+      if (!email) {
+        return res.status(400).json({ success: false, message: "Email required" });
+      }
+      let votes: any[] = [];
+      if (useSqlite && sqliteDb) {
+        try {
+          votes = sqliteDb.prepare("SELECT id, candidate_id, candidate_name, decision, timestamp FROM candidate_votes WHERE LOWER(voter_email) = ?").all(email);
+        } catch (dbErr) {
+          votes = getFallbackCandidateVotes().filter(v => (v.voter_email || "").toLowerCase().trim() === email);
+        }
+      } else {
+        votes = getFallbackCandidateVotes().filter(v => (v.voter_email || "").toLowerCase().trim() === email);
+      }
+      res.json({ success: true, votes });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.post("/api/candidate-votes", async (req, res) => {
+    try {
+      const { voter_email, candidate_id, candidate_name, decision } = req.body;
+      if (!voter_email || !candidate_id || !decision) {
+        return res.status(400).json({ success: false, message: "Voter email, candidate ID, and decision required." });
+      }
+      const emailNorm = voter_email.toLowerCase().trim();
+      const dec = decision.toLowerCase().trim();
+      if (dec !== 'yes' && dec !== 'no') {
+        return res.status(400).json({ success: false, message: "Decision must be 'yes' or 'no'." });
+      }
+
+      const legitEmails = await getLegitimateVoterEmails();
+      const isAdminEmail = emailNorm === 'admin@orderofkpi.org' || emailNorm === 'candidate@gmail.com';
+      if (!legitEmails.has(emailNorm) && !isAdminEmail) {
+        return res.status(403).json({ success: false, message: "Only eligible members (FY27 MIP Eligible) may cast candidate votes." });
+      }
+
+      const id = `${emailNorm.replace(/[^a-zA-Z0-9]/g, '_')}_${String(candidate_id).replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const timestamp = new Date().toISOString();
+
+      if (useSqlite && sqliteDb) {
+        try {
+          const existing = sqliteDb.prepare("SELECT id FROM candidate_votes WHERE id = ? OR (LOWER(voter_email) = ? AND candidate_id = ?)").get(id, emailNorm, candidate_id) as any;
+          if (existing) {
+            sqliteDb.prepare("UPDATE candidate_votes SET decision = ?, timestamp = ? WHERE id = ?").run(dec, timestamp, existing.id || id);
+          } else {
+            sqliteDb.prepare("INSERT INTO candidate_votes (id, voter_email, candidate_id, candidate_name, decision, timestamp) VALUES (?, ?, ?, ?, ?, ?)").run(id, emailNorm, candidate_id, candidate_name || '', dec, timestamp);
+          }
+        } catch (dbErr) {
+          console.error("SQLite candidate vote error:", dbErr);
+        }
+      }
+
+      const list = getFallbackCandidateVotes();
+      const idx = list.findIndex(v => v.id === id || ((v.voter_email || '').toLowerCase().trim() === emailNorm && String(v.candidate_id) === String(candidate_id)));
+      const entry = { id, voter_email: emailNorm, candidate_id: String(candidate_id), candidate_name: candidate_name || '', decision: dec, timestamp };
+      if (idx >= 0) {
+        list[idx] = entry;
+      } else {
+        list.push(entry);
+      }
+      saveFallbackCandidateVotes(list);
+
+      logEvent(emailNorm, "CANDIDATE_VOTE_CAST", `Cast candidate vote '${dec}' for ${candidate_name || candidate_id}`);
+      res.json({ success: true, message: "Candidate vote successfully recorded." });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.delete("/api/admin/candidate-votes/:id", async (req, res) => {
+    try {
+      const id = req.params.id;
+      if (useSqlite && sqliteDb) {
+        try {
+          sqliteDb.prepare("DELETE FROM candidate_votes WHERE id = ?").run(id);
+        } catch (e) {}
+      }
+      const list = getFallbackCandidateVotes().filter(v => v.id !== id);
+      saveFallbackCandidateVotes(list);
+      res.json({ success: true, message: "Vote deleted successfully." });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.post("/api/candidate-votes/sync-bulk", async (req, res) => {
+    try {
+      const { votes } = req.body;
+      if (!Array.isArray(votes)) {
+        return res.status(400).json({ success: false, message: "Votes required as array." });
+      }
+      const list = getFallbackCandidateVotes();
+      for (const v of votes) {
+        if (!v.voter_email || !v.candidate_id || !v.decision) continue;
+        const id = v.id || `${v.voter_email.toLowerCase().trim().replace(/[^a-zA-Z0-9]/g, '_')}_${String(v.candidate_id).replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const timestamp = v.timestamp || new Date().toISOString();
+        if (useSqlite && sqliteDb) {
+          try {
+            const existing = sqliteDb.prepare("SELECT id FROM candidate_votes WHERE id = ?").get(id);
+            if (existing) {
+              sqliteDb.prepare("UPDATE candidate_votes SET decision = ?, timestamp = ? WHERE id = ?").run(v.decision, timestamp, id);
+            } else {
+              sqliteDb.prepare("INSERT INTO candidate_votes (id, voter_email, candidate_id, candidate_name, decision, timestamp) VALUES (?, ?, ?, ?, ?, ?)").run(id, v.voter_email.toLowerCase().trim(), String(v.candidate_id), v.candidate_name || '', v.decision, timestamp);
+            }
+          } catch (e) {}
+        }
+        const idx = list.findIndex(item => item.id === id);
+        const entry = { id, voter_email: v.voter_email.toLowerCase().trim(), candidate_id: String(v.candidate_id), candidate_name: v.candidate_name || '', decision: v.decision, timestamp };
+        if (idx >= 0) list[idx] = entry;
+        else list.push(entry);
+      }
+      saveFallbackCandidateVotes(list);
+      res.json({ success: true, message: "Candidate votes bulk sync completed." });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
