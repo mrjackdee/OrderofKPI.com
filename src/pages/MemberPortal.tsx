@@ -230,7 +230,7 @@ export default function MemberPortal() {
     eligibleVoters.some(e => e.toLowerCase().trim() === normUserEmail);
 
   return (
-    <div className="min-h-screen bg-cream w-full overflow-x-clip">
+    <div className="min-h-screen bg-cream w-full overflow-x-hidden">
       <motion.div 
         initial="hidden"
         animate="visible"
@@ -255,69 +255,71 @@ export default function MemberPortal() {
         </motion.div>
 
         {/* Core Member Tools Grid */}
-        <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Link
-            to="/financial-roster"
-            className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
-          >
-            <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
-              <Users size={28} />
-            </div>
-            <div>
-              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Membership Dues & Status</h4>
-              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Active members & dues standing</p>
-            </div>
-          </Link>
-
-          <Link
-            to="/intake-calendar"
-            className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
-          >
-            <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
-              <CalendarDays size={28} />
-            </div>
-            <div>
-              <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Intake Schedule & Calendar</h4>
-              <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Key dates, meetings & tea time</p>
-            </div>
-          </Link>
-
-          {!isApplicant && isCandidateVoterEligible && (
+        <motion.div variants={itemVariants} className="w-full overflow-x-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-w-0">
             <Link
-              to="/candidate-voting"
-              className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft relative overflow-hidden"
+              to="/financial-roster"
+              className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
             >
-              <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500 shrink-0">
-                <Award size={28} />
+              <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
+                <Users size={28} />
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">FY27 Candidate Voting</h4>
-                  {!candidateVotingStatus.isOpen && (
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
-                      Voting Scheduled
-                    </span>
-                  )}
-                </div>
-                <p className="text-ivy/60 text-[11px] font-medium mt-1 leading-snug">
-                  {!candidateVotingStatus.isOpen ? (
-                    <>
-                      Voting will open Wed, Aug 26, 2026 at 5:00 PM ET and close on Fri August 28, 2026 at 8:00 AM ET. If you have any questions, please reach out to{' '}
-                      <a 
-                        href="mailto:james.haywood@orderofkpi.org" 
-                        onClick={(e) => e.stopPropagation()} 
-                        className="underline hover:text-ivy font-semibold text-amber-900"
-                      >
-                        JR Haywood
-                      </a>.
-                    </>
-                  ) : (
-                    "Cast and submit candidate votes"
-                  )}
-                </p>
+              <div>
+                <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Membership Dues & Status</h4>
+                <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Active members & dues standing</p>
               </div>
             </Link>
-          )}
+
+            <Link
+              to="/intake-calendar"
+              className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft"
+            >
+              <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500">
+                <CalendarDays size={28} />
+              </div>
+              <div>
+                <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">Intake Schedule & Calendar</h4>
+                <p className="text-ivy/40 text-[10px] uppercase tracking-widest mt-1">Key dates, meetings & tea time</p>
+              </div>
+            </Link>
+
+            {!isApplicant && isCandidateVoterEligible && (
+              <Link
+                to="/candidate-voting"
+                className="bg-white border border-gold/20 rounded-lg p-8 flex items-center gap-6 hover:shadow-lg transition-all group shadow-soft relative overflow-hidden"
+              >
+                <div className="p-4 bg-cream rounded-full border border-gold/10 group-hover:bg-ivy group-hover:text-cream transition-all duration-500 shrink-0">
+                  <Award size={28} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-ivy text-sm font-bold uppercase tracking-wider">FY27 Candidate Voting</h4>
+                    {!candidateVotingStatus.isOpen && (
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
+                        Voting Scheduled
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-ivy/60 text-[11px] font-medium mt-1 leading-snug">
+                    {!candidateVotingStatus.isOpen ? (
+                      <>
+                        Voting will open Wed, Aug 26, 2026 at 5:00 PM ET and close on Fri August 28, 2026 at 8:00 AM ET. If you have any questions, please reach out to{' '}
+                        <a 
+                          href="mailto:james.haywood@orderofkpi.org" 
+                          onClick={(e) => e.stopPropagation()} 
+                          className="underline hover:text-ivy font-semibold text-amber-900"
+                        >
+                          JR Haywood
+                        </a>.
+                      </>
+                    ) : (
+                      "Cast and submit candidate votes"
+                    )}
+                  </p>
+                </div>
+              </Link>
+            )}
+          </div>
         </motion.div>
 
         {/* KP Committees Directory Section */}

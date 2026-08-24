@@ -112,7 +112,7 @@ export default function Layout() {
         )
       )}
       
-      <div className={`layout-container flex h-full grow flex-col pt-0`}>
+      <div className={`layout-container flex h-full grow flex-col pt-10 md:pt-14`}>
         <header className={`flex items-center justify-between whitespace-nowrap border-b border-solid border-primary px-4 md:px-10 py-4 md:py-6 bg-black/95 backdrop-blur sticky top-0 left-0 right-0 z-50 transition-all duration-300`}>
           <div className="flex items-center gap-2 md:gap-4 text-primary">
             <img 

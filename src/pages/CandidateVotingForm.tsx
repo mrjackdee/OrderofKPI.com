@@ -4,9 +4,11 @@ import { Link } from 'react-router-dom';
 import { Award, ShieldCheck, CheckCircle2, AlertCircle, ArrowLeft, Send, Check, X, Clock } from 'lucide-react';
 import MemberHeader from '../components/MemberHeader';
 import { 
+  db,
   firebaseSaveCandidateVote, 
   syncCandidateVotesFromFirestore 
 } from '../lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 import { getCandidateVotingStatus, CANDIDATE_VOTING_WINDOW_TEXT } from '../lib/votingWindow';
 
@@ -55,29 +57,53 @@ export default function CandidateVotingForm() {
       })
       .catch(err => console.warn('Roster fetch error:', err));
 
-    // 2. Fetch candidates & user votes
-    Promise.all([
-      fetch('/api/candidates').then(res => res.json()).catch(() => ({ success: false })),
-      fetch(`/api/candidate-votes/user?email=${encodeURIComponent(userEmail)}`).then(res => res.json()).catch(() => ({ success: false }))
-    ]).then(([candRes, voteRes]) => {
-      if (candRes.success && Array.isArray(candRes.candidates)) {
-        // Filter candidates where status = selection
-        const activeCandidates = candRes.candidates.filter((c: any) => 
-          c.status && c.status.toLowerCase() === 'selection'
-        );
-        setCandidates(activeCandidates);
-      } else {
+    // 2. Fetch candidates & user votes from Firestore directly
+    const fetchCandidates = async () => {
+      try {
+        const candidatesRef = collection(db, "candidates");
+        const q = query(candidatesRef);
+        const querySnapshot = await getDocs(q);
+        const list: any[] = [];
+        querySnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          const docId = docSnap.id;
+          
+          // Case-insensitive check for SELECTION stage/status
+          const stage = (data.stage || data.status || "").toUpperCase().trim();
+          if (stage === "SELECTION") {
+            list.push({
+              id: docId,
+              ...data,
+              displayName: data.name || data.fullName || data.applicantName || docId,
+              displayProfession: data.industry || data.profession || data.email || 'Candidate',
+              displayStage: data.stage || data.status || 'Selection'
+            });
+          }
+        });
+        setCandidates(list);
+      } catch (err) {
+        console.error("Error fetching candidates:", err);
         setCandidates([]);
       }
+    };
 
-      if (voteRes.success && Array.isArray(voteRes.votes)) {
-        const map: Record<string, string> = {};
-        voteRes.votes.forEach((v: any) => {
-          map[v.candidate_id] = v.decision;
-        });
-        setVotesMap(map);
+    const fetchUserVotes = async () => {
+      try {
+        const res = await fetch(`/api/candidate-votes/user?email=${encodeURIComponent(userEmail)}`);
+        const voteRes = await res.json();
+        if (voteRes.success && Array.isArray(voteRes.votes)) {
+          const map: Record<string, string> = {};
+          voteRes.votes.forEach((v: any) => {
+            map[v.candidate_id] = v.decision;
+          });
+          setVotesMap(map);
+        }
+      } catch (err) {
+        console.warn("Error fetching user votes:", err);
       }
-    }).finally(() => {
+    };
+
+    Promise.all([fetchCandidates(), fetchUserVotes()]).finally(() => {
       setLoading(false);
     });
 
@@ -102,9 +128,9 @@ export default function CandidateVotingForm() {
 
     // Check if every candidate has a selection
     for (const cand of candidates) {
-      const candId = cand.id || cand.name;
+      const candId = cand.id;
       if (!votesMap[candId]) {
-        setError(`Please make a selection (For or Against) for candidate "${cand.name || cand.fullName || candId}" before submitting your ballot.`);
+        setError(`Please make a selection (For or Against) for candidate "${cand.displayName}" before submitting your ballot.`);
         return;
       }
     }
@@ -115,8 +141,8 @@ export default function CandidateVotingForm() {
 
     try {
       const promises = candidates.map(async (cand) => {
-        const candidateId = cand.id || cand.name;
-        const candidateName = cand.name || cand.fullName || 'Candidate';
+        const candidateId = cand.id;
+        const candidateName = cand.displayName;
         const decision = (votesMap[candidateId] || 'yes') as 'yes' | 'no';
 
         const res = await fetch('/api/candidate-votes', {
@@ -304,15 +330,15 @@ export default function CandidateVotingForm() {
                     >
                       <div>
                         <div className="flex items-center space-x-2">
-                          <h3 className="font-bold text-stone-900 text-base">{candidate.name || candidate.fullName}</h3>
-                          {candidate.industry && (
+                          <h3 className="font-bold text-stone-900 text-base">{candidate.displayName}</h3>
+                          {candidate.displayProfession && candidate.displayProfession !== candidate.email && (
                             <span className="text-xs px-2.5 py-0.5 bg-stone-200 text-stone-700 rounded-full font-medium">
-                              {candidate.industry}
+                              {candidate.displayProfession}
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-stone-500 mt-1">
-                          Status: <span className="font-medium text-stone-700">{candidate.status || 'Selection'}</span>
+                          Status: <span className="font-medium text-stone-700">{candidate.displayStage}</span>
                         </p>
                       </div>
 

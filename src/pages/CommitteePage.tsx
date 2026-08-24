@@ -1192,7 +1192,8 @@ export default function CommitteePage() {
         )}
 
         {/* Navigation Sub-Tabs */}
-        <div className="flex border-b border-gold/20 overflow-x-auto gap-2">
+        <div className="w-full overflow-x-auto min-w-0 border-b border-gold/20">
+          <div className="flex min-w-[600px]">
           {[
             { id: 'calendar', label: 'Committee Calendar', icon: CalendarDays, count: meetings.length },
             { id: 'resources', label: 'Document Repository', icon: FolderGit2, count: resources.length },
@@ -1219,6 +1220,7 @@ export default function CommitteePage() {
               </button>
             );
           })}
+          </div>
         </div>
 
         {/* TAB 1: DOCUMENT REPOSITORY */}
@@ -1487,7 +1489,8 @@ export default function CommitteePage() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="w-full overflow-x-auto min-w-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-w-[600px]">
               {members.map(member => {
                 const norm = normalizeUserRBAC(member);
                 const isMemberAdmin = norm.role === 'admin';
@@ -1571,6 +1574,7 @@ export default function CommitteePage() {
                 );
               })}
             </div>
+          </div>
 
             {members.length === 0 && (
               <div className="bg-white border border-gold/20 rounded-lg p-12 text-center shadow-soft">
@@ -1663,7 +1667,7 @@ export default function CommitteePage() {
           </div>
         )}
 
-// MODAL: ADD RESOURCE
+        {/* MODAL: ADD RESOURCE */}
         {showAddResourceModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto pointer-events-auto">
             <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto pointer-events-auto">
