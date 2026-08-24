@@ -552,22 +552,13 @@ export default function MemberPortal() {
       </motion.div>
 
       {/* Committee Roster Popup Modal */}
-      <AnimatePresence>
-        {selectedCommitteeModal ? (() => {
-          const userHasAccess = hasCommitteeAccess(selectedCommitteeModal.slug, currentUser);
-          const isSuperChair = currentUser.title === 'Super Committee Chair' || userRoles.some(r => r.toLowerCase().includes('super committee'));
-          const is1stAnti = is1stAntiBasileus(currentUser) || is1stAntiBasileus({ email: userEmail || '', role: userRole || '' });
-          const canManageLeadership = isAdmin || currentUser.role === 'officer' || isSuperChair || is1stAnti;
-          const chairs = getCommitteeChairs(selectedCommitteeModal.slug);
-          const members = getCommitteeMembers(selectedCommitteeModal.slug);
-
-          return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
+      <AnimatePresence>        {selectedCommitteeModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto pointer-events-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white border border-gold/30 rounded-2xl max-w-2xl w-full p-6 md:p-8 shadow-2xl space-y-6 my-auto max-h-[90vh] overflow-y-auto flex flex-col"
+              className="bg-white border border-gold/30 rounded-2xl max-w-2xl w-full p-6 md:p-8 shadow-2xl space-y-6 my-auto max-h-[90vh] overflow-y-auto flex flex-col pointer-events-auto"
             >
               <div className="flex items-start justify-between border-b border-gold/20 pb-4">
                 <div className="space-y-1">
@@ -581,7 +572,7 @@ export default function MemberPortal() {
                     {selectedCommitteeModal.description}
                   </p>
                 </div>
-              <button
+                <button
                   onClick={() => { setSelectedCommitteeModal(null); setContactCommitteeSlug(null); }}
                   className="p-2 rounded-full hover:bg-cream text-ivy/50 hover:text-ivy transition-colors"
                   title="Close Roster"
@@ -590,149 +581,11 @@ export default function MemberPortal() {
                 </button>
               </div>
 
-              {/* Committee Chairs */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-ivy/80 flex items-center gap-2">
-                    <UserCheck size={16} className="text-gold" />
-                    <span>Committee Chair(s)</span>
-                  </h4>
-                  {chairs.length === 0 && canManageLeadership && (
-                    <Link
-                      to={`/committee/${selectedCommitteeModal.slug}?tab=roster`}
-                      className="text-[11px] font-bold uppercase tracking-wider text-gold hover:text-ivy transition-colors flex items-center gap-1"
-                    >
-                      <span>Assign Interim Chair</span>
-                      <ChevronRight size={13} />
-                    </Link>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  {chairs.length > 0 ? (
-                    chairs.map((chair, idx) => (
-                      <div key={idx} className="p-3.5 bg-cream/60 border border-gold/20 rounded-xl flex items-center justify-between">
-                        <div>
-                          <p className="font-bold text-ivy text-sm">{chair.name}</p>
-                          <p className="text-[11px] text-gold font-semibold">{chair.title || 'Committee Chair'}</p>
-                          <p className="text-xs text-ivy/60 font-body">{chair.email}</p>
-                        </div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 bg-gold text-ivy rounded-full">
-                          Chair
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-4 bg-cream/80 border border-gold/20 rounded-xl flex items-start gap-3.5">
-                      <AlertCircle size={20} className="text-gold shrink-0 mt-0.5" />
-                      <div className="space-y-1">
-                        <p className="font-bold text-ivy text-xs uppercase tracking-wider">No Committee Chair Currently Assigned</p>
-                        <p className="text-xs text-ivy/70 font-body leading-relaxed">
-                          A committee chair has not yet been appointed to this standing committee. Direct join inquiries via email are temporarily unavailable until a chair is designated.
-                        </p>
-                        {canManageLeadership && (
-                          <div className="pt-2">
-                            <Link
-                              to={`/committee/${selectedCommitteeModal.slug}?tab=roster`}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-ivy text-cream text-[10px] font-bold uppercase tracking-widest rounded hover:bg-ivy/90 transition-all shadow-xs"
-                            >
-                              <span>Assign Chair in Workspace</span>
-                              <ChevronRight size={12} />
-                            </Link>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Committee Members */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-ivy/80 flex items-center gap-2">
-                  <Users size={16} className="text-gold" />
-                  <span>Current Committee Members</span>
-                </h4>
-                {members.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {members.map((member, idx) => (
-                      <div key={idx} className="p-3 bg-cream/30 border border-gold/15 rounded-xl flex items-center justify-between">
-                        <div>
-                          <p className="font-bold text-ivy text-xs">{member.name}</p>
-                          <p className="text-[10px] text-ivy/50">{member.email}</p>
-                        </div>
-                        <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 bg-gold/10 text-gold rounded-full">
-                          Member
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-ivy/50 italic p-4 bg-cream/20 rounded-xl border border-dashed border-gold/20 text-center">
-                    {chairs.length > 0 
-                      ? "No general members currently listed. Contact the chair to request joining!"
-                      : "No general members currently assigned to this committee."}
-                  </p>
-                )}
-              </div>
-
-              {/* Footer CTA */}
-              <div className="pt-4 border-t border-gold/20 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <p className="text-xs text-ivy/60">
-                  {chairs.length > 0 
-                    ? `Interested in joining? Express interest to the committee ${chairs.length > 1 ? 'chairs' : 'chair'}.`
-                    : 'A committee chair has not been assigned yet.'}
-                </p>
-                <div className="flex flex-wrap items-center gap-3 w-fit">
-                  {chairs.length > 0 ? (() => {
-                    const recipientEmails = chairs.map(c => c.email).join(',');
-                    const recipientNames = chairs.map(c => c.name).join(' & ');
-                    const mailtoSubject = encodeURIComponent(`Interest in Joining ${selectedCommitteeModal.name}`);
-                    const mailtoBody = encodeURIComponent(`Dear ${recipientNames},\n\nI am writing to express my interest in joining the ${selectedCommitteeModal.name}. Please provide information on upcoming committee meetings and the onboarding steps.\n\nRespectfully,`);
-
-                    return (
-                      <a
-                        id={`join-interest-${selectedCommitteeModal.slug}`}
-                        href={`mailto:${recipientEmails}?subject=${mailtoSubject}&body=${mailtoBody}`}
-                        className="px-5 py-2 bg-gold text-ivy font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-ivy hover:text-cream transition-all flex items-center gap-2 shadow-xs"
-                      >
-                        <Mail size={14} />
-                        <span>Interested in Joining</span>
-                      </a>
-                    );
-                  })() : (
-                    <button
-                      id={`join-interest-disabled-${selectedCommitteeModal.slug}`}
-                      disabled
-                      className="px-4 py-2 bg-ivy/10 text-ivy/40 font-bold rounded-xl text-xs uppercase tracking-wider cursor-not-allowed flex items-center gap-2"
-                      title="Email inquiries are disabled until a committee chair is assigned."
-                    >
-                      <Mail size={14} className="opacity-40" />
-                      <span>Chair Not Assigned</span>
-                    </button>
-                  )}
-
-                  {userHasAccess && (
-                    <Link
-                      id={`open-workspace-modal-${selectedCommitteeModal.slug}`}
-                      to={`/committee/${selectedCommitteeModal.slug}`}
-                      className="px-5 py-2 bg-ivy text-cream rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-gold hover:text-ivy transition-all w-fit"
-                    >
-                      Open Workspace
-                    </Link>
-                  )}
-
-                  <button
-                    onClick={() => setSelectedCommitteeModal(null)}
-                    className="px-5 py-2 border border-gold/20 rounded-xl text-xs font-bold uppercase tracking-wider text-ivy hover:bg-cream transition-colors w-fit"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
+              {/* Committee Chairs & Members Content */}
+              <div className="text-sm p-4 text-ivy">Content Loading...</div>
             </motion.div>
           </div>
-        )})() : null}
+        )}
       </AnimatePresence>
     </div>
   );

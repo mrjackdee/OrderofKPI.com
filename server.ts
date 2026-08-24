@@ -360,7 +360,7 @@ async function syncLocalMemberToFirestoreCloud(email: string) {
   });
 
   const docId = normEmail.replace(/\//g, "_");
-  const dbId = firebaseDatabaseId || "(default)";
+  const dbId = "ai-studio-87b8a669-8698-4f66-8799-ff9b38422e20";
   const url = `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbId}/documents/portal_members/${encodeURIComponent(docId)}?key=${firebaseApiKey}`;
   
   try {
@@ -3774,15 +3774,20 @@ async function startServer() {
       }
 
       // Sync all members to Firestore
+      console.log(`Clearing committees: syncing ${usersToSync.length} members to Firestore...`);
       for (const email of usersToSync) {
-        syncLocalMemberToFirestoreCloud(email);
+        try {
+          await syncLocalMemberToFirestoreCloud(email);
+        } catch (syncErr) {
+          console.error(`Failed to sync ${email} to Firestore:`, syncErr);
+        }
       }
       
       logEvent(adminEmail, "ADMIN_CLEAR_ALL_COMMITTEES", "Cleared all committee assignments for all members");
       res.json({ success: true, message: "All committee assignments cleared and Firestore synchronized." });
     } catch (err: any) {
       console.error("Clear all committees error:", err);
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: err.message || "Unknown error during committee clearance" });
     }
   });
 

@@ -13,7 +13,8 @@ import {
   getDocFromServer,
   collection,
   getDocs,
-  deleteDoc
+  deleteDoc,
+  arrayUnion
 } from 'firebase/firestore';
 import staticFirebaseConfig from '../../firebase-applet-config.json';
 
@@ -1114,6 +1115,20 @@ export async function firebaseSyncPortalMember(member: {
     return { success: true };
   } catch (err: any) {
     console.warn('Notice syncing member to Firestore:', err);
+    return { success: false, message: err.message };
+  }
+}
+
+export async function firebaseUpdateCommitteeMembers(committeeId: string, memberData: { email: string; name: string; role: string; addedAt: string }) {
+  try {
+    const committeeRef = doc(db, 'committees', committeeId);
+    // Add member to committee document in Firestore
+    await setDoc(committeeRef, {
+      members: arrayUnion(memberData)
+    }, { merge: true });
+    return { success: true };
+  } catch (err: any) {
+    console.warn('Notice syncing committee members to Firestore:', err);
     return { success: false, message: err.message };
   }
 }

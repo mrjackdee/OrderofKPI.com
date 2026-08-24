@@ -67,12 +67,7 @@ export default function CandidateVotingForm() {
         );
         setCandidates(activeCandidates);
       } else {
-        // Fallback default sample candidates if API empty
-        setCandidates([
-          { id: 'cand_1', name: 'Marcus Vance', industry: 'Technology & AI', status: 'Selection' },
-          { id: 'cand_2', name: 'Julian Sterling', industry: 'Finance & Banking', status: 'Selection' },
-          { id: 'cand_3', name: 'Darius Thorne', industry: 'Law & Governance', status: 'Selection' }
-        ]);
+        setCandidates([]);
       }
 
       if (voteRes.success && Array.isArray(voteRes.votes)) {

@@ -39,7 +39,7 @@ import { hasCommitteeAccess, isCommitteeChair, normalizeUserRBAC, defaultMembers
 import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import { renderFormattedTextWithLinks } from '../lib/linkParser';
-import { firebaseSyncPortalMember } from '../lib/firebase';
+import { firebaseSyncPortalMember, firebaseUpdateCommitteeMembers } from '../lib/firebase';
 
 interface CommitteeResource {
   id: string;
@@ -322,7 +322,7 @@ export default function CommitteePage() {
     Promise.allSettled([
       fetch('/api/members').then(res => res.json()),
       getLiveGoogleSheetRoster().catch(() => null)
-    ]).then(([membersRes, sheetRes]) => {
+    ]).then(async ([membersRes, sheetRes]) => {
       const financialSet = new Set<string>();
 
       if (sheetRes.status === 'fulfilled' && sheetRes.value && Array.isArray(sheetRes.value.members)) {
@@ -335,11 +335,31 @@ export default function CommitteePage() {
       }
       setFinancialEmails(financialSet);
 
+      let committeeMembers: any[] = [];
+      try {
+        const { getDoc, doc } = await import('firebase/firestore');
+        const { db } = await import('../lib/firebase');
+        const committeeSnap = await getDoc(doc(db, 'committees', committeeSlug));
+        if (committeeSnap.exists()) {
+          committeeMembers = committeeSnap.data().members || [];
+        }
+      } catch (e) {
+        console.warn('Could not fetch committee members from Firestore:', e);
+      }
+
       if (membersRes.status === 'fulfilled' && membersRes.value?.success && Array.isArray(membersRes.value.members)) {
-        setAllAvailableMembers(membersRes.value.members);
-        filterMembersForCommittee(membersRes.value.members, committeeSlug);
+        // Use member data from Firestore committee document if available
+        let finalMembers = membersRes.value.members;
+        if (committeeMembers.length > 0) {
+          finalMembers = finalMembers.map((m: any) => {
+            const assignment = committeeMembers.find((cm: any) => cm.email === m.email);
+            return assignment ? { ...m, committeeRole: assignment.role } : m;
+          });
+        }
+        setAllAvailableMembers(finalMembers);
+        filterMembersForCommittee(finalMembers, committeeSlug);
         if (userEmail) {
-          const myRec = membersRes.value.members.find((m: any) => m.email && m.email.toLowerCase().trim() === userEmail.toLowerCase().trim());
+          const myRec = finalMembers.find((m: any) => m.email && m.email.toLowerCase().trim() === userEmail.toLowerCase().trim());
           if (myRec) {
             const updated = normalizeUserRBAC(myRec);
             setCurrentUser(updated);
@@ -702,16 +722,24 @@ export default function CommitteePage() {
     const existingRoles = { ...norm.committeeRoles, [committeeDef.slug]: selectedMemberRole };
 
     // Dual-write: 1) Cloud Firestore
-    const firestoreTask = firebaseSyncPortalMember({
-      email: memberToUpdate.email,
-      name: memberToUpdate.name || normSelectedEmail,
-      role: memberToUpdate.role || 'member',
-      title: memberToUpdate.title,
-      financial_status: memberToUpdate.financial_status,
-      industry: memberToUpdate.industry,
-      committees: existingCommittees,
-      committeeRoles: existingRoles
-    });
+    const firestoreTask = Promise.all([
+      firebaseSyncPortalMember({
+        email: memberToUpdate.email,
+        name: memberToUpdate.name || normSelectedEmail,
+        role: memberToUpdate.role || 'member',
+        title: memberToUpdate.title,
+        financial_status: memberToUpdate.financial_status,
+        industry: memberToUpdate.industry,
+        committees: existingCommittees,
+        committeeRoles: existingRoles
+      }),
+      firebaseUpdateCommitteeMembers(committeeDef.slug, {
+        email: normSelectedEmail,
+        name: memberToUpdate.name || normSelectedEmail,
+        role: selectedMemberRole,
+        addedAt: new Date().toISOString()
+      })
+    ]);
 
     // Dual-write: 2) Server API
     const apiTask = (async () => {
@@ -1635,10 +1663,10 @@ export default function CommitteePage() {
           </div>
         )}
 
-        {/* MODAL: ADD RESOURCE */}
+// MODAL: ADD RESOURCE
         {showAddResourceModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
-            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto pointer-events-auto">
+            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto pointer-events-auto">
               <div className="flex items-center justify-between border-b border-gold/10 pb-4">
                 <h3 className="text-lg font-display font-bold uppercase tracking-wider text-ivy">
                   Add Google Shared Drive / Resource Link
@@ -1728,8 +1756,8 @@ export default function CommitteePage() {
 
         {/* MODAL: EDIT RESOURCE */}
         {editingResource && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
-            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto pointer-events-auto">
+            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto pointer-events-auto">
               <div className="flex items-center justify-between border-b border-gold/10 pb-4">
                 <h3 className="text-lg font-display font-bold uppercase tracking-wider text-ivy">
                   Edit Shared Drive / Resource Link
@@ -1819,8 +1847,8 @@ export default function CommitteePage() {
 
         {/* MODAL: SCHEDULE MEETING */}
         {showAddMeetingModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
-            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto pointer-events-auto">
+            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto pointer-events-auto">
               <div className="flex items-center justify-between border-b border-gold/10 pb-4">
                 <h3 className="text-lg font-display font-bold uppercase tracking-wider text-ivy">
                   Schedule Committee Meeting
@@ -1961,8 +1989,8 @@ export default function CommitteePage() {
 
         {/* MODAL: EDIT MEETING */}
         {editingMeeting && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
-            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto pointer-events-auto">
+            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto pointer-events-auto">
               <div className="flex items-center justify-between border-b border-gold/10 pb-4">
                 <h3 className="text-lg font-display font-bold uppercase tracking-wider text-ivy">
                   Edit Committee Meeting
@@ -2108,8 +2136,8 @@ export default function CommitteePage() {
 
         {/* MODAL: POST ANNOUNCEMENT */}
         {showAddAnnouncementModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
-            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto pointer-events-auto">
+            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto pointer-events-auto">
               <div className="flex items-center justify-between border-b border-gold/10 pb-4">
                 <h3 className="text-lg font-display font-bold uppercase tracking-wider text-ivy">
                   Post Committee Announcement
@@ -2170,8 +2198,8 @@ export default function CommitteePage() {
 
         {/* MODAL: EDIT ANNOUNCEMENT */}
         {editingAnnouncement && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
-            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto pointer-events-auto">
+            <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto pointer-events-auto">
               <div className="flex items-center justify-between border-b border-gold/10 pb-4">
                 <h3 className="text-lg font-display font-bold uppercase tracking-wider text-ivy">
                   Edit Committee Announcement
@@ -2244,8 +2272,8 @@ export default function CommitteePage() {
             });
 
           return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
-              <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto pointer-events-auto">
+              <div className="bg-white border border-gold/30 rounded-lg max-w-lg w-full p-6 space-y-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto pointer-events-auto">
                 <div className="flex items-center justify-between border-b border-gold/10 pb-4">
                   <div>
                     <h3 className="text-lg font-display font-bold uppercase tracking-wider text-ivy">

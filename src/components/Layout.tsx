@@ -92,19 +92,19 @@ export default function Layout() {
     <div className={`relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden ${isCreamPage ? 'bg-[#FDFCF0]' : 'bg-[#000000]'} text-primary font-display antialiased transition-colors duration-300`}>
       {isAuthenticated && (
         userRole === 'admin' ? (
-          <div className="bg-red-600 text-white text-[10px] font-black uppercase tracking-[0.2em] py-2 px-4 flex items-center justify-center gap-4 fixed top-0 left-0 right-0 z-[60] shadow-lg shadow-red-900/20">
+          <div className="bg-red-600 text-white text-[10px] font-black uppercase tracking-[0.2em] py-2 px-4 flex items-center justify-center gap-4 block md:fixed top-0 left-0 right-0 z-[60] shadow-lg shadow-red-900/20">
             <ShieldCheck size={14} className="animate-pulse" />
             <span>Administrative Session Active — Full System Access Enabled</span>
             <ShieldCheck size={14} className="animate-pulse" />
           </div>
         ) : isApplicant ? (
-          <div className="bg-gold text-ivy text-[9px] font-bold uppercase tracking-[0.2em] py-1.5 px-4 flex items-center justify-center gap-3 fixed top-0 left-0 right-0 z-[60] border-b border-ivy/10">
+          <div className="bg-gold text-ivy text-[9px] font-bold uppercase tracking-[0.2em] py-1.5 px-4 flex items-center justify-center gap-3 block md:fixed top-0 left-0 right-0 z-[60] border-b border-ivy/10">
             <div className="w-1.5 h-1.5 rounded-full bg-ivy animate-pulse" />
             <span>Prospective Applicant Session Active — FY27 Membership Application Space</span>
             <div className="w-1.5 h-1.5 rounded-full bg-ivy animate-pulse" />
           </div>
         ) : (
-          <div className="bg-primary/90 backdrop-blur text-black text-[9px] font-black uppercase tracking-[0.2em] py-1.5 px-4 flex items-center justify-center gap-3 fixed top-0 left-0 right-0 z-[60] border-b border-black/10">
+          <div className="bg-primary/90 backdrop-blur text-black text-[9px] font-black uppercase tracking-[0.2em] py-1.5 px-4 flex items-center justify-center gap-3 block md:fixed top-0 left-0 right-0 z-[60] border-b border-black/10">
             <div className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
             <span>Financial Member Session Active — Protected Portal Access</span>
             <div className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
@@ -112,8 +112,8 @@ export default function Layout() {
         )
       )}
       
-      <div className={`layout-container flex h-full grow flex-col ${isAuthenticated ? (userRole === 'admin' ? 'pt-[104px] md:pt-[124px]' : 'pt-[98px] md:pt-[118px]') : 'pt-[72px] md:pt-[88px]'}`}>
-        <header className={`flex items-center justify-between whitespace-nowrap border-b border-solid border-primary px-4 md:px-10 py-4 md:py-6 bg-black/95 backdrop-blur fixed ${isAuthenticated ? (userRole === 'admin' ? 'top-[32px]' : 'top-[28px]') : 'top-0'} left-0 right-0 z-50 transition-all duration-300`}>
+      <div className={`layout-container flex h-full grow flex-col pt-0`}>
+        <header className={`flex items-center justify-between whitespace-nowrap border-b border-solid border-primary px-4 md:px-10 py-4 md:py-6 bg-black/95 backdrop-blur sticky top-0 left-0 right-0 z-50 transition-all duration-300`}>
           <div className="flex items-center gap-2 md:gap-4 text-primary">
             <img 
               src="https://assets.orderofkpi.org/images/logos/kpi_logo.png" 
