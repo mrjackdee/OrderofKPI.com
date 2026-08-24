@@ -8,6 +8,7 @@ import {
   firebaseFetchAllCandidateVotes, 
   syncCandidateVotesFromFirestore 
 } from '../lib/firebase';
+import { normalizeUserRBAC, isCommitteeChair } from '../lib/memberDb';
 
 interface CandidateResult {
   candidateId: string;
@@ -24,10 +25,35 @@ export default function CandidateVotingReport() {
   const userRole = sessionStorage.getItem('userRole') || '';
   const normEmail = userEmail.toLowerCase().trim();
   
-  const isAdmin = userRole === 'admin' || normEmail === 'admin@orderofkpi.org';
-  const isCommitteeChair = userRole === 'Membership Committee Chair' || userRole === 'officer';
+  let userCommittees: string[] = [];
+  let userCommitteeRoles: Record<string, string> = {};
+  try {
+    const rawCommittees = sessionStorage.getItem('userCommittees');
+    if (rawCommittees) userCommittees = JSON.parse(rawCommittees);
+    const rawRoles = sessionStorage.getItem('userCommitteeRoles');
+    if (rawRoles) userCommitteeRoles = JSON.parse(rawRoles);
+  } catch (e) {}
+
+  const normUser = normalizeUserRBAC({
+    email: normEmail,
+    role: userRole,
+    committees: userCommittees,
+    committeeRoles: userCommitteeRoles
+  });
+
+  const isAdmin = normUser.role === 'admin' || normEmail === 'admin@orderofkpi.org' || normEmail === 'qa.admin@orderofkpi.org';
+  const isMembershipIntakeChair = 
+    userRole === 'Membership Committee Chair' || 
+    userRole === 'Membership Intake Chair' || 
+    isCommitteeChair('membership_intake', normUser) || 
+    normEmail === 'james.haywood@orderofkpi.org';
   const isBrian = normEmail === 'brian.johnson@orderofkpi.org';
-  const hasAccess = isAdmin || isCommitteeChair || isBrian;
+  
+  const hasAccess = isAdmin || isMembershipIntakeChair || isBrian;
+
+  if (!hasAccess) {
+    return <Navigate to="/member-portal" replace />;
+  }
 
   const [results, setResults] = useState<CandidateResult[]>([]);
   const [loading, setLoading] = useState(true);
@@ -210,7 +236,7 @@ export default function CandidateVotingReport() {
             </div>
           </div>
 
-          <div className="border border-stone-200 rounded-lg overflow-hidden">
+          <div className="border border-stone-200 rounded-lg overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-stone-100 text-stone-700 text-xs uppercase tracking-wider font-semibold border-b border-stone-200">

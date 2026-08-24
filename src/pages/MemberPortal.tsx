@@ -469,11 +469,14 @@ export default function MemberPortal() {
               icon: Award,
               path: '/candidate-voting-report',
               color: 'bg-gold text-ivy',
-              roles: ['admin', 'Membership Committee Chair', 'officer']
+              roles: ['admin', 'Membership Committee Chair', 'Membership Intake Chair', 'brian.johnson@orderofkpi.org']
             }
           ].filter(tool => {
+            if (tool.title === 'FY27 Candidate Voting Report') {
+              return isAdmin || isBrian || isChair || userRole === 'Membership Committee Chair' || userRole === 'Membership Intake Chair' || lowerEmail === 'james.haywood@orderofkpi.org';
+            }
             if ((lowerEmail === 'james.haywood@orderofkpi.org' || lowerEmail === 'brian.johnson@orderofkpi.org') && 
-                (tool.title === 'Past Elections & Records' || tool.title === 'Membership Dashboard' || tool.title === 'FY27 Candidate Voting Report')) {
+                (tool.title === 'Past Elections & Records' || tool.title === 'Membership Dashboard')) {
               return true;
             }
             if (!tool.roles) return true;

@@ -161,8 +161,11 @@ export default function CandidateVotingForm() {
               <Clock className="w-8 h-8" />
             </div>
             <h1 className="text-2xl font-serif font-bold text-stone-900 mb-2">FY27 Candidate Voting Restricted</h1>
+            <p className="text-stone-600 max-w-lg mx-auto mb-4 text-sm leading-relaxed">
+              Voting is not open yet. Voting will open Wed, Aug 26, 2026 at 5:00 PM ET and close on Fri August 28, 2026 at 8:00 AM ET.
+            </p>
             <p className="text-stone-600 max-w-lg mx-auto mb-6 text-sm leading-relaxed">
-              Voting will open Wed, Aug 26, 2026 at 5:00 PM ET and close on Fri August 28, 2026 at 8:00 AM ET. If you have any questions, please reach out to{' '}
+              If you have any questions, please reach out to{' '}
               <a href="mailto:james.haywood@orderofkpi.org" className="text-amber-700 underline font-semibold hover:text-amber-800">
                 JR Haywood
               </a>.

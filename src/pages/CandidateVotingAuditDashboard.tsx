@@ -223,7 +223,7 @@ export default function CandidateVotingAuditDashboard() {
             </div>
           </div>
 
-          <div className="border border-stone-200 rounded-lg overflow-hidden">
+          <div className="border border-stone-200 rounded-lg overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-stone-100 text-stone-700 text-xs uppercase tracking-wider font-semibold border-b border-stone-200">
