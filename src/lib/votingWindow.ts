@@ -52,7 +52,7 @@ export function getCandidateVotingStatus(userEmail: string, userRole: string): {
       isOpen: false,
       isDev: false,
       isAdmin: false,
-      message: `Voting is not open yet. ${CANDIDATE_VOTING_WINDOW_TEXT}.`
+      message: CANDIDATE_VOTING_WINDOW_TEXT
     };
   }
 
@@ -61,7 +61,7 @@ export function getCandidateVotingStatus(userEmail: string, userRole: string): {
       isOpen: false,
       isDev: false,
       isAdmin: false,
-      message: `Voting has concluded. ${CANDIDATE_VOTING_WINDOW_TEXT}.`
+      message: 'Voting has concluded.'
     };
   }
 

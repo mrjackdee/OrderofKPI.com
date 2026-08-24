@@ -92,7 +92,7 @@ export default function MemberDirectory() {
 
   // Admin handlers
   const handleDeleteMember = async (email: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to permanently delete member "${name}" (${email})? This will delete their database record and cloud backup.`)) {
+    if (!window.confirm(`Are you sure you want to permanently remove "${name}" (${email})? This action cannot be undone.`)) {
       return;
     }
     try {

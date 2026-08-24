@@ -112,7 +112,7 @@ export default function FinancialRoster() {
       setSelectedProfileMember(prev => prev ? { ...prev, industry: newIndustry } : null);
       setMembers(prev => prev.map(m => m.email.toLowerCase() === targetEmail ? { ...m, industry: newIndustry } : m));
       setIsEditingIndustry(false);
-      setActionMessage({ type: 'success', text: `Industry/Profession for "${selectedProfileMember.name || targetEmail}" saved successfully!` });
+      setActionMessage({ type: 'success', text: `Industry/Profession for "${selectedProfileMember.name || targetEmail}" has been saved.` });
       setTimeout(() => setActionMessage(null), 5000);
     } else {
       setActionMessage({ type: 'error', text: 'We were unable to update Industry/Profession. Please verify connection and try again.' });
@@ -211,7 +211,7 @@ export default function FinancialRoster() {
       setSelectedProfileMember(prev => prev ? { ...prev, ...merged } : null);
       setMembers(prev => prev.map(m => m.email.toLowerCase() === targetEmail ? { ...m, ...merged } : m));
       setIsEditingAdmin(false);
-      setActionMessage({ type: 'success', text: `Member details and Industry/Profession for "${editAdminForm.name || targetEmail}" successfully saved to database!` });
+      setActionMessage({ type: 'success', text: `Details for "${editAdminForm.name || targetEmail}" have been saved.` });
       setTimeout(() => setActionMessage(null), 5000);
     } else {
       setActionMessage({ type: 'error', text: 'Failed to update member profile in database. Please check connection and try again.' });

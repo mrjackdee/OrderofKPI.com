@@ -178,7 +178,7 @@ export default function ApplicantLogin() {
               whileTap={{ scale: 0.99 }}
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-ivy text-cream py-3.5 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-ivy/90 transition-all mt-2 disabled:opacity-50 shadow-soft"
+              className="w-fit mx-auto flex items-center justify-center gap-2 bg-ivy text-cream py-3.5 px-8 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-ivy/90 transition-all mt-2 disabled:opacity-50 shadow-soft"
             >
               {loading ? (
                 <>

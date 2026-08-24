@@ -392,7 +392,7 @@ export default function MemberPortal() {
                           <Link
                             id={`open-workspace-${committee.slug}`}
                             to={`/committee/${committee.slug}`}
-                            className="flex-1 py-2 px-3.5 bg-ivy text-cream text-center text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-gold hover:text-ivy transition-all flex items-center justify-center gap-1.5 shadow-xs"
+                            className="py-2 px-6 bg-ivy text-cream text-center text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-gold hover:text-ivy transition-all flex items-center justify-center gap-1.5 shadow-xs"
                           >
                             <span>Open Workspace</span>
                             <ChevronRight size={13} />
@@ -410,7 +410,7 @@ export default function MemberPortal() {
                         <button
                           id={`view-details-${committee.slug}`}
                           onClick={() => setSelectedCommitteeModal(committee)}
-                          className="w-full py-2.5 px-4 bg-cream border border-gold/30 text-ivy hover:bg-gold hover:text-ivy text-xs font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-xs"
+                          className="w-fit py-2.5 px-8 bg-cream border border-gold/30 text-ivy hover:bg-gold hover:text-ivy text-xs font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-xs mx-auto"
                         >
                           <span>View Details & Join</span>
                           <ChevronRight size={13} />

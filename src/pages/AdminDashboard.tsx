@@ -42,8 +42,11 @@ import { firebaseSyncPortalMember } from '../lib/firebase';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import { googleSignIn, getAccessToken } from '../lib/googleAuth';
 import { createGoogleForm, getGoogleForm, getGoogleFormResponses } from '../lib/googleWorkspace';
-import { Chrome, ArrowDownToLine, Check, Database, Key, Lock, RefreshCw, Mail, Send, Inbox, Settings } from 'lucide-react';
+import { Chrome, ArrowDownToLine, Check, Database, Key, Lock, RefreshCw, Mail, Send, Inbox, Settings, Sliders, BookOpen, Compass, HelpCircle, Lightbulb, SlidersHorizontal } from 'lucide-react';
 import { useSystemFeatures, updateSystemFeature } from '../lib/settings';
+import RbacManager from '../components/admin/RbacManager';
+import AdminUserGuideModal from '../components/admin/AdminUserGuideModal';
+import AdminSiteNavigator from '../components/admin/AdminSiteNavigator';
 
 interface SystemLog {
   id?: number;
@@ -64,15 +67,31 @@ interface ApplicationAuditLog {
   timestamp: string;
 }
 
+export type AdminDashboardTab = 
+  | 'users' 
+  | 'rbac' 
+  | 'candidates' 
+  | 'audits' 
+  | 'intake' 
+  | 'revisions' 
+  | 'googleForms' 
+  | 'passwordLogs' 
+  | 'systemSettings' 
+  | 'siteNavigator';
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const { features, loading: featuresLoading } = useSystemFeatures();
-  const [activeTab, setActiveTab] = useState<'users' | 'candidates' | 'audits' | 'intake' | 'revisions' | 'googleForms' | 'passwordLogs' | 'systemSettings'>(() => {
+  const [showUserGuide, setShowUserGuide] = useState(false);
+  const [activeHub, setActiveHub] = useState<'all' | 'identity' | 'intake' | 'governance' | 'system' | 'navigator'>('all');
+  const [toolSearch, setToolSearch] = useState('');
+
+  const [activeTab, setActiveTab] = useState<AdminDashboardTab>(() => {
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get('tab');
-    if (tabParam && ['users', 'candidates', 'audits', 'intake', 'revisions', 'googleForms', 'passwordLogs', 'systemSettings'].includes(tabParam)) {
-      return tabParam as any;
+    if (tabParam && ['users', 'rbac', 'candidates', 'audits', 'intake', 'revisions', 'googleForms', 'passwordLogs', 'systemSettings', 'siteNavigator'].includes(tabParam)) {
+      return tabParam as AdminDashboardTab;
     }
     return 'users';
   });
@@ -80,8 +99,8 @@ export default function AdminDashboard() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
-    if (tabParam && ['users', 'candidates', 'audits', 'intake', 'revisions', 'googleForms', 'passwordLogs', 'systemSettings'].includes(tabParam)) {
-      setActiveTab(tabParam as any);
+    if (tabParam && ['users', 'rbac', 'candidates', 'audits', 'intake', 'revisions', 'googleForms', 'passwordLogs', 'systemSettings', 'siteNavigator'].includes(tabParam)) {
+      setActiveTab(tabParam as AdminDashboardTab);
     }
   }, [location.search]);
   const [passwordLogSearch, setPasswordLogSearch] = useState('');
@@ -141,6 +160,131 @@ export default function AdminDashboard() {
   };
 
   const currentUserEmail = sessionStorage.getItem('userEmail') || 'admin@orderofkpi.org';
+
+  interface AdminTool {
+    id: AdminDashboardTab;
+    title: string;
+    category: 'identity' | 'intake' | 'governance' | 'system' | 'navigator';
+    categoryLabel: string;
+    icon: any;
+    description: string;
+    wiifm: string;
+    badge?: string;
+    badgeColor?: string;
+  }
+
+  const ADMIN_TOOLS: AdminTool[] = [
+    {
+      id: 'siteNavigator',
+      title: 'Site-Wide Navigator',
+      category: 'navigator',
+      categoryLabel: 'Global Navigation',
+      icon: Compass,
+      description: 'Instantly jump to any page, voting room, committee workspace, or document repository across the entire website.',
+      wiifm: 'No more memorizing links or guessing where pages are. You have a full GPS map to open, copy, or preview every page on the site instantly.',
+      badge: '1-Click GPS',
+      badgeColor: 'bg-gold/20 text-gold border border-gold/30'
+    },
+    {
+      id: 'users',
+      title: 'User Management',
+      category: 'identity',
+      categoryLabel: 'Identity & Access',
+      icon: Users,
+      description: 'Add, edit, or remove member accounts, assign organizational roles, update financial standing, or reset forgotten credentials.',
+      wiifm: 'You can update contact info, assign multiple roles, or generate password resets in seconds—keeping your chapter roster perfectly organized.',
+      badge: `${members.length} Members`,
+      badgeColor: 'bg-blue-100 text-blue-900 border border-blue-200'
+    },
+    {
+      id: 'rbac',
+      title: 'Role & Access Control (RBAC)',
+      category: 'identity',
+      categoryLabel: 'Identity & Access',
+      icon: Shield,
+      description: 'Grant or restrict permission to any feature or page across the entire site by role or individual user email with live toggles.',
+      wiifm: 'You are in full control of who sees what. Instantly update standing committee access, candidate viewing rights, or admin permissions without calling developers.',
+      badge: 'Real-Time',
+      badgeColor: 'bg-emerald-100 text-emerald-950 border border-emerald-300 font-bold'
+    },
+    {
+      id: 'candidates',
+      title: 'Candidate Pipeline & Removal',
+      category: 'intake',
+      categoryLabel: 'Intake Operations',
+      icon: UserX,
+      description: 'Track candidate intake progress, view scores, advance applicants through pipeline stages, or remove inactive candidates.',
+      wiifm: 'No lost paperwork. You get a single consolidated pipeline showing every candidate’s application status, interview scorecards, and uploaded documents.',
+      badge: `${candidates.length} Candidates`,
+      badgeColor: 'bg-amber-100 text-amber-950 border border-amber-300 font-bold'
+    },
+    {
+      id: 'intake',
+      title: 'Intake Operations',
+      category: 'intake',
+      categoryLabel: 'Intake Operations',
+      icon: CalendarDays,
+      description: 'Manage schedule milestones, intake calendar entries, interview slots, and ceremonies.',
+      wiifm: 'Keep your intake cohort and chapter synchronized. Easy scheduling means less administrative overhead and perfectly coordinated events.',
+      badge: 'Operations',
+      badgeColor: 'bg-teal-100 text-teal-950 border border-teal-300 font-bold'
+    },
+    {
+      id: 'googleForms',
+      title: 'Workspace & Gmail Console',
+      category: 'intake',
+      categoryLabel: 'Intake Operations',
+      icon: Mail,
+      description: 'Connect Google Forms, ingest responses instantly, and send beautiful broadcast emails to members or candidates.',
+      wiifm: 'Automate data collection from Google Forms and broadcast important intake announcements directly from the dashboard without juggling multiple browser tabs.',
+      badge: `${formResponses.length} Responses`,
+      badgeColor: 'bg-purple-100 text-purple-950 border border-purple-300 font-bold'
+    },
+    {
+      id: 'audits',
+      title: 'Audit Trail & System Logs',
+      category: 'governance',
+      categoryLabel: 'Governance & Compliance',
+      icon: Clock,
+      description: 'Chronological activity stream tracking administrator adjustments, candidate stage progressions, and access history.',
+      wiifm: 'Complete compliance and security compliance. You can verify precisely who made which changes and when, maintaining ultimate chapter integrity.',
+      badge: `${appAuditLogs.length} Logs`,
+      badgeColor: 'bg-stone-100 text-stone-850 border border-stone-300'
+    },
+    {
+      id: 'passwordLogs',
+      title: 'Password Audit Stream',
+      category: 'governance',
+      categoryLabel: 'Governance & Compliance',
+      icon: Key,
+      description: 'Identify credentials change requests, failed login attempts, and password reset overrides.',
+      wiifm: 'Spot unauthorized login attempts and confirm that credentials changes are fully authenticated, protecting members\' personal profiles.',
+      badge: `${systemLogs.filter(l => l.event_type.includes('PASSWORD')).length} Alerts`,
+      badgeColor: 'bg-rose-100 text-rose-950 border border-rose-300 font-bold'
+    },
+    {
+      id: 'revisions',
+      title: 'Bylaw Revisions',
+      category: 'governance',
+      categoryLabel: 'Governance & Compliance',
+      icon: FileText,
+      description: 'Track proposed constitutional amendments, member comments, and process voter approvals.',
+      wiifm: 'Simplify the legislative process. Review and coordinate the modern governing rules of your organization transparently.',
+      badge: `${revisions.length} Proposals`,
+      badgeColor: 'bg-indigo-100 text-indigo-950 border border-indigo-300'
+    },
+    {
+      id: 'systemSettings',
+      title: 'Global Settings',
+      category: 'system',
+      categoryLabel: 'System & Operations',
+      icon: Settings,
+      description: 'Manage website-wide feature toggles, run cloud synchronizations, and verify platform health.',
+      wiifm: 'Switch the entire site between "Stealth Mode" or "Active Org" for specific modules. Perform 1-click cloud syncs so your data is always pristine.',
+      badge: 'Diagnostics',
+      badgeColor: 'bg-stone-100 text-stone-850 border border-stone-300'
+    }
+  ];
 
   useEffect(() => {
     // Check Google Token
@@ -232,7 +376,7 @@ export default function AdminDashboard() {
           createdAt: new Date().toISOString()
         });
 
-        setNotification({ type: 'success', text: `Google Form "${newFormTitle}" created and linked successfully!` });
+        setNotification({ type: 'success', text: `Google Form "${newFormTitle}" has been linked.` });
       }
     } catch (err: any) {
       setNotification({ type: 'error', text: err.message || 'Failed to create Google Form.' });
@@ -259,7 +403,7 @@ export default function AdminDashboard() {
         updatedAt: new Date().toISOString()
       });
 
-      setNotification({ type: 'success', text: 'Google Form linked successfully!' });
+      setNotification({ type: 'success', text: 'Google Form has been linked.' });
     } catch (err: any) {
       setNotification({ type: 'error', text: 'Invalid Form ID or insufficient permissions. Verify your Google Auth.' });
     } finally {
@@ -304,7 +448,7 @@ export default function AdminDashboard() {
           throw new Error(errData.error?.message || 'Failed to send email via Gmail.');
         }
 
-        setNotification({ type: 'success', text: `Email successfully sent to ${gmailRecipient}!` });
+        setNotification({ type: 'success', text: `Email sent to ${gmailRecipient}.` });
         setGmailSubject('');
         setGmailBody('');
       } else {
@@ -623,13 +767,13 @@ export default function AdminDashboard() {
 
     if (fsSuccess || apiSuccess) {
       showToast('success', isNewMember 
-        ? `Successfully registered user "${editingMember.name}" and saved to the database!` 
-        : `Successfully updated settings for user "${editingMember.email}" and committed the changes to the database!`
+        ? `User "${editingMember.name}" has been registered.` 
+        : `Settings for user "${editingMember.email}" have been updated.`
       );
       setShowMemberModal(false);
       fetchMembers();
     } else {
-      showToast('error', 'We could not save the member settings to the database. Please check connection and try again.');
+      showToast('error', 'We could not save the member settings. Please check connection and try again.');
     }
     setActionLoading(false);
   };
@@ -646,7 +790,7 @@ export default function AdminDashboard() {
       if (contentType.includes("application/json")) {
         const data = await response.json();
         if (response.ok && data.success) {
-          showToast('success', `Successfully deleted user "${email}" from the system and committed changes to the database.`);
+          showToast('success', `User "${email}" has been removed from the system.`);
           fetchMembers();
           return;
         } else {
@@ -693,7 +837,7 @@ export default function AdminDashboard() {
       const data = await response.json();
 
       if (data.success) {
-        showToast('success', `Successfully registered candidate "${fullName}" and saved their applicant account in the database!`);
+        showToast('success', `Candidate "${fullName}" has been registered and their account has been created.`);
         setShowCandidateModal(false);
         setNewCandidate({ firstName: '', lastName: '', email: '', phone: '', status: 'Inquiry' });
         fetchCandidates();
@@ -732,7 +876,7 @@ export default function AdminDashboard() {
       });
 
       if (response.ok) {
-        showToast('success', `Successfully updated "${candidate.name}"'s intake stage to "${newStatus}" and committed changes to the database!`);
+        showToast('success', `The candidate's intake stage has been updated to "${newStatus}".`);
         fetchCandidates();
         fetchAuditLogs();
       } else {
@@ -756,7 +900,7 @@ export default function AdminDashboard() {
       const data = await response.json();
 
       if (data.success) {
-        showToast('success', `Successfully removed candidate "${name}" from the intake roster and deleted their record from the database.`);
+        showToast('success', `Candidate "${name}" has been removed from the intake roster.`);
         fetchCandidates();
         fetchAuditLogs();
       } else {
@@ -941,87 +1085,206 @@ export default function AdminDashboard() {
             </Link>
           </div>
         </div>
+      </div> {/* Closing shortcuts outer max-w-7xl */}
 
-        {/* Navigation Tabs */}
-        <div className="flex flex-nowrap overflow-x-auto pb-4 gap-3 border-b border-gold/20 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap scrollbar-thin">
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-              activeTab === 'users' ? 'bg-ivy text-cream shadow-md border border-gold/30' : 'bg-white text-ivy/70 hover:bg-gold/10'
-            }`}
-          >
-            <Users className="w-4 h-4 text-gold" /> User Management
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-gold/20 text-gold">{members.length}</span>
-          </button>
+      <div className="max-w-7xl mx-auto px-4 mt-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* LEFT SIDEBAR: Navigational Command Center */}
+          <div className="lg:col-span-4 xl:col-span-3 space-y-6">
+            
+            {/* Search and Hub Selector */}
+            <div className="bg-white p-5 rounded-3xl border border-gold/20 shadow-soft space-y-4">
+              <div className="space-y-1.5">
+                <h3 className="font-display font-bold text-xs uppercase tracking-wider text-ivy flex items-center gap-2">
+                  <SlidersHorizontal className="w-4 h-4 text-gold" /> Command Hubs
+                </h3>
+                <p className="text-[10px] text-ivy/50 leading-relaxed">
+                  Filter administrator utilities by area of operation.
+                </p>
+              </div>
 
-          <button
-            onClick={() => setActiveTab('candidates')}
-            className={`px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-              activeTab === 'candidates' ? 'bg-ivy text-cream shadow-md border border-gold/30' : 'bg-white text-ivy/70 hover:bg-gold/10'
-            }`}
-          >
-            <UserX className="w-4 h-4 text-gold" /> Candidate Pipeline & Removal
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-gold/20 text-gold">{candidates.length}</span>
-          </button>
+              {/* Tool Search Bar */}
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ivy/40" />
+                <input
+                  type="text"
+                  value={toolSearch}
+                  onChange={(e) => setToolSearch(e.target.value)}
+                  placeholder="Quick-find admin tool..."
+                  className="w-full pl-9 pr-3 py-2 bg-cream/40 border border-gold/25 rounded-xl text-xs outline-none focus:ring-2 focus:ring-gold/30 text-ivy"
+                />
+              </div>
 
-          <button
-            onClick={() => setActiveTab('audits')}
-            className={`px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-              activeTab === 'audits' ? 'bg-ivy text-cream shadow-md border border-gold/30' : 'bg-white text-ivy/70 hover:bg-gold/10'
-            }`}
-          >
-            <Clock className="w-4 h-4 text-gold" /> Audit Trail & System Logs
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-gold/20 text-gold">{appAuditLogs.length}</span>
-          </button>
+              {/* Hub Categories list */}
+              <div className="space-y-1">
+                {[
+                  { id: 'all', label: 'All Operations', count: ADMIN_TOOLS.length, icon: Compass },
+                  { id: 'navigator', label: 'Global Navigation', count: 1, icon: Compass },
+                  { id: 'identity', label: 'Identity & Access', count: 2, icon: Shield },
+                  { id: 'intake', label: 'Intake Operations', count: 3, icon: Layers },
+                  { id: 'governance', label: 'Governance & Audit', count: 3, icon: Archive },
+                  { id: 'system', label: 'System & Settings', count: 1, icon: Settings },
+                ].map((hub) => {
+                  const HubIcon = hub.icon || Compass;
+                  const isActive = activeHub === hub.id;
+                  return (
+                    <button
+                      key={hub.id}
+                      onClick={() => {
+                        setActiveHub(hub.id as any);
+                        // If switching hub, auto-select first tool in that hub to keep UX smooth!
+                        const firstTool = ADMIN_TOOLS.find(t => hub.id === 'all' || t.category === hub.id);
+                        if (firstTool) {
+                          setActiveTab(firstTool.id);
+                        }
+                      }}
+                      className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
+                        isActive
+                          ? 'bg-ivy text-cream shadow-md border border-gold/25'
+                          : 'bg-white text-ivy/70 hover:bg-gold/10'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <HubIcon className={`w-4 h-4 ${isActive ? 'text-gold' : 'text-ivy/60'}`} />
+                        <span>{hub.label}</span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${isActive ? 'bg-gold/25 text-gold' : 'bg-cream text-ivy/60'}`}>
+                        {hub.id === 'all' ? ADMIN_TOOLS.length : ADMIN_TOOLS.filter(t => t.category === hub.id).length}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-          <button
-            onClick={() => setActiveTab('intake')}
-            className={`px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-              activeTab === 'intake' ? 'bg-ivy text-cream shadow-md border border-gold/30' : 'bg-white text-ivy/70 hover:bg-gold/10'
-            }`}
-          >
-            <CalendarDays className="w-4 h-4 text-gold" /> Intake Ops
-          </button>
+            {/* Active Tools List (Within Selected Hub) */}
+            <div className="bg-white p-5 rounded-3xl border border-gold/20 shadow-soft space-y-3">
+              <div className="space-y-0.5">
+                <h4 className="font-display font-bold text-[11px] uppercase tracking-wider text-ivy/60">
+                  Available Tools
+                </h4>
+                <p className="text-[9px] text-ivy/40">
+                  Select a tool to open its control panel.
+                </p>
+              </div>
 
-          <button
-            onClick={() => setActiveTab('revisions')}
-            className={`px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-              activeTab === 'revisions' ? 'bg-ivy text-cream shadow-md border border-gold/30' : 'bg-white text-ivy/70 hover:bg-gold/10'
-            }`}
-          >
-            <FileText className="w-4 h-4 text-gold" /> Bylaw Revisions ({revisions.length})
-          </button>
+              <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1 scrollbar-thin">
+                {ADMIN_TOOLS.filter(tool => {
+                  const matchesHub = activeHub === 'all' || tool.category === activeHub;
+                  const matchesSearch = tool.title.toLowerCase().includes(toolSearch.toLowerCase()) ||
+                    tool.description.toLowerCase().includes(toolSearch.toLowerCase()) ||
+                    tool.wiifm.toLowerCase().includes(toolSearch.toLowerCase());
+                  return matchesHub && matchesSearch;
+                }).map((tool) => {
+                  const ToolIcon = tool.icon;
+                  const isSelected = activeTab === tool.id;
 
-          <button
-            onClick={() => setActiveTab('googleForms')}
-            className={`px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-              activeTab === 'googleForms' ? 'bg-ivy text-cream shadow-md border border-gold/30' : 'bg-white text-ivy/70 hover:bg-gold/10'
-            }`}
-          >
-            <Mail className="w-4 h-4 text-gold" /> Workspace & Gmail Console ({formResponses.length})
-          </button>
+                  return (
+                    <button
+                      key={tool.id}
+                      onClick={() => setActiveTab(tool.id)}
+                      className={`w-full text-left p-3 rounded-2xl border transition-all flex items-start gap-2.5 cursor-pointer ${
+                        isSelected
+                          ? 'bg-cream border-gold ring-2 ring-gold/40 shadow-xs'
+                          : 'bg-white border-gold/10 hover:border-gold/20 hover:bg-cream/10'
+                      }`}
+                    >
+                      <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${isSelected ? 'bg-ivy text-gold' : 'bg-cream text-ivy/70'}`}>
+                        <ToolIcon className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h5 className="font-bold text-xs text-ivy line-clamp-1">{tool.title}</h5>
+                          {tool.badge && (
+                            <span className={`px-1.5 py-0.5 rounded-md text-[8px] font-bold ${tool.badgeColor || 'bg-gold/10 text-gold'}`}>
+                              {tool.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-ivy/50 line-clamp-1 mt-0.5">{tool.description}</p>
+                      </div>
+                    </button>
+                  );
+                })}
 
-          <button
-            onClick={() => setActiveTab('passwordLogs')}
-            className={`px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-              activeTab === 'passwordLogs' ? 'bg-ivy text-cream shadow-md border border-gold/30' : 'bg-white text-ivy/70 hover:bg-gold/10'
-            }`}
-          >
-            <Key className="w-4 h-4 text-gold" /> Password Audit Stream
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-gold/20 text-gold font-bold">
-              {systemLogs.filter(l => l.event_type.includes('PASSWORD')).length}
-            </span>
-          </button>
+                {ADMIN_TOOLS.filter(tool => {
+                  const matchesHub = activeHub === 'all' || tool.category === activeHub;
+                  const matchesSearch = tool.title.toLowerCase().includes(toolSearch.toLowerCase()) ||
+                    tool.description.toLowerCase().includes(toolSearch.toLowerCase());
+                  return matchesHub && matchesSearch;
+                }).length === 0 && (
+                  <div className="p-4 text-center text-ivy/40 text-xs">
+                    No matching tools found.
+                  </div>
+                )}
+              </div>
+            </div>
 
-          <button
-            onClick={() => setActiveTab('systemSettings')}
-            className={`px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-              activeTab === 'systemSettings' ? 'bg-ivy text-cream shadow-md border border-gold/30' : 'bg-white text-ivy/70 hover:bg-gold/10'
-            }`}
-          >
-            <Settings className="w-4 h-4 text-gold" /> Global Settings
-          </button>
-        </div>
+            {/* Quick Helper Guide Card */}
+            <div className="bg-gradient-to-br from-ivy via-forest to-ivy/95 p-5 rounded-3xl border border-gold/30 shadow-md text-cream space-y-4">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-gold" />
+                  <h4 className="font-display font-bold text-xs uppercase tracking-wider">
+                    Need Guidance?
+                  </h4>
+                </div>
+                <p className="text-[11px] text-cream/80 leading-relaxed">
+                  Need to change role rights, synchronize databases, or tally election results? Access our complete, plain-English operations reference manual.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowUserGuide(true)}
+                className="w-fit mx-auto py-2.5 px-6 bg-gold hover:bg-gold/90 text-ivy rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Open Admin User Guide</span>
+              </button>
+            </div>
+
+          </div>
+
+          {/* RIGHT COLUMN: Active Tool Workspace */}
+          <div className="lg:col-span-8 xl:col-span-9 space-y-6">
+            
+            {/* WIIFM Headline Bar for Active Tool */}
+            {(() => {
+              const activeTool = ADMIN_TOOLS.find(t => t.id === activeTab);
+              if (!activeTool) return null;
+              const ToolIcon = activeTool.icon;
+              return (
+                <div className="bg-white p-5 rounded-3xl border border-gold/20 shadow-soft flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2.5 bg-ivy text-gold rounded-2xl shrink-0 mt-0.5">
+                      <ToolIcon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[9px] uppercase font-bold text-gold tracking-widest">
+                          {activeTool.categoryLabel} Hub
+                        </span>
+                        <span className="w-1.5 h-1.5 bg-gold/55 rounded-full" />
+                        <span className="text-[9px] uppercase font-bold text-ivy/50 tracking-wider">
+                          Active Workspace
+                        </span>
+                      </div>
+                      <h2 className="text-lg font-display font-bold text-ivy">
+                        {activeTool.title}
+                      </h2>
+                    </div>
+                  </div>
+
+                  <div className="bg-cream/40 border border-gold/15 rounded-2xl px-4 py-2.5 text-xs text-ivy/80 max-w-sm sm:max-w-md">
+                    💡 <strong>What's In It For You:</strong> {activeTool.wiifm}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Active Tool Workspace Content Frame */}
+            <div className="min-h-[500px]">
 
         {/* TAB 1: USER MANAGEMENT */}
         {activeTab === 'users' && (
@@ -1178,9 +1441,18 @@ export default function AdminDashboard() {
                                 setShowMemberModal(true);
                               }}
                               className="p-2 text-ivy/60 hover:text-ivy hover:bg-gold/10 rounded-lg transition-colors"
-                              title="Edit User"
+                              title="Edit User Info"
                             >
                               <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setActiveTab('rbac');
+                              }}
+                              className="p-2 text-gold hover:text-ivy hover:bg-gold/20 rounded-lg transition-colors"
+                              title="Manage User RBAC Roles & Rights"
+                            >
+                              <Shield className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => deleteMember(member.email, member.name)}
@@ -1198,6 +1470,15 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* TAB 1.5: ROLE & ACCESS CONTROL (RBAC) */}
+        {activeTab === 'rbac' && (
+          <RbacManager
+            members={members}
+            onMembersUpdated={fetchMembers}
+            adminEmail={currentUserEmail}
+          />
         )}
 
         {/* TAB 2: CANDIDATE PIPELINE & REMOVAL */}
@@ -1517,7 +1798,7 @@ export default function AdminDashboard() {
                     Google Workspace & Email <span className="text-gold">Notifications</span>
                   </h2>
                   <p className="text-ivy/60 text-xs mt-1">
-                    Manage Google Workspace account connection, send official notifications via Gmail, and synchronize Google Forms into the organization database.
+                    Manage Google Workspace account connection, send official notifications via Gmail, and synchronize Google Forms.
                   </p>
                 </div>
                 <div>
@@ -1742,7 +2023,7 @@ export default function AdminDashboard() {
                             </button>
                             {importedCount !== null && (
                               <p className="text-center text-xs font-bold text-green-700 bg-green-50 border border-green-200 py-2.5 rounded-xl">
-                                Success: Loaded {importedCount} prospective candidate(s) into database.
+                                Success: {importedCount} candidate(s) have been added.
                               </p>
                             )}
                           </div>
@@ -2124,7 +2405,16 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
-      </div>
+
+        {/* TAB 8: SITE WIDE NAVIGATOR */}
+        {activeTab === 'siteNavigator' && (
+          <AdminSiteNavigator />
+        )}
+
+            </div> {/* Closing Active Tool Workspace Content Frame */}
+          </div> {/* Closing RIGHT COLUMN */}
+        </div> {/* Closing Split Grid Layout */}
+      </div> {/* Closing max-w-7xl outer container */}
 
       {/* MEMBER EDIT / CREATE MODAL */}
       {showMemberModal && (
@@ -2395,6 +2685,19 @@ export default function AdminDashboard() {
           </motion.div>
         </div>
       )}
+      {/* ADMIN OPERATIONS MANUAL USER GUIDE MODAL */}
+      <AdminUserGuideModal 
+        isOpen={showUserGuide} 
+        onClose={() => setShowUserGuide(false)} 
+        onNavigateTab={(tab) => {
+          setActiveTab(tab as AdminDashboardTab);
+          const tool = ADMIN_TOOLS.find(t => t.id === tab);
+          if (tool) {
+            setActiveHub(tool.category);
+          }
+          setShowUserGuide(false);
+        }} 
+      />
     </div>
   );
 }

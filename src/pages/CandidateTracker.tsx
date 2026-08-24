@@ -883,14 +883,14 @@ export default function CandidateTracker() {
                     setFormSuccess(null);
                   }}
                   disabled={isSubmitting}
-                  className="flex-1 px-6 py-3 border border-ivy/10 rounded-md font-bold uppercase tracking-widest text-ivy hover:bg-cream transition-all disabled:opacity-50"
+                  className="px-8 py-3 border border-ivy/10 rounded-md font-bold uppercase tracking-widest text-ivy hover:bg-cream transition-all disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 px-6 py-3 bg-ivy text-cream rounded-md font-bold uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="px-8 py-3 bg-ivy text-cream rounded-md font-bold uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? (
                     <>

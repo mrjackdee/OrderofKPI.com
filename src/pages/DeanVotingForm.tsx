@@ -208,7 +208,7 @@ export default function DeanVotingForm() {
       console.log('[DeanVotingForm] Write results:', { serverSuccess, fsSuccess });
 
       if (serverSuccess || fsSuccess) {
-        setSuccessMessage('Your vote has been successfully submitted and saved');
+        setSuccessMessage('Your vote has been recorded.');
         
         if (!serverSuccess && fsSuccess) {
           console.log('[DeanVotingForm] Triggering background sync because server write failed...');

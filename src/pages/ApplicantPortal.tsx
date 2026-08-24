@@ -126,7 +126,7 @@ export default function ApplicantPortal() {
     try {
       const res = await performHybridPasswordChange(userEmail, currentPassword, newPassword);
       if (res.success) {
-        setPwdSuccess('Your password has been updated successfully.');
+        setPwdSuccess('Your password has been updated.');
         sessionStorage.setItem('userIsFirstLogin', 'false');
         localStorage.setItem(`kpi_password_changed_${userEmail}`, 'true');
         setTimeout(() => {
@@ -168,7 +168,7 @@ export default function ApplicantPortal() {
     try {
       const res = await performHybridPasswordChange(userEmail, settingsCurrentPassword, settingsNewPassword);
       if (res.success) {
-        setSettingsPwdSuccess('Your password has been updated successfully.');
+        setSettingsPwdSuccess('Your password has been updated.');
         setSettingsCurrentPassword('');
         setSettingsNewPassword('');
         setSettingsConfirmPassword('');
@@ -201,7 +201,7 @@ export default function ApplicantPortal() {
     try {
       const res = await changeApplicantEmail(userEmail, newEmail, emailAuthPassword);
       if (res.success && res.user) {
-        setEmailSuccess('Your email address has been updated successfully.');
+        setEmailSuccess('Your email address has been updated.');
         sessionStorage.setItem('userEmail', res.user.email);
         setUserEmail(res.user.email);
         setNewEmail('');
@@ -396,7 +396,7 @@ export default function ApplicantPortal() {
               </div>
               <button
                 onClick={handleContinueApplication}
-                className="w-full py-3 bg-gold text-ivy rounded-xl font-bold uppercase tracking-widest text-xs hover:brightness-105 transition-all shadow-md cursor-pointer"
+                className="w-fit mx-auto px-8 py-3 bg-gold text-ivy rounded-xl font-bold uppercase tracking-widest text-xs hover:brightness-105 transition-all shadow-md cursor-pointer"
               >
                 {appStatus === 'submitted' ? 'View Submitted Application' : 'Continue Application'}
               </button>
@@ -418,7 +418,7 @@ export default function ApplicantPortal() {
               },
               { 
                 label: 'Submitted', 
-                desc: 'Transmitted successfully',
+                desc: 'Submitted',
                 icon: CheckCircle,
               },
               { 
@@ -776,7 +776,7 @@ export default function ApplicantPortal() {
                   <button
                     type="submit"
                     disabled={emailLoading}
-                    className="w-full py-3 bg-ivy text-cream rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-ivy/90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 font-display"
+                    className="w-fit mx-auto px-8 py-3 bg-ivy text-cream rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-ivy/90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 font-display"
                   >
                     {emailLoading ? (
                       <>
@@ -869,7 +869,7 @@ export default function ApplicantPortal() {
                   <button
                     type="submit"
                     disabled={settingsPwdLoading}
-                    className="w-full py-3 bg-ivy text-cream rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-ivy/90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 font-display"
+                    className="w-fit mx-auto px-8 py-3 bg-ivy text-cream rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-ivy/90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 font-display"
                   >
                     {settingsPwdLoading ? (
                       <>
@@ -918,7 +918,7 @@ export default function ApplicantPortal() {
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col items-center gap-3">
                 <button
                   onClick={async () => {
                     if (saveRef.current) {
@@ -930,7 +930,7 @@ export default function ApplicantPortal() {
                       setPendingAction(null);
                     }
                   }}
-                  className="w-full py-4 bg-gold text-ivy rounded-2xl font-bold uppercase tracking-widest text-[11px] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-fit px-10 py-4 bg-gold text-ivy rounded-2xl font-bold uppercase tracking-widest text-[11px] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
                 >
                   Save and Continue
                 </button>
@@ -943,7 +943,7 @@ export default function ApplicantPortal() {
                       setPendingAction(null);
                     }
                   }}
-                  className="w-full py-4 border border-gold/30 hover:bg-gold/5 text-ivy rounded-2xl font-bold uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-fit px-10 py-4 border border-gold/30 hover:bg-gold/5 text-ivy rounded-2xl font-bold uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   Discard Changes & Exit
                 </button>

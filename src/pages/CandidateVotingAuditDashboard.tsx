@@ -94,7 +94,7 @@ export default function CandidateVotingAuditDashboard() {
         fetch(`/api/admin/candidate-votes/${encodeURIComponent(id)}`, { method: 'DELETE' }),
         firebaseDeleteCandidateVote(id)
       ]);
-      setMessage('Vote record successfully deleted.');
+      setMessage('Vote record removed.');
       setTimeout(() => setMessage(''), 3000);
     } catch (err: any) {
       setError(err.message || 'Failed to delete vote.');

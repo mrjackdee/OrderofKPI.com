@@ -7,6 +7,8 @@ import {
 } from 'firebase/auth';
 import { 
   getFirestore, 
+  initializeFirestore,
+  setLogLevel,
   doc, 
   setDoc, 
   getDoc, 
@@ -31,7 +33,10 @@ const activeFirebaseConfig = {
 };
 
 const app = getApps().length > 0 ? getApp() : initializeApp(activeFirebaseConfig);
-export const db = getFirestore(app, activeFirebaseConfig.firestoreDatabaseId);
+setLogLevel('error');
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+}, activeFirebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 
 export enum OperationType {
@@ -123,7 +128,7 @@ export async function firebaseRegisterApplicant(name: string, email: string, pas
 
     return {
       success: true,
-      message: 'Account created successfully',
+      message: 'Account created',
       user: {
         uid: user.uid,
         email: normEmail,
@@ -213,7 +218,7 @@ export async function firebaseLoginApplicant(email: string, pass: string) {
     const name = localStorage.getItem(`kpi_client_name_${normEmail}`) || (initialCandidate ? initialCandidate.name : normEmail.split('@')[0]);
     return {
       success: true,
-      message: 'Authenticated successfully',
+      message: 'Logged in',
       user: {
         uid: 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
         email: normEmail,
@@ -229,7 +234,7 @@ export async function firebaseLoginApplicant(email: string, pass: string) {
   if (initialCandidate && pass === initialCandidate.pass && !isChanged && !clientPass) {
     return {
       success: true,
-      message: 'Authenticated successfully',
+      message: 'Logged in',
       user: {
         uid: 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
         email: normEmail,
@@ -269,7 +274,7 @@ export async function firebaseLoginApplicant(email: string, pass: string) {
       if (pass === initialCandidate.pass) {
         return {
           success: true,
-          message: 'Authenticated successfully',
+          message: 'Logged in',
           user: {
             uid: 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
             email: normEmail,
@@ -521,7 +526,7 @@ export async function firebaseSaveApplication(email: string, data: any, status: 
 
       return {
         success: true,
-        message: status === 'submitted' ? 'Application submitted successfully' : 'Draft saved successfully'
+        message: status === 'submitted' ? 'Application submitted' : 'Draft saved'
       };
     } catch (err: any) {
       console.error('Error saving to Firestore:', err);
@@ -666,7 +671,7 @@ export async function firebaseSaveCandidateVote(voterEmail: string, candidateId:
         is_dev: isDevEnvironment()
       };
       await setDoc(docRef, payload, { merge: true });
-      return { success: true, message: 'Candidate vote saved to Firestore successfully' };
+      return { success: true, message: 'Your vote has been recorded.' };
     })();
 
     const timeoutPromise = new Promise<{ success: boolean; message: string }>((resolve) => {
@@ -715,7 +720,7 @@ export async function firebaseDeleteCandidateVote(idOrKey: string): Promise<{ su
         await deleteDoc(docRef);
       } catch (e) {}
     }
-    return { success: true, message: 'Candidate vote deleted successfully' };
+    return { success: true, message: 'Vote removed.' };
   } catch (err: any) {
     return { success: false, message: err.message };
   }
@@ -758,7 +763,7 @@ export async function firebaseSaveDeanNomination(voterEmail: string, data: { nom
         is_dev: isDevEnvironment()
       };
       await setDoc(docRef, payload, { merge: true });
-      return { success: true, message: 'Nomination saved to Firestore successfully' };
+      return { success: true, message: 'Your nomination has been saved.' };
     })();
 
     const timeoutPromise = new Promise<{ success: boolean; message: string }>((resolve) => {
@@ -857,7 +862,7 @@ export async function firebaseSaveDeanVote(voterEmail: string, nomineeName: stri
         is_dev: isDevEnvironment()
       };
       await setDoc(docRef, payload, { merge: true });
-      return { success: true, message: 'Vote saved to Firestore successfully' };
+      return { success: true, message: 'Your vote has been recorded.' };
     })();
 
     const timeoutPromise = new Promise<{ success: boolean; message: string }>((resolve) => {
@@ -960,7 +965,7 @@ export async function firebaseDeleteDeanVote(idOrEmail: string): Promise<{ succe
       }
     }
 
-    return { success: true, message: 'Vote deleted from Firestore successfully' };
+    return { success: true, message: 'Vote removed.' };
   } catch (err: any) {
     console.error('Failed to delete Dean vote from Firestore:', err);
     if (err && (err.message?.includes('permission') || err.message?.includes('Permission') || String(err).includes('permission') || err.code === 'permission-denied')) {
@@ -993,7 +998,7 @@ export async function firebaseDeleteDeanNomination(idOrEmail: string): Promise<{
       }
     }
 
-    return { success: true, message: 'Nomination deleted from Firestore successfully' };
+    return { success: true, message: 'Nomination removed.' };
   } catch (err: any) {
     console.error('Failed to delete Dean nomination from Firestore:', err);
     if (err && (err.message?.includes('permission') || err.message?.includes('Permission') || String(err).includes('permission') || err.code === 'permission-denied')) {

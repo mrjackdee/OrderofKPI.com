@@ -586,7 +586,7 @@ export default function CommitteePage() {
     localStorage.setItem(`kpi_committee_resources_${committeeDef.slug}`, JSON.stringify(updated));
     setShowAddResourceModal(false);
     setNewResource({ title: '', url: '', description: '', type: 'drive' });
-    setNotification({ type: 'success', message: 'Resource link added successfully to committee vault.' });
+    setNotification({ type: 'success', message: 'Resource added to the committee vault.' });
     setTimeout(() => setNotification(null), 4000);
   };
 
@@ -602,7 +602,7 @@ export default function CommitteePage() {
     setResources(updated);
     localStorage.setItem(`kpi_committee_resources_${committeeDef.slug}`, JSON.stringify(updated));
     setEditingResource(null);
-    setNotification({ type: 'success', message: 'Resource link updated successfully.' });
+    setNotification({ type: 'success', message: 'Resource updated.' });
     setTimeout(() => setNotification(null), 4000);
   };
 
@@ -648,7 +648,7 @@ export default function CommitteePage() {
     setMeetings(updated);
     localStorage.setItem(`kpi_committee_meetings_${committeeDef.slug}`, JSON.stringify(updated));
     setEditingMeeting(null);
-    setNotification({ type: 'success', message: 'Meeting details updated successfully.' });
+    setNotification({ type: 'success', message: 'Meeting details have been saved.' });
     setTimeout(() => setNotification(null), 4000);
   };
 
@@ -691,7 +691,7 @@ export default function CommitteePage() {
     setAnnouncements(updated);
     localStorage.setItem(`kpi_committee_announcements_${committeeDef.slug}`, JSON.stringify(updated));
     setEditingAnnouncement(null);
-    setNotification({ type: 'success', message: 'Announcement updated successfully.' });
+    setNotification({ type: 'success', message: 'Announcement has been posted.' });
     setTimeout(() => setNotification(null), 4000);
   };
 
@@ -786,7 +786,7 @@ export default function CommitteePage() {
       setSelectedMemberEmail('');
       setNotification({ 
         type: 'success', 
-        message: `Committee assignment for "${memberToUpdate.name || selectedMemberEmail}" as ${selectedMemberRole === 'chair' ? 'Committee Chair' : 'Committee Member'} successfully saved to the database!` 
+        message: `Committee assignment for "${memberToUpdate.name || selectedMemberEmail}" has been updated.` 
       });
       setTimeout(() => setNotification(null), 5000);
     } else {
@@ -858,10 +858,10 @@ export default function CommitteePage() {
 
       setAllAvailableMembers(updatedMemberList);
       filterMembersForCommittee(updatedMemberList, committeeDef.slug);
-      setNotification({ type: 'success', message: `Member "${displayName}" removed from ${committeeDef.name} and saved to database.` });
+      setNotification({ type: 'success', message: `Member "${displayName}" has been removed from ${committeeDef.name}.` });
       setTimeout(() => setNotification(null), 5000);
     } else {
-      setNotification({ type: 'error', message: 'Unable to remove committee assignment from database. Please verify connection and try again.' });
+      setNotification({ type: 'error', message: 'Unable to remove committee assignment. Please verify connection and try again.' });
     }
     setSavingRoleForEmail(null);
   };
@@ -937,11 +937,11 @@ export default function CommitteePage() {
       filterMembersForCommittee(updatedMemberList, committeeDef.slug);
       setNotification({ 
         type: 'success', 
-        message: `Role assignment for "${displayName}" updated to ${newRole === 'chair' ? 'Committee Chair' : 'Committee Member'} and saved to database!` 
+        message: `Role assignment for "${displayName}" updated to ${newRole === 'chair' ? 'Committee Chair' : 'Committee Member'}.` 
       });
       setTimeout(() => setNotification(null), 5000);
     } else {
-      setNotification({ type: 'error', message: 'Error saving committee role change to database. Please check connection and try again.' });
+      setNotification({ type: 'error', message: 'Error saving committee role change. Please check connection and try again.' });
     }
     setSavingRoleForEmail(null);
   };

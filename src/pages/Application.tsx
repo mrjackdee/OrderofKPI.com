@@ -1071,11 +1071,11 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="flex items-center gap-4 w-full md:w-auto justify-end">
             <button 
               onClick={() => handleSave(true)}
               disabled={saving}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border border-gold/30 text-gold font-bold uppercase tracking-widest text-[11px] hover:bg-gold/10 transition-all disabled:opacity-50"
+              className="px-8 py-4 rounded-2xl border border-gold/30 text-gold font-bold uppercase tracking-widest text-[11px] hover:bg-gold/10 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Save size={16} />
               {saving ? 'Saving...' : 'Save Draft'}
@@ -1083,7 +1083,7 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
             <button 
               onClick={handleSubmit}
               disabled={saving}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-10 py-4 rounded-2xl bg-gold text-ivy font-bold uppercase tracking-widest text-[11px] hover:scale-105 active:scale-95 transition-all shadow-lg disabled:opacity-50"
+              className="px-10 py-4 rounded-2xl bg-gold text-ivy font-bold uppercase tracking-widest text-[11px] hover:scale-105 active:scale-95 transition-all shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Send size={16} />
               Submit Application
@@ -1136,7 +1136,7 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
               <button
                 type="button"
                 onClick={() => setShowSaveModal(false)}
-                className="w-full py-3.5 bg-ivy text-cream rounded-xl font-bold uppercase tracking-widest text-xs hover:brightness-110 transition-all shadow-md cursor-pointer"
+                className="w-fit mx-auto px-8 py-3.5 bg-ivy text-cream rounded-xl font-bold uppercase tracking-widest text-xs hover:brightness-110 transition-all shadow-md cursor-pointer"
               >
                 OK / Continue Application
               </button>

@@ -72,7 +72,7 @@ export default function RegistrationList() {
             transition={{ delay: 0.1 }}
             className="text-silver text-lg font-light max-w-2xl"
           >
-            A verified list of members who have successfully registered for the Biennial Conference.
+            A verified list of members who have registered for the Biennial Conference.
           </motion.p>
         </div>
 

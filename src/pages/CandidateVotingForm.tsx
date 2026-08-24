@@ -162,7 +162,7 @@ export default function CandidateVotingForm() {
       });
 
       await Promise.all(promises);
-      setSuccessMessage('Ballot submitted successfully! Thank you for participating in the FY27 candidate selection.');
+      setSuccessMessage('Your ballot has been submitted. Thank you for participating in the FY27 selection.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       setError(err.message || 'Failed to submit ballot. Please try again.');
@@ -187,18 +187,12 @@ export default function CandidateVotingForm() {
               <Clock className="w-8 h-8" />
             </div>
             <h1 className="text-2xl font-serif font-bold text-stone-900 mb-2">FY27 Candidate Voting Restricted</h1>
-            <p className="text-stone-600 max-w-lg mx-auto mb-4 text-sm leading-relaxed">
-              Voting is not open yet. Voting will open Wed, Aug 26, 2026 at 5:00 PM ET and close on Fri August 28, 2026 at 8:00 AM ET.
-            </p>
             <p className="text-stone-600 max-w-lg mx-auto mb-6 text-sm leading-relaxed">
               If you have any questions, please reach out to{' '}
               <a href="mailto:james.haywood@orderofkpi.org" className="text-amber-700 underline font-semibold hover:text-amber-800">
                 JR Haywood
               </a>.
             </p>
-            <div className="bg-amber-50 border border-amber-200/80 rounded-lg p-4 max-w-md mx-auto text-amber-900 text-xs font-semibold mb-6">
-              {votingStatus.message}
-            </div>
             <Link
               to="/member-portal"
               className="inline-flex items-center px-5 py-2.5 bg-stone-800 text-white rounded-lg text-sm font-medium hover:bg-stone-900 transition-colors"
@@ -342,12 +336,12 @@ export default function CandidateVotingForm() {
                         </p>
                       </div>
 
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center gap-3">
                         <button
                           type="button"
                           disabled={!isEligible}
                           onClick={() => handleSelectVote(candId, 'yes')}
-                          className={`flex-1 md:flex-none inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                          className={`inline-flex items-center justify-center px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
                             currentVote === 'yes'
                               ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-600 ring-offset-2'
                               : 'bg-white border border-stone-300 text-stone-700 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700'
@@ -360,7 +354,7 @@ export default function CandidateVotingForm() {
                           type="button"
                           disabled={!isEligible}
                           onClick={() => handleSelectVote(candId, 'no')}
-                          className={`flex-1 md:flex-none inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                          className={`inline-flex items-center justify-center px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
                             currentVote === 'no'
                               ? 'bg-rose-600 text-white shadow-sm ring-2 ring-rose-600 ring-offset-2'
                               : 'bg-white border border-stone-300 text-stone-700 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700'

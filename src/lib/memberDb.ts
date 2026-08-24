@@ -673,7 +673,7 @@ export async function performApplicantRegister(name: string, email: string, pass
         if (response.ok && data.success) {
           return {
             success: true,
-            message: 'Applicant registered successfully',
+            message: 'Registration complete',
             user: data.user
           };
         } else {
@@ -1002,7 +1002,7 @@ function performClientSidePasswordChange(email: string, currentPass: string, new
 
   return {
     success: true,
-    message: 'Your portal password was updated successfully.'
+    message: 'Your password has been updated.'
   };
 }
 
@@ -1049,11 +1049,11 @@ export async function saveApplication(email: string, data: any, status: 'draft' 
       const result = await response.json();
       return result;
     } else {
-      return { success: true, message: 'Application saved successfully.' };
+      return { success: true, message: 'Application saved.' };
     }
   } catch (err) {
     console.warn('Server API save notice:', err);
-    return { success: true, message: 'Application saved successfully.' };
+    return { success: true, message: 'Application saved.' };
   }
 }
 

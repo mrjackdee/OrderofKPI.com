@@ -213,7 +213,7 @@ export default function CommitteeChairDashboard() {
         })
       });
       if (res.ok) {
-        showNotification('success', `Successfully updated the candidate's intake stage to "${newStatus}" and committed changes to the database!`);
+        showNotification('success', `The candidate's intake stage has been updated to "${newStatus}".`);
         fetchCandidates();
         fetchAuditLogs();
       } else {
@@ -250,7 +250,7 @@ export default function CommitteeChairDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        showNotification('success', `Successfully registered candidate "${fullName}" and saved their applicant account in the database!`);
+        showNotification('success', `Candidate "${fullName}" has been registered and their account has been created.`);
         setShowAddCandidateModal(false);
         setNewCandidate({ firstName: '', lastName: '', email: '', phone: '', status: 'Inquiry' });
         fetchCandidates();
@@ -276,15 +276,15 @@ export default function CommitteeChairDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        showNotification('success', `Successfully removed candidate "${name}" from the intake roster and deleted their record from the database.`);
+        showNotification('success', `Candidate "${name}" has been removed from the intake roster.`);
         fetchCandidates();
         fetchAuditLogs();
       } else {
-        showNotification('error', data.message || 'We were unable to remove this candidate from the database. Please try again.');
+        showNotification('error', data.message || 'We were unable to remove this candidate. Please try again.');
         fetchCandidates();
       }
     } catch (err) {
-      showNotification('error', 'We ran into a connection issue while removing the candidate from the database. Please try again.');
+      showNotification('error', 'We ran into a connection issue while removing the candidate. Please try again.');
       fetchCandidates();
     }
   };
@@ -347,7 +347,7 @@ export default function CommitteeChairDashboard() {
     const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success;
 
     if (fsSuccess || apiSuccess) {
-      showNotification('success', `Successfully saved Membership Committee assignment for "${selectedMemberToAdd}" to the database!`);
+      showNotification('success', `Membership Committee assignment for "${selectedMemberToAdd}" has been saved.`);
       setSelectedMemberToAdd('');
       await fetchCommitteeMembers();
       await fetchAllMembers();
@@ -400,7 +400,7 @@ export default function CommitteeChairDashboard() {
     const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success;
 
     if (fsSuccess || apiSuccess) {
-      showNotification('success', `Successfully revoked Membership Committee access for "${name}" and updated the permissions database.`);
+      showNotification('success', `Membership Committee access for "${name}" has been revoked.`);
       fetchCommitteeMembers();
       fetchAllMembers();
     } else {

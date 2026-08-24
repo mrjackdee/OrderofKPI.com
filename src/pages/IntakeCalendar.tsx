@@ -141,7 +141,7 @@ export default function IntakeCalendar() {
         setGoogleToken(result.accessToken);
         setSyncStatus({
           type: 'success',
-          text: `Successfully connected to Google Account (${result.user.email || 'Workspace'}) and saved authentication session to the database!`
+          text: `Successfully connected to Google Account (${result.user.email || 'Workspace'}) and saved authentication session!`
         });
         setTimeout(() => setSyncStatus(null), 5000);
       }

@@ -7,7 +7,15 @@ import { GoogleGenAI } from "@google/genai";
 import { google } from "googleapis";
 import nodemailer from "nodemailer";
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore, doc as fsDoc, setDoc as fsSetDoc, getDocs as fsGetDocs, collection as fsCollection } from "firebase/firestore";
+import { 
+  getFirestore, 
+  initializeFirestore,
+  setLogLevel,
+  doc as fsDoc, 
+  setDoc as fsSetDoc, 
+  getDocs as fsGetDocs, 
+  collection as fsCollection 
+} from "firebase/firestore";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -41,10 +49,15 @@ interface UserRecord {
 const passwordOverridesPath = path.join(process.cwd(), "user_password_overrides.json");
 const altPasswordOverridesPath = path.join(process.cwd(), "password_overrides.json");
 const systemSettingsPath = path.join(process.cwd(), "system_settings.json");
+const rbacRolePermissionsPath = path.join(process.cwd(), "rbac_role_permissions.json");
+const rbacUserOverridesPath = path.join(process.cwd(), "rbac_user_overrides.json");
 
 let globalSystemSettings: Record<string, any> = {
   committee_enabled: false
 };
+
+let globalRolePermissions: Record<string, any> = {};
+let globalUserOverrides: Record<string, any> = {};
 
 function loadSystemSettingsFromFile() {
   if (fs.existsSync(systemSettingsPath)) {
@@ -54,6 +67,24 @@ function loadSystemSettingsFromFile() {
       console.log(`[SETTINGS] Loaded system settings from system_settings.json:`, globalSystemSettings);
     } catch (err) {
       console.error("[SETTINGS] Error loading system settings file:", err);
+    }
+  }
+
+  if (fs.existsSync(rbacRolePermissionsPath)) {
+    try {
+      globalRolePermissions = JSON.parse(fs.readFileSync(rbacRolePermissionsPath, "utf-8"));
+      console.log(`[RBAC] Loaded role permissions from rbac_role_permissions.json`);
+    } catch (err) {
+      console.error("[RBAC] Error loading rbac_role_permissions.json:", err);
+    }
+  }
+
+  if (fs.existsSync(rbacUserOverridesPath)) {
+    try {
+      globalUserOverrides = JSON.parse(fs.readFileSync(rbacUserOverridesPath, "utf-8"));
+      console.log(`[RBAC] Loaded user overrides from rbac_user_overrides.json`);
+    } catch (err) {
+      console.error("[RBAC] Error loading rbac_user_overrides.json:", err);
     }
   }
 }
@@ -70,11 +101,71 @@ async function syncSystemSettingsFromFirestoreCloud() {
             fs.writeFileSync(systemSettingsPath, JSON.stringify(globalSystemSettings, null, 2), "utf-8");
           } catch (_) {}
           console.log(`[SETTINGS Cloud Sync] Hydrated system settings from Cloud Firestore:`, globalSystemSettings);
+        } else if (docSnap.id === "role_permissions") {
+          const data = docSnap.data();
+          globalRolePermissions = { ...globalRolePermissions, ...data };
+          try {
+            fs.writeFileSync(rbacRolePermissionsPath, JSON.stringify(globalRolePermissions, null, 2), "utf-8");
+          } catch (_) {}
+          console.log(`[RBAC Cloud Sync] Hydrated role permissions from Cloud Firestore`);
+        } else if (docSnap.id === "user_overrides") {
+          const data = docSnap.data();
+          globalUserOverrides = { ...globalUserOverrides, ...data };
+          try {
+            fs.writeFileSync(rbacUserOverridesPath, JSON.stringify(globalUserOverrides, null, 2), "utf-8");
+          } catch (_) {}
+          console.log(`[RBAC Cloud Sync] Hydrated user overrides from Cloud Firestore`);
         }
       });
     } catch (e) {
       console.warn("[SETTINGS Cloud Sync] Error syncing system settings from Firestore:", e);
     }
+  }
+}
+
+async function syncSystemLogsFromFirestoreCloud() {
+  if (!serverFirestoreDb) return;
+  try {
+    const snap = await fsGetDocs(fsCollection(serverFirestoreDb, "system_logs"));
+    let loadedCount = 0;
+    snap.forEach(docSnap => {
+      const data = docSnap.data();
+      if (useSqlite && sqliteDb) {
+        try {
+          sqliteDb.prepare(`
+            INSERT OR IGNORE INTO system_logs (timestamp, email, event_type, message, severity)
+            VALUES (?, ?, ?, ?, ?)
+          `).run(data.timestamp, data.email, data.event_type, data.message, data.severity || 'info');
+          loadedCount++;
+        } catch (e) {}
+      }
+    });
+    if (loadedCount > 0) console.log(`[LOGS Cloud Sync] Hydrated ${loadedCount} system logs from Cloud Firestore.`);
+  } catch (err) {
+    console.warn("[LOGS Cloud Sync] Firestore cloud system logs sync notice:", err);
+  }
+}
+
+async function syncAuditLogsFromFirestoreCloud() {
+  if (!serverFirestoreDb) return;
+  try {
+    const snap = await fsGetDocs(fsCollection(serverFirestoreDb, "application_audit_logs"));
+    let loadedCount = 0;
+    snap.forEach(docSnap => {
+      const data = docSnap.data();
+      if (useSqlite && sqliteDb) {
+        try {
+          sqliteDb.prepare(`
+            INSERT OR IGNORE INTO application_audit_logs (id, reviewer_email, reviewer_name, applicant_email, applicant_name, action, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `).run(docSnap.id, data.reviewer_email, data.reviewer_name, data.applicant_email, data.applicant_name, data.action, data.timestamp);
+          loadedCount++;
+        } catch (e) {}
+      }
+    });
+    if (loadedCount > 0) console.log(`[AUDIT Cloud Sync] Hydrated ${loadedCount} audit logs from Cloud Firestore.`);
+  } catch (err) {
+    console.warn("[AUDIT Cloud Sync] Firestore cloud audit logs sync notice:", err);
   }
 }
 
@@ -99,7 +190,10 @@ let serverFirestoreDb: any = null;
 try {
   if (rawFirebaseConfig) {
     serverFirebaseApp = getApps().length > 0 ? getApp() : initializeApp(rawFirebaseConfig);
-    serverFirestoreDb = getFirestore(serverFirebaseApp, firebaseDatabaseId);
+    setLogLevel('error');
+    serverFirestoreDb = initializeFirestore(serverFirebaseApp, {
+      experimentalForceLongPolling: true,
+    }, firebaseDatabaseId);
   }
 } catch (e) {
   console.warn("[AUTH] Server Firebase init notice:", e);
@@ -863,7 +957,8 @@ async function initDb() {
         email TEXT,
         event_type TEXT,
         message TEXT,
-        severity TEXT DEFAULT 'info'
+        severity TEXT DEFAULT 'info',
+        UNIQUE(timestamp, email, event_type, message)
       )
     `);
 
@@ -875,7 +970,8 @@ async function initDb() {
         applicant_email TEXT,
         applicant_name TEXT,
         action TEXT,
-        timestamp TEXT
+        timestamp TEXT,
+        UNIQUE(timestamp, reviewer_email, action, applicant_email)
       )
     `);
 
@@ -1073,6 +1169,10 @@ async function initDb() {
     }
   }
 
+  // Hydrate logs from Cloud Firestore after SQLite is ready
+  await syncSystemLogsFromFirestoreCloud();
+  await syncAuditLogsFromFirestoreCloud();
+
   // Always ensure JSON database is seeded, synchronized, and available as a safe fallback/primary option
   try {
     let initialData: Record<string, UserRecord> = {};
@@ -1219,12 +1319,18 @@ function logEvent(email: string, event_type: string, message: string, severity: 
   if (useSqlite && sqliteDb) {
     try {
       sqliteDb.prepare(`
-        INSERT INTO system_logs (timestamp, email, event_type, message, severity)
+        INSERT OR IGNORE INTO system_logs (timestamp, email, event_type, message, severity)
         VALUES (?, ?, ?, ?, ?)
       `).run(timestamp, email, event_type, message, severity);
     } catch (e) {
       console.error("SQLite log write error", e);
     }
+  }
+
+  // Dual-write to Firestore
+  if (serverFirestoreDb) {
+    const logId = `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    fsSetDoc(fsDoc(serverFirestoreDb, "system_logs", logId), logEntry).catch(() => {});
   }
 
   // Broadcast to SSE clients
@@ -2311,7 +2417,7 @@ async function startServer() {
       }
 
       logEvent(email || "system", "CALENDAR_FLYER_UPLOAD", "Uploaded and updated official membership intake calendar flyer image");
-      res.json({ success: true, message: "Official flyer updated successfully" });
+      res.json({ success: true, message: "Official flyer has been updated." });
     } catch (err: any) {
       console.error("Error saving calendar flyer:", err);
       res.status(500).json({ success: false, message: err.message || "Failed to save image" });
@@ -2532,7 +2638,7 @@ async function startServer() {
       syncLocalMemberToFirestoreCloud(normEmail);
 
       logEvent(adminEmail || "admin", "MEMBER_CREATED", `Added new member to directory: ${fullName} (${normEmail}) as ${role}`);
-      res.json({ success: true, message: "Member successfully added to the active directory." });
+      res.json({ success: true, message: "Member has been added to the active directory." });
     } catch (err: any) {
       console.error("Error adding member:", err);
       res.status(500).json({ success: false, message: err.message || "Failed to add member" });
@@ -2658,7 +2764,7 @@ async function startServer() {
       syncLocalMemberToFirestoreCloud(normEmail);
 
       logEvent(adminEmail || "admin", "MEMBER_UPDATED", `Updated directory details for member: ${normEmail}`);
-      res.json({ success: true, message: "Member record updated successfully." });
+      res.json({ success: true, message: "Member record updated." });
     } catch (err: any) {
       console.error("Error updating member:", err);
       res.status(500).json({ success: false, message: err.message || "Failed to update member" });
@@ -2705,7 +2811,7 @@ async function startServer() {
       }
 
       logEvent((adminEmail as string) || "admin", "MEMBER_DELETED", `Removed member from directory: ${normEmail}`);
-      res.json({ success: true, message: "Member deleted successfully." });
+      res.json({ success: true, message: "Member has been removed." });
     } catch (err: any) {
       console.error("Error deleting member:", err);
       res.status(500).json({ success: false, message: err.message || "Failed to delete member" });
@@ -2909,7 +3015,7 @@ async function startServer() {
       };
       fs.writeFileSync(appsJsonFile, JSON.stringify(jsonStore, null, 2));
 
-      res.json({ success: true, message: "Application saved to database" });
+      res.json({ success: true, message: "Your application progress has been saved." });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -3391,7 +3497,7 @@ async function startServer() {
 
       logEvent(adminEmail || "admin", "CANDIDATE_CREATED", `Added new candidate ${name} (${emailNorm}) with applicant account role.`);
 
-      res.json({ success: true, candidateId: id, message: `Candidate ${name} record created with applicant account successfully.` });
+      res.json({ success: true, candidateId: id, message: `Candidate ${name} has been added with an applicant account.` });
     } catch (err: any) {
       console.error('Error creating candidate:', err);
       res.status(500).json({ success: false, message: err.message || "Failed to create candidate record." });
@@ -3560,7 +3666,7 @@ async function startServer() {
       // Log audit event
       logEvent((chairEmail as string) || "committee_chair", "CANDIDATE_REMOVED", `Removed candidate ${targetCandName} (${targetCandEmail || normId}) from active tracking`);
 
-      res.json({ success: true, message: "Candidate removed successfully." });
+      res.json({ success: true, message: "Candidate has been removed." });
     } catch (err: any) {
       console.error('Error deleting candidate:', err);
       res.status(500).json({ success: false, message: err.message });
@@ -3590,10 +3696,11 @@ async function startServer() {
       const { reviewer_email, reviewer_name, applicant_email, applicant_name, action } = req.body;
       const id = Math.random().toString(36).substring(2, 9);
       const timestamp = new Date().toISOString();
+      const logData = { reviewer_email, reviewer_name, applicant_email, applicant_name, action, timestamp };
 
       if (useSqlite && sqliteDb) {
         sqliteDb.prepare(`
-          INSERT INTO application_audit_logs (id, reviewer_email, reviewer_name, applicant_email, applicant_name, action, timestamp)
+          INSERT OR IGNORE INTO application_audit_logs (id, reviewer_email, reviewer_name, applicant_email, applicant_name, action, timestamp)
           VALUES (?, ?, ?, ?, ?, ?, ?)
         `).run(
           id, 
@@ -3604,6 +3711,11 @@ async function startServer() {
           action || "ACCESSED_APPLICATION", 
           timestamp
         );
+      }
+
+      // Dual-write to Firestore
+      if (serverFirestoreDb) {
+        fsSetDoc(fsDoc(serverFirestoreDb, "application_audit_logs", id), logData).catch(() => {});
       }
 
       logEvent(reviewer_email || "system", "APPLICATION_AUDIT", `Reviewer ${reviewer_name || reviewer_email} performed ${action} on candidate ${applicant_name || applicant_email}`);
@@ -3799,7 +3911,7 @@ async function startServer() {
 
       logEvent(chairEmail || "system", "COMMITTEE_MEMBER_ADDED", `Granted ${targetSlug} (${targetRole}) access to ${normEmail}`);
 
-      res.json({ success: true, message: `Member assigned to ${targetSlug} as ${targetRole} successfully.` });
+      res.json({ success: true, message: `Member assigned to ${targetSlug} as ${targetRole}.` });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -4133,7 +4245,7 @@ async function startServer() {
         saveFallbackDeanVotes(list);
       }
 
-      res.json({ success: true, message: "Vote updated successfully." });
+      res.json({ success: true, message: "Vote updated." });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -4194,7 +4306,7 @@ async function startServer() {
         }
       }
 
-      res.json({ success: true, message: "Vote deleted successfully." });
+      res.json({ success: true, message: "Vote removed." });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -4479,7 +4591,7 @@ KP Member Portal`;
         console.error("Dean vote notification trigger error:", err);
       });
 
-      res.json({ success: true, message: "Vote successfully recorded." });
+      res.json({ success: true, message: "Your vote has been recorded." });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -4539,7 +4651,7 @@ KP Member Portal`;
       }
 
       saveFallbackDeanVotes(list);
-      res.json({ success: true, message: "Votes bulk sync completed successfully." });
+      res.json({ success: true, message: "Synchronization complete." });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -4652,7 +4764,7 @@ KP Member Portal`;
       saveFallbackCandidateVotes(list);
 
       logEvent(emailNorm, "CANDIDATE_VOTE_CAST", `Cast candidate vote '${dec}' for ${candidate_name || candidate_id}`);
-      res.json({ success: true, message: "Candidate vote successfully recorded." });
+      res.json({ success: true, message: "Your vote has been recorded." });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -4668,7 +4780,7 @@ KP Member Portal`;
       }
       const list = getFallbackCandidateVotes().filter(v => v.id !== id);
       saveFallbackCandidateVotes(list);
-      res.json({ success: true, message: "Vote deleted successfully." });
+      res.json({ success: true, message: "Vote removed." });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -4768,7 +4880,7 @@ KP Member Portal`;
         saveFallbackDeanNominations(list);
       }
 
-      res.json({ success: true, message: "Nomination updated successfully." });
+      res.json({ success: true, message: "Nomination updated." });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -4793,7 +4905,7 @@ KP Member Portal`;
       list = list.filter(n => n.id !== id);
       saveFallbackDeanNominations(list);
 
-      res.json({ success: true, message: "Nomination deleted successfully." });
+      res.json({ success: true, message: "Nomination removed." });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -4946,7 +5058,7 @@ KP Member Portal`;
       }
 
       saveFallbackDeanNominations(list);
-      res.json({ success: true, message: "Nominations bulk sync completed successfully." });
+      res.json({ success: true, message: "Synchronization complete." });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -4983,6 +5095,84 @@ KP Member Portal`;
       }
 
       res.json({ success: true, features: globalSystemSettings });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // RBAC Configuration & Permissions Endpoints
+  app.get("/api/rbac/config", (req, res) => {
+    res.json({
+      success: true,
+      rolePermissions: globalRolePermissions,
+      userOverrides: globalUserOverrides
+    });
+  });
+
+  app.post("/api/rbac/role-permissions", async (req, res) => {
+    try {
+      const { roleId, permissions } = req.body || {};
+      if (!roleId || !Array.isArray(permissions)) {
+        return res.status(400).json({ success: false, message: "roleId and permissions array are required" });
+      }
+
+      globalRolePermissions[roleId] = permissions;
+
+      try {
+        fs.writeFileSync(rbacRolePermissionsPath, JSON.stringify(globalRolePermissions, null, 2), "utf-8");
+      } catch (e) {
+        console.error("[RBAC] Error saving rbac_role_permissions.json:", e);
+      }
+
+      if (serverFirestoreDb) {
+        try {
+          await fsSetDoc(fsDoc(serverFirestoreDb, "system_settings", "role_permissions"), globalRolePermissions, { merge: true });
+          console.log(`[RBAC Cloud] Synchronized role_permissions to Firestore for role ${roleId}`);
+        } catch (fsErr) {
+          console.warn("[RBAC Cloud] Warning saving role permissions to Firestore:", fsErr);
+        }
+      }
+
+      res.json({ success: true, message: `Permissions updated for role ${roleId}`, rolePermissions: globalRolePermissions });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/rbac/user-permissions", async (req, res) => {
+    try {
+      const { email, permissionKey, value } = req.body || {};
+      if (!email || !permissionKey) {
+        return res.status(400).json({ success: false, message: "email and permissionKey are required" });
+      }
+
+      const normEmail = email.toLowerCase().trim();
+      if (!globalUserOverrides[normEmail]) {
+        globalUserOverrides[normEmail] = {};
+      }
+
+      if (value === undefined) {
+        delete globalUserOverrides[normEmail][permissionKey];
+      } else {
+        globalUserOverrides[normEmail][permissionKey] = value;
+      }
+
+      try {
+        fs.writeFileSync(rbacUserOverridesPath, JSON.stringify(globalUserOverrides, null, 2), "utf-8");
+      } catch (e) {
+        console.error("[RBAC] Error saving rbac_user_overrides.json:", e);
+      }
+
+      if (serverFirestoreDb) {
+        try {
+          await fsSetDoc(fsDoc(serverFirestoreDb, "system_settings", "user_overrides"), globalUserOverrides, { merge: true });
+          console.log(`[RBAC Cloud] Synchronized user_overrides to Firestore for user ${normEmail}`);
+        } catch (fsErr) {
+          console.warn("[RBAC Cloud] Warning saving user overrides to Firestore:", fsErr);
+        }
+      }
+
+      res.json({ success: true, message: `Permission override updated for ${normEmail}`, userOverrides: globalUserOverrides });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }

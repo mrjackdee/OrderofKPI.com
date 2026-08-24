@@ -231,7 +231,7 @@ export default function Constitution() {
       setSubmissions(list);
       setLoadingSubmissions(false);
     }, (error) => {
-      console.error("Firestore loading error:", error);
+      console.warn("Firestore revisions sync listener notice:", error.message || error);
       setLoadingSubmissions(false);
       try {
         handleFirestoreError(error, OperationType.LIST, 'revisions');

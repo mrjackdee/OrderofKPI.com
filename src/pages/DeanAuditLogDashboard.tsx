@@ -117,7 +117,7 @@ export default function DeanAuditLogDashboard() {
       const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
 
       if (apiSuccess || fsSuccess) {
-        setMessage('Nomination successfully deleted.');
+        setMessage('Nomination removed.');
         fetchAdminNominations();
       } else {
         setError('Failed to delete nomination record.');
@@ -161,7 +161,7 @@ export default function DeanAuditLogDashboard() {
       const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
 
       if (apiSuccess || fsSuccess) {
-        setMessage('Nomination successfully updated.');
+        setMessage('Nomination updated.');
         setEditingId(null);
         fetchAdminNominations();
       } else {
