@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { Member, Candidate } from '../types';
 import { prospectiveMembers, fetchAllApplications, syncApplicationsFromFirestore } from '../lib/memberDb';
+import { firebaseSyncPortalMember } from '../lib/firebase';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import { googleSignIn, getAccessToken } from '../lib/googleAuth';
 import { createGoogleForm, getGoogleForm, getGoogleFormResponses } from '../lib/googleWorkspace';
@@ -572,39 +573,64 @@ export default function AdminDashboard() {
     if (!editingMember?.email || !editingMember?.name || !editingMember?.role) return;
 
     setActionLoading(true);
-    try {
-      const url = isNewMember ? '/api/members' : `/api/members?email=${encodeURIComponent(editingMember.email)}`;
-      const method = isNewMember ? 'POST' : 'PUT';
-      
-      const response = await fetch(url, {
-        method,
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-user-email': currentUserEmail
-        },
-        body: JSON.stringify({
-          ...editingMember,
-          adminEmail: currentUserEmail
-        }),
-      });
+    const targetEmail = editingMember.email.toLowerCase().trim();
 
-      const data = await response.json();
+    // Dual-write: 1) Cloud Firestore
+    const firestoreTask = firebaseSyncPortalMember({
+      email: targetEmail,
+      name: editingMember.name || targetEmail,
+      role: editingMember.role || 'member',
+      title: editingMember.title || '',
+      financial_status: editingMember.financial_status || 'active',
+      industry: editingMember.industry || '',
+      committees: editingMember.committees || [],
+      committeeRoles: editingMember.committeeRoles || {}
+    });
 
-      if (response.ok && data.success) {
-        showToast('success', isNewMember 
-          ? `Successfully registered user "${editingMember.name}" and saved to the database!` 
-          : `Successfully updated settings for user "${editingMember.email}" and committed the changes to the database!`
-        );
-        setShowMemberModal(false);
-        fetchMembers();
-      } else {
-        showToast('error', data.message || 'We could not save the member settings. Please make sure all details are filled out correctly and try again.');
+    // Dual-write: 2) Server API
+    const apiTask = (async () => {
+      try {
+        const url = isNewMember ? '/api/members' : `/api/members?email=${encodeURIComponent(targetEmail)}`;
+        const method = isNewMember ? 'POST' : 'PUT';
+        
+        const response = await fetch(url, {
+          method,
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user-email': currentUserEmail
+          },
+          body: JSON.stringify({
+            ...editingMember,
+            adminEmail: currentUserEmail
+          }),
+        });
+
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          return await response.json();
+        }
+        return { success: response.ok };
+      } catch (err) {
+        return { success: false, error: err };
       }
-    } catch (error) {
-      showToast('error', 'We had trouble saving the directory user. Please check your network connection and try again.');
-    } finally {
-      setActionLoading(false);
+    })();
+
+    const [fsRes, apiRes] = await Promise.allSettled([firestoreTask, apiTask]);
+
+    const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
+    const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success;
+
+    if (fsSuccess || apiSuccess) {
+      showToast('success', isNewMember 
+        ? `Successfully registered user "${editingMember.name}" and saved to the database!` 
+        : `Successfully updated settings for user "${editingMember.email}" and committed the changes to the database!`
+      );
+      setShowMemberModal(false);
+      fetchMembers();
+    } else {
+      showToast('error', 'We could not save the member settings to the database. Please check connection and try again.');
     }
+    setActionLoading(false);
   };
 
   const deleteMember = async (email: string, name: string) => {

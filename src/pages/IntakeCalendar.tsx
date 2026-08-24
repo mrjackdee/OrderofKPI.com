@@ -352,18 +352,14 @@ export default function IntakeCalendar() {
 
     // Header background / styling
     doc.setFillColor(30, 63, 32); // #1E3F20 Ivy
-    doc.rect(0, 0, 210, 38, 'F');
+    doc.rect(0, 0, 210, 28, 'F');
 
     doc.setTextColor(253, 252, 240); // #FDFCF0 Cream
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(16);
-    doc.text('MEMBERSHIP INTAKE CALENDAR', 105, 15, { align: 'center' });
+    doc.text('MEMBERSHIP INTAKE CALENDAR', 105, 18, { align: 'center' });
 
-    doc.setFontSize(10);
-    doc.setTextColor(184, 134, 11); // Gold #B8860B
-    doc.text('August 2026 – September 2026', 105, 25, { align: 'center' });
-
-    let y = 48;
+    let y = 36;
     const sections = [
       {
         title: 'I. Interest Meetings',
@@ -550,7 +546,7 @@ export default function IntakeCalendar() {
         </div>
 
         {/* Header Section */}
-        <div className="pt-8 pb-6 px-6 text-center">
+        <div className="pt-4 pb-2 px-6 text-center">
           <motion.div 
             initial="hidden"
             animate="visible"
@@ -560,26 +556,19 @@ export default function IntakeCalendar() {
             }}
             className="flex flex-col items-center"
           >
-            <div className="flex items-center justify-center gap-4 mb-4">
+            <div className="flex items-center justify-center gap-4 mb-3">
               <div className="h-px w-16 bg-[#B8860B]" />
               <Leaf className="text-[#1E3F20]" size={24} />
               <div className="h-px w-16 bg-[#B8860B]" />
             </div>
-            <h1 className="text-4xl md:text-6xl font-serif text-[#1E3F20] tracking-wider mb-4 uppercase text-center max-w-4xl">
+            <h1 className="text-4xl md:text-6xl font-serif text-[#1E3F20] tracking-wider mb-2 uppercase text-center max-w-4xl">
               Membership Intake Calendar
             </h1>
-            <div className="flex items-center justify-center gap-4">
-              <div className="w-2 h-2 rounded-full bg-[#B8860B]" />
-              <p className="text-lg md:text-2xl text-[#B8860B] font-medium tracking-[0.2em] uppercase">
-                August 2026 – September 2026
-              </p>
-              <div className="w-2 h-2 rounded-full bg-[#B8860B]" />
-            </div>
           </motion.div>
         </div>
 
         {/* PDF Export & Google Calendar Sign-In */}
-        <div className="flex flex-col items-center justify-center gap-4 mb-8 px-4">
+        <div className="flex flex-col items-center justify-center gap-4 mb-4 px-4">
           <button
             onClick={exportToPDF}
             className="bg-[#B8860B] hover:bg-[#1E3F20] text-white px-6 py-3 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-md transition-all cursor-pointer hover:scale-105"

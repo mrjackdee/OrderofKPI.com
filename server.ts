@@ -2410,50 +2410,92 @@ async function startServer() {
     const resolvedLastName = last_name || name?.split(" ").slice(1).join(" ") || "";
     const resolvedFullName = name || `${resolvedFirstName} ${resolvedLastName}`.trim();
     const isTestVal = is_test_credential !== undefined ? (is_test_credential ? 1 : 0) : null;
-    const commsStr = committees !== undefined ? JSON.stringify(Array.isArray(committees) ? committees : []) : null;
+    const commsArr = committees !== undefined ? (Array.isArray(committees) ? committees : []) : null;
+    const commsStr = commsArr !== null ? JSON.stringify(commsArr) : null;
     const commRolesObj = committeeRoles !== undefined ? committeeRoles : (committee_roles !== undefined ? committee_roles : null);
     const commRolesStr = commRolesObj !== null ? JSON.stringify(commRolesObj) : null;
     const rolesStr = Array.isArray(roles) ? JSON.stringify(roles) : null;
 
     try {
-      // Update SQLite
+      // Update SQLite (Upsert if member not in users table)
       if (useSqlite && sqliteDb) {
-        sqliteDb.prepare(`
-          UPDATE users 
-          SET name = COALESCE(?, name), 
-              first_name = COALESCE(?, first_name), 
-              last_name = COALESCE(?, last_name), 
-              role = COALESCE(?, role), 
-              roles = COALESCE(?, roles), 
-              title = COALESCE(?, title),
-              financial_status = COALESCE(?, financial_status),
-              industry = COALESCE(?, industry),
-              profile_photo = COALESCE(?, profile_photo),
-              is_test_credential = COALESCE(?, is_test_credential),
-              committees = COALESCE(?, committees),
-              committee_roles = COALESCE(?, committee_roles)
-          WHERE email = ?
-        `).run(
-          resolvedFullName || null, 
-          resolvedFirstName || null, 
-          resolvedLastName || null, 
-          role || null, 
-          rolesStr, 
-          title !== undefined ? title : null, 
-          financial_status || null, 
-          industry !== undefined ? industry : null, 
-          profile_photo || null, 
-          isTestVal,
-          commsStr,
-          commRolesStr,
-          normEmail
-        );
+        const existing = sqliteDb.prepare("SELECT * FROM users WHERE email = ?").get(normEmail);
+        if (!existing) {
+          sqliteDb.prepare(`
+            INSERT INTO users (email, name, first_name, last_name, role, roles, title, financial_status, industry, profile_photo, is_test_credential, committees, committee_roles)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(
+            normEmail,
+            resolvedFullName || normEmail,
+            resolvedFirstName || '',
+            resolvedLastName || '',
+            role || 'member',
+            rolesStr || JSON.stringify([role || 'member']),
+            title || '',
+            financial_status || 'active',
+            industry || '',
+            profile_photo || '',
+            isTestVal || 0,
+            commsStr || '[]',
+            commRolesStr || '{}'
+          );
+        } else {
+          sqliteDb.prepare(`
+            UPDATE users 
+            SET name = COALESCE(?, name), 
+                first_name = COALESCE(?, first_name), 
+                last_name = COALESCE(?, last_name), 
+                role = COALESCE(?, role), 
+                roles = COALESCE(?, roles), 
+                title = COALESCE(?, title),
+                financial_status = COALESCE(?, financial_status),
+                industry = COALESCE(?, industry),
+                profile_photo = COALESCE(?, profile_photo),
+                is_test_credential = COALESCE(?, is_test_credential),
+                committees = COALESCE(?, committees),
+                committee_roles = COALESCE(?, committee_roles)
+            WHERE email = ?
+          `).run(
+            resolvedFullName || null, 
+            resolvedFirstName || null, 
+            resolvedLastName || null, 
+            role || null, 
+            rolesStr, 
+            title !== undefined ? title : null, 
+            financial_status || null, 
+            industry !== undefined ? industry : null, 
+            profile_photo || null, 
+            isTestVal,
+            commsStr,
+            commRolesStr,
+            normEmail
+          );
+        }
       }
 
       // Sync JSON
       if (fs.existsSync(jsonDbPath)) {
-        const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
-        if (data[normEmail]) {
+        let data: Record<string, any> = {};
+        try {
+          data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
+        } catch (e) {
+          data = {};
+        }
+        if (!data[normEmail]) {
+          data[normEmail] = {
+            email: normEmail,
+            name: resolvedFullName || normEmail,
+            first_name: resolvedFirstName || '',
+            last_name: resolvedLastName || '',
+            role: role || 'member',
+            roles: Array.isArray(roles) ? roles : [role || 'member'],
+            title: title || '',
+            financial_status: financial_status || 'active',
+            industry: industry || '',
+            committees: commsArr || [],
+            committeeRoles: commRolesObj || {}
+          };
+        } else {
           if (resolvedFullName) data[normEmail].name = resolvedFullName;
           if (resolvedFirstName) data[normEmail].first_name = resolvedFirstName;
           if (resolvedLastName) data[normEmail].last_name = resolvedLastName;
@@ -2464,10 +2506,10 @@ async function startServer() {
           if (industry !== undefined) data[normEmail].industry = industry;
           if (profile_photo) data[normEmail].profile_photo = profile_photo;
           if (isTestVal !== null) data[normEmail].is_test_credential = isTestVal;
-          if (committees !== undefined) data[normEmail].committees = committees;
+          if (commsArr !== null) data[normEmail].committees = commsArr;
           if (commRolesObj !== null) data[normEmail].committeeRoles = commRolesObj;
-          fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
         }
+        fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
       }
 
       // Trigger 2-way cloud push to Firestore

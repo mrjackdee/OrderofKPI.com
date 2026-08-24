@@ -30,6 +30,7 @@ import MemberHeader from '../components/MemberHeader';
 import { Member, STANDING_COMMITTEES, CommitteeSlug, CommitteeRole } from '../types';
 import { syncApplicationsFromFirestore, normalizeUserRBAC } from '../lib/memberDb';
 import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
+import { firebaseSyncPortalMember } from '../lib/firebase';
 
 export default function FinancialRoster() {
   const navigate = useNavigate();
@@ -64,25 +65,58 @@ export default function FinancialRoster() {
   const handleSaveIndustry = async () => {
     if (!selectedProfileMember) return;
     setIsSavingIndustry(true);
-    try {
-      const res = await fetch(`/api/members/${encodeURIComponent(selectedProfileMember.email)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          industry: industryInput.trim(),
-          adminEmail: currentUserEmail
-        })
-      });
-      if (res.ok) {
-        setSelectedProfileMember(prev => prev ? { ...prev, industry: industryInput.trim() } : null);
-        setMembers(prev => prev.map(m => m.email.toLowerCase() === selectedProfileMember.email.toLowerCase() ? { ...m, industry: industryInput.trim() } : m));
-        setIsEditingIndustry(false);
+    const newIndustry = industryInput.trim();
+    const targetEmail = selectedProfileMember.email.toLowerCase().trim();
+
+    // Dual-write: 1) Cloud Firestore
+    const firestoreTask = firebaseSyncPortalMember({
+      email: targetEmail,
+      name: selectedProfileMember.name || targetEmail,
+      role: selectedProfileMember.role || 'member',
+      title: selectedProfileMember.title || '',
+      financial_status: selectedProfileMember.financial_status || 'active',
+      industry: newIndustry,
+      committees: selectedProfileMember.committees || [],
+      committeeRoles: selectedProfileMember.committeeRoles || {}
+    });
+
+    // Dual-write: 2) Server API
+    const apiTask = (async () => {
+      try {
+        const res = await fetch(`/api/members/${encodeURIComponent(targetEmail)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            industry: newIndustry,
+            adminEmail: currentUserEmail
+          })
+        });
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          return await res.json();
+        }
+        return { success: res.ok };
+      } catch (e) {
+        return { success: false, error: e };
       }
-    } catch (e) {
-      console.error('Failed to save industry:', e);
-    } finally {
-      setIsSavingIndustry(false);
+    })();
+
+    const [fsRes, apiRes] = await Promise.allSettled([firestoreTask, apiTask]);
+
+    const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
+    const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success;
+
+    if (fsSuccess || apiSuccess) {
+      setSelectedProfileMember(prev => prev ? { ...prev, industry: newIndustry } : null);
+      setMembers(prev => prev.map(m => m.email.toLowerCase() === targetEmail ? { ...m, industry: newIndustry } : m));
+      setIsEditingIndustry(false);
+      setActionMessage({ type: 'success', text: `Industry/Profession for "${selectedProfileMember.name || targetEmail}" saved successfully!` });
+      setTimeout(() => setActionMessage(null), 5000);
+    } else {
+      setActionMessage({ type: 'error', text: 'We were unable to update Industry/Profession. Please verify connection and try again.' });
+      setTimeout(() => setActionMessage(null), 5000);
     }
+    setIsSavingIndustry(false);
   };
 
   // Admin states and handlers for absolute CRUD controls across the Member Portal
@@ -123,38 +157,65 @@ export default function FinancialRoster() {
   const handleSaveAdminEdit = async () => {
     if (!selectedProfileMember) return;
     setSavingAdmin(true);
-    try {
-      const res = await fetch(`/api/members/${encodeURIComponent(selectedProfileMember.email)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...editAdminForm,
-          adminEmail: currentUserEmail
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        const updatedCommittees = editAdminForm.committees as CommitteeSlug[];
-        const updatedRoles = editAdminForm.committeeRoles as Record<string, CommitteeRole>;
-        const merged = {
-          ...editAdminForm,
-          committees: updatedCommittees,
-          committeeRoles: updatedRoles
-        };
-        setSelectedProfileMember(prev => prev ? { ...prev, ...merged } : null);
-        setMembers(prev => prev.map(m => m.email.toLowerCase() === selectedProfileMember.email.toLowerCase() ? { ...m, ...merged } : m));
-        setIsEditingAdmin(false);
-        setActionMessage({ type: 'success', text: `Member details and committee assignments for "${editAdminForm.name || selectedProfileMember.email}" successfully saved to database!` });
-        setTimeout(() => setActionMessage(null), 5000);
-      } else {
-        alert(data.message || 'Failed to update member details');
+    const targetEmail = selectedProfileMember.email.toLowerCase().trim();
+
+    const updatedCommittees = editAdminForm.committees as CommitteeSlug[];
+    const updatedRoles = editAdminForm.committeeRoles as Record<string, CommitteeRole>;
+
+    // Dual-write: 1) Cloud Firestore
+    const firestoreTask = firebaseSyncPortalMember({
+      email: targetEmail,
+      name: editAdminForm.name || targetEmail,
+      role: editAdminForm.role || 'member',
+      title: editAdminForm.title || '',
+      financial_status: editAdminForm.financial_status || 'active',
+      industry: editAdminForm.industry || '',
+      committees: updatedCommittees,
+      committeeRoles: updatedRoles
+    });
+
+    // Dual-write: 2) Server API
+    const apiTask = (async () => {
+      try {
+        const res = await fetch(`/api/members/${encodeURIComponent(targetEmail)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...editAdminForm,
+            adminEmail: currentUserEmail
+          })
+        });
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          return await res.json();
+        }
+        return { success: res.ok };
+      } catch (e) {
+        return { success: false, error: e };
       }
-    } catch (err) {
-      console.error('Error saving updates:', err);
-      alert('Error connecting to server');
-    } finally {
-      setSavingAdmin(false);
+    })();
+
+    const [fsRes, apiRes] = await Promise.allSettled([firestoreTask, apiTask]);
+
+    const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
+    const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success;
+
+    if (fsSuccess || apiSuccess) {
+      const merged = {
+        ...editAdminForm,
+        committees: updatedCommittees,
+        committeeRoles: updatedRoles
+      };
+      setSelectedProfileMember(prev => prev ? { ...prev, ...merged } : null);
+      setMembers(prev => prev.map(m => m.email.toLowerCase() === targetEmail ? { ...m, ...merged } : m));
+      setIsEditingAdmin(false);
+      setActionMessage({ type: 'success', text: `Member details and Industry/Profession for "${editAdminForm.name || targetEmail}" successfully saved to database!` });
+      setTimeout(() => setActionMessage(null), 5000);
+    } else {
+      setActionMessage({ type: 'error', text: 'Failed to update member profile in database. Please check connection and try again.' });
+      setTimeout(() => setActionMessage(null), 5000);
     }
+    setSavingAdmin(false);
   };
 
   const handleDeleteAdminMember = async () => {
