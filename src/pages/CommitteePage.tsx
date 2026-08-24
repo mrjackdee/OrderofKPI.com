@@ -689,7 +689,8 @@ export default function CommitteePage() {
     e.preventDefault();
     if (!selectedMemberEmail || isSavingMember) return;
 
-    const memberToUpdate = allAvailableMembers.find(m => m.email.toLowerCase() === selectedMemberEmail.toLowerCase());
+    const normSelectedEmail = selectedMemberEmail.toLowerCase().trim();
+    const memberToUpdate = allAvailableMembers.find(m => m.email.toLowerCase().trim() === normSelectedEmail);
     if (!memberToUpdate) return;
 
     setIsSavingMember(true);
@@ -700,59 +701,70 @@ export default function CommitteePage() {
     }
     const existingRoles = { ...norm.committeeRoles, [committeeDef.slug]: selectedMemberRole };
 
-    try {
-      const res = await fetch('/api/committee/members', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: selectedMemberEmail,
-          committeeSlug: committeeDef.slug,
-          committeeRole: selectedMemberRole,
-          chairEmail: userEmail
-        })
+    // Dual-write: 1) Cloud Firestore
+    const firestoreTask = firebaseSyncPortalMember({
+      email: memberToUpdate.email,
+      name: memberToUpdate.name || normSelectedEmail,
+      role: memberToUpdate.role || 'member',
+      title: memberToUpdate.title,
+      financial_status: memberToUpdate.financial_status,
+      industry: memberToUpdate.industry,
+      committees: existingCommittees,
+      committeeRoles: existingRoles
+    });
+
+    // Dual-write: 2) Server API
+    const apiTask = (async () => {
+      try {
+        const res = await fetch('/api/committee/members', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: normSelectedEmail,
+            committeeSlug: committeeDef.slug,
+            committeeRole: selectedMemberRole,
+            chairEmail: userEmail
+          })
+        });
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          return await res.json();
+        }
+        return { success: res.ok };
+      } catch (err) {
+        return { success: false, error: err };
+      }
+    })();
+
+    const [fsRes, apiRes] = await Promise.allSettled([firestoreTask, apiTask]);
+    const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
+    const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success;
+
+    if (fsSuccess || apiSuccess) {
+      const updatedMemberList = allAvailableMembers.map(m => {
+        if (m.email.toLowerCase().trim() === normSelectedEmail) {
+          return {
+            ...m,
+            committees: existingCommittees,
+            committeeRoles: existingRoles
+          };
+        }
+        return m;
       });
 
-      const data = await res.json();
-      if (data.success) {
-        firebaseSyncPortalMember({
-          email: memberToUpdate.email,
-          name: memberToUpdate.name,
-          role: memberToUpdate.role || 'member',
-          title: memberToUpdate.title,
-          financial_status: memberToUpdate.financial_status,
-          industry: memberToUpdate.industry,
-          committees: existingCommittees,
-          committeeRoles: existingRoles
-        }).catch(() => {});
-
-        const updatedMemberList = allAvailableMembers.map(m => {
-          if (m.email.toLowerCase() === selectedMemberEmail.toLowerCase()) {
-            return {
-              ...m,
-              committees: existingCommittees,
-              committeeRoles: existingRoles
-            };
-          }
-          return m;
-        });
-
-        setAllAvailableMembers(updatedMemberList);
-        filterMembersForCommittee(updatedMemberList, committeeDef.slug);
-        setShowAddMemberModal(false);
-        setSelectedMemberEmail('');
-        setNotification({ 
-          type: 'success', 
-          message: `Committee assignment for "${memberToUpdate.name || selectedMemberEmail}" as ${selectedMemberRole === 'chair' ? 'Committee Chair' : 'Committee Member'} successfully saved to the database!` 
-        });
-        setTimeout(() => setNotification(null), 5000);
-      } else {
-        setNotification({ type: 'error', message: data.message || 'Unable to save committee assignment. Please try again.' });
-      }
-    } catch (err: any) {
-      setNotification({ type: 'error', message: 'Connection error while saving committee assignment to database.' });
-    } finally {
-      setIsSavingMember(false);
+      setAllAvailableMembers(updatedMemberList);
+      filterMembersForCommittee(updatedMemberList, committeeDef.slug);
+      setShowAddMemberModal(false);
+      setSelectedMemberEmail('');
+      setNotification({ 
+        type: 'success', 
+        message: `Committee assignment for "${memberToUpdate.name || selectedMemberEmail}" as ${selectedMemberRole === 'chair' ? 'Committee Chair' : 'Committee Member'} successfully saved to the database!` 
+      });
+      setTimeout(() => setNotification(null), 5000);
+    } else {
+      setNotification({ type: 'error', message: 'Unable to save committee assignment to database. Please check your connection and try again.' });
     }
+    setIsSavingMember(false);
   };
 
   const handleRemoveMemberFromCommittee = async (memberEmail: string, memberName?: string) => {
@@ -765,55 +777,65 @@ export default function CommitteePage() {
     }
 
     setSavingRoleForEmail(normTarget);
-    try {
-      const res = await fetch(`/api/committee/members/${encodeURIComponent(normTarget)}?slug=${committeeDef.slug}&chairEmail=${encodeURIComponent(userEmail)}`, {
-        method: 'DELETE'
-      });
-      const data = await res.json();
-      if (data.success) {
-        const targetMember = allAvailableMembers.find(m => m.email.toLowerCase() === normTarget);
-        let updatedMemberList = allAvailableMembers;
-        if (targetMember) {
-          const norm = normalizeUserRBAC(targetMember);
-          const filteredCommittees = norm.committees.filter(c => c !== committeeDef.slug);
-          const filteredRoles = { ...norm.committeeRoles };
-          delete filteredRoles[committeeDef.slug];
 
-          firebaseSyncPortalMember({
-            email: targetMember.email,
-            name: targetMember.name,
-            role: targetMember.role || 'member',
-            title: targetMember.title,
-            financial_status: targetMember.financial_status,
-            industry: targetMember.industry,
+    const targetMember = allAvailableMembers.find(m => m.email.toLowerCase().trim() === normTarget);
+    const norm = targetMember ? normalizeUserRBAC(targetMember) : { committees: [], committeeRoles: {} };
+    const filteredCommittees = norm.committees.filter(c => c !== committeeDef.slug);
+    const filteredRoles = { ...norm.committeeRoles };
+    delete filteredRoles[committeeDef.slug];
+
+    // Dual-write: 1) Cloud Firestore
+    const firestoreTask = firebaseSyncPortalMember({
+      email: normTarget,
+      name: targetMember?.name || displayName,
+      role: targetMember?.role || 'member',
+      title: targetMember?.title,
+      financial_status: targetMember?.financial_status,
+      industry: targetMember?.industry,
+      committees: filteredCommittees,
+      committeeRoles: filteredRoles
+    });
+
+    // Dual-write: 2) Server API
+    const apiTask = (async () => {
+      try {
+        const res = await fetch(`/api/committee/members/${encodeURIComponent(normTarget)}?slug=${committeeDef.slug}&chairEmail=${encodeURIComponent(userEmail)}`, {
+          method: 'DELETE'
+        });
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          return await res.json();
+        }
+        return { success: res.ok };
+      } catch (err) {
+        return { success: false, error: err };
+      }
+    })();
+
+    const [fsRes, apiRes] = await Promise.allSettled([firestoreTask, apiTask]);
+    const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
+    const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success;
+
+    if (fsSuccess || apiSuccess) {
+      const updatedMemberList = allAvailableMembers.map(m => {
+        if (m.email.toLowerCase().trim() === normTarget) {
+          return {
+            ...m,
             committees: filteredCommittees,
             committeeRoles: filteredRoles
-          }).catch(() => {});
-
-          updatedMemberList = allAvailableMembers.map(m => {
-            if (m.email.toLowerCase() === normTarget) {
-              return {
-                ...m,
-                committees: filteredCommittees,
-                committeeRoles: filteredRoles
-              };
-            }
-            return m;
-          });
+          };
         }
+        return m;
+      });
 
-        setAllAvailableMembers(updatedMemberList);
-        filterMembersForCommittee(updatedMemberList, committeeDef.slug);
-        setNotification({ type: 'success', message: `Member "${displayName}" removed from ${committeeDef.name} and saved to database.` });
-        setTimeout(() => setNotification(null), 5000);
-      } else {
-        setNotification({ type: 'error', message: data.message || 'Failed to remove member from committee.' });
-      }
-    } catch (err) {
-      setNotification({ type: 'error', message: 'Error connecting to database to remove committee assignment.' });
-    } finally {
-      setSavingRoleForEmail(null);
+      setAllAvailableMembers(updatedMemberList);
+      filterMembersForCommittee(updatedMemberList, committeeDef.slug);
+      setNotification({ type: 'success', message: `Member "${displayName}" removed from ${committeeDef.name} and saved to database.` });
+      setTimeout(() => setNotification(null), 5000);
+    } else {
+      setNotification({ type: 'error', message: 'Unable to remove committee assignment from database. Please verify connection and try again.' });
     }
+    setSavingRoleForEmail(null);
   };
 
   const handleToggleCommitteeRole = async (memberEmail: string, currentlyChair: boolean, memberName?: string) => {
@@ -823,68 +845,77 @@ export default function CommitteePage() {
     const displayName = memberName || memberEmail;
 
     setSavingRoleForEmail(normTarget);
-    try {
-      const res = await fetch('/api/committee/members', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: memberEmail,
-          committeeSlug: committeeDef.slug,
-          committeeRole: newRole,
-          chairEmail: userEmail
-        })
+
+    const targetMember = allAvailableMembers.find(m => m.email.toLowerCase().trim() === normTarget);
+    const norm = targetMember ? normalizeUserRBAC(targetMember) : { committees: [], committeeRoles: {} };
+    const existingCommittees = [...norm.committees];
+    if (!existingCommittees.includes(committeeDef.slug)) {
+      existingCommittees.push(committeeDef.slug);
+    }
+    const existingRoles = { ...norm.committeeRoles, [committeeDef.slug]: newRole as CommitteeRole };
+
+    // Dual-write: 1) Cloud Firestore
+    const firestoreTask = firebaseSyncPortalMember({
+      email: normTarget,
+      name: targetMember?.name || displayName,
+      role: targetMember?.role || 'member',
+      title: targetMember?.title,
+      financial_status: targetMember?.financial_status,
+      industry: targetMember?.industry,
+      committees: existingCommittees,
+      committeeRoles: existingRoles
+    });
+
+    // Dual-write: 2) Server API
+    const apiTask = (async () => {
+      try {
+        const res = await fetch('/api/committee/members', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: normTarget,
+            committeeSlug: committeeDef.slug,
+            committeeRole: newRole,
+            chairEmail: userEmail
+          })
+        });
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          return await res.json();
+        }
+        return { success: res.ok };
+      } catch (err) {
+        return { success: false, error: err };
+      }
+    })();
+
+    const [fsRes, apiRes] = await Promise.allSettled([firestoreTask, apiTask]);
+    const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
+    const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success;
+
+    if (fsSuccess || apiSuccess) {
+      const updatedMemberList = allAvailableMembers.map(m => {
+        if (m.email.toLowerCase().trim() === normTarget) {
+          return {
+            ...m,
+            committees: existingCommittees,
+            committeeRoles: existingRoles as Record<string, CommitteeRole>
+          };
+        }
+        return m;
       });
 
-      const data = await res.json();
-      if (data.success) {
-        const targetMember = allAvailableMembers.find(m => m.email.toLowerCase() === normTarget);
-        let updatedMemberList = allAvailableMembers;
-        if (targetMember) {
-          const norm = normalizeUserRBAC(targetMember);
-          const existingCommittees = [...norm.committees];
-          if (!existingCommittees.includes(committeeDef.slug)) {
-            existingCommittees.push(committeeDef.slug);
-          }
-          const existingRoles = { ...norm.committeeRoles, [committeeDef.slug]: newRole };
-
-          firebaseSyncPortalMember({
-            email: targetMember.email,
-            name: targetMember.name,
-            role: targetMember.role || 'member',
-            title: targetMember.title,
-            financial_status: targetMember.financial_status,
-            industry: targetMember.industry,
-            committees: existingCommittees,
-            committeeRoles: existingRoles
-          }).catch(() => {});
-
-          updatedMemberList = allAvailableMembers.map(m => {
-            if (m.email.toLowerCase() === normTarget) {
-              return {
-                ...m,
-                committees: existingCommittees,
-                committeeRoles: existingRoles as Record<string, CommitteeRole>
-              };
-            }
-            return m;
-          });
-        }
-
-        setAllAvailableMembers(updatedMemberList);
-        filterMembersForCommittee(updatedMemberList, committeeDef.slug);
-        setNotification({ 
-          type: 'success', 
-          message: `Role assignment for "${displayName}" updated to ${newRole === 'chair' ? 'Committee Chair' : 'Committee Member'} and saved to database!` 
-        });
-        setTimeout(() => setNotification(null), 5000);
-      } else {
-        setNotification({ type: 'error', message: data.message || 'Failed to update committee role.' });
-      }
-    } catch (err) {
-      setNotification({ type: 'error', message: 'Error saving committee role change to database.' });
-    } finally {
-      setSavingRoleForEmail(null);
+      setAllAvailableMembers(updatedMemberList);
+      filterMembersForCommittee(updatedMemberList, committeeDef.slug);
+      setNotification({ 
+        type: 'success', 
+        message: `Role assignment for "${displayName}" updated to ${newRole === 'chair' ? 'Committee Chair' : 'Committee Member'} and saved to database!` 
+      });
+      setTimeout(() => setNotification(null), 5000);
+    } else {
+      setNotification({ type: 'error', message: 'Error saving committee role change to database. Please check connection and try again.' });
     }
+    setSavingRoleForEmail(null);
   };
 
   // Update Purpose Statement Handler (Chair / Admin)

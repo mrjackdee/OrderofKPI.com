@@ -24,7 +24,7 @@ import {
   Save
 } from 'lucide-react';
 import { Candidate, Member } from '../types';
-import { firebaseUpdateCandidateStatus } from '../lib/firebase';
+import { firebaseUpdateCandidateStatus, firebaseSyncPortalMember } from '../lib/firebase';
 import { prospectiveMembers, fetchAllApplications, syncApplicationsFromFirestore, isEligibleFinancialMember } from '../lib/memberDb';
 import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 import { logPortalSectionAccess } from '../lib/auditLogger';
@@ -299,51 +299,112 @@ export default function CommitteeChairDashboard() {
     }
 
     setIsAddingCommitteeMember(true);
-    try {
-      const res = await fetch('/api/committee/members', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: selectedMemberToAdd,
-          committeeSlug: 'membership_intake',
-          committeeRole: 'member',
-          chairEmail: currentUserEmail
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        showNotification('success', `Successfully saved Membership Committee assignment for "${selectedMemberToAdd}" to the database!`);
-        setSelectedMemberToAdd('');
-        await fetchCommitteeMembers();
-        await fetchAllMembers();
-      } else {
-        showNotification('error', data.message || 'We were unable to add this member to the committee. Please try again.');
-      }
-    } catch (err) {
-      showNotification('error', 'We had trouble updating the committee roster in the database. Please verify your connection and try again.');
-    } finally {
-      setIsAddingCommitteeMember(false);
+    const normSelected = selectedMemberToAdd.toLowerCase().trim();
+    const targetMember = allMembers.find(m => m.email.toLowerCase().trim() === normSelected);
+    const existingCommittees = targetMember?.committees ? [...targetMember.committees] : [];
+    if (!existingCommittees.includes('membership_intake')) {
+      existingCommittees.push('membership_intake');
     }
+    const existingRoles = { ...(targetMember?.committeeRoles || {}), membership_intake: 'member' };
+
+    // Dual-write: 1) Cloud Firestore
+    const firestoreTask = firebaseSyncPortalMember({
+      email: normSelected,
+      name: targetMember?.name || normSelected,
+      role: targetMember?.role || 'member',
+      title: targetMember?.title,
+      financial_status: targetMember?.financial_status,
+      industry: targetMember?.industry,
+      committees: existingCommittees,
+      committeeRoles: existingRoles
+    });
+
+    // Dual-write: 2) Server API
+    const apiTask = (async () => {
+      try {
+        const res = await fetch('/api/committee/members', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: normSelected,
+            committeeSlug: 'membership_intake',
+            committeeRole: 'member',
+            chairEmail: currentUserEmail
+          })
+        });
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          return await res.json();
+        }
+        return { success: res.ok };
+      } catch (err) {
+        return { success: false, error: err };
+      }
+    })();
+
+    const [fsRes, apiRes] = await Promise.allSettled([firestoreTask, apiTask]);
+    const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
+    const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success;
+
+    if (fsSuccess || apiSuccess) {
+      showNotification('success', `Successfully saved Membership Committee assignment for "${selectedMemberToAdd}" to the database!`);
+      setSelectedMemberToAdd('');
+      await fetchCommitteeMembers();
+      await fetchAllMembers();
+    } else {
+      showNotification('error', 'We were unable to add this member to the committee. Please check connection and try again.');
+    }
+    setIsAddingCommitteeMember(false);
   };
 
   // Remove Member from Committee
   const handleRemoveCommitteeMember = async (email: string, name: string) => {
     if (!window.confirm(`Revoke Membership Committee access for ${name}?`)) return;
 
-    try {
-      const res = await fetch(`/api/committee/members?email=${encodeURIComponent(email)}&chairEmail=${encodeURIComponent(currentUserEmail)}`, {
-        method: 'DELETE'
-      });
-      const data = await res.json();
-      if (data.success) {
-        showNotification('success', `Successfully revoked Membership Committee access for "${name}" and updated the permissions database.`);
-        fetchCommitteeMembers();
-        fetchAllMembers();
-      } else {
-        showNotification('error', data.message || 'We were unable to revoke committee permissions. Please try again.');
+    const normTarget = email.toLowerCase().trim();
+    const targetMember = allMembers.find(m => m.email.toLowerCase().trim() === normTarget);
+    const filteredCommittees = (targetMember?.committees || []).filter(c => c !== 'membership_intake');
+    const filteredRoles = { ...(targetMember?.committeeRoles || {}) };
+    delete filteredRoles.membership_intake;
+
+    // Dual-write: 1) Cloud Firestore
+    const firestoreTask = firebaseSyncPortalMember({
+      email: normTarget,
+      name: name || normTarget,
+      role: targetMember?.role || 'member',
+      title: targetMember?.title,
+      financial_status: targetMember?.financial_status,
+      industry: targetMember?.industry,
+      committees: filteredCommittees,
+      committeeRoles: filteredRoles
+    });
+
+    // Dual-write: 2) Server API
+    const apiTask = (async () => {
+      try {
+        const res = await fetch(`/api/committee/members?email=${encodeURIComponent(normTarget)}&chairEmail=${encodeURIComponent(currentUserEmail)}`, {
+          method: 'DELETE'
+        });
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          return await res.json();
+        }
+        return { success: res.ok };
+      } catch (err) {
+        return { success: false, error: err };
       }
-    } catch (err) {
-      showNotification('error', 'We encountered an error updating committee permissions. Please try again.');
+    })();
+
+    const [fsRes, apiRes] = await Promise.allSettled([firestoreTask, apiTask]);
+    const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
+    const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success;
+
+    if (fsSuccess || apiSuccess) {
+      showNotification('success', `Successfully revoked Membership Committee access for "${name}" and updated the permissions database.`);
+      fetchCommitteeMembers();
+      fetchAllMembers();
+    } else {
+      showNotification('error', 'We encountered an error updating committee permissions. Please check connection and try again.');
     }
   };
 
