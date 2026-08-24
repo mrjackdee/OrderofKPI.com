@@ -19,7 +19,7 @@ export const SUPPORT_CENTER_CONFIG: SupportCenterConfig = {
   description: "A simpler way to get help is on the way. Soon, members will be able to report technical issues, request digital enhancements, receive a request number, and track progress in one place.",
   supportingLine: "One request. Clear updates. Less follow-up.",
   buttonLabel: "PREVIEW SUPPORT CENTER",
-  previewImagePath: "/assets/support_preview.png",
+  previewImagePath: "/support_preview.png",
   previewImageAlt: "Preview of the KP Member Support Center website.",
   previewCaption: "Preview of the new KP Member Support Center.",
 };
