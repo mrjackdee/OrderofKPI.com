@@ -406,7 +406,7 @@ export default function Constitution() {
 
   // Loaded Revisions content
   return (
-    <main className="w-full bg-pure-black min-h-screen py-8 px-4 md:px-8 relative overflow-hidden">
+    <main className="w-full bg-pure-black min-h-screen py-8 px-4 md:px-8 relative overflow-x-clip">
       {/* Dynamic Background Accents */}
       <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
       

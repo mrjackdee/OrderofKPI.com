@@ -509,7 +509,7 @@ export default function CandidateTracker() {
         </div>
       </div>
 
-      <div className="w-full max-w-7xl mx-auto px-4 overflow-hidden">
+      <div className="w-full max-w-7xl mx-auto px-4 min-w-0">
         {/* Stage Summary / Color-Coded Status Legend */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-6">
           {STAGES.map(stage => {
@@ -572,7 +572,7 @@ export default function CandidateTracker() {
           <span>← Swipe horizontally to view process stages →</span>
         </div>
 
-        <div className="flex gap-4 overflow-x-auto pb-6 scroll-smooth touch-pan-x items-start">
+        <div className="flex gap-4 overflow-x-auto pb-6 scroll-smooth touch-pan-x items-start w-full max-w-full scrollbar-thin">
           {STAGES.map(stage => {
             const stageCfg = getStatusBadgeConfig(stage);
             const count = filteredCandidates.filter(c => c.status === stage).length;
@@ -603,7 +603,7 @@ export default function CandidateTracker() {
             }
 
             return (
-              <div key={stage} className="min-w-[320px] flex-1 flex flex-col gap-4">
+              <div key={stage} className="w-[85vw] max-w-[340px] sm:w-auto sm:min-w-[300px] sm:max-w-none flex-1 flex-shrink-0 sm:flex-shrink flex flex-col gap-4">
                 <div className="flex items-center justify-between px-3 py-2 bg-white/60 backdrop-blur-xs rounded-xl border border-gold/10">
                   <div className="flex items-center gap-2">
                     <span className={`w-2.5 h-2.5 rounded-full ${stageCfg.dot}`} />

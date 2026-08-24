@@ -40,6 +40,43 @@ interface UserRecord {
 
 const passwordOverridesPath = path.join(process.cwd(), "user_password_overrides.json");
 const altPasswordOverridesPath = path.join(process.cwd(), "password_overrides.json");
+const systemSettingsPath = path.join(process.cwd(), "system_settings.json");
+
+let globalSystemSettings: Record<string, any> = {
+  committee_enabled: false
+};
+
+function loadSystemSettingsFromFile() {
+  if (fs.existsSync(systemSettingsPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(systemSettingsPath, "utf-8"));
+      globalSystemSettings = { ...globalSystemSettings, ...data };
+      console.log(`[SETTINGS] Loaded system settings from system_settings.json:`, globalSystemSettings);
+    } catch (err) {
+      console.error("[SETTINGS] Error loading system settings file:", err);
+    }
+  }
+}
+
+async function syncSystemSettingsFromFirestoreCloud() {
+  if (serverFirestoreDb) {
+    try {
+      const snap = await fsGetDocs(fsCollection(serverFirestoreDb, "system_settings"));
+      snap.forEach(docSnap => {
+        if (docSnap.id === "features") {
+          const data = docSnap.data();
+          globalSystemSettings = { ...globalSystemSettings, ...data };
+          try {
+            fs.writeFileSync(systemSettingsPath, JSON.stringify(globalSystemSettings, null, 2), "utf-8");
+          } catch (_) {}
+          console.log(`[SETTINGS Cloud Sync] Hydrated system settings from Cloud Firestore:`, globalSystemSettings);
+        }
+      });
+    } catch (e) {
+      console.warn("[SETTINGS Cloud Sync] Error syncing system settings from Firestore:", e);
+    }
+  }
+}
 
 let firebaseProjectId = process.env.VITE_FIREBASE_PROJECT_ID || "";
 let firebaseApiKey = process.env.VITE_FIREBASE_API_KEY || "";
@@ -664,6 +701,8 @@ async function initDb() {
   loadPasswordOverridesFromFile();
   await syncPasswordOverridesFromFirestoreCloud();
   await syncPortalMembersFromFirestoreCloud();
+  loadSystemSettingsFromFile();
+  await syncSystemSettingsFromFirestoreCloud();
 
   const allowedEmails = new Set([
     ...defaultUsers.map(u => u.email.toLowerCase().trim()),
@@ -4913,20 +4952,41 @@ KP Member Portal`;
     }
   });
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
+  // System Settings / Feature Flags API Endpoints
+  app.get("/api/system-settings", (req, res) => {
+    res.json({ success: true, features: globalSystemSettings });
+  });
+
+  app.post("/api/system-settings", async (req, res) => {
+    try {
+      const { features, featureKey, value } = req.body || {};
+      if (features && typeof features === "object") {
+        globalSystemSettings = { ...globalSystemSettings, ...features };
+      } else if (featureKey !== undefined && value !== undefined) {
+        globalSystemSettings[featureKey] = value;
+      }
+
+      try {
+        fs.writeFileSync(systemSettingsPath, JSON.stringify(globalSystemSettings, null, 2), "utf-8");
+        console.log("[SETTINGS] Updated and saved settings to system_settings.json:", globalSystemSettings);
+      } catch (e) {
+        console.error("[SETTINGS] Error writing system settings file:", e);
+      }
+
+      if (serverFirestoreDb) {
+        try {
+          await fsSetDoc(fsDoc(serverFirestoreDb, "system_settings", "features"), globalSystemSettings, { merge: true });
+          console.log("[SETTINGS] Synchronized settings update to Firestore system_settings/features.");
+        } catch (fsErr) {
+          console.warn("[SETTINGS] Warning writing settings to Firestore:", fsErr);
+        }
+      }
+
+      res.json({ success: true, features: globalSystemSettings });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
 
   app.post("/api/minutes/generate", async (req, res) => {
     try {
@@ -4958,6 +5018,21 @@ KP Member Portal`;
       res.status(500).json({ success: false, error: error.message });
     }
   });
+
+  // Vite middleware for development
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
 
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);

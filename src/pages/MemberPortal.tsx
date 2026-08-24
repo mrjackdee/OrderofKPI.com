@@ -30,7 +30,7 @@ import {
 } from '../lib/memberDb';
 import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 import { CommitteeSlug, STANDING_COMMITTEES, CommitteeDefinition, Member } from '../types';
-import { useSystemFeatures } from '../lib/settings';
+import { useSystemFeatures, isCommitteeFeatureActive } from '../lib/settings';
 import { getCandidateVotingStatus, CANDIDATE_VOTING_WINDOW_TEXT } from '../lib/votingWindow';
 
 export default function MemberPortal() {
@@ -323,7 +323,7 @@ export default function MemberPortal() {
         </motion.div>
 
         {/* KP Committees Directory Section */}
-        {features.committee_enabled && !isApplicant && (
+        {isCommitteeFeatureActive(currentUser, features) && !isApplicant && (
           <motion.section variants={itemVariants} className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gold/20 pb-4">
               <div>
@@ -334,6 +334,11 @@ export default function MemberPortal() {
                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-ivy/60">
                     Directory ({STANDING_COMMITTEES.length})
                   </span>
+                  {!features.committee_enabled && isAdmin && (
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-full shadow-xs">
+                      Admin Stealth Preview (Hidden from Members)
+                    </span>
+                  )}
                 </div>
                 <h2 className="text-2xl font-display text-ivy uppercase tracking-widest mt-1">
                   Organizational Committees
@@ -477,7 +482,7 @@ export default function MemberPortal() {
               icon: ClipboardCheck, 
               path: '/review-applications',
               color: 'bg-ivy text-cream',
-              roles: ['admin', 'Membership Committee', 'Membership Committee Chair']
+              roles: features.committee_enabled ? ['admin', 'Membership Committee', 'Membership Committee Chair'] : ['admin']
             },
             {
               title: 'FY27 Candidate Voting Mgmt & Audit',

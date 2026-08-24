@@ -31,9 +31,11 @@ import { Member, STANDING_COMMITTEES, CommitteeSlug, CommitteeRole } from '../ty
 import { syncApplicationsFromFirestore, normalizeUserRBAC } from '../lib/memberDb';
 import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 import { firebaseSyncPortalMember } from '../lib/firebase';
+import { useSystemFeatures } from '../lib/settings';
 
 export default function FinancialRoster() {
   const navigate = useNavigate();
+  const { features } = useSystemFeatures();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'firstName' | 'lastName'>('firstName');
   const [viewMode, setViewMode] = useState<'list' | 'cards'>('list');
@@ -1008,7 +1010,7 @@ export default function FinancialRoster() {
                     </div>
 
                     {/* Committees */}
-                    {selectedProfileMember.committees && selectedProfileMember.committees.length > 0 && (
+                    {selectedProfileMember.committees && selectedProfileMember.committees.length > 0 && (features.committee_enabled || isAdmin) && (
                       <div className="bg-white rounded-xl p-4 border border-[#B8860B]/20">
                         <span className="text-[10px] font-bold uppercase tracking-widest text-[#1E3F20]/60 block mb-2">
                           Committee Appointments

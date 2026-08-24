@@ -959,8 +959,8 @@ export default function CommitteePage() {
   };
 
   return (
-    <div className="min-h-screen bg-cream text-ivy font-body overflow-x-hidden">
-      <div className="w-full max-w-7xl mx-auto px-6 py-6 md:py-12 space-y-8">
+    <div className="min-h-screen bg-cream text-ivy font-body w-full max-w-full overflow-x-clip">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-12 space-y-6 md:space-y-8">
         <MemberHeader />
 
         {/* Back Link */}
@@ -1192,8 +1192,8 @@ export default function CommitteePage() {
         )}
 
         {/* Navigation Sub-Tabs */}
-        <div className="w-full overflow-x-auto min-w-0 border-b border-gold/20">
-          <div className="flex min-w-[600px]">
+        <div className="w-full overflow-x-auto min-w-0 border-b border-gold/20 scrollbar-thin">
+          <div className="flex min-w-max gap-1">
           {[
             { id: 'calendar', label: 'Committee Calendar', icon: CalendarDays, count: meetings.length },
             { id: 'resources', label: 'Document Repository', icon: FolderGit2, count: resources.length },
@@ -1206,7 +1206,7 @@ export default function CommitteePage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`px-5 py-3 text-xs font-bold uppercase tracking-wider flex items-center gap-2.5 border-b-2 transition-all whitespace-nowrap ${
+                className={`px-4 sm:px-5 py-3 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${
                   isActive 
                     ? 'border-gold text-ivy bg-gold/5 font-black' 
                     : 'border-transparent text-ivy/60 hover:text-ivy hover:border-gold/30'
@@ -1247,8 +1247,8 @@ export default function CommitteePage() {
               )}
             </div>
 
-            <div className="w-full overflow-x-auto min-w-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-[600px]">
+            <div className="w-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
               {resources.map(res => (
                 <div 
                   key={res.id}
@@ -1344,8 +1344,8 @@ export default function CommitteePage() {
               )}
             </div>
 
-            <div className="w-full overflow-x-auto min-w-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-[600px]">
+            <div className="w-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
               {meetings.map(mtg => (
                 <div
                   key={mtg.id}
@@ -1493,8 +1493,8 @@ export default function CommitteePage() {
               )}
             </div>
 
-            <div className="w-full overflow-x-auto min-w-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-w-[600px]">
+            <div className="w-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
               {members.map(member => {
                 const norm = normalizeUserRBAC(member);
                 const isMemberAdmin = norm.role === 'admin';

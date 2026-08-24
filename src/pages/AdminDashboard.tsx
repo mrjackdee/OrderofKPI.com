@@ -943,7 +943,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex flex-nowrap overflow-x-auto pb-4 gap-3 border-b border-gold/20 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="flex flex-nowrap overflow-x-auto pb-4 gap-3 border-b border-gold/20 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap scrollbar-thin">
           <button
             onClick={() => setActiveTab('users')}
             className={`px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
@@ -2023,39 +2023,102 @@ export default function AdminDashboard() {
             </div>
 
             <div className="bg-white p-6 rounded-3xl border border-gold/20 shadow-soft">
-              <h3 className="font-display font-bold text-ivy text-sm uppercase mb-4 border-b border-gold/10 pb-2">Feature Toggles & Visibility</h3>
+              <h3 className="font-display font-bold text-ivy text-sm uppercase mb-4 border-b border-gold/10 pb-2 flex items-center justify-between">
+                <span>Feature Toggles & System Visibility</span>
+                <span className={`text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border ${
+                  features.committee_enabled 
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
+                    : 'bg-amber-50 text-amber-800 border-amber-300'
+                }`}>
+                  {features.committee_enabled ? '● Live: Visible to Organization' : '🔒 Stealth Mode Active (Admin Only)'}
+                </span>
+              </h3>
               
               <div className="space-y-6 max-w-3xl">
-                {/* Committee Feature Toggle */}
-                <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-gold/20 bg-cream/20">
-                  <div className="space-y-1">
-                    <h4 className="font-bold text-ivy text-sm flex items-center gap-2">
-                      <Users className="w-4 h-4 text-gold" /> KP Committees Visibility
-                    </h4>
-                    <p className="text-xs text-ivy/70">
-                      When disabled, the KP Committees section in the Member Portal is completely hidden from all general members and officers, keeping it in "stealth" mode (Admins can still view it). When enabled, access is fully restored based on the standard role-based access control.
-                    </p>
+                {/* Committee Feature Control Card */}
+                <div className="p-5 rounded-2xl border border-gold/25 bg-cream/30 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-ivy text-sm flex items-center gap-2">
+                        <Users className="w-4 h-4 text-gold" /> KP Committees Visibility Control
+                      </h4>
+                      <p className="text-xs text-ivy/70 leading-relaxed max-w-xl">
+                        Select whether organizational committees, workspaces, and member appointment badges are visible to general members or locked in stealth mode for administrators only.
+                      </p>
+                    </div>
                   </div>
-                  
-                  <button
-                    disabled={featuresLoading}
-                    onClick={async () => {
-                      const newStatus = !features.committee_enabled;
-                      const success = await updateSystemFeature('committee_enabled', newStatus);
-                      if (success) {
-                        showToast('success', `Committee Feature Visibility is now ${newStatus ? 'ENABLED' : 'DISABLED'}.`);
-                      } else {
-                        showToast('error', 'Failed to update feature setting. Please try again.');
-                      }
-                    }}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${features.committee_enabled ? 'bg-green-600' : 'bg-gray-300'}`}
-                  >
-                    <span className="sr-only">Toggle Committee Visibility</span>
-                    <span
-                      aria-hidden="true"
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${features.committee_enabled ? 'translate-x-5' : 'translate-x-0'}`}
-                    />
-                  </button>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    {/* Stealth Mode Option Button */}
+                    <button
+                      type="button"
+                      disabled={featuresLoading}
+                      onClick={async () => {
+                        if (!features.committee_enabled) return;
+                        const success = await updateSystemFeature('committee_enabled', false);
+                        if (success) {
+                          showToast('success', 'Committee features switched to 🔒 Stealth Mode (Admin Only).');
+                        } else {
+                          showToast('error', 'Failed to update feature setting. Please try again.');
+                        }
+                      }}
+                      className={`p-4 rounded-xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
+                        !features.committee_enabled
+                          ? 'bg-amber-100/70 border-amber-400 ring-2 ring-amber-400/50 shadow-sm'
+                          : 'bg-white border-gold/20 hover:border-gold/50 opacity-80'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">🔒</span>
+                          <span className="font-bold text-xs uppercase tracking-wider text-ivy">Stealth Mode</span>
+                        </div>
+                        {!features.committee_enabled && (
+                          <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-md border border-amber-300">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-ivy/70">
+                        Hidden & locked for all non-admin users. Only Admins can preview workspaces.
+                      </p>
+                    </button>
+
+                    {/* Visible to Organization Option Button */}
+                    <button
+                      type="button"
+                      disabled={featuresLoading}
+                      onClick={async () => {
+                        if (features.committee_enabled) return;
+                        const success = await updateSystemFeature('committee_enabled', true);
+                        if (success) {
+                          showToast('success', 'Committee features switched to 🌐 Visible to Organization.');
+                        } else {
+                          showToast('error', 'Failed to update feature setting. Please try again.');
+                        }
+                      }}
+                      className={`p-4 rounded-xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
+                        features.committee_enabled
+                          ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-400/50 shadow-sm'
+                          : 'bg-white border-gold/20 hover:border-gold/50 opacity-80'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">🌐</span>
+                          <span className="font-bold text-xs uppercase tracking-wider text-ivy">Visible to Org</span>
+                        </div>
+                        {features.committee_enabled && (
+                          <span className="text-[10px] font-bold bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-md border border-emerald-300">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-ivy/70">
+                        Live & visible to members according to standard role-based access control.
+                      </p>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
