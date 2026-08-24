@@ -36,3 +36,10 @@
 - **UI Containment & Role Isolation**: New navigation items, committee dashboards, or administrative controls must be strictly hidden from unauthorized users via RBAC without affecting the visual layout or accessibility of existing member features.
 - **Staging-First Validation**: All large structural changes (Calendars, Committee Portals, RBAC updates) must be thoroughly validated in the development environment before being finalized for production to ensure zero impact on existing workflows.
 
+## 6. Password & Credential Persistence Safeguards
+- **Cloud-First Credential Authority**: Cloud Firestore (`user_password_overrides` and `candidate_accounts` collections) is the single authoritative source of truth for user passwords and first-time login statuses.
+- **Never Overwrite User Passwords with Defaults**: Server initialization routines, member directory synchronization, and CSV/Google Sheet hydration processes MUST NEVER overwrite an existing user's password hash or `is_first_login` flag with a default password.
+- **Startup Cloud Hydration**: On server startup (`initDb`), the application MUST query Cloud Firestore using the Firebase SDK to download and cache all user password overrides before handling login requests.
+- **Immediate Dual-Write on Password Change**: When a user changes or establishes their password, the change MUST be written immediately to Cloud Firestore (`user_password_overrides` and `candidate_accounts`) as well as local server storage, and confirmed before completing the transaction.
+- **Firestore Security Rules Protection**: Ensure `firestore.rules` always grants read/write permissions to `user_password_overrides` and `candidate_accounts` so cloud database requests are never blocked by permission errors.
+

@@ -6,6 +6,8 @@ import fs from "fs";
 import { GoogleGenAI } from "@google/genai";
 import { google } from "googleapis";
 import nodemailer from "nodemailer";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getFirestore, doc as fsDoc, setDoc as fsSetDoc, getDocs as fsGetDocs, collection as fsCollection } from "firebase/firestore";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -42,17 +44,29 @@ const altPasswordOverridesPath = path.join(process.cwd(), "password_overrides.js
 let firebaseProjectId = process.env.VITE_FIREBASE_PROJECT_ID || "";
 let firebaseApiKey = process.env.VITE_FIREBASE_API_KEY || "";
 let firebaseDatabaseId = process.env.VITE_FIREBASE_DATABASE_ID || "ai-studio-87b8a669-8698-4f66-8799-ff9b38422e20";
+let rawFirebaseConfig: any = null;
 try {
   const cfgPath = path.join(process.cwd(), "firebase-applet-config.json");
   if (fs.existsSync(cfgPath)) {
-    const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf-8"));
-    if (!firebaseProjectId) firebaseProjectId = cfg.projectId || "";
-    if (!firebaseApiKey) firebaseApiKey = cfg.apiKey || "";
-    if (!process.env.VITE_FIREBASE_DATABASE_ID && cfg.firestoreDatabaseId) {
-      firebaseDatabaseId = cfg.firestoreDatabaseId;
+    rawFirebaseConfig = JSON.parse(fs.readFileSync(cfgPath, "utf-8"));
+    if (!firebaseProjectId) firebaseProjectId = rawFirebaseConfig.projectId || "";
+    if (!firebaseApiKey) firebaseApiKey = rawFirebaseConfig.apiKey || "";
+    if (!process.env.VITE_FIREBASE_DATABASE_ID && rawFirebaseConfig.firestoreDatabaseId) {
+      firebaseDatabaseId = rawFirebaseConfig.firestoreDatabaseId;
     }
   }
 } catch (e) {}
+
+let serverFirebaseApp: any = null;
+let serverFirestoreDb: any = null;
+try {
+  if (rawFirebaseConfig) {
+    serverFirebaseApp = getApps().length > 0 ? getApp() : initializeApp(rawFirebaseConfig);
+    serverFirestoreDb = getFirestore(serverFirebaseApp, firebaseDatabaseId);
+  }
+} catch (e) {
+  console.warn("[AUTH] Server Firebase init notice:", e);
+}
 
 interface PasswordOverrideRecord {
   hash: string;
@@ -108,6 +122,53 @@ function loadPasswordOverridesFromFile() {
 }
 
 async function syncPasswordOverridesFromFirestoreCloud() {
+  // First try direct Firestore SDK
+  if (serverFirestoreDb) {
+    try {
+      const snap = await fsGetDocs(fsCollection(serverFirestoreDb, "user_password_overrides"));
+      let loadedCount = 0;
+      snap.forEach(docSnap => {
+        const data = docSnap.data();
+        const normEmail = (data.email || docSnap.id).toLowerCase().trim();
+        const hash = data.hash || "";
+        const isFirstLogin = data.isFirstLogin === 1 || data.isFirstLogin === true ? 1 : 0;
+        const updatedAt = data.updatedAt || new Date().toISOString();
+
+        if (normEmail && hash) {
+          globalPasswordOverrides[normEmail] = { hash, isFirstLogin, updatedAt };
+          loadedCount++;
+
+          if (useSqlite && sqliteDb) {
+            try {
+              sqliteDb.prepare("UPDATE users SET password_hash = ?, is_first_login = ? WHERE LOWER(email) = ?").run(hash, isFirstLogin, normEmail);
+            } catch (e) {}
+          }
+          if (fs.existsSync(jsonDbPath)) {
+            try {
+              const jsonUsers = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8")) as Record<string, UserRecord>;
+              if (jsonUsers[normEmail]) {
+                jsonUsers[normEmail].password_hash = hash;
+                jsonUsers[normEmail].is_first_login = isFirstLogin;
+                fs.writeFileSync(jsonDbPath, JSON.stringify(jsonUsers, null, 2));
+              }
+            } catch (e) {}
+          }
+        }
+      });
+      if (loadedCount > 0) {
+        console.log(`[AUTH Cloud Sync] Hydrated ${loadedCount} password overrides from Cloud Firestore SDK.`);
+        try {
+          fs.writeFileSync(passwordOverridesPath, JSON.stringify(globalPasswordOverrides, null, 2));
+          fs.writeFileSync(altPasswordOverridesPath, JSON.stringify(globalPasswordOverrides, null, 2));
+        } catch (e) {}
+        return;
+      }
+    } catch (sdkErr) {
+      console.warn("[AUTH Cloud Sync] Firestore SDK sync fallback notice:", sdkErr);
+    }
+  }
+
+  // Fallback to REST API if SDK was not ready
   if (!firebaseProjectId || !firebaseApiKey) return;
   try {
     const dbId = firebaseDatabaseId || "(default)";
@@ -149,7 +210,11 @@ async function syncPasswordOverridesFromFirestoreCloud() {
         }
       }
       if (loadedCount > 0) {
-        console.log(`[AUTH Cloud Sync] Hydrated ${loadedCount} password overrides from Cloud Firestore.`);
+        console.log(`[AUTH Cloud Sync] Hydrated ${loadedCount} password overrides from Cloud Firestore REST.`);
+        try {
+          fs.writeFileSync(passwordOverridesPath, JSON.stringify(globalPasswordOverrides, null, 2));
+          fs.writeFileSync(altPasswordOverridesPath, JSON.stringify(globalPasswordOverrides, null, 2));
+        } catch (e) {}
       }
     }
   } catch (err) {
@@ -172,7 +237,44 @@ function savePasswordOverride(email: string, hash: string, isFirstLogin: number 
     console.error("[AUTH] Failed to save password override file:", err);
   }
 
-  // Push to Firestore Cloud asynchronously so changed passwords persist across container resets & all environments
+  // Update SQLite & JSON local DB
+  if (useSqlite && sqliteDb) {
+    try {
+      sqliteDb.prepare("UPDATE users SET password_hash = ?, is_first_login = ? WHERE LOWER(email) = ?").run(hash, isFirstLogin, normEmail);
+    } catch (e) {}
+  }
+  if (fs.existsSync(jsonDbPath)) {
+    try {
+      const jsonUsers = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8")) as Record<string, UserRecord>;
+      if (jsonUsers[normEmail]) {
+        jsonUsers[normEmail].password_hash = hash;
+        jsonUsers[normEmail].is_first_login = isFirstLogin;
+        fs.writeFileSync(jsonDbPath, JSON.stringify(jsonUsers, null, 2));
+      }
+    } catch (e) {}
+  }
+
+  // 1. Push via Firestore SDK
+  if (serverFirestoreDb) {
+    try {
+      fsSetDoc(fsDoc(serverFirestoreDb, "user_password_overrides", normEmail), {
+        email: normEmail,
+        hash,
+        isFirstLogin: isFirstLogin === 1 ? 1 : 0,
+        updatedAt: new Date().toISOString()
+      }, { merge: true }).catch((e: any) => console.warn("[AUTH SDK Sync] user_password_overrides setDoc notice:", e?.message));
+
+      if (normEmail.includes("@gmail.com") || normEmail.includes("@me.com") || normEmail.includes("@yahoo.com")) {
+        fsSetDoc(fsDoc(serverFirestoreDb, "candidate_accounts", normEmail), {
+          email: normEmail,
+          isFirstLogin: isFirstLogin === 1,
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(() => {});
+      }
+    } catch (e) {}
+  }
+
+  // 2. Also push to Firestore REST asynchronously as dual-write backup
   if (firebaseProjectId && firebaseApiKey) {
     const docId = normEmail.replace(/\//g, "_");
     const dbId = firebaseDatabaseId || "(default)";
@@ -257,10 +359,13 @@ async function syncPortalMembersFromFirestoreCloud() {
 
         if (normEmail) {
           loadedCount++;
+          const userOverride = globalPasswordOverrides[normEmail];
+          const targetPassHash = userOverride ? userOverride.hash : hashPassword("atlanta");
+          const targetIsFirst = userOverride ? userOverride.isFirstLogin : 1;
           
           if (useSqlite && sqliteDb) {
             try {
-              const existingUser = sqliteDb.prepare("SELECT email FROM users WHERE email = ?").get(normEmail);
+              const existingUser = sqliteDb.prepare("SELECT email, password_hash, is_first_login FROM users WHERE email = ?").get(normEmail) as any;
               if (existingUser) {
                 sqliteDb.prepare(`
                   UPDATE users 
@@ -268,11 +373,10 @@ async function syncPortalMembersFromFirestoreCloud() {
                   WHERE email = ?
                 `).run(name, first_name, last_name, role, title, financial_status, industry, profile_photo, is_test_val, committeesStr, committeeRolesStr, normEmail);
               } else {
-                const defaultPasswordHash = hashPassword("atlanta");
                 sqliteDb.prepare(`
                   INSERT INTO users (email, name, first_name, last_name, password_hash, is_first_login, role, title, financial_status, industry, profile_photo, is_test_credential, committees, committee_roles)
-                  VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)
-                `).run(normEmail, name, first_name, last_name, defaultPasswordHash, role, title, financial_status, industry, profile_photo, is_test_val, committeesStr, committeeRolesStr);
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `).run(normEmail, name, first_name, last_name, targetPassHash, targetIsFirst, role, title, financial_status, industry, profile_photo, is_test_val, committeesStr, committeeRolesStr);
               }
             } catch (e) {
               console.error("[PORTAL MEMBERS Cloud Sync] SQLite sync err:", e);
@@ -282,14 +386,13 @@ async function syncPortalMembersFromFirestoreCloud() {
             try {
               const jsonUsers = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8")) as Record<string, any>;
               if (!jsonUsers[normEmail]) {
-                const defaultPasswordHash = hashPassword("atlanta");
                 jsonUsers[normEmail] = {
                   email: normEmail,
                   name,
                   first_name,
                   last_name,
-                  password_hash: defaultPasswordHash,
-                  is_first_login: 1,
+                  password_hash: targetPassHash,
+                  is_first_login: targetIsFirst,
                   role,
                   title,
                   financial_status,

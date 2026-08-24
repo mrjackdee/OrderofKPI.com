@@ -959,7 +959,7 @@ export default function CommitteePage() {
   };
 
   return (
-    <div className="min-h-screen bg-cream text-ivy font-body">
+    <div className="min-h-screen bg-cream text-ivy font-body overflow-x-hidden">
       <div className="w-full max-w-7xl mx-auto px-6 py-6 md:py-12 space-y-8">
         <MemberHeader />
 
@@ -1247,7 +1247,8 @@ export default function CommitteePage() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="w-full overflow-x-auto min-w-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-[600px]">
               {resources.map(res => (
                 <div 
                   key={res.id}
@@ -1306,6 +1307,7 @@ export default function CommitteePage() {
                   </div>
                 </div>
               ))}
+              </div>
             </div>
 
             {resources.length === 0 && (
@@ -1342,7 +1344,8 @@ export default function CommitteePage() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="w-full overflow-x-auto min-w-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-[600px]">
               {meetings.map(mtg => (
                 <div
                   key={mtg.id}
@@ -1453,6 +1456,7 @@ export default function CommitteePage() {
                   </div>
                 </div>
               ))}
+              </div>
             </div>
 
             {meetings.length === 0 && (
