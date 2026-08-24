@@ -14,10 +14,12 @@ import {
   Mail,
   X,
   UserCheck,
-  AlertCircle
+  AlertCircle,
+  LifeBuoy
 } from 'lucide-react';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import MemberHeader from '../components/MemberHeader';
+import { SupportCenterPreview } from '../components/SupportCenterPreview';
 import { 
   syncApplicationsFromFirestore, 
   getVisibleCommitteesForUser, 
@@ -252,6 +254,11 @@ export default function MemberPortal() {
           <h1 className="text-5xl md:text-6xl font-display font-bold uppercase tracking-tighter text-ivy">
             Member <span className="text-gold">Portal</span>
           </h1>
+        </motion.div>
+
+        {/* KP Support Center Feature Preview */}
+        <motion.div variants={itemVariants} className="w-full">
+          <SupportCenterPreview />
         </motion.div>
 
         {/* Core Member Tools Grid */}
