@@ -2,12 +2,34 @@ import { useState, useEffect } from 'react';
 import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
+export interface UrgentBannerConfig {
+  enabled: boolean;
+  message: string;
+  linkUrl?: string;
+  linkText?: string;
+  severity?: 'urgent' | 'important' | 'info';
+  speed?: 'normal' | 'slow' | 'fast';
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export const DEFAULT_URGENT_BANNER: UrgentBannerConfig = {
+  enabled: false,
+  message: "Intake Voting will begin on Wednesday for eligible members",
+  linkUrl: "/candidate-voting",
+  linkText: "Click Here to Review & Vote",
+  severity: "urgent",
+  speed: "normal"
+};
+
 export interface SystemFeatures {
   committee_enabled: boolean;
+  urgent_banner?: UrgentBannerConfig;
 }
 
 export const DEFAULT_FEATURES: SystemFeatures = {
-  committee_enabled: false
+  committee_enabled: false,
+  urgent_banner: DEFAULT_URGENT_BANNER
 };
 
 const STORAGE_KEY = 'kpi_system_features';
@@ -65,7 +87,14 @@ export function useSystemFeatures() {
       })
       .then(data => {
         if (data && data.features) {
-          const merged = { ...DEFAULT_FEATURES, ...data.features };
+          const merged: SystemFeatures = {
+            ...DEFAULT_FEATURES,
+            ...data.features,
+            urgent_banner: {
+              ...DEFAULT_URGENT_BANNER,
+              ...(data.features.urgent_banner || {})
+            }
+          };
           setFeatures(merged);
           persistFeaturesLocally(merged);
         }
@@ -78,7 +107,15 @@ export function useSystemFeatures() {
       const docRef = doc(db, 'system_settings', 'features');
       unsubscribe = onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists()) {
-          const cloudFeatures = { ...DEFAULT_FEATURES, ...docSnap.data() } as SystemFeatures;
+          const data = docSnap.data();
+          const cloudFeatures: SystemFeatures = {
+            ...DEFAULT_FEATURES,
+            ...data,
+            urgent_banner: {
+              ...DEFAULT_URGENT_BANNER,
+              ...(data.urgent_banner || {})
+            }
+          };
           setFeatures(cloudFeatures);
           persistFeaturesLocally(cloudFeatures);
         }
@@ -138,5 +175,48 @@ export async function updateSystemFeature(featureKey: keyof SystemFeatures, valu
   }
 
   // Considered successful if at least one target accepted the write
+  return cloudSuccess || backendSuccess;
+}
+
+export async function updateUrgentBannerConfig(bannerConfig: Partial<UrgentBannerConfig>): Promise<boolean> {
+  const current = getStoredFeatures();
+  const mergedBanner: UrgentBannerConfig = {
+    ...DEFAULT_URGENT_BANNER,
+    ...(current.urgent_banner || {}),
+    ...bannerConfig,
+    updatedAt: new Date().toISOString()
+  };
+
+  const nextFeatures: SystemFeatures = {
+    ...current,
+    urgent_banner: mergedBanner
+  };
+
+  persistFeaturesLocally(nextFeatures);
+
+  let cloudSuccess = false;
+  let backendSuccess = false;
+
+  try {
+    const docRef = doc(db, 'system_settings', 'features');
+    await setDoc(docRef, nextFeatures, { merge: true });
+    cloudSuccess = true;
+  } catch (error) {
+    console.warn("Firestore update banner notice:", error);
+  }
+
+  try {
+    const res = await fetch('/api/system-settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ features: nextFeatures })
+    });
+    if (res.ok) {
+      backendSuccess = true;
+    }
+  } catch (backendError) {
+    console.warn("Backend update banner notice:", backendError);
+  }
+
   return cloudSuccess || backendSuccess;
 }

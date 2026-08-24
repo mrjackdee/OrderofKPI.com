@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Lock, Key, Check, AlertCircle, X, ShieldAlert, CheckCircle2, LogOut, ArrowLeft } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { performHybridPasswordChange } from '../lib/memberDb';
+import UrgentBannerTicker from './UrgentBannerTicker';
 
 export default function MemberHeader() {
   const [firstName, setFirstName] = useState('Member');
@@ -82,7 +83,7 @@ export default function MemberHeader() {
     try {
       const result = await performHybridPasswordChange(
         email,
-        isFirstLogin ? 'atlanta' : currentPassword,
+        isFirstLogin ? (currentPassword || 'atlanta') : currentPassword,
         newPassword
       );
 
@@ -117,6 +118,11 @@ export default function MemberHeader() {
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 md:px-12 pt-6">
+      {isNotMemberPortal && (
+        <div className="mb-4 rounded-2xl overflow-hidden shadow-md">
+          <UrgentBannerTicker />
+        </div>
+      )}
       <div className="bg-[#122c14] border-2 border-[#D4AF37] rounded-2xl p-5 md:p-7 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
         <div className="flex flex-col md:flex-row items-center md:items-start gap-4 text-center md:text-left">
           <div className="w-14 h-14 rounded-full bg-[#D4AF37]/25 border-2 border-[#D4AF37] flex items-center justify-center text-[#FFDF79] font-black uppercase text-lg shrink-0 shadow-inner animate-pulse">

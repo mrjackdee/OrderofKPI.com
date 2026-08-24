@@ -99,7 +99,7 @@ export const SITE_ROUTES: SiteRouteItem[] = [
     title: 'Candidate Classroom Portal',
     category: 'Portals & Member Directory',
     path: '/classroom-portal',
-    description: 'Educational modules, fraternity history, study materials, and intake assignments.',
+    description: 'Educational modules, organization history, study materials, and intake assignments.',
     icon: BookOpen,
     allowedRoles: ['applicant', 'admin'],
     status: 'Role Restricted',

@@ -47,6 +47,7 @@ import { useSystemFeatures, updateSystemFeature } from '../lib/settings';
 import RbacManager from '../components/admin/RbacManager';
 import AdminUserGuideModal from '../components/admin/AdminUserGuideModal';
 import AdminSiteNavigator from '../components/admin/AdminSiteNavigator';
+import AdminUrgentBannerConfig from '../components/admin/AdminUrgentBannerConfig';
 
 interface SystemLog {
   id?: number;
@@ -2298,10 +2299,13 @@ export default function AdminDashboard() {
                   Global System <span className="text-gold">Configurations</span>
                 </h2>
                 <p className="text-ivy/60 text-xs mt-1">
-                  Manage organization-wide feature toggles, visibility controls, and access parameters.
+                  Manage organization-wide feature toggles, urgent portal banners, visibility controls, and access parameters.
                 </p>
               </div>
             </div>
+
+            {/* Urgent Portal Banner Management Section */}
+            <AdminUrgentBannerConfig onShowToast={showToast} />
 
             <div className="bg-white p-6 rounded-3xl border border-gold/20 shadow-soft">
               <h3 className="font-display font-bold text-ivy text-sm uppercase mb-4 border-b border-gold/10 pb-2 flex items-center justify-between">

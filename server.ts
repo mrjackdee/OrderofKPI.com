@@ -209,7 +209,12 @@ let globalPasswordOverrides: Record<string, PasswordOverrideRecord> = {};
 
 function loadPasswordOverridesFromFile() {
   globalPasswordOverrides = {
-    "james.haywood@orderofkpi.org": { hash: hashPassword("2012"), isFirstLogin: 0, updatedAt: new Date().toISOString() }
+    "admin@orderofkpi.org": { hash: hashPassword("2012"), isFirstLogin: 0, updatedAt: new Date().toISOString() },
+    "info@kpi2012.org": { hash: hashPassword("2012"), isFirstLogin: 0, updatedAt: new Date().toISOString() },
+    "qa.admin@orderofkpi.org": { hash: hashPassword("KPI_QA_Admin2026!"), isFirstLogin: 0, updatedAt: new Date().toISOString() },
+    "james.haywood@orderofkpi.org": { hash: hashPassword("2012"), isFirstLogin: 0, updatedAt: new Date().toISOString() },
+    "donald.mitchell@orderofkpi.org": { hash: hashPassword("1914"), isFirstLogin: 0, updatedAt: new Date().toISOString() },
+    "sammie.poe@orderofkpi.org": { hash: hashPassword("atlanta"), isFirstLogin: 0, updatedAt: new Date().toISOString() }
   };
 
   if (fs.existsSync(passwordOverridesPath)) {
@@ -806,6 +811,8 @@ async function initDb() {
   const userPasswordOverrides: Record<string, string> = {
     "james.haywood@orderofkpi.org": "2012",
     "admin@orderofkpi.org": "2012",
+    "info@kpi2012.org": "2012",
+    "qa.admin@orderofkpi.org": "KPI_QA_Admin2026!",
     "donald.mitchell@orderofkpi.org": "1914",
     "sammie.poe@orderofkpi.org": "atlanta",
     "churtis.poulson@orderofkpi.org": "atlanta"
@@ -1480,12 +1487,19 @@ function findUser(email: string): UserRecord | null {
         email: normEmail,
         name: defaultU.name,
         first_name: defaultU.name.split(" ")[0],
-        password_hash: (normEmail === "admin@orderofkpi.org" || normEmail === "james.haywood@orderofkpi.org") 
+        password_hash: (normEmail === "admin@orderofkpi.org" || normEmail === "info@kpi2012.org" || normEmail === "james.haywood@orderofkpi.org") 
           ? hashPassword("2012") 
           : (normEmail === "donald.mitchell@orderofkpi.org")
             ? hashPassword("1914")
             : hashPassword("atlanta"),
-        is_first_login: (normEmail === "james.haywood@orderofkpi.org" || normEmail === "donald.mitchell@orderofkpi.org" || normEmail === "sammie.poe@orderofkpi.org") ? 0 : 1,
+        is_first_login: (
+          normEmail === "admin@orderofkpi.org" || 
+          normEmail === "info@kpi2012.org" || 
+          normEmail === "qa.admin@orderofkpi.org" || 
+          normEmail === "james.haywood@orderofkpi.org" || 
+          normEmail === "donald.mitchell@orderofkpi.org" || 
+          normEmail === "sammie.poe@orderofkpi.org"
+        ) ? 0 : 1,
         role: defaultU.role,
         roles: (defaultU as any).roles || [defaultU.role],
         title: defaultU.title,
@@ -1748,8 +1762,8 @@ async function startServer() {
     const isDefaultQaPassword = isQaOrTest && password === "2012";
     const explicitQa = QA_EXPLICIT_CREDENTIALS[normEmail];
     const isExplicitQaPassword = explicitQa && password === explicitQa.pass;
-    const isAdminAccount = normEmail === "admin@orderofkpi.org";
-    const isAdminPassword = isAdminAccount && password === "K@mala2026";
+    const isAdminAccount = normEmail === "admin@orderofkpi.org" || normEmail === "info@kpi2012.org" || normEmail === "qa.admin@orderofkpi.org";
+    const isAdminPassword = isAdminAccount && (password === "K@mala2026" || password === "2012" || password === "KPI_QA_Admin2026!");
     const isJamesAccount = normEmail === "james.haywood@orderofkpi.org";
     const isJamesPassword = isJamesAccount && (password === "2012" || password === "atlanta");
     const isDonaldAccount = normEmail === "donald.mitchell@orderofkpi.org";
@@ -1804,7 +1818,7 @@ async function startServer() {
           title: user.title,
           committees: parsedCommittees,
           committeeRoles: parsedCommitteeRoles,
-          isFirstLogin: user.is_first_login === 1
+          isFirstLogin: (isAdminAccount || isJamesAccount || isDonaldAccount || isSammieAccount) ? false : (user.is_first_login === 1)
         }
       });
     }

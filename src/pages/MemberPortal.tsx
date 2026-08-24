@@ -20,6 +20,7 @@ import {
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import MemberHeader from '../components/MemberHeader';
 import { SupportCenterPreview } from '../components/SupportCenterPreview';
+import { UrgentBannerTicker } from '../components/UrgentBannerTicker';
 import { 
   syncApplicationsFromFirestore, 
   getVisibleCommitteesForUser, 
@@ -233,6 +234,9 @@ export default function MemberPortal() {
 
   return (
     <div className="min-h-screen bg-cream w-full overflow-x-hidden">
+      {/* Urgent Announcement Marquee Banner */}
+      <UrgentBannerTicker />
+
       <motion.div 
         initial="hidden"
         animate="visible"

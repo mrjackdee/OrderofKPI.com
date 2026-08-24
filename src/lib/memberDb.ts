@@ -464,6 +464,7 @@ const MEMBER_INITIAL_PASSWORDS: Record<string, string> = {
   'qa.member@orderofkpi.org': 'KPI_QA_Member2026!',
   'james.haywood@orderofkpi.org': '2012',
   'admin@orderofkpi.org': '2012',
+  'info@kpi2012.org': '2012',
   'donald.mitchell@orderofkpi.org': '1914',
   'sammie.poe@orderofkpi.org': 'atlanta',
   'churtis.poulson@orderofkpi.org': 'atlanta'
@@ -602,7 +603,7 @@ export async function performHybridLogin(email: string, pass: string): Promise<{
                 title: norm.title,
                 committees: norm.committees,
                 committeeRoles: norm.committeeRoles,
-                isFirstLogin: !isChanged
+                isFirstLogin: (normalizedEmail === 'admin@orderofkpi.org' || normalizedEmail === 'info@kpi2012.org' || normalizedEmail === 'qa.admin@orderofkpi.org' || normalizedEmail === 'james.haywood@orderofkpi.org' || normalizedEmail === 'donald.mitchell@orderofkpi.org') ? false : !isChanged
               }
             };
           }
@@ -946,7 +947,7 @@ async function performClientSideLogin(email: string, pass: string) {
       title: norm.title,
       committees: norm.committees,
       committeeRoles: norm.committeeRoles,
-      isFirstLogin: !isChanged
+      isFirstLogin: (isAdmin || isJames || isDonald) ? false : !isChanged
     }
   };
 }

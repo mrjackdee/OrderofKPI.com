@@ -185,3 +185,33 @@
     margin: 0.5cm;
   }
 }
+
+/* Ticker Marquee Keyframes for Member Portal Banner */
+@keyframes kpi-marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-kpi-marquee {
+  display: flex;
+  width: max-content;
+  animation: kpi-marquee 30s linear infinite;
+}
+
+.animate-kpi-marquee-fast {
+  display: flex;
+  width: max-content;
+  animation: kpi-marquee 18s linear infinite;
+}
+
+.animate-kpi-marquee-slow {
+  display: flex;
+  width: max-content;
+  animation: kpi-marquee 45s linear infinite;
+}
+
+.animate-kpi-marquee:hover,
+.animate-kpi-marquee-fast:hover,
+.animate-kpi-marquee-slow:hover {
+  animation-play-state: paused !important;
+}
