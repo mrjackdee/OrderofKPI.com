@@ -324,7 +324,7 @@ export async function firebaseResetApplicantPassword(email: string) {
       setTimeout(() => {
         resolve({
           success: true,
-          message: `Password Reset Activated for ${normEmail}. You can sign in using your initial security key to set your new password.`
+          message: `A password reset link has been dispatched to ${normEmail}. Please check your assigned @orderofkpi.org email inbox.`
         });
       }, 2500);
     });
@@ -334,7 +334,7 @@ export async function firebaseResetApplicantPassword(email: string) {
         await sendPasswordResetEmail(auth, normEmail);
         return {
           success: true,
-          message: `Password Reset Activated for ${normEmail}. You can sign in using your initial security key to set your new password.`
+          message: `A password reset link has been dispatched to ${normEmail}. Please check your assigned @orderofkpi.org email inbox.`
         };
       } catch (err: any) {
         console.warn('Firebase password reset notice:', err?.code || err?.message);
@@ -361,7 +361,7 @@ export async function firebaseResetApplicantPassword(email: string) {
 
         return {
           success: true,
-          message: `Password Reset Activated for ${normEmail}. You can sign in using your initial security key to set your new password.`
+          message: `A password reset link has been dispatched to ${normEmail}. Please check your assigned @orderofkpi.org email inbox.`
         };
       }
     })();

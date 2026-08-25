@@ -787,8 +787,129 @@ export async function requestApplicantPasswordReset(email: string): Promise<{
   } catch (e) {
     return {
       success: true,
-      message: serverMessage || `Self-Service Reset Activated for ${normEmail}: Your password has been reset to your default pass key. You can now log in immediately and you will be prompted to set a new password.`
+      message: serverMessage || `Password reset instructions have been sent to ${normEmail}. Please check your assigned @orderofkpi.org email inbox to set a new password.`
     };
+  }
+}
+
+/**
+ * Resets user password using a verified reset token.
+ */
+export async function performTokenPasswordReset(
+  email: string,
+  token: string,
+  newPass: string
+): Promise<{ success: boolean; message: string }> {
+  const normEmail = email.toLowerCase().trim();
+
+  try {
+    const resp = await fetch('/api/auth/reset-password-with-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: normEmail, token, newPassword: newPass })
+    });
+
+    const data = await resp.json();
+    if (!resp.ok || !data.success) {
+      return { success: false, message: data.message || 'Failed to reset password.' };
+    }
+
+    localStorage.setItem(`kpi_client_password_${normEmail}`, newPass);
+    localStorage.setItem(`kpi_password_changed_${normEmail}`, 'true');
+
+    // Dual-write to Cloud Firestore
+    try {
+      const { doc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('./firebase');
+
+      let passwordHash = data.hash;
+      if (!passwordHash) {
+        const msgUint8 = new TextEncoder().encode(newPass);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        passwordHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+      }
+
+      await setDoc(doc(db, 'user_password_overrides', normEmail), {
+        email: normEmail,
+        hash: passwordHash,
+        isFirstLogin: false,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      await setDoc(doc(db, 'candidate_accounts', normEmail), {
+        email: normEmail,
+        pass: newPass,
+        isFirstLogin: false,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (fsErr) {
+      console.warn('Firestore password sync notice:', fsErr);
+    }
+
+    return { success: true, message: data.message || 'Your password has been reset successfully.' };
+  } catch (err: any) {
+    return { success: false, message: err?.message || 'Network error during password reset.' };
+  }
+}
+
+/**
+ * Allows an Administrator to directly change any member's password without generating an email.
+ */
+export async function performAdminPasswordChange(
+  adminEmail: string,
+  targetEmail: string,
+  newPass: string
+): Promise<{ success: boolean; message: string }> {
+  const normAdmin = adminEmail.toLowerCase().trim();
+  const normTarget = targetEmail.toLowerCase().trim();
+
+  try {
+    const resp = await fetch('/api/admin/change-user-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminEmail: normAdmin, targetEmail: normTarget, newPassword: newPass })
+    });
+
+    const data = await resp.json();
+    if (!resp.ok || !data.success) {
+      return { success: false, message: data.message || 'Failed to update user password.' };
+    }
+
+    localStorage.setItem(`kpi_client_password_${normTarget}`, newPass);
+    localStorage.setItem(`kpi_password_changed_${normTarget}`, 'true');
+
+    // Dual-write to Cloud Firestore
+    try {
+      const { doc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('./firebase');
+
+      let passwordHash = data.hash;
+      if (!passwordHash) {
+        const msgUint8 = new TextEncoder().encode(newPass);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        passwordHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+      }
+
+      await setDoc(doc(db, 'user_password_overrides', normTarget), {
+        email: normTarget,
+        hash: passwordHash,
+        isFirstLogin: false,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      await setDoc(doc(db, 'candidate_accounts', normTarget), {
+        email: normTarget,
+        pass: newPass,
+        isFirstLogin: false,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (fsErr) {
+      console.warn('Firestore admin password sync notice:', fsErr);
+    }
+
+    return { success: true, message: data.message || `Password for ${normTarget} updated successfully.` };
+  } catch (err: any) {
+    return { success: false, message: err?.message || 'Server request failed during admin password update.' };
   }
 }
 

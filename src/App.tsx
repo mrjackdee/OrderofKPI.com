@@ -22,6 +22,7 @@ import ConferencePortal from './pages/ConferencePortal';
 import IntakeCalendar from './pages/IntakeCalendar';
 import Login from './pages/Login';
 import ApplicantLogin from './pages/ApplicantLogin';
+import ResetPassword from './pages/ResetPassword';
 import ApplicantPortal from './pages/ApplicantPortal';
 import FinancialRoster from './pages/FinancialRoster';
 import GanttChart from './pages/GanttChart';
@@ -81,6 +82,7 @@ export default function App() {
           <Route path="gantt-chart" element={<ProtectedRoute allowedRoles={['admin', 'officer', 'Membership Committee', 'Membership Committee Chair', 'member']}><GanttChart /></ProtectedRoute>} />
           <Route path="login" element={<Login />} />
           <Route path="applicant-login" element={<ApplicantLogin />} />
+          <Route path="reset-password" element={<ResetPassword />} />
           <Route path="applicant-portal" element={<ProtectedRoute><ApplicantPortal /></ProtectedRoute>} />
           <Route path="financial-roster" element={<ProtectedRoute><FinancialRoster /></ProtectedRoute>} />
           <Route path="member-directory" element={<ProtectedRoute><MemberDirectory /></ProtectedRoute>} />

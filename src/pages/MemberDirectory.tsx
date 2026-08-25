@@ -21,11 +21,14 @@ import {
   Edit3,
   Save,
   X,
-  Check
+  Check,
+  Key,
+  Lock,
+  Sparkles
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Member } from '../types';
-import { syncApplicationsFromFirestore } from '../lib/memberDb';
+import { syncApplicationsFromFirestore, performAdminPasswordChange } from '../lib/memberDb';
 import { firebaseSyncPortalMember } from '../lib/firebase';
 
 export default function MemberDirectory() {
@@ -51,6 +54,52 @@ export default function MemberDirectory() {
   });
   const [saving, setSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  // Admin Direct Password Override State
+  const [resettingPasswordUser, setResettingPasswordUser] = useState<Member | null>(null);
+  const [adminNewPassword, setAdminNewPassword] = useState('');
+  const [adminConfirmPassword, setAdminConfirmPassword] = useState('');
+  const [adminPasswordSaving, setAdminPasswordSaving] = useState(false);
+  const [adminPasswordError, setAdminPasswordError] = useState('');
+
+  const handleOpenPasswordModal = (member: Member) => {
+    setResettingPasswordUser(member);
+    setAdminNewPassword('');
+    setAdminConfirmPassword('');
+    setAdminPasswordError('');
+  };
+
+  const handleAdminPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resettingPasswordUser) return;
+
+    const hasMinLength = adminNewPassword.length >= 8;
+    const hasNumber = /\d/.test(adminNewPassword);
+    const hasUppercase = /[A-Z]/.test(adminNewPassword);
+    const passwordsMatch = adminNewPassword === adminConfirmPassword && adminNewPassword.length > 0;
+
+    if (!hasMinLength || !hasNumber || !hasUppercase || !passwordsMatch) {
+      setAdminPasswordError('Please satisfy all password complexity requirements (8+ chars, uppercase letter, number, matching passwords).');
+      return;
+    }
+
+    setAdminPasswordSaving(true);
+    setAdminPasswordError('');
+
+    try {
+      const res = await performAdminPasswordChange(currentUserEmail, resettingPasswordUser.email, adminNewPassword);
+      if (res.success) {
+        setToastMessage({ type: 'success', text: res.message });
+        setResettingPasswordUser(null);
+      } else {
+        setAdminPasswordError(res.message);
+      }
+    } catch (err: any) {
+      setAdminPasswordError(err?.message || 'Failed to update user password.');
+    } finally {
+      setAdminPasswordSaving(false);
+    }
+  };
 
   useEffect(() => {
     const role = sessionStorage.getItem('userRole');
@@ -354,6 +403,13 @@ export default function MemberDirectory() {
                     <Edit3 size={12} /> Edit
                   </button>
                   <button
+                    onClick={() => handleOpenPasswordModal(member)}
+                    className="px-3 py-1.5 bg-gold/10 text-ivy hover:bg-gold hover:text-ivy text-xs font-bold uppercase tracking-wider rounded border border-gold/40 flex items-center gap-1.5 transition-all cursor-pointer"
+                    title="Set User Password Directly (No Reset Email Generated)"
+                  >
+                    <Key size={12} className="text-gold" /> Password
+                  </button>
+                  <button
                     onClick={() => handleDeleteMember(member.email, member.name)}
                     className="px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white text-xs font-bold uppercase tracking-wider rounded border border-red-200 flex items-center gap-1.5 transition-all cursor-pointer"
                     title="Delete Account"
@@ -535,6 +591,112 @@ export default function MemberDirectory() {
                   <span>{saving ? 'Saving...' : 'Save Changes'}</span>
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* SUPER-USER ADMINISTRATOR DIRECT PASSWORD OVERRIDE MODAL */}
+      <AnimatePresence>
+        {resettingPasswordUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white border-2 border-gold rounded-2xl max-w-md w-full overflow-hidden shadow-2xl relative my-auto"
+            >
+              <div className="bg-ivy p-6 text-cream">
+                <button
+                  onClick={() => setResettingPasswordUser(null)}
+                  className="absolute top-4 right-4 text-cream/70 hover:text-cream bg-white/10 hover:bg-white/20 rounded-full p-1.5 transition-colors cursor-pointer"
+                  title="Close Modal"
+                >
+                  <X size={18} />
+                </button>
+                <div className="flex items-center gap-2.5">
+                  <Key className="w-6 h-6 text-gold" />
+                  <h3 className="text-lg font-display font-bold uppercase tracking-wider text-cream">
+                    Direct Password Override
+                  </h3>
+                </div>
+                <p className="text-xs text-cream/75 mt-1">
+                  Target Account: <strong className="text-gold">{resettingPasswordUser.name}</strong> ({resettingPasswordUser.email})
+                </p>
+              </div>
+
+              <form onSubmit={handleAdminPasswordSubmit}>
+                <div className="p-6 space-y-4 bg-cream/30">
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-ivy text-xs leading-relaxed">
+                    <strong>Admin Notice:</strong> This action updates the member's password directly in the database and Cloud Firestore without sending a reset email.
+                  </div>
+
+                  {adminPasswordError && (
+                    <div className="p-3 bg-red-100 border border-red-300 text-red-800 text-xs rounded-xl">
+                      {adminPasswordError}
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/60 mb-1">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="password"
+                        value={adminNewPassword}
+                        onChange={e => setAdminNewPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-ivy/20 focus:border-ivy bg-white text-ivy outline-none pr-9"
+                        required
+                      />
+                      <Lock size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-ivy/40" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/60 mb-1">
+                      Confirm New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="password"
+                        value={adminConfirmPassword}
+                        onChange={e => setAdminConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-ivy/20 focus:border-ivy bg-white text-ivy outline-none pr-9"
+                        required
+                      />
+                      <Lock size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-ivy/40" />
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-white/70 rounded-xl border border-ivy/10 text-[11px] space-y-1 text-ivy/75">
+                    <p className="font-bold text-[10px] uppercase text-ivy tracking-wider">Password Requirements:</p>
+                    <p className={adminNewPassword.length >= 8 ? 'text-emerald-700 font-semibold' : ''}>• At least 8 characters</p>
+                    <p className={/[A-Z]/.test(adminNewPassword) ? 'text-emerald-700 font-semibold' : ''}>• At least 1 uppercase letter</p>
+                    <p className={/\d/.test(adminNewPassword) ? 'text-emerald-700 font-semibold' : ''}>• At least 1 number</p>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-white border-t border-ivy/10 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setResettingPasswordUser(null)}
+                    className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-ivy/60 hover:text-ivy"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={adminPasswordSaving}
+                    className="px-5 py-2 bg-ivy hover:bg-ivy/90 text-cream text-xs font-bold uppercase tracking-widest rounded-lg flex items-center gap-1.5 disabled:opacity-50 transition-all shadow-sm cursor-pointer"
+                  >
+                    <Sparkles size={13} className="text-gold" />
+                    <span>{adminPasswordSaving ? 'Updating...' : 'Set Password Directly'}</span>
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

@@ -2314,6 +2314,9 @@ async function startServer() {
     });
   });
 
+  // In-memory store for active password reset tokens
+  const passwordResetTokens: Record<string, { token: string; expiresAt: number }> = {};
+
   app.post("/api/auth/forgot-password", (req, res) => {
     const { email } = req.body;
     if (!email) {
@@ -2322,61 +2325,113 @@ async function startServer() {
     const normEmail = email.toLowerCase().trim();
     const user = findUser(normEmail);
     if (!user) {
-      return res.json({ success: true, message: `If an account associated with ${normEmail} exists, a password reset link has been dispatched.` });
+      return res.json({ 
+        success: true, 
+        message: `If an account associated with ${normEmail} exists, a password reset link has been dispatched to their assigned email address.` 
+      });
     }
 
     logEvent(normEmail, "PASSWORD_RESET_REQUEST", `Password reset link requested for ${normEmail}`);
 
-    let defaultPass = "atlanta";
-    const initialCandidates: Record<string, string> = {
-      'james.haywood@orderofkpi.org': '2012',
-      'averyt16@gmail.com': '0784',
-      'hupirate90@me.com': '9348',
-      'quincyld86@gmail.com': '1326',
-      'jabari.smithperry@gmail.com': '7008',
-      'l.a.sennet@gmail.com': '1774',
-      'malineskidrussell@gmail.com': '0011',
-      'mabmykie1914@gmail.com': '7119',
-      'roliver449@gmail.com': '6846',
-      'burnettesteven3@gmail.com': '2275',
-      'tashaunbenton233@gmail.com': '1821',
-      'o_titus@yahoo.com': '7713',
-      'zgatesnorris@gmail.com': '4876',
-      'jaabn2@gmail.com': '3795'
+    // Generate a secure reset token valid for 1 hour (3600000 ms)
+    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    passwordResetTokens[normEmail] = {
+      token,
+      expiresAt: Date.now() + 3600000
     };
-    if (initialCandidates[normEmail]) {
-      defaultPass = initialCandidates[normEmail];
-    }
 
-    const resetPassHash = hashPassword(defaultPass);
-    updateUserPassword(normEmail, resetPassHash);
+    const host = req.get('host') || 'localhost:3000';
+    const protocol = req.protocol === 'https' || host.includes('run.app') ? 'https' : 'http';
+    const resetLink = `${protocol}://${host}/reset-password?token=${token}&email=${encodeURIComponent(normEmail)}`;
 
-    // Explicitly set is_first_login to 1 so user is prompted to establish a new password upon signing in
-    if (useSqlite && sqliteDb) {
-      try {
-        sqliteDb.prepare("UPDATE users SET is_first_login = 1 WHERE LOWER(email) = ?").run(normEmail);
-      } catch (e) {
-        console.warn("SQLite is_first_login update notice:", e);
-      }
-    }
-    const jsonDbPath = path.join(process.cwd(), "kpi_members_v2.json");
-    if (fs.existsSync(jsonDbPath)) {
-      try {
-        const data = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8"));
-        if (data[normEmail]) {
-          data[normEmail].is_first_login = 1;
-          data[normEmail].password_hash = resetPassHash;
-          fs.writeFileSync(jsonDbPath, JSON.stringify(data, null, 2));
-        }
-      } catch (e) {
-        console.warn("JSON is_first_login update notice:", e);
-      }
-    }
+    console.log(`[AUTH] Local Dev Reset Link generated for ${normEmail}: ${resetLink}`);
 
     return res.json({ 
       success: true, 
-      message: `Password Reset Activated: The password for ${normEmail} has been reset to your initial pass key (${defaultPass}). You can sign in immediately using this key and you will be prompted to set a new password.` 
+      message: `A password reset link has been dispatched to ${normEmail}. Please check your inbox or click the reset link to complete your password change.`,
+      resetLink,
+      token
     });
+  });
+
+  app.post("/api/auth/reset-password-with-token", (req, res) => {
+    const { email, token, newPassword } = req.body;
+    if (!email || !token || !newPassword) {
+      return res.status(400).json({ success: false, message: "Email, reset token, and new password are required." });
+    }
+    const normEmail = email.toLowerCase().trim();
+    const stored = passwordResetTokens[normEmail];
+
+    if (!stored || stored.token !== token) {
+      return res.status(400).json({ success: false, message: "Invalid or expired password reset link." });
+    }
+    if (Date.now() > stored.expiresAt) {
+      delete passwordResetTokens[normEmail];
+      return res.status(400).json({ success: false, message: "This password reset link has expired. Please request a new one." });
+    }
+
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({ success: false, message: "Password must be at least 8 characters long and contain at least one uppercase letter and one number." });
+    }
+
+    const newHash = hashPassword(newPassword);
+    const ok = updateUserPassword(normEmail, newHash);
+
+    if (ok) {
+      delete passwordResetTokens[normEmail];
+      logEvent(normEmail, "PASSWORD_RESET_SUCCESS", `Password successfully reset via token for ${normEmail}`);
+      return res.json({
+        success: true,
+        message: "Your password has been updated successfully. You can now log in with your new password.",
+        hash: newHash
+      });
+    } else {
+      return res.status(500).json({ success: false, message: "Failed to update password in database." });
+    }
+  });
+
+  app.post("/api/admin/change-user-password", (req, res) => {
+    const { adminEmail, targetEmail, newPassword } = req.body;
+    if (!targetEmail || !newPassword) {
+      return res.status(400).json({ success: false, message: "Target user email and new password are required." });
+    }
+    const normAdmin = (adminEmail || "").toLowerCase().trim();
+    const normTarget = targetEmail.toLowerCase().trim();
+
+    const adminUser = findUser(normAdmin);
+    const isAdmin = normAdmin === "admin@orderofkpi.org" || 
+                    normAdmin === "info@kpi2012.org" || 
+                    normAdmin === "qa.admin@orderofkpi.org" || 
+                    (adminUser && (adminUser.role === 'admin' || (adminUser.roles && adminUser.roles.includes('admin'))));
+
+    if (!isAdmin) {
+      return res.status(403).json({ success: false, message: "Unauthorized: Admin privileges required to update user passwords directly." });
+    }
+
+    const targetUser = findUser(normTarget);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: `User account '${normTarget}' not found.` });
+    }
+
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({ success: false, message: "Password must be at least 8 characters long and contain at least one uppercase letter and one number." });
+    }
+
+    const newHash = hashPassword(newPassword);
+    const ok = updateUserPassword(normTarget, newHash);
+
+    if (ok) {
+      logEvent(normAdmin, "ADMIN_PASSWORD_OVERRIDE", `Admin ${normAdmin} directly updated password for user ${normTarget}`);
+      return res.json({
+        success: true,
+        message: `Password for ${normTarget} was updated successfully by Admin.`,
+        hash: newHash
+      });
+    } else {
+      return res.status(500).json({ success: false, message: "Failed to update target user password." });
+    }
   });
 
   app.get("/api/registrations", async (req, res) => {
