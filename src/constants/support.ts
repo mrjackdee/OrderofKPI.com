@@ -1,14 +1,19 @@
+export interface SupportFeature {
+  title: string;
+  description: string;
+  iconName: 'Ticket' | 'Sparkles' | 'ShieldCheck';
+}
+
 export interface SupportCenterConfig {
   url: string;
   isLive: boolean;
   statusLabel: string;
   heading: string;
+  subheading: string;
   description: string;
   supportingLine: string;
   buttonLabel: string;
-  previewImagePath: string;
-  previewImageAlt: string;
-  previewCaption: string;
+  features: SupportFeature[];
 }
 
 export const SUPPORT_CENTER_CONFIG: SupportCenterConfig = {
@@ -16,10 +21,25 @@ export const SUPPORT_CENTER_CONFIG: SupportCenterConfig = {
   isLive: false,
   statusLabel: "COMING SOON",
   heading: "KP Member Support Center",
-  description: "A simpler way to get help is on the way. Soon, members will be able to report technical issues, request digital enhancements, receive a request number, and track progress in one place.",
-  supportingLine: "One request. Clear updates. Less follow-up.",
+  subheading: "Centralized Technical & Organizational Assistance",
+  description: "A centralized support portal designed to streamline assistance for all members. Submit technical inquiries, track resolution milestones in real time, and request digital portal enhancements with complete transparency.",
+  supportingLine: "One request. Clear updates. Zero friction.",
   buttonLabel: "PREVIEW SUPPORT CENTER",
-  previewImagePath: "/support_preview.png",
-  previewImageAlt: "Preview of the KP Member Support Center website.",
-  previewCaption: "Preview of the new KP Member Support Center.",
+  features: [
+    {
+      title: "Real-Time Ticket Tracking",
+      description: "Receive a dedicated request ID and monitor resolution progress from submission to completion.",
+      iconName: "Ticket"
+    },
+    {
+      title: "Portal Enhancements",
+      description: "Submit feature suggestions and technical bug reports directly to organizational engineering.",
+      iconName: "Sparkles"
+    },
+    {
+      title: "Account & Roster Help",
+      description: "Get prompt assistance with member portal credentials, committee access, and account settings.",
+      iconName: "ShieldCheck"
+    }
+  ]
 };

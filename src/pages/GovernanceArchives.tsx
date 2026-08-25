@@ -24,6 +24,7 @@ import MemberHeader from '../components/MemberHeader';
 import { syncApplicationsFromFirestore, normalizeUserRBAC } from '../lib/memberDb';
 import { syncDeanDataFromFirestore, firebaseFetchAllDeanVotes, firebaseFetchAllDeanNominations } from '../lib/firebase';
 import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
+import { reconcileNomineeCount } from '../utils/reconciliation';
 
 interface VoteTally {
   nominee_name: string;
@@ -327,7 +328,16 @@ export default function GovernanceArchives() {
             </div>
             <div>
               <p className="text-cream/40 text-[10px] uppercase tracking-widest">Nominees Slate</p>
-              <p className="text-gold font-bold font-mono text-lg">{nomineesList.length}</p>
+              <p className="text-gold font-bold font-mono text-lg">
+                {reconcileNomineeCount(
+                  nomineesList.length,
+                  tallies.length,
+                  new Set([
+                    ...tallies.map(t => t.nominee_name?.toLowerCase().trim()),
+                    ...nomineesList.map(n => n.fullName?.toLowerCase().trim())
+                  ].filter(Boolean)).size
+                )}
+              </p>
             </div>
             <div>
               <p className="text-cream/40 text-[10px] uppercase tracking-widest">Participation</p>
