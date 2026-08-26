@@ -348,11 +348,11 @@ export default function Constitution() {
   // If not logged in, show the Enter Passcode screen
   if (!isLoggedIn) {
     return (
-      <main className="w-full bg-pure-black min-h-screen py-8 px-6 flex items-center justify-center relative overflow-hidden">
+      <main className="w-full bg-pure-black min-h-screen py-12 px-4 sm:px-6 flex flex-col items-center justify-center relative overflow-y-auto overflow-x-hidden">
         {/* Abstract glowing background lines */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-silver/20 to-transparent" />
         
-        <div className="max-w-md w-full relative z-10">
+        <div className="max-w-md w-full relative z-10 my-auto">
           <div className="text-center mb-6">
             <Link to="/agenda" className="inline-flex items-center gap-1.5 text-silver/40 hover:text-white text-[10px] uppercase font-bold tracking-widest transition-colors mb-4">
               <ArrowLeft size={12} /> Back to Conference

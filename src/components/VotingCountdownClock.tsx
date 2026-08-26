@@ -110,43 +110,43 @@ export const VotingCountdownClock: React.FC<{ isEligible?: boolean }> = ({ isEli
 
         {/* Center Countdown Display */}
         {timeLeft.phase !== 'ended' ? (
-          <div className="flex items-center justify-center gap-2 sm:gap-3 my-2 md:my-0">
+          <div className="flex items-center justify-center gap-1.5 sm:gap-3 my-2 md:my-0">
             <div className="flex flex-col items-center">
-              <div className="bg-pure-black/70 border border-gold/30 rounded-xl p-2.5 sm:p-3 min-w-[54px] sm:min-w-[64px] text-center shadow-inner">
-                <span className="text-xl sm:text-3xl font-mono font-bold text-gold tracking-wider">
+              <div className="bg-pure-black/70 border border-gold/30 rounded-xl p-2 sm:p-3 min-w-[46px] sm:min-w-[64px] text-center shadow-inner">
+                <span className="text-lg sm:text-3xl font-mono font-bold text-gold tracking-wider">
                   {formatNumber(timeLeft.days)}
                 </span>
               </div>
               <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-cream/60 mt-1">Days</span>
             </div>
 
-            <span className="text-lg sm:text-2xl font-mono font-bold text-gold/60 -mt-4">:</span>
+            <span className="text-base sm:text-2xl font-mono font-bold text-gold/60 -mt-4">:</span>
 
             <div className="flex flex-col items-center">
-              <div className="bg-pure-black/70 border border-gold/30 rounded-xl p-2.5 sm:p-3 min-w-[54px] sm:min-w-[64px] text-center shadow-inner">
-                <span className="text-xl sm:text-3xl font-mono font-bold text-gold tracking-wider">
+              <div className="bg-pure-black/70 border border-gold/30 rounded-xl p-2 sm:p-3 min-w-[46px] sm:min-w-[64px] text-center shadow-inner">
+                <span className="text-lg sm:text-3xl font-mono font-bold text-gold tracking-wider">
                   {formatNumber(timeLeft.hours)}
                 </span>
               </div>
               <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-cream/60 mt-1">Hours</span>
             </div>
 
-            <span className="text-lg sm:text-2xl font-mono font-bold text-gold/60 -mt-4">:</span>
+            <span className="text-base sm:text-2xl font-mono font-bold text-gold/60 -mt-4">:</span>
 
             <div className="flex flex-col items-center">
-              <div className="bg-pure-black/70 border border-gold/30 rounded-xl p-2.5 sm:p-3 min-w-[54px] sm:min-w-[64px] text-center shadow-inner">
-                <span className="text-xl sm:text-3xl font-mono font-bold text-gold tracking-wider">
+              <div className="bg-pure-black/70 border border-gold/30 rounded-xl p-2 sm:p-3 min-w-[46px] sm:min-w-[64px] text-center shadow-inner">
+                <span className="text-lg sm:text-3xl font-mono font-bold text-gold tracking-wider">
                   {formatNumber(timeLeft.minutes)}
                 </span>
               </div>
               <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-cream/60 mt-1">Mins</span>
             </div>
 
-            <span className="text-lg sm:text-2xl font-mono font-bold text-gold/60 -mt-4">:</span>
+            <span className="text-base sm:text-2xl font-mono font-bold text-gold/60 -mt-4">:</span>
 
             <div className="flex flex-col items-center">
-              <div className="bg-pure-black/70 border border-gold/30 rounded-xl p-2.5 sm:p-3 min-w-[54px] sm:min-w-[64px] text-center shadow-inner">
-                <span className="text-xl sm:text-3xl font-mono font-bold text-amber-400 tracking-wider">
+              <div className="bg-pure-black/70 border border-gold/30 rounded-xl p-2 sm:p-3 min-w-[46px] sm:min-w-[64px] text-center shadow-inner">
+                <span className="text-lg sm:text-3xl font-mono font-bold text-amber-400 tracking-wider">
                   {formatNumber(timeLeft.seconds)}
                 </span>
               </div>

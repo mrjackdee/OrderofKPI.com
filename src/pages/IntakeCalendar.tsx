@@ -526,7 +526,7 @@ export default function IntakeCalendar() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#FDFCF0] font-sans pb-20 relative overflow-hidden">
+    <div className="min-h-screen w-full bg-[#FDFCF0] font-sans pb-20 relative overflow-x-hidden">
       <div className="relative z-10">
         <div className="pt-24">
           <MemberHeader />

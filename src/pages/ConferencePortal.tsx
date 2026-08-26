@@ -438,14 +438,14 @@ export default function ConferencePortal() {
 
   if (!isAuthenticated) {
     return (
-      <div className="relative min-h-screen w-full bg-[#030303] text-silver overflow-hidden flex flex-col items-center justify-center p-4">
+      <div className="relative min-h-screen w-full bg-[#030303] text-silver overflow-y-auto overflow-x-hidden flex flex-col items-center justify-center p-4 py-12">
         <FloatingParticles />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
         
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-pure-black/90 border border-primary/20 rounded-3xl p-8 md:p-12 max-w-md w-full backdrop-blur-md relative z-10 shadow-2xl"
+          className="bg-pure-black/90 border border-primary/20 rounded-3xl p-8 md:p-12 max-w-md w-full backdrop-blur-md relative z-10 shadow-2xl my-auto"
         >
           <div className="flex flex-col items-center text-center mb-8">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6 border border-primary/30">
@@ -483,7 +483,7 @@ export default function ConferencePortal() {
   }
 
   return (
-    <div className="relative min-h-screen w-full bg-[#030303] text-silver overflow-hidden">
+    <div className="relative min-h-screen w-full bg-[#030303] text-silver overflow-y-auto overflow-x-hidden">
       <FloatingParticles />
 
       {/* Decorative backdrop glow */}

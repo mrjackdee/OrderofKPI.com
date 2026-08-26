@@ -668,7 +668,7 @@ export default function CommitteeChairDashboard() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left text-xs min-w-[700px]">
                   <thead className="bg-ivy text-cream font-display uppercase tracking-wider text-[10px]">
                     <tr>
                       <th className="py-4 px-6">Timestamp</th>

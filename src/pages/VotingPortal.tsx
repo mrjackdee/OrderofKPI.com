@@ -369,11 +369,11 @@ export default function VotingPortal() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-pure-black flex items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen bg-pure-black flex flex-col items-center justify-center relative overflow-y-auto overflow-x-hidden py-12 px-4 sm:px-6">
       {/* Background elements */}
-      <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(192,192,192,0.05)_0%,transparent_50%)] -z-0" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(192,192,192,0.05)_0%,transparent_50%)] pointer-events-none" />
       
-      <div className="relative z-10 w-full flex justify-center">
+      <div className="relative z-10 w-full flex flex-col items-center justify-center flex-1 my-auto">
         {step === 'login' && <LoginView onLogin={(id, name) => {
           setCurrentUser({ id, name });
           setStep('ballot');
@@ -391,7 +391,7 @@ export default function VotingPortal() {
       </div>
       
       {/* Footer / Exit */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-6">
+      <div className="relative z-10 mt-8 flex items-center gap-6">
         {step === 'login' && (
           <Link to="/elections" className="text-silver/40 hover:text-primary transition-colors text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
             <X size={14} />

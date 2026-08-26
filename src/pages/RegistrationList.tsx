@@ -119,7 +119,7 @@ export default function RegistrationList() {
                   <p className="text-silver text-lg font-light">No registrations found matching your search.</p>
                 </div>
               ) : (
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse min-w-[500px]">
                   <thead>
                     <tr className="border-b border-white/10">
                       <th className="py-4 px-4 text-xs font-semibold text-primary uppercase tracking-widest">Status</th>

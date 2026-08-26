@@ -112,7 +112,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-3 sm:px-6 py-8 sm:py-12 relative overflow-hidden w-full max-w-full">
+    <div className="min-h-[80vh] flex flex-col items-center justify-center px-3 sm:px-6 py-8 sm:py-12 relative overflow-y-auto overflow-x-hidden w-full max-w-full">
       {/* Background decoration */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
 

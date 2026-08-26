@@ -265,7 +265,7 @@ export default function Layout() {
           )}
         </AnimatePresence>
 
-        <main className="flex-1 flex flex-col items-center justify-center w-full min-w-0 max-w-full overflow-x-hidden">
+        <main className="flex-1 flex flex-col w-full min-w-0 max-w-full">
           <Outlet />
         </main>
 

@@ -173,7 +173,7 @@ export default function DeanNominationForm() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse min-w-[480px]">
                 <thead>
                   <tr className="border-b border-[#B8860B]/30 text-[11px] font-bold uppercase tracking-widest text-[#1E3F20] bg-[#FDFCF0]">
                     <th className="py-3.5 px-4 w-16">#</th>

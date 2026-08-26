@@ -175,7 +175,7 @@ export default function SaveTheDate() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.8 }}
-      className="min-h-screen flex flex-col items-center justify-center relative px-4 pt-20 md:pt-24 pb-12 overflow-hidden"
+      className="min-h-screen flex flex-col items-center justify-center relative px-4 pt-20 md:pt-24 pb-12 overflow-y-auto overflow-x-hidden"
     >
       <FloatingParticles />
       

@@ -1636,7 +1636,7 @@ export default function AdminDashboard() {
 
             <div className="bg-white rounded-3xl border border-gold/20 shadow-soft overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left">
+                <table className="w-full text-left min-w-[700px]">
                   <thead className="bg-ivy text-cream border-b border-gold/10 text-[10px] font-display uppercase tracking-widest">
                     <tr>
                       <th className="px-6 py-4">User Details</th>
@@ -1985,7 +1985,7 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
+                    <table className="w-full text-left text-xs min-w-[700px]">
                       <thead className="bg-cream border-b border-gold/10 text-[10px] font-bold uppercase tracking-widest text-ivy/50">
                         <tr>
                           <th className="py-4 px-6">Timestamp</th>
@@ -2051,7 +2051,7 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
+                    <table className="w-full text-left text-xs min-w-[700px]">
                       <thead className="bg-cream border-b border-gold/10 text-[10px] font-bold uppercase tracking-widest text-ivy/50">
                         <tr>
                           <th className="py-4 px-6">Timestamp</th>
@@ -2240,7 +2240,7 @@ export default function AdminDashboard() {
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
+                      <table className="w-full text-left text-xs min-w-[780px]">
                         <thead className="bg-cream border-b border-gold/10 text-[10px] font-bold uppercase tracking-widest text-ivy/50">
                           <tr>
                             <th className="py-4 px-6">Timestamp</th>
@@ -2643,7 +2643,7 @@ export default function AdminDashboard() {
                           <div className="pt-4 border-t border-gold/10 space-y-2">
                             <h4 className="text-xs font-bold uppercase text-ivy">Live Responses Queue</h4>
                             <div className="overflow-x-auto overflow-y-auto max-h-60 rounded-xl border border-gold/15 bg-white">
-                              <table className="w-full text-left border-collapse text-[11px]">
+                              <table className="w-full text-left border-collapse text-[11px] min-w-[500px]">
                                 <thead>
                                   <tr className="bg-[#FAF9F5] border-b border-gold/20 text-ivy/70">
                                     <th className="p-2.5 font-bold uppercase tracking-wider">Response ID</th>
@@ -2821,7 +2821,7 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                  <table className="w-full text-left text-xs min-w-[700px]">
                     <thead className="bg-cream border-b border-gold/10 text-[10px] font-bold uppercase tracking-widest text-ivy/50">
                       <tr>
                         <th className="py-4 px-6">Timestamp</th>

@@ -209,11 +209,11 @@ const PolishedSeparator = () => (
 
 const PasswordGate = ({ onAuthenticated }: { onAuthenticated: () => void }) => {
   return (
-    <div className="min-h-screen bg-pure-black flex items-center justify-center px-6">
+    <div className="min-h-screen bg-pure-black flex flex-col items-center justify-center py-12 px-4 sm:px-6 overflow-y-auto overflow-x-hidden">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-black border border-silver/10 p-8 md:p-12 rounded-3xl text-center shadow-[0_0_50px_rgba(192,192,192,0.05)]"
+        className="w-full max-w-md bg-black border border-silver/10 p-6 sm:p-12 rounded-3xl text-center shadow-[0_0_50px_rgba(192,192,192,0.05)] my-auto"
       >
         <div className="w-16 h-16 rounded-full bg-silver/5 flex items-center justify-center text-primary mx-auto mb-8 border border-silver/10">
           <Lock size={24} />

@@ -924,7 +924,7 @@ export default function CandidateTracker() {
           /* DESKTOP & MOBILE COMPACT LIST / TABLE VIEW */
           <div className="bg-white rounded-2xl border border-gold/20 shadow-soft overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse min-w-[760px]">
                 <thead>
                   <tr className="bg-cream/60 border-b border-gold/20 text-[11px] font-bold uppercase tracking-wider text-ivy/70">
                     <th className="py-3.5 px-4 md:px-6">Candidate Name</th>

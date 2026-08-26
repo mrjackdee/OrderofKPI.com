@@ -31,7 +31,7 @@ export default function Party() {
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className="min-h-[80vh] flex flex-col items-center justify-center relative px-4 pt-20 md:pt-24 pb-12 overflow-hidden"
+      className="min-h-[80vh] flex flex-col items-center justify-center relative px-4 pt-20 md:pt-24 pb-12 overflow-y-auto overflow-x-hidden"
     >
       {/* Abstract Background Elements */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(192,192,192,0.15)_0%,transparent_70%)] pointer-events-none" />

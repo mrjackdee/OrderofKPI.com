@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, Megaphone, Info, ExternalLink, ArrowRight, X, Sparkles } from 'lucide-react';
+import { AlertTriangle, Megaphone, Info, ExternalLink, ArrowRight, X, Pause, Play } from 'lucide-react';
 import { useSystemFeatures, UrgentBannerConfig, DEFAULT_URGENT_BANNER } from '../lib/settings';
 
 interface UrgentBannerTickerProps {
@@ -11,6 +11,7 @@ export const UrgentBannerTicker: React.FC<UrgentBannerTickerProps> = ({ classNam
   const { features } = useSystemFeatures();
   const banner: UrgentBannerConfig = features?.urgent_banner || DEFAULT_URGENT_BANNER;
   const [dismissed, setDismissed] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   // Check session dismissal state
   useEffect(() => {
@@ -120,21 +121,28 @@ export const UrgentBannerTicker: React.FC<UrgentBannerTickerProps> = ({ classNam
     <div 
       role="region"
       aria-label="Urgent Announcement Ticker"
-      className={`relative w-full border-y py-2.5 px-3 sm:px-4 z-40 overflow-hidden group ${styleConfig.container} ${className}`}
+      className={`relative w-full border-y py-2.5 px-3 sm:px-4 z-40 overflow-hidden group select-none ${styleConfig.container} ${className}`}
     >
-      <div className="flex items-center gap-3 max-w-7xl mx-auto">
+      <div className="flex items-center gap-2 sm:gap-3 max-w-7xl mx-auto">
         
         {/* Fixed Badge Label on Left */}
         <div className="shrink-0 flex items-center gap-2 z-10">
-          <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-sm ${styleConfig.badgeBg}`}>
+          <div className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full border text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-sm ${styleConfig.badgeBg}`}>
             <IconComponent className={`w-3.5 h-3.5 ${styleConfig.iconColor} animate-pulse`} />
             <span className="whitespace-nowrap">{styleConfig.badgeText}</span>
           </div>
         </div>
 
-        {/* Scrolling Ticker Track (Pauses on Hover) */}
-        <div className="relative overflow-hidden flex-1 py-0.5">
-          <div className={`${speedClass} flex items-center group-hover:[animation-play-state:paused]`}>
+        {/* Scrolling Ticker Track (Pauses on Hover, Active Touch, or Toggle) */}
+        <div 
+          className="relative overflow-hidden flex-1 py-0.5 cursor-pointer"
+          onClick={() => setIsPaused(!isPaused)}
+          title="Click or tap to pause / resume ticker"
+        >
+          <div 
+            className={`${speedClass} flex items-center group-hover:[animation-play-state:paused] group-active:[animation-play-state:paused]`}
+            style={isPaused ? { animationPlayState: 'paused' } : undefined}
+          >
             {/* Duplicated items to guarantee seamless infinite scrolling loop */}
             {renderContentItem(1)}
             {renderContentItem(2)}
@@ -143,15 +151,25 @@ export const UrgentBannerTicker: React.FC<UrgentBannerTickerProps> = ({ classNam
           </div>
         </div>
 
-        {/* Pause Indicator / Dismiss Button */}
-        <div className="shrink-0 flex items-center gap-2 z-10">
-          <span className="hidden md:inline-block text-[10px] uppercase tracking-wider text-amber-200/60 font-mono italic opacity-0 group-hover:opacity-100 transition-opacity">
-            Paused
-          </span>
+        {/* Pause / Resume Button & Dismiss Button */}
+        <div className="shrink-0 flex items-center gap-1 sm:gap-2 z-10">
+          <button
+            type="button"
+            onClick={() => setIsPaused(!isPaused)}
+            className="p-1 sm:p-1.5 rounded-full hover:bg-white/20 text-cream/80 hover:text-white transition-colors cursor-pointer flex items-center gap-1"
+            title={isPaused ? "Resume scrolling" : "Pause scrolling to read"}
+            aria-label={isPaused ? "Resume banner animation" : "Pause banner animation"}
+          >
+            {isPaused ? <Play size={13} className="text-amber-300" /> : <Pause size={13} />}
+            <span className="text-[9px] sm:text-[10px] uppercase font-mono tracking-wider hidden xs:inline">
+              {isPaused ? 'Paused' : 'Pause'}
+            </span>
+          </button>
+
           <button
             type="button"
             onClick={handleDismiss}
-            className="p-1 rounded-full hover:bg-white/20 text-cream/70 hover:text-white transition-colors cursor-pointer"
+            className="p-1 sm:p-1.5 rounded-full hover:bg-white/20 text-cream/70 hover:text-white transition-colors cursor-pointer"
             title="Dismiss notice for this session"
             aria-label="Dismiss banner message"
           >
