@@ -20,6 +20,7 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [devResetLink, setDevResetLink] = useState('');
   const [requestSent, setRequestSent] = useState(false);
   const [firebaseEmail, setFirebaseEmail] = useState<string | null>(null);
 
@@ -95,9 +96,13 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
+      setDevResetLink('');
       const result = await requestApplicantPasswordReset(email);
       if (result.success) {
         setSuccess(result.message);
+        if (result.resetLink) {
+          setDevResetLink(result.resetLink);
+        }
         setRequestSent(true);
       } else {
         setError(result.message);
@@ -164,6 +169,20 @@ export default function ResetPassword() {
                   <p className="leading-relaxed">{success}</p>
                 </div>
               </div>
+
+              {devResetLink && (
+                <div className="pt-3 border-t border-emerald-500/30 flex flex-col gap-2">
+                  <span className="text-[11px] font-bold text-gold uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles size={13} /> Direct Reset Access Link:
+                  </span>
+                  <a
+                    href={devResetLink}
+                    className="w-full text-center py-2.5 bg-gold hover:bg-gold-light text-ivy font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md"
+                  >
+                    Click Here to Reset Password Now
+                  </a>
+                </div>
+              )}
 
               {isResetMode && (
                 <div className="pt-2">

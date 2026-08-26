@@ -233,8 +233,8 @@ export default function DeanVotingForm() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFCF0] font-sans pb-24">
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-10">
+    <div className="min-h-screen bg-[#FDFCF0] font-sans pb-24 overflow-x-hidden">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-6 sm:space-y-10">
         <MemberHeader />
 
         <div>
@@ -247,43 +247,43 @@ export default function DeanVotingForm() {
         </div>
 
         {/* Header */}
-        <div className="bg-white border border-[#B8860B]/30 rounded-3xl p-8 md:p-12 shadow-[0_8px_30px_rgba(30,63,32,0.06)] space-y-4">
-          <h1 className="text-3xl md:text-5xl font-serif font-bold text-[#1E3F20]">
+        <div className="bg-white border border-[#B8860B]/30 rounded-3xl p-4 sm:p-8 md:p-12 shadow-[0_8px_30px_rgba(30,63,32,0.06)] space-y-4">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-serif font-bold text-[#1E3F20]">
             Intake Dean Team Voting
           </h1>
-          <p className="text-gray-600 text-sm leading-relaxed max-w-2xl">
+          <p className="text-gray-600 text-xs sm:text-sm leading-relaxed max-w-2xl">
             Cast your official ballot for the Intake Dean position. Each financial member is restricted to a single active vote.
           </p>
-          <div className="bg-[#FDFCF0] border border-[#B8860B]/40 rounded-2xl p-6 space-y-4 mt-6 text-[#1E3F20] shadow-sm">
+          <div className="bg-[#FDFCF0] border border-[#B8860B]/40 rounded-2xl p-4 sm:p-6 space-y-4 mt-6 text-[#1E3F20] shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-[#B8860B]/10 rounded-xl text-[#B8860B]">
+              <div className="p-2.5 bg-[#B8860B]/10 rounded-xl text-[#B8860B] shrink-0">
                 <Clock size={22} />
               </div>
               <div>
-                <p className="text-base md:text-lg font-bold uppercase tracking-wider text-[#1E3F20]">Intake Team Dean Voting Window</p>
-                <p className="text-sm md:text-base font-bold text-[#1E3F20] mt-0.5">August 17 – August 19, 2026</p>
-                <p className="text-xs text-gray-500 mt-1">Deadline: August 19, 2026 at 11:59 PM ET</p>
+                <p className="text-sm sm:text-base md:text-lg font-bold uppercase tracking-wider text-[#1E3F20]">Intake Team Dean Voting Window</p>
+                <p className="text-xs sm:text-sm md:text-base font-bold text-[#1E3F20] mt-0.5">August 17 – August 19, 2026</p>
+                <p className="text-[10px] sm:text-xs text-gray-500 mt-1">Deadline: August 19, 2026 at 11:59 PM ET</p>
               </div>
             </div>
 
             {/* Countdown timer */}
-            <div className="pt-3 border-t border-[#B8860B]/20 flex flex-wrap items-center gap-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#B8860B]">Time Remaining:</span>
+            <div className="pt-3 border-t border-[#B8860B]/20 flex flex-wrap items-center gap-3 sm:gap-4">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#B8860B]">Time Remaining:</span>
               {timeLeft.expired ? (
                 <span className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-200">Voting Period Closed</span>
               ) : (
-                <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#1E3F20]">
-                  <div className="bg-white px-3 py-1.5 rounded-lg border border-[#B8860B]/30 shadow-2xs">
-                    <span className="text-sm font-bold">{timeLeft.days}</span> <span className="text-[10px] text-gray-500 font-normal">days</span>
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs font-mono font-bold text-[#1E3F20]">
+                  <div className="bg-white px-2.5 sm:px-3 py-1.5 rounded-lg border border-[#B8860B]/30 shadow-2xs">
+                    <span className="text-xs sm:text-sm font-bold">{timeLeft.days}</span> <span className="text-[10px] text-gray-500 font-normal">days</span>
                   </div>
-                  <div className="bg-white px-3 py-1.5 rounded-lg border border-[#B8860B]/30 shadow-2xs">
-                    <span className="text-sm font-bold">{String(timeLeft.hours).padStart(2, '0')}</span> <span className="text-[10px] text-gray-500 font-normal">hrs</span>
+                  <div className="bg-white px-2.5 sm:px-3 py-1.5 rounded-lg border border-[#B8860B]/30 shadow-2xs">
+                    <span className="text-xs sm:text-sm font-bold">{String(timeLeft.hours).padStart(2, '0')}</span> <span className="text-[10px] text-gray-500 font-normal">hrs</span>
                   </div>
-                  <div className="bg-white px-3 py-1.5 rounded-lg border border-[#B8860B]/30 shadow-2xs">
-                    <span className="text-sm font-bold">{String(timeLeft.minutes).padStart(2, '0')}</span> <span className="text-[10px] text-gray-500 font-normal">mins</span>
+                  <div className="bg-white px-2.5 sm:px-3 py-1.5 rounded-lg border border-[#B8860B]/30 shadow-2xs">
+                    <span className="text-xs sm:text-sm font-bold">{String(timeLeft.minutes).padStart(2, '0')}</span> <span className="text-[10px] text-gray-500 font-normal">mins</span>
                   </div>
-                  <div className="bg-white px-3 py-1.5 rounded-lg border border-[#B8860B]/30 shadow-2xs">
-                    <span className="text-sm font-bold">{String(timeLeft.seconds).padStart(2, '0')}</span> <span className="text-[10px] text-gray-500 font-normal">secs</span>
+                  <div className="bg-white px-2.5 sm:px-3 py-1.5 rounded-lg border border-[#B8860B]/30 shadow-2xs">
+                    <span className="text-xs sm:text-sm font-bold">{String(timeLeft.seconds).padStart(2, '0')}</span> <span className="text-[10px] text-gray-500 font-normal">secs</span>
                   </div>
                 </div>
               )}
@@ -297,11 +297,11 @@ export default function DeanVotingForm() {
 
         {/* Ineligible Banner */}
         {!isEligibleVoter && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 space-y-2">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-6 space-y-2">
             <div className="flex items-start gap-3 text-amber-800">
               <AlertCircle size={22} className="flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="font-bold text-sm uppercase tracking-wider">Voting Eligibility Notice</h3>
+                <h3 className="font-bold text-xs sm:text-sm uppercase tracking-wider">Voting Eligibility Notice</h3>
                 <p className="text-xs text-amber-900 mt-1">
                   Voting in the Intake Dean election is restricted to active financial members who meet the MIP criteria on the official roster. If you believe this is an error, please contact the Membership Intake Chair.
                 </p>
@@ -312,11 +312,11 @@ export default function DeanVotingForm() {
 
         {/* Status Banner */}
         {existingVote && (
-          <div className="bg-[#1E3F20]/5 border border-[#1E3F20]/20 rounded-2xl p-6 space-y-3">
+          <div className="bg-[#1E3F20]/5 border border-[#1E3F20]/20 rounded-2xl p-4 sm:p-6 space-y-3">
             <div className="flex items-start gap-4">
               <CheckCircle2 size={24} className="text-[#1E3F20] flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="font-bold text-[#1E3F20] text-sm uppercase tracking-wider">Active Vote Recorded</h3>
+                <h3 className="font-bold text-[#1E3F20] text-xs sm:text-sm uppercase tracking-wider">Active Vote Recorded</h3>
                 <p className="text-xs text-gray-600 mt-1">
                   You currently have an active ballot cast for <span className="font-bold text-[#1E3F20]">{existingVote.nominee_name}</span>.
                 </p>
@@ -329,7 +329,7 @@ export default function DeanVotingForm() {
         )}
 
         {/* Form Container */}
-        <div className="bg-white border border-[#B8860B]/30 rounded-3xl p-8 md:p-12 shadow-[0_8px_30px_rgba(30,63,32,0.06)]">
+        <div className="bg-white border border-[#B8860B]/30 rounded-3xl p-4 sm:p-8 md:p-12 shadow-[0_8px_30px_rgba(30,63,32,0.06)]">
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-700 text-xs">
               <AlertCircle size={18} className="flex-shrink-0" />

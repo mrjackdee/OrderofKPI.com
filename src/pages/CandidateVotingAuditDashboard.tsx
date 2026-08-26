@@ -178,21 +178,21 @@ export default function CandidateVotingAuditDashboard() {
         <motion.div 
           initial={{ opacity: 0, y: 12 }} 
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-sm border border-stone-200 p-8 mb-8"
+          className="bg-white rounded-xl shadow-sm border border-stone-200 p-4 sm:p-8 mb-8 overflow-hidden"
         >
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center space-x-3">
-              <div className="p-3 bg-amber-50 text-amber-700 rounded-lg">
+              <div className="p-3 bg-amber-50 text-amber-700 rounded-lg shrink-0">
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-2xl font-serif font-bold text-stone-900">FY27 Candidate Voting Mgmt & Audit</h1>
-                <p className="text-sm text-stone-600">Administrative audit log displaying voter records, candidate selections, and decisions.</p>
+                <h1 className="text-xl sm:text-2xl font-serif font-bold text-stone-900">FY27 Candidate Voting Mgmt & Audit</h1>
+                <p className="text-xs sm:text-sm text-stone-600">Administrative audit log displaying voter records, candidate selections, and decisions.</p>
               </div>
             </div>
-            <div className="text-right">
-              <span className="text-2xl font-bold text-stone-900">{votes.length}</span>
-              <p className="text-xs text-stone-500 uppercase tracking-wider font-medium">Total Votes Cast</p>
+            <div className="text-left sm:text-right">
+              <span className="text-xl sm:text-2xl font-bold text-stone-900">{votes.length}</span>
+              <p className="text-[10px] sm:text-xs text-stone-500 uppercase tracking-wider font-medium">Total Votes Cast</p>
             </div>
           </div>
 

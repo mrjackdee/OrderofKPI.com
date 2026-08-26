@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Lock, Mail, User, ArrowRight, ShieldCheck, Loader2, FileText, CheckCircle, KeyRound, RefreshCw } from 'lucide-react';
+import { Lock, Mail, User, ArrowRight, ShieldCheck, Loader2, FileText, CheckCircle, KeyRound, RefreshCw, Sparkles } from 'lucide-react';
 import { performApplicantLogin, performApplicantRegister, requestApplicantPasswordReset } from '../lib/memberDb';
 import { useToast } from '../components/ToastContext';
 import { getFriendlyError } from '../lib/utils';
@@ -12,6 +12,7 @@ export default function ApplicantLogin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [devResetLink, setDevResetLink] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -50,9 +51,13 @@ export default function ApplicantLogin() {
 
         navigate('/applicant-portal', { replace: true });
       } else if (mode === 'reset') {
+        setDevResetLink('');
         const result = await requestApplicantPasswordReset(finalEmail);
         if (result.success) {
           setSuccessMsg(result.message);
+          if (result.resetLink) {
+            setDevResetLink(result.resetLink);
+          }
         } else {
           throw new Error(result.message);
         }
@@ -119,9 +124,24 @@ export default function ApplicantLogin() {
           )}
 
           {successMsg && (
-            <div className="mb-4 p-3.5 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800 font-body flex items-start gap-2.5">
-              <CheckCircle size={18} className="shrink-0 text-green-600 mt-0.5" />
-              <span className="leading-relaxed">{successMsg}</span>
+            <div className="mb-4 p-3.5 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800 font-body space-y-2">
+              <div className="flex items-start gap-2.5">
+                <CheckCircle size={18} className="shrink-0 text-green-600 mt-0.5" />
+                <span className="leading-relaxed">{successMsg}</span>
+              </div>
+              {devResetLink && (
+                <div className="mt-2 pt-3 border-t border-green-200 flex flex-col gap-2">
+                  <span className="text-[11px] font-bold text-ivy uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-gold" /> Direct Reset Access Link:
+                  </span>
+                  <a
+                    href={devResetLink}
+                    className="w-full text-center py-2.5 bg-gold hover:bg-gold-light text-ivy font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm"
+                  >
+                    Click Here to Reset Password Now
+                  </a>
+                </div>
+              )}
             </div>
           )}
 

@@ -246,15 +246,15 @@ export default function CandidateVotingForm() {
     <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
       <MemberHeader />
 
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8 overflow-x-hidden">
+        <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <Link 
             to="/member-portal" 
-            className="inline-flex items-center text-sm font-medium text-amber-700 hover:text-amber-800 transition-colors"
+            className="inline-flex items-center text-xs sm:text-sm font-medium text-amber-700 hover:text-amber-800 transition-colors"
           >
-            <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to Member Portal
+            <ArrowLeft className="w-4 h-4 mr-1.5 shrink-0" /> Back to Member Portal
           </Link>
-          <div className="text-xs uppercase tracking-wider font-semibold px-3 py-1 bg-amber-100 text-amber-800 rounded-full">
+          <div className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold px-3 py-1 bg-amber-100 text-amber-800 rounded-full">
             FY27 MIP Official Ballot
           </div>
         </div>
@@ -262,15 +262,15 @@ export default function CandidateVotingForm() {
         <motion.div 
           initial={{ opacity: 0, y: 12 }} 
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-sm border border-stone-200 p-8 mb-8"
+          className="bg-white rounded-xl shadow-sm border border-stone-200 p-4 sm:p-8 mb-8 overflow-hidden"
         >
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="p-3 bg-amber-50 text-amber-700 rounded-lg">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
+            <div className="p-3 bg-amber-50 text-amber-700 rounded-lg shrink-0">
               <Award className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-serif font-bold text-stone-900">FY27 Candidate Voting</h1>
-              <p className="text-sm text-stone-600">Please review the candidate slate and select a decision for every candidate before submitting your official ballot.</p>
+              <h1 className="text-xl sm:text-2xl font-serif font-bold text-stone-900">FY27 Candidate Voting</h1>
+              <p className="text-xs sm:text-sm text-stone-600">Please review the candidate slate and select a decision for every candidate before submitting your official ballot.</p>
             </div>
           </div>
 
@@ -278,8 +278,8 @@ export default function CandidateVotingForm() {
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3 text-red-800">
               <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
               <div>
-                <h3 className="font-semibold text-sm">Eligibility Requirement Notice</h3>
-                <p className="text-xs mt-1">
+                <h3 className="font-semibold text-xs sm:text-sm">Eligibility Requirement Notice</h3>
+                <p className="text-xs mt-1 leading-relaxed">
                   Official candidate voting is restricted to members marked as <span className="font-bold">YES</span> in the <span className="font-bold">FY27 MIP Eligible</span> column of the roster. Your account ({userEmail || 'Guest'}) does not currently reflect active eligibility in the master roster.
                 </p>
               </div>
@@ -289,25 +289,25 @@ export default function CandidateVotingForm() {
           {successMessage && (
             <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center space-x-3 text-emerald-800">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-              <p className="text-sm font-medium">{successMessage}</p>
+              <p className="text-xs sm:text-sm font-medium leading-relaxed">{successMessage}</p>
             </div>
           )}
 
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-3 text-red-800">
               <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
-              <p className="text-sm font-medium">{error}</p>
+              <p className="text-xs sm:text-sm font-medium leading-relaxed">{error}</p>
             </div>
           )}
 
           <div className="border-t border-stone-100 pt-6">
-            <h2 className="text-lg font-semibold text-stone-900 mb-4">Candidate Slate ({candidates.length})</h2>
+            <h2 className="text-base sm:text-lg font-semibold text-stone-900 mb-4">Candidate Slate ({candidates.length})</h2>
             
             {loading ? (
-              <div className="text-center py-12 text-stone-500">Loading candidate ballot...</div>
+              <div className="text-center py-12 text-stone-500 text-xs sm:text-sm">Loading candidate ballot...</div>
             ) : candidates.length === 0 ? (
-              <div className="text-center py-12 bg-stone-50 rounded-lg border border-dashed border-stone-200">
-                <p className="text-stone-600 text-sm">No active candidates currently scheduled for voting.</p>
+              <div className="text-center py-12 bg-stone-50 rounded-lg border border-dashed border-stone-200 p-4">
+                <p className="text-stone-600 text-xs sm:text-sm">No active candidates currently scheduled for voting.</p>
               </div>
             ) : (
               <div className="space-y-4 mb-8">
@@ -318,15 +318,15 @@ export default function CandidateVotingForm() {
                   return (
                     <div 
                       key={candId} 
-                      className={`p-5 rounded-lg border transition-all ${
+                      className={`p-4 sm:p-5 rounded-lg border transition-all ${
                         currentVote ? 'border-amber-300 bg-amber-50/20' : 'border-stone-200 bg-stone-50/50'
                       } flex flex-col md:flex-row md:items-center justify-between gap-4`}
                     >
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <h3 className="font-bold text-stone-900 text-base">{candidate.displayName}</h3>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-bold text-stone-900 text-sm sm:text-base break-words">{candidate.displayName}</h3>
                           {candidate.displayProfession && candidate.displayProfession !== candidate.email && (
-                            <span className="text-xs px-2.5 py-0.5 bg-stone-200 text-stone-700 rounded-full font-medium">
+                            <span className="text-[10px] sm:text-xs px-2.5 py-0.5 bg-stone-200 text-stone-700 rounded-full font-medium shrink-0">
                               {candidate.displayProfession}
                             </span>
                           )}
@@ -336,31 +336,31 @@ export default function CandidateVotingForm() {
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-row items-center gap-2 sm:gap-3 w-full md:w-auto">
                         <button
                           type="button"
                           disabled={!isEligible}
                           onClick={() => handleSelectVote(candId, 'yes')}
-                          className={`inline-flex items-center justify-center px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                          className={`flex-1 md:flex-initial inline-flex items-center justify-center px-3 sm:px-6 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                             currentVote === 'yes'
                               ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-600 ring-offset-2'
                               : 'bg-white border border-stone-300 text-stone-700 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700'
                           } ${!isEligible ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                          <Check className="w-4 h-4 mr-1.5" /> For / Accept
+                          <Check className="w-4 h-4 mr-1 sm:mr-1.5 shrink-0" /> For / Accept
                         </button>
 
                         <button
                           type="button"
                           disabled={!isEligible}
                           onClick={() => handleSelectVote(candId, 'no')}
-                          className={`inline-flex items-center justify-center px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                          className={`flex-1 md:flex-initial inline-flex items-center justify-center px-3 sm:px-6 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                             currentVote === 'no'
                               ? 'bg-rose-600 text-white shadow-sm ring-2 ring-rose-600 ring-offset-2'
                               : 'bg-white border border-stone-300 text-stone-700 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700'
                           } ${!isEligible ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                          <X className="w-4 h-4 mr-1.5" /> Against / Reject
+                          <X className="w-4 h-4 mr-1 sm:mr-1.5 shrink-0" /> Against / Reject
                         </button>
                       </div>
                     </div>
@@ -370,14 +370,14 @@ export default function CandidateVotingForm() {
             )}
 
             {candidates.length > 0 && isEligible && (
-              <div className="flex items-center justify-end pt-4 border-t border-stone-200">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4 border-t border-stone-200">
                 <button
                   type="button"
                   disabled={isSubmitting}
                   onClick={handleSubmittingBallot}
-                  className="inline-flex items-center px-6 py-3 bg-amber-700 text-white rounded-xl text-sm font-semibold hover:bg-amber-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50"
+                  className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 bg-amber-700 text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-amber-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50"
                 >
-                  <Send className="w-4 h-4 mr-2" /> {isSubmitting ? 'Submitting Ballot...' : 'Submit Official Ballot'}
+                  <Send className="w-4 h-4 mr-2 shrink-0" /> {isSubmitting ? 'Submitting Ballot...' : 'Submit Official Ballot'}
                 </button>
               </div>
             )}

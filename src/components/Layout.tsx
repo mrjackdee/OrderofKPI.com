@@ -113,15 +113,15 @@ export default function Layout() {
       )}
       
       <div className={`layout-container flex h-full grow flex-col pt-10 md:pt-14`}>
-        <header className={`flex items-center justify-between whitespace-nowrap border-b border-solid border-primary px-4 md:px-10 py-4 md:py-6 bg-black/95 backdrop-blur sticky top-0 left-0 right-0 z-50 transition-all duration-300`}>
-          <div className="flex items-center gap-2 md:gap-4 text-primary">
+        <header className={`flex items-center justify-between whitespace-nowrap border-b border-solid border-primary px-3 sm:px-6 md:px-10 py-3 sm:py-4 md:py-6 bg-black/95 backdrop-blur sticky top-0 left-0 right-0 z-50 transition-all duration-300`}>
+          <div className="flex items-center gap-2 md:gap-4 text-primary shrink-0">
             <img 
               src="https://assets.orderofkpi.org/images/logos/kpi_logo.png" 
               alt="KP Logo" 
-              className="w-8 h-8 md:w-10 md:h-10 object-contain"
+              className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 object-contain"
               referrerPolicy="no-referrer"
             />
-            <h2 className="text-primary text-base md:text-xl font-bold leading-tight tracking-tight uppercase">The Order of KP, Inc.</h2>
+            <h2 className="text-primary text-xs sm:text-base md:text-xl font-bold leading-tight tracking-tight uppercase">The Order of KP, Inc.</h2>
           </div>
           
           {/* Desktop Nav */}

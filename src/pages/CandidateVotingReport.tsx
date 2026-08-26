@@ -24,6 +24,7 @@ import {
   calculateApproval, 
   determineVotingStatus, 
   formatSyncTimestamp,
+  aggregateCandidateVotes,
   VotingStatusState 
 } from '../utils/reconciliation';
 
@@ -83,7 +84,7 @@ export default function CandidateVotingReport() {
   const fetchReportData = async () => {
     try {
       setHasFetchError(false);
-      let votes: any[] = [];
+      let allRawVotes: any[] = [];
       let candidatesList: any[] = [];
       const [serverRes, fsRes, candRes] = await Promise.allSettled([
         fetch('/api/candidate-votes').then(r => r.json()),
@@ -92,64 +93,22 @@ export default function CandidateVotingReport() {
       ]);
 
       if (serverRes.status === 'fulfilled' && serverRes.value?.success && Array.isArray(serverRes.value.votes)) {
-        votes = serverRes.value.votes;
-      } else if (fsRes.status === 'fulfilled' && fsRes.value?.success && Array.isArray(fsRes.value.votes)) {
-        votes = fsRes.value.votes;
+        allRawVotes.push(...serverRes.value.votes);
+      }
+      if (fsRes.status === 'fulfilled' && fsRes.value?.success && Array.isArray(fsRes.value.votes)) {
+        allRawVotes.push(...fsRes.value.votes);
       }
       
       if (candRes.status === 'fulfilled' && candRes.value?.success && Array.isArray(candRes.value.candidates)) {
         candidatesList = candRes.value.candidates.filter((c: any) => c.status && c.status.toLowerCase() === 'selection');
       }
 
-      setTotalSelectionCandidates(candidatesList.length);
-
-      const selectionCandidateIds = new Set(candidatesList.map(c => String(c.id || c.name).toLowerCase().trim()));
-      const selectionCandidateNames = new Set(candidatesList.map(c => String(c.name || '').toLowerCase().trim()));
-
-      // Group votes by candidate, strictly filtering for candidates where status = selection
-      const candidateMap = new Map<string, { name: string; yes: number; no: number }>();
-
-      votes.forEach(v => {
-        const cId = String(v.candidate_id || v.candidate_name || 'Unknown');
-        const cName = String(v.candidate_name || v.candidate_id || 'Candidate');
-
-        if (candidatesList.length > 0) {
-          const isMatch = selectionCandidateIds.has(cId.toLowerCase().trim()) || selectionCandidateNames.has(cName.toLowerCase().trim());
-          if (!isMatch) return;
-        }
-
-        if (!candidateMap.has(cId)) {
-          candidateMap.set(cId, { name: cName, yes: 0, no: 0 });
-        }
-        const entry = candidateMap.get(cId)!;
-        if ((v.decision || '').toLowerCase() === 'yes') {
-          entry.yes += 1;
-        } else if ((v.decision || '').toLowerCase() === 'no') {
-          entry.no += 1;
-        }
-      });
-
-      const aggregated: CandidateResult[] = [];
-      let totalBallotsCount = 0;
-
-      candidateMap.forEach((val, cId) => {
-        const { totalVotesCast, approvalPercentage, passed } = calculateApproval(val.yes, val.no);
-        totalBallotsCount += totalVotesCast;
-
-        aggregated.push({
-          candidateId: cId,
-          candidateName: val.name,
-          yesVotes: val.yes,
-          noVotes: val.no,
-          totalVotesCast,
-          approvalPercentage,
-          passed
-        });
-      });
-
+      const aggregated = aggregateCandidateVotes(candidatesList, allRawVotes);
+      setTotalSelectionCandidates(candidatesList.length || aggregated.length);
       setResults(aggregated);
       setLastSyncedAt(formatSyncTimestamp(new Date()));
 
+      const totalBallotsCount = aggregated.reduce((sum, r) => sum + r.totalVotesCast, 0);
       const statusState = determineVotingStatus(
         false,
         candidatesList.length || aggregated.length,

@@ -3,7 +3,8 @@ import {
   calculateApproval, 
   reconcileNomineeCount, 
   determineVotingStatus,
-  formatSyncTimestamp 
+  formatSyncTimestamp,
+  aggregateCandidateVotes 
 } from './reconciliation';
 
 describe('Voting and Election Reconciliation Tests', () => {
@@ -12,6 +13,41 @@ describe('Voting and Election Reconciliation Tests', () => {
     expect(zeroRes.totalVotesCast).toBe(0);
     expect(zeroRes.approvalPercentage).toBe(0);
     expect(zeroRes.passed).toBe(false);
+  });
+
+  it('should aggregate votes per candidate without duplicate rows', () => {
+    const candidates = [
+      { id: '1', name: 'Avery Torrence', status: 'Selection' },
+      { id: '2', name: 'Steven Burnette', status: 'Selection' }
+    ];
+
+    const votes = [
+      { voter_email: 'voter1@kpi.org', candidate_id: '1', candidate_name: 'Avery Torrence', decision: 'yes' },
+      { voter_email: 'voter1@kpi.org', candidate_id: '2', candidate_name: 'Steven Burnette', decision: 'yes' },
+      { voter_email: 'voter2@kpi.org', candidate_id: 'cand_avery', candidate_name: 'Avery Torrence', decision: 'yes' },
+      { voter_email: 'voter2@kpi.org', candidate_id: 'cand_steven', candidate_name: 'Steven Burnette', decision: 'no' }
+    ];
+
+    const aggregated = aggregateCandidateVotes(candidates, votes);
+
+    // Must produce exactly 2 unique rows for the 2 candidates
+    expect(aggregated.length).toBe(2);
+
+    const avery = aggregated.find(c => c.candidateName === 'Avery Torrence');
+    expect(avery).toBeDefined();
+    expect(avery?.yesVotes).toBe(2);
+    expect(avery?.noVotes).toBe(0);
+    expect(avery?.totalVotesCast).toBe(2);
+    expect(avery?.approvalPercentage).toBe(100.0);
+    expect(avery?.passed).toBe(true);
+
+    const steven = aggregated.find(c => c.candidateName === 'Steven Burnette');
+    expect(steven).toBeDefined();
+    expect(steven?.yesVotes).toBe(1);
+    expect(steven?.noVotes).toBe(1);
+    expect(steven?.totalVotesCast).toBe(2);
+    expect(steven?.approvalPercentage).toBe(50.0);
+    expect(steven?.passed).toBe(false);
   });
 
   it('should enforce the 50.1% threshold rule (50.0% fails, 50.1% passes)', () => {

@@ -4767,6 +4767,131 @@ KP Member Portal`;
     }
   });
 
+  app.get("/api/candidate-votes/report", async (req, res) => {
+    try {
+      let votes: any[] = [];
+      if (useSqlite && sqliteDb) {
+        try {
+          votes = sqliteDb.prepare("SELECT id, voter_email, candidate_id, candidate_name, decision, timestamp FROM candidate_votes").all();
+        } catch (dbErr) {
+          votes = getFallbackCandidateVotes();
+        }
+      } else {
+        votes = getFallbackCandidateVotes();
+      }
+
+      const legitEmails = await getLegitimateVoterEmails();
+      const filteredVotes = votes.filter(v => {
+        const email = (v.voter_email || "").toLowerCase().trim();
+        if (email === "admin@orderofkpi.org" || email === "candidate@gmail.com") return true;
+        return legitEmails.has(email);
+      });
+
+      // Fetch candidates list
+      let candidatesList: any[] = [];
+      if (useSqlite && sqliteDb) {
+        try {
+          candidatesList = sqliteDb.prepare("SELECT id, name, email, status FROM candidates").all();
+        } catch (e) {
+          candidatesList = getFallbackCandidates();
+        }
+      } else {
+        candidatesList = getFallbackCandidates();
+      }
+
+      const selectionCandidates = candidatesList.filter((c: any) => c.status && c.status.toLowerCase() === 'selection');
+      const targetCandidates = selectionCandidates.length > 0 ? selectionCandidates : candidatesList;
+
+      const normMap = new Map<string, { candidateId: string; candidateName: string; yesVotes: number; noVotes: number }>();
+      const idToNormName = new Map<string, string>();
+      const nameToNormName = new Map<string, string>();
+
+      targetCandidates.forEach((c: any) => {
+        const cName = String(c.name || c.id || 'Candidate').trim();
+        const cId = String(c.id || cName).trim();
+        const normName = cName.toLowerCase();
+
+        if (!normMap.has(normName)) {
+          normMap.set(normName, { candidateId: cId, candidateName: cName, yesVotes: 0, noVotes: 0 });
+        }
+        if (cId) idToNormName.set(cId.toLowerCase(), normName);
+        if (cName) nameToNormName.set(normName, normName);
+      });
+
+      const dedupedVotesMap = new Map<string, any>();
+      filteredVotes.forEach((v: any) => {
+        if (!v) return;
+        const voter = String(v.voter_email || '').toLowerCase().trim();
+        const rawCandId = String(v.candidate_id || v.candidate_name || '').toLowerCase().trim();
+        const voteKey = voter ? `${voter}_${rawCandId}` : (v.id || Math.random().toString());
+        dedupedVotesMap.set(voteKey, v);
+      });
+
+      dedupedVotesMap.forEach((v: any) => {
+        const rawId = String(v.candidate_id || '').trim().toLowerCase();
+        const rawName = String(v.candidate_name || '').trim().toLowerCase();
+
+        let matchedNormName = 
+          idToNormName.get(rawId) || 
+          nameToNormName.get(rawName) || 
+          nameToNormName.get(rawId) || 
+          idToNormName.get(rawName);
+
+        if (!matchedNormName) {
+          if (rawName) matchedNormName = rawName;
+          else if (rawId) matchedNormName = rawId;
+        }
+
+        if (!matchedNormName) return;
+
+        if (!normMap.has(matchedNormName)) {
+          const displayCandidateName = String(v.candidate_name || v.candidate_id || 'Candidate').trim();
+          normMap.set(matchedNormName, {
+            candidateId: v.candidate_id || matchedNormName,
+            candidateName: displayCandidateName,
+            yesVotes: 0,
+            noVotes: 0
+          });
+        }
+
+        const candidateEntry = normMap.get(matchedNormName)!;
+        const decision = String(v.decision || '').toLowerCase().trim();
+        if (decision === 'yes' || decision === 'for' || decision === 'approve') {
+          candidateEntry.yesVotes += 1;
+        } else if (decision === 'no' || decision === 'against' || decision === 'reject') {
+          candidateEntry.noVotes += 1;
+        }
+      });
+
+      const results: any[] = [];
+      normMap.forEach((entry) => {
+        const totalVotesCast = entry.yesVotes + entry.noVotes;
+        const rawPercentage = totalVotesCast > 0 ? (entry.yesVotes / totalVotesCast) * 100 : 0;
+        const approvalPercentage = Math.round(rawPercentage * 10) / 10;
+        const passed = approvalPercentage >= 50.1;
+
+        results.push({
+          candidateId: entry.candidateId,
+          candidateName: entry.candidateName,
+          yesVotes: entry.yesVotes,
+          noVotes: entry.noVotes,
+          totalVotesCast,
+          approvalPercentage,
+          passed
+        });
+      });
+
+      res.json({
+        success: true,
+        results,
+        totalSelectionCandidates: targetCandidates.length,
+        totalBallotsCast: results.reduce((sum, r) => sum + r.totalVotesCast, 0)
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
   app.get("/api/candidate-votes/user", async (req, res) => {
     try {
       const email = (req.query.email as string || "").toLowerCase().trim();

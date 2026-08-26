@@ -91,28 +91,28 @@ export default function SelectionVoting() {
 
   return (
     <div className="min-h-screen bg-cream pb-20">
-      <div className="bg-ivy py-16 px-4 mb-12">
+      <div className="bg-ivy py-8 sm:py-16 px-4 mb-6 sm:mb-12">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-gold/20 text-gold px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-6">
-            <ShieldCheck className="w-4 h-4" />
+          <div className="inline-flex items-center gap-2 bg-gold/20 text-gold px-3 sm:px-4 py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-4 sm:mb-6">
+            <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             Member Voting
           </div>
-          <h1 className="text-4xl md:text-5xl font-display text-cream mb-4">Candidate Intake Voting</h1>
-          <p className="text-cream/70 font-body max-w-2xl mx-auto">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-display text-cream mb-3 sm:mb-4">Candidate Intake Voting</h1>
+          <p className="text-cream/70 font-body text-xs sm:text-base max-w-2xl mx-auto leading-relaxed">
             Review candidate applications and cast your vote for the FY27 intake class.
           </p>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4">
         {candidates.length === 0 ? (
-          <div className="bg-white p-12 rounded-lg border border-gold/20 text-center shadow-soft">
-            <Clock className="w-16 h-16 text-gold/20 mx-auto mb-6" />
-            <h2 className="text-2xl font-display text-ivy mb-2">No Candidates in Selection</h2>
-            <p className="text-ivy/60">There are currently no candidates ready for voting. Please check back later.</p>
+          <div className="bg-white p-6 sm:p-12 rounded-lg border border-gold/20 text-center shadow-soft">
+            <Clock className="w-12 h-12 sm:w-16 sm:h-16 text-gold/20 mx-auto mb-4 sm:mb-6" />
+            <h2 className="text-xl sm:text-2xl font-display text-ivy mb-2">No Candidates in Selection</h2>
+            <p className="text-ivy/60 text-xs sm:text-sm">There are currently no candidates ready for voting. Please check back later.</p>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {candidates.map((candidate) => {
               const myVote = getUserVote(candidate.id);
               return (
@@ -122,92 +122,92 @@ export default function SelectionVoting() {
                   animate={{ opacity: 1, y: 0 }}
                   className="bg-white rounded-lg border border-gold/20 shadow-soft overflow-hidden"
                 >
-                  <div className="p-8">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+                  <div className="p-4 sm:p-8">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                       <div>
-                        <h2 className="text-2xl font-display text-ivy mb-1">{candidate.name}</h2>
-                        <div className="flex items-center gap-4 text-ivy/40 text-sm">
+                        <h2 className="text-xl sm:text-2xl font-display text-ivy mb-1">{candidate.name}</h2>
+                        <div className="flex flex-wrap items-center gap-3 text-ivy/40 text-xs sm:text-sm">
                           <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
+                            <Clock className="w-3 h-3 shrink-0" />
                             Applied: {new Date(candidate.application_date).toLocaleDateString()}
                           </span>
                           <span className="flex items-center gap-1">
-                            <FileText className="w-3 h-3" />
+                            <FileText className="w-3 h-3 shrink-0" />
                             Application Submitted
                           </span>
                         </div>
                       </div>
-                      <button className="flex items-center gap-2 text-ivy border-2 border-ivy px-6 py-2 rounded-md font-bold uppercase tracking-widest text-xs hover:bg-ivy hover:text-cream transition-all cursor-pointer">
+                      <button className="w-full sm:w-auto flex items-center justify-center gap-2 text-ivy border-2 border-ivy px-4 sm:px-6 py-2 rounded-md font-bold uppercase tracking-widest text-xs hover:bg-ivy hover:text-cream transition-all cursor-pointer">
                         View Application
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                      <div className="bg-cream p-4 rounded-lg">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 mb-6">
+                      <div className="bg-cream p-3 sm:p-4 rounded-lg">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-ivy/40 mb-1">Application Score</p>
-                        <p className="text-xl font-display text-ivy">{candidate.scores?.application || 'Pending'}/100</p>
+                        <p className="text-lg sm:text-xl font-display text-ivy">{candidate.scores?.application || 'Pending'}/100</p>
                       </div>
-                      <div className="bg-cream p-4 rounded-lg">
+                      <div className="bg-cream p-3 sm:p-4 rounded-lg">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-ivy/40 mb-1">Interview Score</p>
-                        <p className="text-xl font-display text-ivy">{candidate.scores?.interview || 'Pending'}/100</p>
+                        <p className="text-lg sm:text-xl font-display text-ivy">{candidate.scores?.interview || 'Pending'}/100</p>
                       </div>
-                      <div className="bg-cream p-4 rounded-lg">
+                      <div className="bg-cream p-3 sm:p-4 rounded-lg">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-ivy/40 mb-1">Status</p>
-                        <p className="text-xl font-display text-ivy">{candidate.status}</p>
+                        <p className="text-lg sm:text-xl font-display text-ivy">{candidate.status}</p>
                       </div>
                     </div>
 
-                    <div className="pt-8 border-t border-cream">
-                      <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="pt-6 border-t border-cream">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-2 text-ivy/60">
                           {myVote ? (
-                            <div className="flex items-center gap-2 px-4 py-2 bg-ivy/5 rounded-md">
-                              <Check className="w-4 h-4 text-green-600" />
-                              <span className="text-sm font-bold uppercase tracking-widest text-ivy">Your Vote: {myVote.decision}</span>
+                            <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-ivy/5 rounded-md">
+                              <Check className="w-4 h-4 text-green-600 shrink-0" />
+                              <span className="text-xs sm:text-sm font-bold uppercase tracking-widest text-ivy">Your Vote: {myVote.decision}</span>
                             </div>
                           ) : (
                             <div className="flex items-center gap-2 text-gold">
-                              <AlertTriangle className="w-4 h-4" />
-                              <span className="text-sm font-bold uppercase tracking-widest">Awaiting Your Vote</span>
+                              <AlertTriangle className="w-4 h-4 shrink-0" />
+                              <span className="text-xs sm:text-sm font-bold uppercase tracking-widest">Awaiting Your Vote</span>
                             </div>
                           )}
                         </div>
 
-                        <div className="flex gap-4 w-full md:w-auto">
+                        <div className="flex flex-row gap-2 sm:gap-3 w-full sm:w-auto">
                           <button
                             disabled={submitting === candidate.id}
                             onClick={() => castVote(candidate.id, 'yes')}
-                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-md font-bold uppercase tracking-widest text-sm transition-all ${
+                            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-6 py-2.5 rounded-md font-bold uppercase tracking-widest text-xs sm:text-sm transition-all ${
                               myVote?.decision === 'yes'
                                 ? 'bg-green-600 text-white'
                                 : 'bg-white border-2 border-green-600 text-green-600 hover:bg-green-600 hover:text-white'
                             }`}
                           >
-                            <Check className="w-4 h-4" />
+                            <Check className="w-4 h-4 shrink-0" />
                             Yes
                           </button>
                           <button
                             disabled={submitting === candidate.id}
                             onClick={() => castVote(candidate.id, 'no')}
-                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-md font-bold uppercase tracking-widest text-sm transition-all ${
+                            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-6 py-2.5 rounded-md font-bold uppercase tracking-widest text-xs sm:text-sm transition-all ${
                               myVote?.decision === 'no'
                                 ? 'bg-red-600 text-white'
                                 : 'bg-white border-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white'
                             }`}
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-4 h-4 shrink-0" />
                             No
                           </button>
                           <button
                             disabled={submitting === candidate.id}
                             onClick={() => castVote(candidate.id, 'abstain')}
-                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-md font-bold uppercase tracking-widest text-sm transition-all ${
+                            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-5 py-2.5 rounded-md font-bold uppercase tracking-widest text-xs sm:text-sm transition-all ${
                               myVote?.decision === 'abstain'
                                 ? 'bg-gray-600 text-white'
                                 : 'bg-white border-2 border-gray-600 text-gray-600 hover:bg-gray-600 hover:text-white'
                             }`}
                           >
-                            <Minus className="w-4 h-4" />
+                            <Minus className="w-4 h-4 shrink-0" />
                             Abstain
                           </button>
                         </div>

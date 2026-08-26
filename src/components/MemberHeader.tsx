@@ -117,24 +117,24 @@ export default function MemberHeader() {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 md:px-12 pt-6">
+    <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 md:px-12 pt-4 sm:pt-6">
       {isNotMemberPortal && (
         <div className="mb-4 rounded-2xl overflow-hidden shadow-md">
           <UrgentBannerTicker />
         </div>
       )}
-      <div className="bg-[#122c14] border-2 border-[#D4AF37] rounded-2xl p-5 md:p-7 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 text-center md:text-left">
-          <div className="w-14 h-14 rounded-full bg-[#D4AF37]/25 border-2 border-[#D4AF37] flex items-center justify-center text-[#FFDF79] font-black uppercase text-lg shrink-0 shadow-inner animate-pulse">
+      <div className="bg-[#122c14] border-2 border-[#D4AF37] rounded-2xl p-4 sm:p-5 md:p-7 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 shadow-2xl">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-3 md:gap-4 text-center md:text-left">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#D4AF37]/25 border-2 border-[#D4AF37] flex items-center justify-center text-[#FFDF79] font-black uppercase text-base sm:text-lg shrink-0 shadow-inner">
             {firstName.substring(0, 2)}
           </div>
           <div>
-            <h3 className="text-2xl md:text-3xl font-serif font-bold text-white tracking-wide">
+            <h3 className="text-xl sm:text-2xl md:text-3xl font-serif font-bold text-white tracking-wide">
               Welcome, {fullName || firstName}
             </h3>
             
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5 mt-2">
-              <span className="px-3.5 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest bg-[#D4AF37] text-[#122c14] shadow-md">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-2">
+              <span className="px-3 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest bg-[#D4AF37] text-[#122c14] shadow-md">
                 {role === 'admin' ? 'Administrator' : role === 'officer' ? 'Officer' : 'Financial Member'}
               </span>
               {title && 
@@ -142,23 +142,23 @@ export default function MemberHeader() {
                title.toLowerCase() !== 'officer' && 
                title.toLowerCase() !== 'member' && 
                title.toLowerCase() !== 'financial member' && (
-                <span className="px-3.5 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest bg-white/10 text-[#FFDF79] border-2 border-[#D4AF37]/50 shadow-md">
+                <span className="px-3 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest bg-white/10 text-[#FFDF79] border-2 border-[#D4AF37]/50 shadow-md">
                   {title}
                 </span>
               )}
             </div>
 
-            <p className="text-[10px] md:text-xs text-white/80 uppercase font-bold tracking-[0.2em] mt-3">
+            <p className="text-[10px] md:text-xs text-white/80 uppercase font-bold tracking-[0.2em] mt-2">
               Order of Kappa Pi Member Portal
             </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 w-full md:w-auto">
           {isNotMemberPortal && (
             <Link
               to="/member-portal"
-              className="px-4 py-2 text-xs font-bold uppercase tracking-widest bg-[#D4AF37] hover:bg-white text-[#122c14] rounded-xl transition-all flex items-center gap-1.5 shadow-md"
+              className="px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-widest bg-[#D4AF37] hover:bg-white text-[#122c14] rounded-xl transition-all flex items-center gap-1.5 shadow-md"
             >
               <ArrowLeft size={13} /> Member Portal
             </Link>
@@ -166,14 +166,14 @@ export default function MemberHeader() {
 
           <button
             onClick={() => setShowModal(true)}
-            className="px-4 py-2 text-xs font-bold uppercase tracking-widest bg-transparent border-2 border-[#B8860B]/40 hover:border-[#B8860B] text-white hover:bg-white/10 rounded-xl transition-all flex items-center gap-1.5"
+            className="px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-widest bg-transparent border-2 border-[#B8860B]/40 hover:border-[#B8860B] text-white hover:bg-white/10 rounded-xl transition-all flex items-center gap-1.5"
           >
             <Key size={13} /> Change Password
           </button>
           
           <button
             onClick={handleLogout}
-            className="px-4 py-2 text-xs font-bold uppercase tracking-widest bg-red-500/20 hover:bg-red-500/35 border-2 border-red-500/40 text-red-100 rounded-xl transition-all flex items-center gap-1.5"
+            className="px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-widest bg-red-500/20 hover:bg-red-500/35 border-2 border-red-500/40 text-red-100 rounded-xl transition-all flex items-center gap-1.5"
           >
             <LogOut size={13} /> Log Out
           </button>

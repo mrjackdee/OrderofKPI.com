@@ -752,9 +752,11 @@ export async function performApplicantLogin(email: string, pass: string): Promis
 export async function requestApplicantPasswordReset(email: string): Promise<{
   success: boolean;
   message: string;
+  resetLink?: string;
 }> {
   const normEmail = email.toLowerCase().trim();
   let serverMessage = '';
+  let resetLink = '';
 
   try {
     const controller = new AbortController();
@@ -773,6 +775,9 @@ export async function requestApplicantPasswordReset(email: string): Promise<{
       if (data && data.message) {
         serverMessage = data.message;
       }
+      if (data && data.resetLink) {
+        resetLink = data.resetLink;
+      }
     }
   } catch (e) {
     console.warn('Server forgot password log notice:', e);
@@ -782,12 +787,14 @@ export async function requestApplicantPasswordReset(email: string): Promise<{
     const firebaseRes = await firebaseResetApplicantPassword(normEmail);
     return {
       success: true,
-      message: serverMessage || firebaseRes.message
+      message: serverMessage || firebaseRes.message,
+      resetLink: resetLink || (firebaseRes as any)?.resetLink
     };
   } catch (e) {
     return {
       success: true,
-      message: serverMessage || `Password reset instructions have been sent to ${normEmail}. Please check your assigned @orderofkpi.org email inbox to set a new password.`
+      message: serverMessage || `Password reset instructions have been sent to ${normEmail}. Please check your assigned @orderofkpi.org email inbox to set a new password.`,
+      resetLink
     };
   }
 }
