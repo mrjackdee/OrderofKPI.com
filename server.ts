@@ -2851,12 +2851,12 @@ async function startServer() {
         }));
       }
 
-      const includeTest = req.query.includeTest === 'true' || req.query.all === 'true';
-      if (process.env.NODE_ENV === 'production' && !includeTest) {
+      // Strictly filter out test/QA accounts in production environment
+      if (process.env.NODE_ENV === 'production') {
         members = members.filter((m: any) => {
           const email = (m.email || '').toLowerCase().trim();
-          // Explicitly check for QA/Test emails rather than dropping genuine member records
-          const isExplicitTestEmail = email.startsWith('qa.') || email.startsWith('test.') || email === 'candidate@gmail.com' || email === 'applicant@orderofkpi.org';
+          const name = (m.name || '').toLowerCase().trim();
+          const isExplicitTestEmail = email.startsWith('qa.') || email.startsWith('test.') || email.startsWith('qa_') || email.startsWith('test_') || email === 'applicant@orderofkpi.org' || name.startsWith('qa ') || name.startsWith('test ');
           return !isExplicitTestEmail;
         });
       }
@@ -4059,7 +4059,7 @@ async function startServer() {
       }
 
       // Normalize each user's committees and committee roles
-      const normalizedUsers = allUsers.map((u: any) => {
+      let normalizedUsers = allUsers.map((u: any) => {
         let comms: string[] = [];
         let roles: Record<string, string> = {};
         try {
@@ -4098,6 +4098,14 @@ async function startServer() {
           committeeRoles: roles
         };
       });
+
+      if (process.env.NODE_ENV === 'production') {
+        normalizedUsers = normalizedUsers.filter((u: any) => {
+          const email = (u.email || '').toLowerCase().trim();
+          const name = (u.name || '').toLowerCase().trim();
+          return !(email.startsWith('qa.') || email.startsWith('test.') || email.startsWith('qa_') || email.startsWith('test_') || email === 'applicant@orderofkpi.org' || name.startsWith('qa ') || name.startsWith('test '));
+        });
+      }
 
       if (!slug || slug === 'membership_intake') {
         const membershipMembers = normalizedUsers.filter(u => 

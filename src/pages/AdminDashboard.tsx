@@ -703,9 +703,9 @@ export default function AdminDashboard() {
     try {
       const memberMap = new Map<string, Member>();
 
-      // 1. Primary: Fetch from REST API (/api/members?includeTest=true)
+      // 1. Primary: Fetch from REST API
       try {
-        const response = await fetch('/api/members?includeTest=true');
+        const response = await fetch('/api/members');
         const data = await response.json();
         if (data && data.success && Array.isArray(data.members)) {
           data.members.forEach((m: Member) => {
@@ -795,6 +795,12 @@ export default function AdminDashboard() {
 
       let combinedMembers = Array.from(memberMap.values());
 
+      // Production Safety Guard: Strictly filter out QA and test accounts in production environments
+      const isProd = (import.meta as any).env?.PROD || process.env.NODE_ENV === 'production';
+      if (isProd) {
+        combinedMembers = combinedMembers.filter(m => !isTestUser(m));
+      }
+
       // Sort members: Officers first, then Admin, then Members, alphabetically
       const roleOrder: Record<string, number> = { officer: 1, admin: 2, 'Committee Chair': 2, member: 3 };
       combinedMembers.sort((a, b) => {
@@ -809,7 +815,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Error in fetchMembers:', error);
       if (defaultMembers && defaultMembers.length > 0) {
-        setMembers(defaultMembers.map((dm: any) => ({
+        let fallback: Member[] = defaultMembers.map((dm: any) => ({
           email: dm.email.toLowerCase().trim(),
           name: dm.name,
           first_name: dm.name.split(' ')[0],
@@ -820,8 +826,12 @@ export default function AdminDashboard() {
           committees: dm.committees || [],
           committeeRoles: dm.committeeRoles || {},
           is_first_login: false,
-          financial_status: 'active'
-        })));
+          financial_status: 'active' as const
+        }));
+        if ((import.meta as any).env?.PROD || process.env.NODE_ENV === 'production') {
+          fallback = fallback.filter(m => !isTestUser(m));
+        }
+        setMembers(fallback);
       }
     } finally {
       setIsSyncingMembers(false);
@@ -1107,12 +1117,16 @@ export default function AdminDashboard() {
   };
 
   // Filtered lists
-  const filteredMembers = members.filter(m => 
-    m.name.toLowerCase().includes(memberSearch.toLowerCase()) ||
-    m.email.toLowerCase().includes(memberSearch.toLowerCase()) ||
-    (m.role && m.role.toLowerCase().includes(memberSearch.toLowerCase())) ||
-    (m.title && m.title.toLowerCase().includes(memberSearch.toLowerCase()))
-  );
+  const filteredMembers = members.filter(m => {
+    const isProd = (import.meta as any).env?.PROD || process.env.NODE_ENV === 'production';
+    if (isProd && isTestUser(m)) return false;
+    return (
+      m.name.toLowerCase().includes(memberSearch.toLowerCase()) ||
+      m.email.toLowerCase().includes(memberSearch.toLowerCase()) ||
+      (m.role && m.role.toLowerCase().includes(memberSearch.toLowerCase())) ||
+      (m.title && m.title.toLowerCase().includes(memberSearch.toLowerCase()))
+    );
+  });
 
   const mergedCandidates = useMemo(() => {
     const submittedAppsMap = new Map<string, any>();
@@ -1549,13 +1563,15 @@ export default function AdminDashboard() {
                   <span>{isSyncingMembers ? 'Syncing...' : 'Sync Roster'}</span>
                 </button>
 
-                <a 
-                  href="/test_credentials.md" 
-                  download="kpi_test_credentials.md"
-                  className="bg-gold/20 hover:bg-gold/30 text-ivy border border-gold/40 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-sm"
-                >
-                  📥 Download Credentials (.md)
-                </a>
+                {(import.meta as any).env?.DEV && (
+                  <a 
+                    href="/test_credentials.md" 
+                    download="kpi_test_credentials.md"
+                    className="bg-gold/20 hover:bg-gold/30 text-ivy border border-gold/40 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-sm"
+                  >
+                    📥 Download Credentials (.md)
+                  </a>
+                )}
 
                 <button
                   onClick={async () => {

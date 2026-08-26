@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Member } from '../types';
-import { syncApplicationsFromFirestore, performAdminPasswordChange } from '../lib/memberDb';
+import { syncApplicationsFromFirestore, performAdminPasswordChange, isTestUser } from '../lib/memberDb';
 import { firebaseSyncPortalMember } from '../lib/firebase';
 
 export default function MemberDirectory() {
@@ -241,6 +241,9 @@ export default function MemberDirectory() {
   };
 
   const filteredMembers = members.filter(member => {
+    const isProd = (import.meta as any).env?.PROD || process.env.NODE_ENV === 'production';
+    if (isProd && isTestUser(member)) return false;
+
     const name = member.name || '';
     const email = member.email || '';
     const title = member.title || '';
