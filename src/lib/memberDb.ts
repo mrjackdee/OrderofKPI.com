@@ -603,7 +603,7 @@ export async function performHybridLogin(email: string, pass: string): Promise<{
                 title: norm.title,
                 committees: norm.committees,
                 committeeRoles: norm.committeeRoles,
-                isFirstLogin: (normalizedEmail === 'admin@orderofkpi.org' || normalizedEmail === 'info@kpi2012.org' || normalizedEmail === 'qa.admin@orderofkpi.org' || normalizedEmail === 'james.haywood@orderofkpi.org' || normalizedEmail === 'donald.mitchell@orderofkpi.org') ? false : !isChanged
+                isFirstLogin: (normalizedEmail === 'admin@orderofkpi.org' || normalizedEmail === 'info@kpi2012.org' || normalizedEmail === 'qa.admin@orderofkpi.org' || normalizedEmail === 'james.haywood@orderofkpi.org' || normalizedEmail === 'donald.mitchell@orderofkpi.org') ? false : (pass === 'atlanta' ? true : false)
               }
             };
           }
@@ -1060,6 +1060,7 @@ async function performClientSideLogin(email: string, pass: string) {
 
   // If password was changed, we must NOT allow the initial password anymore.
   let isPasswordValid = isAdminPass || isJamesPass || isDonaldPass || (isChanged ? (pass === savedPass) : (pass === initialPass || pass === savedPass));
+  let isFirstLoginVal = (isAdmin || isJames || isDonald) ? false : (pass === 'atlanta' ? true : !isChanged);
 
   if (!isPasswordValid && !isDefaultQa) {
     // 1. Check Cloud Firestore user_password_overrides collection
@@ -1075,6 +1076,7 @@ async function performClientSideLogin(email: string, pass: string) {
           const inputHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
           if (data.hash === inputHash) {
             isPasswordValid = true;
+            isFirstLoginVal = (data.isFirstLogin === true || data.isFirstLogin === 1 || data.isFirstLogin === 'true' || data.isFirstLogin === '1' || pass === 'atlanta') ? true : false;
             try {
               localStorage.setItem(`kpi_password_changed_${normEmail}`, 'true');
               localStorage.setItem(`kpi_client_password_${normEmail}`, pass);
@@ -1089,6 +1091,11 @@ async function performClientSideLogin(email: string, pass: string) {
       try {
         await signInWithEmailAndPassword(auth, normEmail, pass);
         isPasswordValid = true;
+        isFirstLoginVal = pass === 'atlanta';
+        try {
+          localStorage.setItem(`kpi_password_changed_${normEmail}`, 'true');
+          localStorage.setItem(`kpi_client_password_${normEmail}`, pass);
+        } catch (e) {}
       } catch (err) {
         return {
           success: false,
@@ -1119,7 +1126,7 @@ async function performClientSideLogin(email: string, pass: string) {
       title: norm.title,
       committees: norm.committees,
       committeeRoles: norm.committeeRoles,
-      isFirstLogin: (isAdmin || isJames || isDonald) ? false : !isChanged
+      isFirstLogin: isFirstLoginVal
     }
   };
 }

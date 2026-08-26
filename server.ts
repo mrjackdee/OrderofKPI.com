@@ -439,7 +439,7 @@ function savePasswordOverride(email: string, hash: string, isFirstLogin: number 
         fields: {
           email: { stringValue: normEmail },
           hash: { stringValue: hash },
-          isFirstLogin: { integerValue: isFirstLogin },
+          isFirstLogin: { integerValue: String(isFirstLogin) },
           updatedAt: { stringValue: new Date().toISOString() }
         }
       })
