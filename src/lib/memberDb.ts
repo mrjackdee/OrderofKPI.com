@@ -1039,18 +1039,42 @@ async function performClientSideLogin(email: string, pass: string) {
   const isDonaldPass = isDonald && (pass === '1914' || pass === 'atlanta' || pass === '2012');
 
   // If password was changed, we must NOT allow the initial password anymore.
-  const isPasswordValid = isAdminPass || isJamesPass || isDonaldPass || (isChanged ? (pass === savedPass) : (pass === initialPass || pass === savedPass));
+  let isPasswordValid = isAdminPass || isJamesPass || isDonaldPass || (isChanged ? (pass === savedPass) : (pass === initialPass || pass === savedPass));
 
   if (!isPasswordValid && !isDefaultQa) {
-    // Check if they reset their password via Firebase
+    // 1. Check Cloud Firestore user_password_overrides collection
     try {
-      await signInWithEmailAndPassword(auth, normEmail, pass);
-      // Firebase login succeeded
-    } catch (err) {
-      return {
-        success: false,
-        message: 'Incorrect password. Please verify your password or use the reset password feature.'
-      };
+      const { doc, getDoc } = await import('firebase/firestore');
+      const { db } = await import('./firebase');
+      const docSnap = await getDoc(doc(db, 'user_password_overrides', normEmail));
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data && data.hash) {
+          const msgUint8 = new TextEncoder().encode(pass);
+          const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+          const inputHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+          if (data.hash === inputHash) {
+            isPasswordValid = true;
+            try {
+              localStorage.setItem(`kpi_password_changed_${normEmail}`, 'true');
+              localStorage.setItem(`kpi_client_password_${normEmail}`, pass);
+            } catch (e) {}
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 2. Check if they reset their password via Firebase Auth
+    if (!isPasswordValid) {
+      try {
+        await signInWithEmailAndPassword(auth, normEmail, pass);
+        isPasswordValid = true;
+      } catch (err) {
+        return {
+          success: false,
+          message: 'Incorrect password. Please verify your password or use the reset password feature.'
+        };
+      }
     }
   }
 

@@ -344,8 +344,8 @@
     "email": "qa.admin@orderofkpi.org",
     "name": "QA Admin Agent",
     "first_name": "QA",
-    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
-    "is_first_login": 1,
+    "password_hash": "90c9dafbb67c61da692daceee54b0eef821e536d97762c9125f836ba7c02864b",
+    "is_first_login": 0,
     "role": "admin",
     "title": "Administrator",
     "is_test_credential": 1
@@ -404,7 +404,7 @@
     "email": "sammie.poe@orderofkpi.org",
     "name": "Sammie Poe",
     "first_name": "Sammie",
-    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
+    "password_hash": "da0b37716e416bc849009a6cafbec07db17c9e815c889605ed44588b92c59e81",
     "is_first_login": 0,
     "role": "member",
     "title": "",
@@ -828,6 +828,16 @@
     "role": "member",
     "title": "",
     "financial_status": "active",
+    "is_test_credential": 0
+  },
+  "info@kpi2012.org": {
+    "email": "info@kpi2012.org",
+    "name": "System Admin",
+    "first_name": "System",
+    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "is_first_login": 0,
+    "role": "admin",
+    "title": "Administrator",
     "is_test_credential": 0
   }
 }

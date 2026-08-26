@@ -206,22 +206,30 @@ interface PasswordOverrideRecord {
 }
 
 let globalPasswordOverrides: Record<string, PasswordOverrideRecord> = {};
+const defaultPasswordHash = hashPassword("atlanta");
 
 function loadPasswordOverridesFromFile() {
+  const atlantaHash = hashPassword("atlanta");
   globalPasswordOverrides = {
     "admin@orderofkpi.org": { hash: hashPassword("2012"), isFirstLogin: 0, updatedAt: new Date().toISOString() },
     "info@kpi2012.org": { hash: hashPassword("2012"), isFirstLogin: 0, updatedAt: new Date().toISOString() },
     "qa.admin@orderofkpi.org": { hash: hashPassword("KPI_QA_Admin2026!"), isFirstLogin: 0, updatedAt: new Date().toISOString() },
     "james.haywood@orderofkpi.org": { hash: hashPassword("2012"), isFirstLogin: 0, updatedAt: new Date().toISOString() },
     "donald.mitchell@orderofkpi.org": { hash: hashPassword("1914"), isFirstLogin: 0, updatedAt: new Date().toISOString() },
-    "sammie.poe@orderofkpi.org": { hash: hashPassword("atlanta"), isFirstLogin: 0, updatedAt: new Date().toISOString() }
+    "sammie.poe@orderofkpi.org": { hash: atlantaHash, isFirstLogin: 0, updatedAt: new Date().toISOString() }
   };
 
   if (fs.existsSync(passwordOverridesPath)) {
     try {
       const data = JSON.parse(fs.readFileSync(passwordOverridesPath, "utf-8"));
-      globalPasswordOverrides = { ...globalPasswordOverrides, ...data };
-      console.log(`[AUTH] Loaded ${Object.keys(data).length} password overrides from user_password_overrides.json`);
+      for (const [em, record] of Object.entries(data as Record<string, PasswordOverrideRecord>)) {
+        const norm = em.toLowerCase().trim();
+        // Ignore uninitialized default records (hash is atlanta AND isFirstLogin is 1)
+        if (record && record.hash && (record.hash !== atlantaHash || record.isFirstLogin === 0)) {
+          globalPasswordOverrides[norm] = record;
+        }
+      }
+      console.log(`[AUTH] Loaded ${Object.keys(globalPasswordOverrides).length} verified password overrides from user_password_overrides.json`);
     } catch (err) {
       console.error("[AUTH] Error loading password overrides file:", err);
     }
@@ -230,24 +238,28 @@ function loadPasswordOverridesFromFile() {
   if (fs.existsSync(altPasswordOverridesPath)) {
     try {
       const altData = JSON.parse(fs.readFileSync(altPasswordOverridesPath, "utf-8"));
-      globalPasswordOverrides = { ...globalPasswordOverrides, ...altData };
-      console.log(`[AUTH] Loaded ${Object.keys(altData).length} password overrides from password_overrides.json`);
+      for (const [em, record] of Object.entries(altData as Record<string, PasswordOverrideRecord>)) {
+        const norm = em.toLowerCase().trim();
+        if (record && record.hash && (record.hash !== atlantaHash || record.isFirstLogin === 0)) {
+          globalPasswordOverrides[norm] = record;
+        }
+      }
     } catch (err) {
       console.error("[AUTH] Error loading alt password overrides file:", err);
     }
   }
 
-  // Also read kpi_members_v2.json to ensure any previously saved user passwords are present in memory
+  // Also read kpi_members_v2.json ONLY for genuine established passwords (is_first_login === 0 and not atlanta with first login)
   if (fs.existsSync(jsonDbPath)) {
     try {
       const jsonUsers = JSON.parse(fs.readFileSync(jsonDbPath, "utf-8")) as Record<string, UserRecord>;
       for (const [em, record] of Object.entries(jsonUsers)) {
         const norm = em.toLowerCase().trim();
-        if (record.password_hash) {
-          if (!globalPasswordOverrides[norm] || record.is_first_login === 0) {
+        if (record.password_hash && record.is_first_login === 0 && record.password_hash !== atlantaHash) {
+          if (!globalPasswordOverrides[norm]) {
             globalPasswordOverrides[norm] = {
               hash: record.password_hash,
-              isFirstLogin: record.is_first_login ?? (record.password_hash === hashPassword("atlanta") ? 1 : 0),
+              isFirstLogin: 0,
               updatedAt: new Date().toISOString()
             };
           }
@@ -258,6 +270,7 @@ function loadPasswordOverridesFromFile() {
 }
 
 async function syncPasswordOverridesFromFirestoreCloud() {
+  const atlantaHash = hashPassword("atlanta");
   // First try direct Firestore SDK
   if (serverFirestoreDb) {
     try {
@@ -270,7 +283,9 @@ async function syncPasswordOverridesFromFirestoreCloud() {
         const isFirstLogin = data.isFirstLogin === 1 || data.isFirstLogin === true ? 1 : 0;
         const updatedAt = data.updatedAt || new Date().toISOString();
 
-        if (normEmail && hash) {
+        // Safeguard: Never allow uninitialized default records (atlanta + first login) to overwrite established passwords
+        const isDummyDefault = hash === atlantaHash && isFirstLogin === 1;
+        if (normEmail && hash && !isDummyDefault) {
           globalPasswordOverrides[normEmail] = { hash, isFirstLogin, updatedAt };
           loadedCount++;
 
@@ -292,7 +307,7 @@ async function syncPasswordOverridesFromFirestoreCloud() {
         }
       });
       if (loadedCount > 0) {
-        console.log(`[AUTH Cloud Sync] Hydrated ${loadedCount} password overrides from Cloud Firestore SDK.`);
+        console.log(`[AUTH Cloud Sync] Hydrated ${loadedCount} active password overrides from Cloud Firestore SDK.`);
         try {
           fs.writeFileSync(passwordOverridesPath, JSON.stringify(globalPasswordOverrides, null, 2));
           fs.writeFileSync(altPasswordOverridesPath, JSON.stringify(globalPasswordOverrides, null, 2));
@@ -324,7 +339,9 @@ async function syncPasswordOverridesFromFirestoreCloud() {
           : (fields.isFirstLogin?.booleanValue === false ? 0 : (fields.isFirstLogin?.booleanValue === true ? 1 : 0));
         const updatedAt = fields.updatedAt?.stringValue || new Date().toISOString();
 
-        if (normEmail && hash) {
+        // Safeguard: Never allow uninitialized default records (atlanta + first login) to overwrite established passwords
+        const isDummyDefault = hash === atlantaHash && isFirstLogin === 1;
+        if (normEmail && hash && !isDummyDefault) {
           globalPasswordOverrides[normEmail] = { hash, isFirstLogin, updatedAt };
           loadedCount++;
           
@@ -346,7 +363,7 @@ async function syncPasswordOverridesFromFirestoreCloud() {
         }
       }
       if (loadedCount > 0) {
-        console.log(`[AUTH Cloud Sync] Hydrated ${loadedCount} password overrides from Cloud Firestore REST.`);
+        console.log(`[AUTH Cloud Sync] Hydrated ${loadedCount} active password overrides from Cloud Firestore REST.`);
         try {
           fs.writeFileSync(passwordOverridesPath, JSON.stringify(globalPasswordOverrides, null, 2));
           fs.writeFileSync(altPasswordOverridesPath, JSON.stringify(globalPasswordOverrides, null, 2));
@@ -1018,24 +1035,31 @@ async function initDb() {
       let targetPasswordHash = defaultPasswordHash;
       let targetIsFirstLogin = 1;
 
-      if (override) {
+      // Rule: If user exists in SQLite, prioritize their saved password hash and first login status
+      if (existingUser && existingUser.password_hash) {
+        targetPasswordHash = existingUser.password_hash;
+        targetIsFirstLogin = existingUser.is_first_login ?? 0;
+      }
+
+      // Rule: An authoritative override from Cloud Firestore or user_password_overrides takes precedence if active
+      if (override && override.hash && (override.hash !== defaultPasswordHash || override.isFirstLogin === 0)) {
         targetPasswordHash = override.hash;
         targetIsFirstLogin = override.isFirstLogin;
-      } else if (existingUser) {
-        targetPasswordHash = existingUser.password_hash;
-        targetIsFirstLogin = existingUser.is_first_login;
-      } else if (emailNorm === "james.haywood@orderofkpi.org") {
-        targetPasswordHash = hashPassword("2012");
-        targetIsFirstLogin = 0;
-      } else if (emailNorm === "admin@orderofkpi.org" || emailNorm === "info@kpi2012.org" || emailNorm === "qa.admin@orderofkpi.org") {
-        targetPasswordHash = hashPassword(emailNorm === "qa.admin@orderofkpi.org" ? "KPI_QA_Admin2026!" : "2012");
-        targetIsFirstLogin = 0;
-      } else if (emailNorm === "donald.mitchell@orderofkpi.org") {
-        targetPasswordHash = hashPassword("1914");
-        targetIsFirstLogin = 0;
-      } else if (emailNorm === "sammie.poe@orderofkpi.org") {
-        targetPasswordHash = hashPassword("atlanta");
-        targetIsFirstLogin = 0;
+      } else if (!existingUser) {
+        // Initial defaults for brand new accounts that don't exist yet
+        if (emailNorm === "james.haywood@orderofkpi.org") {
+          targetPasswordHash = hashPassword("2012");
+          targetIsFirstLogin = 0;
+        } else if (emailNorm === "admin@orderofkpi.org" || emailNorm === "info@kpi2012.org" || emailNorm === "qa.admin@orderofkpi.org") {
+          targetPasswordHash = hashPassword(emailNorm === "qa.admin@orderofkpi.org" ? "KPI_QA_Admin2026!" : "2012");
+          targetIsFirstLogin = 0;
+        } else if (emailNorm === "donald.mitchell@orderofkpi.org") {
+          targetPasswordHash = hashPassword("1914");
+          targetIsFirstLogin = 0;
+        } else if (emailNorm === "sammie.poe@orderofkpi.org") {
+          targetPasswordHash = hashPassword("atlanta");
+          targetIsFirstLogin = 0;
+        }
       }
 
       const defaultComms = (u as any).committees ? JSON.stringify((u as any).committees) : "[]";
@@ -1628,8 +1652,11 @@ function findUser(email: string): UserRecord | null {
 
   // Apply persistent password override if recorded!
   if (userRecord && globalPasswordOverrides[normEmail]) {
-    userRecord.password_hash = globalPasswordOverrides[normEmail].hash;
-    userRecord.is_first_login = globalPasswordOverrides[normEmail].isFirstLogin;
+    const override = globalPasswordOverrides[normEmail];
+    if (override && override.hash && (override.hash !== defaultPasswordHash || override.isFirstLogin === 0)) {
+      userRecord.password_hash = override.hash;
+      userRecord.is_first_login = override.isFirstLogin;
+    }
   }
 
   return userRecord;
