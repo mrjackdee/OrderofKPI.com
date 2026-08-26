@@ -80,6 +80,7 @@ export default function Login() {
         const defaultPath = isApplicant ? '/membership-application' : '/member-portal';
         navigate(locationFrom || defaultPath, { replace: true });
       } catch (err: any) {
+        console.error('Raw Login Error:', err);
         const friendlyMsg = getFriendlyError(err, 'Unable to sign in. Please check your credentials or contact admin@orderofkpi.org.');
         setError(friendlyMsg);
         showToast(friendlyMsg, 'error');

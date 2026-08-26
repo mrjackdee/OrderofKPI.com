@@ -21,6 +21,23 @@ export interface MemberUser {
   committeeRoles?: Record<string, CommitteeRole>;
 }
 
+/**
+ * Safely parses JSON from a Response object, adhering to HTTP/JSON Robustness rules.
+ */
+export async function safeParseJson(response: Response, fallbackMsg = 'Server response was not JSON'): Promise<any> {
+  const contentType = response.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    const rawText = await response.text().catch(() => '');
+    const statusText = response.statusText || `HTTP ${response.status}`;
+    throw new Error(`${fallbackMsg} (${statusText}). Raw response: ${rawText.slice(0, 150)}`);
+  }
+  try {
+    return await response.json();
+  } catch (err: any) {
+    throw new Error(`${fallbackMsg}. Failed to parse JSON body: ${err?.message || String(err)}`);
+  }
+}
+
 export const ALL_COMMITTEE_SLUGS: CommitteeSlug[] = [
   'annual_event',
   'scholarship',
@@ -864,7 +881,7 @@ export async function performTokenPasswordReset(
       body: JSON.stringify({ email: normEmail, token, newPassword: newPass })
     });
 
-    const data = await resp.json();
+    const data = await safeParseJson(resp, 'Failed to complete password reset.');
     if (!resp.ok || !data.success) {
       return { success: false, message: data.message || 'Failed to reset password.' };
     }
@@ -925,7 +942,7 @@ export async function performAdminPasswordChange(
       body: JSON.stringify({ adminEmail: normAdmin, targetEmail: normTarget, newPassword: newPass })
     });
 
-    const data = await resp.json();
+    const data = await safeParseJson(resp, 'Failed to update user password.');
     if (!resp.ok || !data.success) {
       return { success: false, message: data.message || 'Failed to update user password.' };
     }
@@ -1053,7 +1070,7 @@ export async function changeApplicantEmail(
       body: JSON.stringify({ currentEmail, newEmail, password }),
     });
 
-    const data = await response.json();
+    const data = await safeParseJson(response, 'Failed to update email address.');
     return data;
   } catch (err: any) {
     return { success: false, message: err.message || 'Network error occurred while changing email.' };
@@ -1353,7 +1370,7 @@ export async function saveApplication(email: string, data: any, status: 'draft' 
     clearTimeout(timeoutId);
 
     if (response.ok) {
-      const result = await response.json();
+      const result = await safeParseJson(response, 'Failed to save application.');
       return result;
     } else {
       return { success: true, message: 'Application saved.' };
@@ -1394,7 +1411,7 @@ export async function fetchApplication(email: string) {
       const response = await fetch(`/api/applications?email=${encodeURIComponent(normEmail)}`, { signal: controller.signal });
       clearTimeout(timeoutId);
       if (response.ok) {
-        return await response.json();
+        return await safeParseJson(response, 'Failed to fetch application.');
       }
     } catch (err) {
       console.warn('Failed to fetch application from server:', err);
@@ -1449,7 +1466,7 @@ export async function fetchAllApplications() {
   const apiFetch = (async () => {
     try {
       const response = await fetch('/api/applications');
-      const data = await response.json();
+      const data = await safeParseJson(response, 'Failed to fetch all applications.');
       if (data.success && Array.isArray(data.applications)) {
         return data.applications;
       }
@@ -1551,14 +1568,21 @@ export async function syncApplicationsFromFirestore() {
       const { db } = await import('./firebase');
       const snap = await getDocs(collection(db, 'user_password_overrides'));
       const overrides: any[] = [];
+      const atlantaHash = 'd3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92';
+      
       snap.forEach(docSnap => {
         const data = docSnap.data();
         if (data.email && data.hash) {
-          overrides.push({
-            email: data.email,
-            hash: data.hash,
-            isFirstLogin: (data.isFirstLogin === true || data.isFirstLogin === 1 || data.isFirstLogin === '1' || data.isFirstLogin === 'true') ? 1 : 0
-          });
+          const isFirst = (data.isFirstLogin === true || data.isFirstLogin === 1 || data.isFirstLogin === '1' || data.isFirstLogin === 'true');
+          const isDummyDefault = data.hash === atlantaHash && isFirst;
+          
+          if (!isDummyDefault) {
+            overrides.push({
+              email: data.email,
+              hash: data.hash,
+              isFirstLogin: isFirst ? 1 : 0
+            });
+          }
         }
       });
       if (overrides.length > 0) {

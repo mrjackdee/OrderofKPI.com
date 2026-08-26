@@ -90,21 +90,24 @@ export default function CandidateVotingForm() {
         // 2. Secondary fetch from API to ensure complete roster hydration
         try {
           const apiRes = await fetch('/api/candidates');
-          const apiData = await apiRes.json();
-          if (apiData?.success && Array.isArray(apiData.candidates)) {
-            apiData.candidates.forEach((c: any) => {
-              const normEmail = (c.email || c.id || '').toLowerCase().trim();
-              const stage = (c.stage || c.status || "").toUpperCase().trim();
-              if (stage === "SELECTION" && !candidateMap.has(normEmail)) {
-                candidateMap.set(normEmail, {
-                  id: c.id || 'cand_' + normEmail.replace(/[^a-z0-9]/g, '_'),
-                  ...c,
-                  displayName: c.name || c.fullName || normEmail,
-                  displayProfession: c.industry || c.profession || c.email || 'Candidate',
-                  displayStage: c.status || c.stage || 'Selection'
-                });
-              }
-            });
+          const contentType = apiRes.headers.get('content-type');
+          if (apiRes.ok && contentType && contentType.includes('application/json')) {
+            const apiData = await apiRes.json();
+            if (apiData?.success && Array.isArray(apiData.candidates)) {
+              apiData.candidates.forEach((c: any) => {
+                const normEmail = (c.email || c.id || '').toLowerCase().trim();
+                const stage = (c.stage || c.status || "").toUpperCase().trim();
+                if (stage === "SELECTION" && !candidateMap.has(normEmail)) {
+                  candidateMap.set(normEmail, {
+                    id: c.id || 'cand_' + normEmail.replace(/[^a-z0-9]/g, '_'),
+                    ...c,
+                    displayName: c.name || c.fullName || normEmail,
+                    displayProfession: c.industry || c.profession || c.email || 'Candidate',
+                    displayStage: c.status || c.stage || 'Selection'
+                  });
+                }
+              });
+            }
           }
         } catch (apiErr) {
           console.warn("API candidates fetch fallback error:", apiErr);
@@ -120,13 +123,16 @@ export default function CandidateVotingForm() {
     const fetchUserVotes = async () => {
       try {
         const res = await fetch(`/api/candidate-votes/user?email=${encodeURIComponent(userEmail)}`);
-        const voteRes = await res.json();
-        if (voteRes.success && Array.isArray(voteRes.votes)) {
-          const map: Record<string, string> = {};
-          voteRes.votes.forEach((v: any) => {
-            map[v.candidate_id] = v.decision;
-          });
-          setVotesMap(map);
+        const contentType = res.headers.get('content-type');
+        if (res.ok && contentType && contentType.includes('application/json')) {
+          const voteRes = await res.json();
+          if (voteRes.success && Array.isArray(voteRes.votes)) {
+            const map: Record<string, string> = {};
+            voteRes.votes.forEach((v: any) => {
+              map[v.candidate_id] = v.decision;
+            });
+            setVotesMap(map);
+          }
         }
       } catch (err) {
         console.warn("Error fetching user votes:", err);
@@ -188,14 +194,27 @@ export default function CandidateVotingForm() {
               decision
             })
           });
-          const data = await res.json();
-          if (data && data.success) {
-            apiSuccess = true;
-          } else if (data && data.message) {
-            apiMessage = data.message;
+
+          const contentType = res.headers.get('content-type');
+          if (res.ok && contentType && contentType.includes('application/json')) {
+            const data = await res.json();
+            if (data && data.success) {
+              apiSuccess = true;
+            } else if (data && data.message) {
+              apiMessage = data.message;
+            }
+          } else {
+            const textMsg = await res.text().catch(() => '');
+            try {
+              const parsed = JSON.parse(textMsg);
+              apiMessage = parsed.message || `Server error (${res.status})`;
+            } catch (e) {
+              apiMessage = textMsg.length > 0 && textMsg.length < 150 ? textMsg : `Server response returned error code ${res.status}`;
+            }
           }
-        } catch (apiErr) {
+        } catch (apiErr: any) {
           console.warn('API candidate vote save warning:', apiErr);
+          apiMessage = apiErr.message || 'Network connection failed';
         }
 
         let fsSuccess = false;

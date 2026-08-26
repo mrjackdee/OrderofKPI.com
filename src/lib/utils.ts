@@ -9,6 +9,11 @@ export function getFriendlyError(err: any, defaultMsg = "An unexpected error occ
   if (!err) return defaultMsg;
   const raw = typeof err === 'string' ? err : (err.message || String(err));
   const lower = raw.toLowerCase();
+
+  // Native Safari / WebKit JSON parsing or regex mismatch errors
+  if (lower.includes('expected pattern') || lower.includes('string did not match') || lower.includes('did not meet') || lower.includes('did not match')) {
+    return "A browser compatibility or connection issue was detected. Please refresh the page and try again, or use another browser.";
+  }
   
   // 401 Unauthorized / Credentials / Invalid Login
   if (
@@ -54,8 +59,15 @@ export function getFriendlyError(err: any, defaultMsg = "An unexpected error occ
   }
 
   // 429 Too Many Requests / Rate Limiting
-  if (lower.includes('429') || lower.includes('too many requests') || lower.includes('rate limit') || lower.includes('quota')) {
-    return "Too many requests. Please wait a moment before trying again.";
+  if (
+    lower.includes('429') ||
+    lower.includes('too many requests') ||
+    lower.includes('rate limit') ||
+    lower.includes('quota') ||
+    lower.includes('resource_exhausted') ||
+    lower.includes('exhausted')
+  ) {
+    return "The AI service or request queue is temporarily at maximum capacity or has exceeded its quota limit. Please try again in a few moments.";
   }
 
   // 500 / 502 / 503 / 504 Server Errors
@@ -103,7 +115,11 @@ export function getFriendlyError(err: any, defaultMsg = "An unexpected error occ
     lower.includes('syntaxerror') ||
     lower.includes('domexception') ||
     lower.includes('string did not match') ||
+    lower.includes('string did not meet') ||
+    lower.includes('string did not') ||
     lower.includes('expected pattern') ||
+    lower.includes('meet expected') ||
+    lower.includes('pattern') ||
     lower.includes('at ') ||
     lower.includes('eval(') ||
     lower.includes('object') ||

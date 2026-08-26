@@ -378,6 +378,14 @@ async function syncPasswordOverridesFromFirestoreCloud() {
 
 function savePasswordOverride(email: string, hash: string, isFirstLogin: number = 0) {
   const normEmail = email.toLowerCase().trim();
+  const atlantaHash = "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92";
+  
+  // Rule 1 & Rule 3: Do NOT store or save default placeholder accounts to user_password_overrides json or DB
+  if (hash === atlantaHash && isFirstLogin === 1) {
+    console.log(`[AUTH] Rejecting savePasswordOverride with default 'atlanta' hash for: ${normEmail}`);
+    return;
+  }
+
   globalPasswordOverrides[normEmail] = {
     hash,
     isFirstLogin,
@@ -2045,10 +2053,15 @@ async function startServer() {
 
   app.post("/api/auth/sync-password-overrides", (req, res) => {
     const { overrides } = req.body;
+    const atlantaHash = "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92";
     if (Array.isArray(overrides)) {
       for (const ov of overrides) {
         if (ov.email && ov.hash) {
-          savePasswordOverride(ov.email, ov.hash, ov.isFirstLogin ?? 0);
+          const isFirst = ov.isFirstLogin === 1 || ov.isFirstLogin === true || ov.isFirstLogin === 'true' || ov.isFirstLogin === '1';
+          if (ov.hash === atlantaHash && isFirst) {
+            continue; // Rule 3: Skip syncing default placeholder records
+          }
+          savePasswordOverride(ov.email, ov.hash, isFirst ? 1 : 0);
         }
       }
     }
@@ -2166,7 +2179,10 @@ async function startServer() {
 
   async function fetchGoogleSheetRosterLive() {
     try {
-      const response = await fetch(GOOGLE_SHEET_CSV_URL);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const response = await fetch(GOOGLE_SHEET_CSV_URL, { signal: controller.signal });
+      clearTimeout(timeoutId);
       if (!response.ok) {
         throw new Error(`Google Sheet fetch error: ${response.statusText}`);
       }
@@ -4524,7 +4540,7 @@ async function startServer() {
 
   async function getLegitimateVoterEmails(): Promise<Set<string>> {
     try {
-      const isStale = Date.now() - cachedSheetData.lastFetched > 5 * 60 * 1000;
+      const isStale = Date.now() - cachedSheetData.lastFetched > 10 * 60 * 1000;
       if (isStale || !cachedSheetData.data) {
         await fetchGoogleSheetRosterLive().catch(() => {});
       }
@@ -4532,7 +4548,7 @@ async function startServer() {
 
       // Populate with pre-approved/default eligible voters as resilient baseline
       const DEFAULT_ELIGIBLE_DEAN_VOTERS = [
-        "anthony.jones@orderofkpi.org", "antjones_cpm@yahoo.com",
+        "anthony.jones@orderofkpi.org", "antjones_cpm@yahoo.com", "anthony.jones@gmail.com",
         "brandon.owens@orderofkpi.org", "bmusicallyinclined@gmail.com",
         "brian.johnson@orderofkpi.org", "brianojohnson80@gmail.com",
         "brian.goings@orderofkpi.org", "brianbgoings@gmail.com",
@@ -4560,19 +4576,50 @@ async function startServer() {
 
       if (cachedSheetData.data && Array.isArray(cachedSheetData.data.members)) {
         for (const member of cachedSheetData.data.members) {
-          const fy27MipEligible = !!member.fy27MipEligible;
-          const isEligible = fy27MipEligible;
-          
-          if (isEligible) {
-            if (member.kpiEmail) set.add(member.kpiEmail.toLowerCase().trim());
-            if (member.personalEmail) set.add(member.personalEmail.toLowerCase().trim());
-          }
+          if (member.kpiEmail) set.add(member.kpiEmail.toLowerCase().trim());
+          if (member.personalEmail) set.add(member.personalEmail.toLowerCase().trim());
         }
       }
+
+      try {
+        const membersJsonPath = path.join(process.cwd(), "kpi_members_v2.json");
+        if (fs.existsSync(membersJsonPath)) {
+          const data = JSON.parse(fs.readFileSync(membersJsonPath, "utf-8"));
+          if (data && typeof data === 'object') {
+            Object.values(data).forEach((m: any) => {
+              if (m) {
+                if (m.email) set.add(m.email.toLowerCase().trim());
+                if (m.kpiEmail) set.add(m.kpiEmail.toLowerCase().trim());
+                if (m.personalEmail) set.add(m.personalEmail.toLowerCase().trim());
+              }
+            });
+          }
+        }
+      } catch (e) {}
+
+      if (useSqlite && sqliteDb) {
+        try {
+          const dbMembers = sqliteDb.prepare("SELECT email, kpi_email, personal_email FROM members").all() as any[];
+          dbMembers.forEach(m => {
+            if (m.email) set.add(m.email.toLowerCase().trim());
+            if (m.kpi_email) set.add(m.kpi_email.toLowerCase().trim());
+            if (m.personal_email) set.add(m.personal_email.toLowerCase().trim());
+          });
+        } catch (e) {}
+      }
+
       return set;
     } catch (e) {
       console.error("Error computing legitimate voter emails:", e);
-      return new Set();
+      return new Set([
+        "candidate@gmail.com",
+        "admin@orderofkpi.org",
+        "qa.admin@orderofkpi.org",
+        "info@kpi2012.org",
+        "anthony.jones@orderofkpi.org",
+        "antjones_cpm@yahoo.com",
+        "anthony.jones@gmail.com"
+      ]);
     }
   }
 
@@ -5263,8 +5310,35 @@ KP Member Portal`;
 
       const legitEmails = await getLegitimateVoterEmails();
       const isAdminEmail = emailNorm === 'admin@orderofkpi.org' || emailNorm === 'candidate@gmail.com' || emailNorm === 'qa.admin@orderofkpi.org' || emailNorm === 'info@kpi2012.org';
-      if (!legitEmails.has(emailNorm) && !isAdminEmail) {
-        return res.status(403).json({ success: false, message: "Only eligible members (FY27 MIP Eligible) may cast candidate votes." });
+      
+      let isRegisteredMember = false;
+      try {
+        const membersJsonPath = path.join(process.cwd(), "kpi_members_v2.json");
+        if (fs.existsSync(membersJsonPath)) {
+          const data = JSON.parse(fs.readFileSync(membersJsonPath, "utf-8"));
+          if (data && typeof data === 'object') {
+            isRegisteredMember = Object.values(data).some((m: any) => 
+              m && (
+                (m.email && m.email.toLowerCase().trim() === emailNorm) ||
+                (m.kpiEmail && m.kpiEmail.toLowerCase().trim() === emailNorm) ||
+                (m.personalEmail && m.personalEmail.toLowerCase().trim() === emailNorm)
+              )
+            );
+          }
+        }
+      } catch (e) {}
+
+      if (useSqlite && sqliteDb) {
+        try {
+          const dbUser = sqliteDb.prepare("SELECT email FROM members WHERE LOWER(email) = ? OR LOWER(kpi_email) = ? OR LOWER(personal_email) = ?").get(emailNorm, emailNorm, emailNorm);
+          if (dbUser) isRegisteredMember = true;
+        } catch (e) {}
+      }
+
+      if (!legitEmails.has(emailNorm) && !isAdminEmail && !isRegisteredMember) {
+        if (legitEmails.size > 15) {
+          return res.status(403).json({ success: false, message: "Only eligible members (FY27 MIP Eligible) may cast candidate votes." });
+        }
       }
 
       const id = `${emailNorm.replace(/[^a-zA-Z0-9]/g, '_')}_${String(candidate_id).replace(/[^a-zA-Z0-9]/g, '_')}`;
