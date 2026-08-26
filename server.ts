@@ -2341,12 +2341,47 @@ async function startServer() {
     });
   });
 
-  // In-memory store for active password reset tokens
+  // In-memory store for active password reset tokens and email dispatch audit history
   const passwordResetTokens: Record<string, { token: string; expiresAt: number }> = {};
+  const emailDispatchHistory: Array<{
+    id: string;
+    timestamp: string;
+    targetEmail: string;
+    recipients: string[];
+    sent: boolean;
+    method: string;
+    messageId?: string;
+    error?: string;
+  }> = [];
 
-  async function sendOutboundPasswordResetEmail(targetEmail: string, resetLink: string, userName: string = ""): Promise<{ sent: boolean; method: string; error?: string }> {
+  async function sendOutboundPasswordResetEmail(targetEmail: string, resetLink: string, userName: string = ""): Promise<{ sent: boolean; method: string; messageId?: string; error?: string }> {
     const supportEmail = process.env.SUPPORT_EMAIL || "info@kpi2012.org";
+    const senderUser = process.env.SMTP_USER || "info@kpi2012.org";
+    const senderName = "Order of KPI";
+    const fromHeader = `"${senderName}" <${senderUser}>`;
+    const replyToHeader = supportEmail;
     const emailSubject = "Password Reset Request - Member Portal";
+
+    // Find any linked secondary or personal email addresses from member records to maximize delivery reliability
+    const secondaryEmails: string[] = [];
+    const normTarget = targetEmail.toLowerCase().trim();
+    if (cachedSheetData?.data?.members && Array.isArray(cachedSheetData.data.members)) {
+      const match = cachedSheetData.data.members.find((m: any) => 
+        (m.kpiEmail && m.kpiEmail.toLowerCase().trim() === normTarget) ||
+        (m.personalEmail && m.personalEmail.toLowerCase().trim() === normTarget)
+      );
+      if (match) {
+        if (match.personalEmail && match.personalEmail.toLowerCase().trim() !== normTarget) {
+          secondaryEmails.push(match.personalEmail.toLowerCase().trim());
+        }
+        if (match.kpiEmail && match.kpiEmail.toLowerCase().trim() !== normTarget) {
+          secondaryEmails.push(match.kpiEmail.toLowerCase().trim());
+        }
+      }
+    }
+
+    const allRecipients = Array.from(new Set([targetEmail, ...secondaryEmails]));
+
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1f2937; background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
         <div style="text-align: center; margin-bottom: 24px;">
@@ -2369,7 +2404,11 @@ async function startServer() {
       </div>
     `;
 
-    // Method 1: Production SMTP (e.g. Gmail / Workspace SMTP)
+    const plainText = `Hello,\n\nYou requested a password reset for your account. Please use the following link to establish a new password:\n\n${resetLink}\n\nThis link is valid for 1 hour. If you did not request this, you can safely ignore this email.\n\nFor assistance, contact ${supportEmail}.`;
+
+    let dispatchResult: { sent: boolean; method: string; messageId?: string; error?: string } = { sent: false, method: "none" };
+
+    // Method 1: Production SMTP (e.g. Google Workspace / Gmail SMTP with SPF alignment)
     if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
       try {
         const port = parseInt(process.env.SMTP_PORT || "587", 10);
@@ -2386,22 +2425,25 @@ async function startServer() {
         });
 
         const info = await transporter.sendMail({
-          from: process.env.SMTP_FROM || `"Order of KPI" <${process.env.SMTP_USER}>`,
+          from: fromHeader,
+          replyTo: replyToHeader,
           to: targetEmail,
+          cc: secondaryEmails.length > 0 ? secondaryEmails : undefined,
           subject: emailSubject,
-          text: `Hello,\n\nYou requested a password reset for your account. Please use the following link to establish a new password:\n\n${resetLink}\n\nThis link is valid for 1 hour. If you did not request this, you can safely ignore this email.\n\nFor assistance, contact ${supportEmail}.`,
+          text: plainText,
           html: emailHtml
         });
 
-        console.log(`[AUTH SMTP] Password reset email successfully dispatched to ${targetEmail}. MessageId: ${info.messageId}`);
-        return { sent: true, method: "smtp" };
+        console.log(`[AUTH SMTP] Password reset email successfully dispatched to ${targetEmail} (CC: ${secondaryEmails.join(', ') || 'none'}). MessageId: ${info.messageId}`);
+        dispatchResult = { sent: true, method: "smtp", messageId: info.messageId };
       } catch (err: any) {
         console.error("[AUTH SMTP] Delivery error for " + targetEmail + ":", err?.message || err);
+        dispatchResult = { sent: false, method: "smtp", error: err?.message || String(err) };
       }
     }
 
-    // Method 2: Resend API
-    if (process.env.RESEND_API_KEY) {
+    // Method 2: Resend API fallback if SMTP failed or not configured
+    if (!dispatchResult.sent && process.env.RESEND_API_KEY) {
       try {
         const resendRes = await fetch("https://api.resend.com/emails", {
           method: "POST",
@@ -2410,8 +2452,8 @@ async function startServer() {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            from: process.env.SMTP_FROM || "Member Portal <onboarding@resend.dev>",
-            to: [targetEmail],
+            from: fromHeader,
+            to: allRecipients,
             subject: emailSubject,
             html: emailHtml
           })
@@ -2420,18 +2462,20 @@ async function startServer() {
         if (resendRes.ok) {
           const data = await resendRes.json();
           console.log(`[AUTH Resend] Password reset email successfully dispatched to ${targetEmail}:`, data.id);
-          return { sent: true, method: "resend" };
+          dispatchResult = { sent: true, method: "resend", messageId: data.id };
         } else {
           const errData = await resendRes.text();
           console.error(`[AUTH Resend] Delivery failed (${resendRes.status}):`, errData);
+          dispatchResult = { sent: false, method: "resend", error: errData };
         }
       } catch (err: any) {
         console.error("[AUTH Resend] Request exception:", err?.message);
+        dispatchResult = { sent: false, method: "resend", error: err?.message || String(err) };
       }
     }
 
-    // Method 3: Firebase Auth sendOobCode REST API
-    if (firebaseApiKey) {
+    // Method 3: Firebase Auth sendOobCode REST API fallback
+    if (!dispatchResult.sent && firebaseApiKey) {
       try {
         const fbUrl = `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${firebaseApiKey}`;
         const fbRes = await fetch(fbUrl, {
@@ -2445,15 +2489,42 @@ async function startServer() {
 
         if (fbRes.ok) {
           console.log(`[AUTH Firebase Auth] Triggered password reset email for ${targetEmail}`);
-          return { sent: true, method: "firebase_auth" };
+          dispatchResult = { sent: true, method: "firebase_auth" };
         }
       } catch (err: any) {
         console.warn("[AUTH Firebase Auth] Notice:", err?.message);
       }
     }
 
-    return { sent: false, method: "none", error: "No outbound email provider is currently active or configured." };
+    // Record audit log entry in memory and Cloud Firestore
+    const logEntry = {
+      id: "email_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
+      timestamp: new Date().toISOString(),
+      targetEmail,
+      recipients: allRecipients,
+      sent: dispatchResult.sent,
+      method: dispatchResult.method,
+      messageId: dispatchResult.messageId || "",
+      error: dispatchResult.error || ""
+    };
+    emailDispatchHistory.unshift(logEntry);
+    if (emailDispatchHistory.length > 100) emailDispatchHistory.pop();
+
+    if (serverFirestoreDb) {
+      try {
+        fsSetDoc(fsDoc(serverFirestoreDb, "email_dispatch_logs", logEntry.id), logEntry).catch(() => {});
+      } catch (e) {}
+    }
+
+    return dispatchResult;
   }
+
+  app.get("/api/auth/email-logs", (req, res) => {
+    res.json({
+      success: true,
+      logs: emailDispatchHistory
+    });
+  });
 
   app.post("/api/auth/forgot-password", async (req, res) => {
     try {

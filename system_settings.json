@@ -1,12 +1,12 @@
 {
   "committee_enabled": false,
   "urgent_banner": {
-    "updatedAt": "2026-08-25T00:20:06.291Z",
-    "severity": "info",
-    "linkUrl": "/candidate-voting",
     "speed": "normal",
-    "linkText": "Review & Cast Votes",
+    "linkUrl": "/candidate-voting",
+    "severity": "info",
     "enabled": true,
-    "message": "Eligible members can begin voting on Wed, Aug 27 for FY27 Intake Candidates"
+    "message": "Eligible members can begin voting on Wed, Aug 27 for FY27 Intake Candidates",
+    "updatedAt": "2026-08-25T00:20:06.291Z",
+    "linkText": "Review & Cast Votes"
   }
 }

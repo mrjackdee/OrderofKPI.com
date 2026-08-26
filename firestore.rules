@@ -155,5 +155,13 @@ service cloud.firestore {
     match /system_settings/{settingId} {
       allow read, write: if true;
     }
+
+    match /email_dispatch_logs/{logId} {
+      allow read, write: if true;
+    }
+
+    match /system_logs/{logId} {
+      allow read, write: if true;
+    }
   }
 }
