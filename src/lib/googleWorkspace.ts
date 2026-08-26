@@ -24,13 +24,13 @@ export async function safeGoogleFetch(url: string, init?: RequestInit): Promise<
   if (!response.ok) {
     if (contentType.includes('application/json')) {
       const errJson = await response.json().catch(() => ({}));
-      throw new Error(errJson.error?.message || errJson.message || `Google API error (${response.status})`);
+      throw new Error(errJson.error?.message || errJson.message || 'Google Workspace service request failed. Please try again.');
     } else {
       const text = await response.text().catch(() => '');
       if (text.includes('That’s an error') || text.includes('<html>')) {
-        throw new Error('Google API authentication error (401). Your session token may have expired. Please re-authenticate.');
+        throw new Error('Google Workspace session has expired. Please re-authenticate to continue.');
       }
-      throw new Error(`Google API request failed with status ${response.status}`);
+      throw new Error('Unable to complete Google Workspace request. Please try again.');
     }
   }
 

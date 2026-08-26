@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Key, Lock, CheckCircle2, AlertCircle, ArrowLeft, RefreshCw, Sparkles, Check } from 'lucide-react';
+import { Key, Lock, CheckCircle2, AlertCircle, ArrowLeft, RefreshCw, Sparkles, Check, Mail } from 'lucide-react';
 import { performTokenPasswordReset, requestApplicantPasswordReset } from '../lib/memberDb';
 import { verifyPasswordResetCode, confirmPasswordReset } from 'firebase/auth';
 import { auth } from '../lib/firebase';
+import { getFriendlyError } from '../lib/utils';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -73,13 +74,13 @@ export default function ResetPassword() {
         if (result.success) {
           setSuccess(result.message);
         } else {
-          setError(result.message);
+          setError(getFriendlyError(result.message, 'Failed to reset password.'));
         }
       } else {
         setError('Missing password reset verification token. Please request a new link.');
       }
     } catch (err: any) {
-      setError(err?.message || 'Failed to complete password reset. Please try requesting a new reset link.');
+      setError(getFriendlyError(err, 'Failed to complete password reset. Please try requesting a new reset link.'));
     } finally {
       setLoading(false);
     }
@@ -105,10 +106,10 @@ export default function ResetPassword() {
         }
         setRequestSent(true);
       } else {
-        setError(result.message);
+        setError(getFriendlyError(result.message, 'Unable to process reset link request.'));
       }
     } catch (err: any) {
-      setError(err?.message || 'Unable to process reset link request.');
+      setError(getFriendlyError(err, 'Unable to process reset link request.'));
     } finally {
       setLoading(false);
     }
@@ -312,41 +313,29 @@ export default function ResetPassword() {
             </form>
           )}
 
-          {/* Form to request password reset link if opening page directly */}
+          {/* Direct contact message when opening page directly without a token */}
           {!isResetMode && !requestSent && (
-            <form onSubmit={handleRequestLinkSubmit} className="space-y-5">
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-cream/70 mb-1.5 ml-1">
-                  Email Address (@orderofkpi.org)
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@orderofkpi.org"
-                  className="w-full px-4 py-3 bg-stone-900/60 border border-gold/30 rounded-xl text-cream text-xs outline-none focus:border-gold placeholder:text-cream/30"
-                  required
-                />
+            <div className="space-y-5">
+              <div className="p-5 rounded-2xl bg-stone-900/60 border border-gold/30 text-center space-y-3">
+                <p className="text-sm font-bold text-cream">
+                  Automated email password reset is temporarily offline.
+                </p>
+                <p className="text-xs text-cream/70 leading-relaxed">
+                  If you need your password reset or credential assistance, please email the administrative team directly at:
+                </p>
+                <div className="py-2">
+                  <a
+                    href={`mailto:admin@orderofkpi.org?subject=Password%20Reset%20Request%20-%20KPI%20Portal&body=Hello%20Administrator%2C%0A%0APlease%20reset%20the%20password%20for%20my%20account%3A%20${encodeURIComponent(email || '')}%0A%0AThank%20you.`}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-gold hover:bg-gold-light text-ivy font-bold text-xs uppercase tracking-wider transition-all shadow-md w-full"
+                  >
+                    <Mail size={16} /> Email admin@orderofkpi.org
+                  </a>
+                </div>
+                <p className="text-[11px] text-cream/50">
+                  Admins can manually configure your password immediately upon request.
+                </p>
               </div>
-
-              <button
-                type="submit"
-                disabled={loading || !email.trim()}
-                className="w-full py-3.5 bg-gold hover:bg-gold-light text-ivy font-display font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-              >
-                {loading ? (
-                  <>
-                    <RefreshCw size={16} className="animate-spin" />
-                    <span>Sending Reset Link...</span>
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw size={16} />
-                    <span>Send Password Reset Link</span>
-                  </>
-                )}
-              </button>
-            </form>
+            </div>
           )}
 
           {/* Back to Login Footer */}

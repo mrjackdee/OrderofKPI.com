@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { saveApplication, fetchApplication } from '../lib/memberDb';
 import { generateApplicationPDF } from '../utils/pdfGenerator';
+import { getFriendlyError } from '../lib/utils';
 
 interface ApplicationData {
   firstName: string;
@@ -477,11 +478,11 @@ export default function MembershipApplication({ onUnsavedChangesChange, saveRef 
         localStorage.setItem(`kpi_app_submitted_${normEmail}`, 'true');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
-        setError(res?.message || 'Unable to submit application at this time. Please try again.');
+        setError(getFriendlyError(res?.message, 'Unable to submit application at this time. Please try again.'));
       }
     } catch (err: any) {
       console.error('Submission error:', err);
-      setError(err?.message || 'An error occurred while submitting your application. Please try again.');
+      setError(getFriendlyError(err, 'An error occurred while submitting your application. Please try again.'));
     } finally {
       setSaving(false);
     }

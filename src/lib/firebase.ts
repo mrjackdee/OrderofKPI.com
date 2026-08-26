@@ -192,7 +192,9 @@ const INITIAL_CANDIDATES_LIST: Record<string, { name: string; pass: string }> = 
   'burnettesteven3@gmail.com': { name: 'Steven Burnette', pass: '2275' },
   'tashaunbenton233@gmail.com': { name: 'Tashaun Najee Benton', pass: '1821' },
   'o_titus@yahoo.com': { name: 'Titus Oliver', pass: '7713' },
-  'zgatesnorris@gmail.com': { name: 'Zion Gates-Norris', pass: '4876' }
+  'zgatesnorris@gmail.com': { name: 'Zion Gates-Norris', pass: '4876' },
+  'jaabn2@gmail.com': { name: 'Jamar Amber', pass: '3795' },
+  'candidate@gmail.com': { name: 'John Candidate', pass: '2012' }
 };
 
 /**
@@ -213,7 +215,55 @@ export async function firebaseLoginApplicant(email: string, pass: string) {
   const clientPass = localStorage.getItem(`kpi_client_password_${normEmail}`);
   const isChanged = localStorage.getItem(`kpi_password_changed_${normEmail}`) === 'true';
 
-  // 1. Instant check against saved updated password
+  // 1. Authoritative check: Cloud Firestore user_password_overrides & candidate_accounts
+  try {
+    let inputHash = '';
+    const msgUint8 = new TextEncoder().encode(pass);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+    inputHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+    const docSnap = await getDoc(doc(db, 'user_password_overrides', normEmail));
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      if (data && data.hash) {
+        const isFirst = (data.isFirstLogin === true || data.isFirstLogin === 1 || data.isFirstLogin === 'true' || data.isFirstLogin === '1');
+        const hasPermanentPassword = !isFirst;
+
+        if (hasPermanentPassword) {
+          if (data.hash === inputHash) {
+            try {
+              localStorage.setItem(`kpi_password_changed_${normEmail}`, 'true');
+              localStorage.setItem(`kpi_client_password_${normEmail}`, pass);
+            } catch (e) {}
+
+            const name = localStorage.getItem(`kpi_client_name_${normEmail}`) || (initialCandidate ? initialCandidate.name : normEmail.split('@')[0]);
+            return {
+              success: true,
+              message: 'Logged in',
+              user: {
+                uid: 'fs_' + normEmail.replace(/[^a-z0-9]/g, '_'),
+                email: normEmail,
+                name,
+                firstName: name.split(' ')[0],
+                role: 'prospective',
+                isFirstLogin: false
+              }
+            };
+          } else if (initialCandidate && pass === initialCandidate.pass) {
+            throw new Error('A permanent password has been set for this candidate account. The initial default password is no longer valid.');
+          } else {
+            throw new Error('Invalid password. Please enter the correct password or request a reset.');
+          }
+        }
+      }
+    }
+  } catch (fsErr: any) {
+    if (fsErr.message && (fsErr.message.includes('permanent password') || fsErr.message.includes('Invalid password'))) {
+      throw fsErr;
+    }
+  }
+
+  // 2. Instant check against saved updated password in LocalStorage
   if (clientPass && pass === clientPass) {
     const name = localStorage.getItem(`kpi_client_name_${normEmail}`) || (initialCandidate ? initialCandidate.name : normEmail.split('@')[0]);
     return {
@@ -228,6 +278,10 @@ export async function firebaseLoginApplicant(email: string, pass: string) {
         isFirstLogin: false
       }
     };
+  }
+
+  if (isChanged && initialCandidate && pass === initialCandidate.pass) {
+    throw new Error('A permanent password has been set for this candidate account. The initial default password is no longer valid.');
   }
 
   // Allow initial default candidate password only if not changed

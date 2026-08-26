@@ -11,6 +11,7 @@ import {
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 import { getCandidateVotingStatus, CANDIDATE_VOTING_WINDOW_TEXT } from '../lib/votingWindow';
+import { getFriendlyError } from '../lib/utils';
 
 export default function CandidateVotingForm() {
   const userEmail = sessionStorage.getItem('userEmail') || '';
@@ -165,7 +166,7 @@ export default function CandidateVotingForm() {
       setSuccessMessage('Your ballot has been submitted. Thank you for participating in the FY27 selection.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
-      setError(err.message || 'Failed to submit ballot. Please try again.');
+      setError(getFriendlyError(err, 'Failed to submit ballot. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }

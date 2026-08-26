@@ -9,6 +9,7 @@ import {
   firebaseDeleteCandidateVote, 
   syncCandidateVotesFromFirestore 
 } from '../lib/firebase';
+import { getFriendlyError } from '../lib/utils';
 
 interface CandidateVoteAuditItem {
   id: string;
@@ -102,7 +103,7 @@ export default function CandidateVotingAuditDashboard() {
       setMessage('Vote record removed.');
       setTimeout(() => setMessage(''), 3000);
     } catch (err: any) {
-      setError(err.message || 'Failed to delete vote.');
+      setError(getFriendlyError(err, 'Failed to delete vote. Please try again.'));
     }
   };
 

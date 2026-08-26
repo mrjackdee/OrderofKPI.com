@@ -75,8 +75,8 @@
     "email": "edward.cook@orderofkpi.org",
     "name": "Edward Cook",
     "first_name": "Edward",
-    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
-    "is_first_login": 1,
+    "password_hash": "6212164897b0de1ab1f8e97b2f9320f0125e9e920c76c19908e5a7c6335170f9",
+    "is_first_login": 0,
     "role": "officer",
     "title": "Epistoleus",
     "is_test_credential": 0
@@ -115,8 +115,8 @@
     "email": "dominic.goodman@orderofkpi.org",
     "name": "Dominic Goodman",
     "first_name": "Dominic",
-    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
-    "is_first_login": 1,
+    "password_hash": "c3e8235539bb2b7fcf14d98dfa848750c2002dac4213e8ae4b2e49b172749cb6",
+    "is_first_login": 0,
     "role": "member",
     "title": "",
     "is_test_credential": 0
@@ -135,7 +135,7 @@
     "email": "averyt16@gmail.com",
     "name": "Avery Torrence",
     "first_name": "Avery",
-    "password_hash": "4973d188f032d851e2067c2343665201bb9764214c9b9d848c490da4bca8b8f9",
+    "password_hash": "9cfc9387bb87d7bd2bd63521651072d13fdf8d11d8dd3ec3a0d96332e2451561",
     "is_first_login": 0,
     "role": "prospective",
     "title": "Candidate",
@@ -384,8 +384,8 @@
     "email": "qa.member@orderofkpi.org",
     "name": "QA Member Agent",
     "first_name": "QA",
-    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
-    "is_first_login": 1,
+    "password_hash": "7e78656d9a1e21df15ac807c35d19c27e8b0d167d19130f0b8d34badbdf18fea",
+    "is_first_login": 0,
     "role": "member",
     "title": "",
     "is_test_credential": 1
@@ -838,6 +838,28 @@
     "is_first_login": 0,
     "role": "admin",
     "title": "Administrator",
+    "is_test_credential": 0
+  },
+  "nobody_nonexistent_user@orderofkpi.org": {
+    "email": "nobody_nonexistent_user@orderofkpi.org",
+    "name": "Nobody_nonexistent_user",
+    "first_name": "Nobody_nonexistent_user",
+    "last_name": "",
+    "password_hash": "d267796cc68ca77b78bd57431e246b7991756d255f1a97b9d9b6b55fb8be8856",
+    "is_first_login": 0,
+    "role": "member",
+    "title": "",
+    "financial_status": "active",
+    "is_test_credential": 0
+  },
+  "candidate@gmail.com": {
+    "email": "candidate@gmail.com",
+    "name": "John Candidate",
+    "first_name": "John",
+    "password_hash": "30235ccd794742d779d3c82f9bd829bd0500c876364ad2c30f960c1bede21c85",
+    "is_first_login": 0,
+    "role": "prospective",
+    "title": "Candidate",
     "is_test_credential": 0
   }
 }

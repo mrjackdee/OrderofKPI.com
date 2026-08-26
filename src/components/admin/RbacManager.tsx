@@ -37,7 +37,8 @@ import {
   FileCheck,
   CheckSquare,
   ClipboardCheck,
-  Sparkles
+  Sparkles,
+  Lock
 } from 'lucide-react';
 import { Member, UserRole } from '../../types';
 import {
@@ -54,6 +55,7 @@ import {
   updateUserRoles,
   checkUserPermission
 } from '../../lib/rbac';
+import { performAdminPasswordChange } from '../../lib/memberDb';
 
 interface RbacManagerProps {
   members: Member[];
@@ -80,6 +82,13 @@ export default function RbacManager({ members, onMembersUpdated, adminEmail }: R
   const [userRoleFilter, setUserRoleFilter] = useState('all');
   const [selectedUserEmail, setSelectedUserEmail] = useState<string | null>(null);
   const [userActionLoading, setUserActionLoading] = useState(false);
+
+  // Direct Admin Password Override State
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [adminNewPassword, setAdminNewPassword] = useState('');
+  const [adminConfirmPassword, setAdminConfirmPassword] = useState('');
+  const [adminPasswordSaving, setAdminPasswordSaving] = useState(false);
+  const [adminPasswordError, setAdminPasswordError] = useState('');
 
   // New role input for quick-add
   const [roleToAdd, setRoleToAdd] = useState('');
@@ -650,13 +659,28 @@ export default function RbacManager({ members, onMembersUpdated, adminEmail }: R
                     )}
                   </div>
 
-                  <div className="text-right shrink-0">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-ivy/60 block mb-1">
-                      Account Status
-                    </span>
-                    <span className="text-xs font-semibold px-3 py-1 bg-cream/60 rounded-xl border border-gold/20 inline-block text-ivy">
-                      {selectedMember.is_first_login ? 'First-Time Setup Pending' : 'Verified & Active'}
-                    </span>
+                  <div className="text-right shrink-0 flex flex-col items-end gap-2">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-ivy/60 block mb-1">
+                        Account Status
+                      </span>
+                      <span className="text-xs font-semibold px-3 py-1 bg-cream/60 rounded-xl border border-gold/20 inline-block text-ivy">
+                        {selectedMember.is_first_login ? 'First-Time Setup Pending' : 'Verified & Active'}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAdminNewPassword('');
+                        setAdminConfirmPassword('');
+                        setAdminPasswordError('');
+                        setShowPasswordModal(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gold/15 hover:bg-gold text-ivy hover:text-ivy font-bold text-[11px] uppercase tracking-wider rounded-xl border border-gold/30 transition-all cursor-pointer shadow-sm"
+                    >
+                      <Key size={13} className="text-ivy" /> Override Password
+                    </button>
                   </div>
                 </div>
 
@@ -1176,6 +1200,147 @@ export default function RbacManager({ members, onMembersUpdated, adminEmail }: R
                     className="flex-1 px-5 py-2.5 bg-ivy text-cream rounded-xl font-bold uppercase tracking-wider text-xs hover:brightness-110 transition-all shadow-lg disabled:opacity-50 cursor-pointer"
                   >
                     {roleActionLoading ? 'Creating...' : 'Create Role'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Modal: Direct Admin Password Override */}
+        {showPasswordModal && selectedMember && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl border border-gold/30 p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6"
+            >
+              <div className="flex items-center justify-between border-b border-gold/15 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gold/15 flex items-center justify-center text-ivy">
+                    <Key size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-lg text-ivy">Direct Password Override</h3>
+                    <p className="text-xs text-ivy/60">Set permanent login credentials for user</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowPasswordModal(false)}
+                  className="p-1.5 text-ivy/40 hover:text-ivy hover:bg-cream rounded-xl transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-3.5 bg-cream/40 rounded-2xl border border-gold/20 space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-ivy/60">Target Member</p>
+                <p className="text-xs font-bold text-ivy">{selectedMember.name}</p>
+                <p className="text-[11px] font-mono text-ivy/70">{selectedMember.email}</p>
+              </div>
+
+              {adminPasswordError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
+                  <AlertCircle size={16} className="shrink-0 text-red-600 mt-0.5" />
+                  <span>{adminPasswordError}</span>
+                </div>
+              )}
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const hasMinLength = adminNewPassword.length >= 8;
+                  const hasNumber = /\d/.test(adminNewPassword);
+                  const hasUppercase = /[A-Z]/.test(adminNewPassword);
+                  const passwordsMatch = adminNewPassword === adminConfirmPassword && adminNewPassword.length > 0;
+
+                  if (!hasMinLength || !hasNumber || !hasUppercase || !passwordsMatch) {
+                    setAdminPasswordError('Password must be 8+ chars with at least 1 uppercase letter, 1 number, and match confirm password.');
+                    return;
+                  }
+
+                  setAdminPasswordSaving(true);
+                  setAdminPasswordError('');
+
+                  try {
+                    const res = await performAdminPasswordChange(adminEmail, selectedMember.email, adminNewPassword);
+                    if (res.success) {
+                      showFeedback('success', `Password successfully updated for ${selectedMember.email}. User can now log in with their permanent password.`);
+                      setShowPasswordModal(false);
+                      onMembersUpdated();
+                    } else {
+                      setAdminPasswordError(res.message);
+                    }
+                  } catch (err: any) {
+                    setAdminPasswordError(err?.message || 'Failed to update user password.');
+                  } finally {
+                    setAdminPasswordSaving(false);
+                  }
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/70 mb-1">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={adminNewPassword}
+                    onChange={(e) => setAdminNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-4 py-2.5 bg-cream/30 border border-gold/30 rounded-xl text-xs text-ivy outline-none focus:border-ivy"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-ivy/70 mb-1">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={adminConfirmPassword}
+                    onChange={(e) => setAdminConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-4 py-2.5 bg-cream/30 border border-gold/30 rounded-xl text-xs text-ivy outline-none focus:border-ivy"
+                    required
+                  />
+                </div>
+
+                <div className="p-3 bg-cream/20 rounded-xl border border-gold/15 space-y-1 text-[11px] text-ivy/70">
+                  <div className="flex items-center gap-1.5">
+                    <Check size={12} className={adminNewPassword.length >= 8 ? "text-emerald-600" : "text-ivy/30"} />
+                    <span>8+ Characters</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Check size={12} className={/[A-Z]/.test(adminNewPassword) ? "text-emerald-600" : "text-ivy/30"} />
+                    <span>1 Uppercase Letter</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Check size={12} className={/\d/.test(adminNewPassword) ? "text-emerald-600" : "text-ivy/30"} />
+                    <span>1 Number</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Check size={12} className={adminNewPassword && adminNewPassword === adminConfirmPassword ? "text-emerald-600" : "text-ivy/30"} />
+                    <span>Passwords Match</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-3 border-t border-gold/10">
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordModal(false)}
+                    className="flex-1 px-5 py-2.5 border border-gold/20 rounded-xl font-bold uppercase tracking-wider text-xs hover:bg-cream transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={adminPasswordSaving || !adminNewPassword}
+                    className="flex-1 px-5 py-2.5 bg-ivy text-cream rounded-xl font-bold uppercase tracking-wider text-xs hover:brightness-110 transition-all shadow-lg disabled:opacity-50 cursor-pointer"
+                  >
+                    {adminPasswordSaving ? 'Saving...' : 'Set Password'}
                   </button>
                 </div>
               </form>

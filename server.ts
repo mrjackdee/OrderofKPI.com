@@ -12,6 +12,7 @@ import {
   initializeFirestore,
   setLogLevel,
   doc as fsDoc, 
+  getDoc as fsGetDoc,
   setDoc as fsSetDoc, 
   getDocs as fsGetDocs, 
   collection as fsCollection 
@@ -734,7 +735,8 @@ const initialCandidates = [
   { name: "Tashaun Najee Benton", email: "tashaunbenton233@gmail.com", phone: "973-592-1821", pass: "1821" },
   { name: "Titus Oliver", email: "o_titus@yahoo.com", phone: "662-654-7713", pass: "7713" },
   { name: "Zion Gates-Norris", email: "zgatesnorris@gmail.com", phone: "954-234-4876", pass: "4876" },
-  { name: "Jamar Amber", email: "jaabn2@gmail.com", phone: "410-443-3795", pass: "3795" }
+  { name: "Jamar Amber", email: "jaabn2@gmail.com", phone: "410-443-3795", pass: "3795" },
+  { name: "John Candidate", email: "candidate@gmail.com", phone: "555-000-2012", pass: "2012" }
 ];
 
 let useSqlite = true;
@@ -1006,11 +1008,11 @@ async function initDb() {
       // Column already exists
     }
     
-    // Ensure legacy deshaun.stafford@orderofkpi.org, dennis@gmail.com, jackdee.sync@gmail.com, and candidate@gmail.com accounts are purged
+    // Ensure legacy deshaun.stafford@orderofkpi.org, dennis@gmail.com, and jackdee.sync@gmail.com accounts are purged
     try {
-      sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) IN ('deshaun.stafford@orderofkpi.org', 'candidate@orderofkpi.org', 'dennis@gmail.com', 'candidate@gmail.com', 'jackdee.sync@gmail.com')").run();
-      sqliteDb.prepare("DELETE FROM candidates WHERE LOWER(email) IN ('candidate@orderofkpi.org', 'dennis@gmail.com', 'candidate@gmail.com', 'jackdee.sync@gmail.com')").run();
-      sqliteDb.prepare("DELETE FROM membership_applications WHERE LOWER(email) IN ('dennis@gmail.com', 'candidate@gmail.com', 'jackdee.sync@gmail.com')").run();
+      sqliteDb.prepare("DELETE FROM users WHERE LOWER(email) IN ('deshaun.stafford@orderofkpi.org', 'candidate@orderofkpi.org', 'dennis@gmail.com', 'jackdee.sync@gmail.com')").run();
+      sqliteDb.prepare("DELETE FROM candidates WHERE LOWER(email) IN ('candidate@orderofkpi.org', 'dennis@gmail.com', 'jackdee.sync@gmail.com')").run();
+      sqliteDb.prepare("DELETE FROM membership_applications WHERE LOWER(email) IN ('dennis@gmail.com', 'jackdee.sync@gmail.com')").run();
     } catch (e) {
       // Ignore
     }
@@ -1764,7 +1766,7 @@ async function startServer() {
     });
   });
 
-  app.post("/api/auth/login", (req, res) => {
+  app.post("/api/auth/login", async (req, res) => {
     const { email, password } = req.body;
     console.log(`[AUTH] Login attempt for: ${email}`);
 
@@ -1777,6 +1779,62 @@ async function startServer() {
       return res.status(400).json({ success: false, message: "Email and password are required" });
     }
 
+    const normEmail = email.toLowerCase().trim();
+    const hashedInput = hashPassword(password);
+    const atlantaHash = hashPassword("atlanta");
+
+    // Dynamic Cloud Firestore check for real-time password accuracy
+    let hasPermanentOverride = false;
+    let overrideHash = "";
+    let overrideIsFirstLogin = 1;
+
+    if (globalPasswordOverrides[normEmail]) {
+      const rec = globalPasswordOverrides[normEmail];
+      if (rec && rec.hash) {
+        overrideHash = rec.hash;
+        overrideIsFirstLogin = rec.isFirstLogin;
+        if (rec.hash !== atlantaHash || rec.isFirstLogin === 0) {
+          hasPermanentOverride = true;
+        }
+      }
+    }
+
+    // If not in local overrides or if mismatch, query Cloud Firestore on-demand
+    if (!hasPermanentOverride || (overrideHash && hashedInput !== overrideHash)) {
+      try {
+        if (serverFirestoreDb) {
+          const docRef = fsDoc(serverFirestoreDb, "user_password_overrides", normEmail);
+          const docSnap = await fsGetDoc(docRef);
+          if (docSnap.exists()) {
+            const fsData = docSnap.data();
+            if (fsData && fsData.hash) {
+              const fsHash = fsData.hash;
+              const fsFirst = (fsData.isFirstLogin === 1 || fsData.isFirstLogin === true || fsData.isFirstLogin === "1" || fsData.isFirstLogin === "true") ? 1 : 0;
+              globalPasswordOverrides[normEmail] = {
+                hash: fsHash,
+                isFirstLogin: fsFirst,
+                updatedAt: fsData.updatedAt || new Date().toISOString()
+              };
+              overrideHash = fsHash;
+              overrideIsFirstLogin = fsFirst;
+              if (fsHash !== atlantaHash || fsFirst === 0) {
+                hasPermanentOverride = true;
+              }
+
+              // Update local SQLite cache
+              if (useSqlite && sqliteDb) {
+                try {
+                  sqliteDb.prepare("UPDATE users SET password_hash = ?, is_first_login = ? WHERE LOWER(email) = ?").run(fsHash, fsFirst, normEmail);
+                } catch (_) {}
+              }
+            }
+          }
+        }
+      } catch (fsCheckErr) {
+        console.warn("[AUTH] On-demand Firestore password check warning:", fsCheckErr);
+      }
+    }
+
     const user = findUser(email);
     if (!user) {
       console.log(`[AUTH] User not found: ${email}`);
@@ -1784,8 +1842,6 @@ async function startServer() {
       return res.status(401).json({ success: false, message: "Invalid email or password" });
     }
 
-    const normEmail = email.toLowerCase().trim();
-    const hashedInput = hashPassword(password);
     const isQaOrTest = normEmail.startsWith("qa.") || normEmail.startsWith("test.");
     const isDefaultQaPassword = isQaOrTest && password === "2012";
     const explicitQa = QA_EXPLICIT_CREDENTIALS[normEmail];
@@ -1799,7 +1855,20 @@ async function startServer() {
     const isSammieAccount = normEmail === "sammie.poe@orderofkpi.org";
     const isSammiePassword = isSammieAccount && (password === "atlanta" || password === "2012");
 
-    if (user.password_hash === hashedInput || isDefaultQaPassword || isExplicitQaPassword || isAdminPassword || isJamesPassword || isDonaldPassword || isSammiePassword) {
+    // Guard: If a user has established a permanent password, REJECT the default 'atlanta' password
+    if (hasPermanentOverride && (password === "atlanta" || hashedInput === atlantaHash) && !isAdminPassword && !isJamesPassword && !isDonaldPassword && !isSammiePassword && !isDefaultQaPassword && !isExplicitQaPassword) {
+      console.log(`[AUTH] Default password 'atlanta' rejected because user ${normEmail} has set a permanent password.`);
+      logEvent(email, "LOGIN_FAILURE", "Default password rejected because permanent password has already been set", "warning");
+      return res.status(401).json({
+        success: false,
+        message: "A permanent password has been set for this account. The default initial password is no longer valid."
+      });
+    }
+
+    const effectiveHash = overrideHash || user.password_hash;
+    const isHashMatched = (effectiveHash === hashedInput);
+
+    if (isHashMatched || isDefaultQaPassword || isExplicitQaPassword || isAdminPassword || isJamesPassword || isDonaldPassword || isSammiePassword) {
       if (isDefaultQaPassword && globalPasswordOverrides[normEmail]) {
         // Clear override from memory and save
         delete globalPasswordOverrides[normEmail];
@@ -1846,7 +1915,7 @@ async function startServer() {
           title: user.title,
           committees: parsedCommittees,
           committeeRoles: parsedCommitteeRoles,
-          isFirstLogin: (isAdminAccount || isJamesAccount || isDonaldAccount || isSammieAccount) ? false : (user.is_first_login === 1)
+          isFirstLogin: (isAdminAccount || isJamesAccount || isDonaldAccount || isSammieAccount || hasPermanentOverride) ? false : (user.is_first_login === 1)
         }
       });
     }
@@ -4338,8 +4407,9 @@ async function startServer() {
         user = data[adminEmail.toLowerCase().trim()];
       }
       
-      if (!user || (user.role !== 'admin' && adminEmail !== 'info@kpi2012.org')) {
-        return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
+      const normAdmin = (adminEmail || "").toLowerCase().trim();
+      if (!user || (user.role !== 'admin' && normAdmin !== 'admin@orderofkpi.org' && normAdmin !== 'info@kpi2012.org' && normAdmin !== 'qa.admin@orderofkpi.org')) {
+        return res.status(403).json({ success: false, message: "Unauthorized: Admin privileges required to clear committees." });
       }
 
       // Perform cleanup

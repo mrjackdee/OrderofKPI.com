@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Lock, Key, Check, AlertCircle, X, ShieldAlert, CheckCircle2, LogOut, ArrowLeft } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { performHybridPasswordChange } from '../lib/memberDb';
+import { getFriendlyError } from '../lib/utils';
 import UrgentBannerTicker from './UrgentBannerTicker';
 
 export default function MemberHeader() {
@@ -96,11 +97,7 @@ export default function MemberHeader() {
       sessionStorage.setItem('isFirstLogin', 'false');
       setIsFirstLogin(false);
     } catch (err: any) {
-      const isTechnical = err.message.includes('JSON') || err.message.includes('token') || err.message.includes('fetch');
-      setError(isTechnical
-        ? 'The update service is temporarily offline. Your password change was not saved. Please try again later.'
-        : err.message || 'Unable to update your password. Please verify your current password and try again.'
-      );
+      setError(getFriendlyError(err, 'Unable to update your password. Please verify your current password and try again.'));
     } finally {
       setLoading(false);
     }

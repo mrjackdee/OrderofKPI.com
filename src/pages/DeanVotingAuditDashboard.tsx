@@ -6,6 +6,7 @@ import { ShieldCheck, Download, ArrowLeft, Trash2, Edit2, CheckCircle2, AlertCir
 import MemberHeader from '../components/MemberHeader';
 import { syncApplicationsFromFirestore } from '../lib/memberDb';
 import { firebaseFetchAllDeanVotes, syncDeanDataFromFirestore, firebaseDeleteDeanVote, firebaseSaveDeanVote } from '../lib/firebase';
+import { getFriendlyError } from '../lib/utils';
 
 interface AdminVoteItem {
   id: string;
@@ -142,12 +143,12 @@ export default function DeanVotingAuditDashboard() {
       } else {
         const apiError = apiRes.status === 'rejected' ? apiRes.reason?.message : 'Server delete failed';
         const fsError = fsRes.status === 'rejected' ? fsRes.reason?.message : fsRes.value?.message;
-        setError(apiError || fsError || 'Failed to delete vote.');
+        setError(getFriendlyError(apiError || fsError, 'Failed to delete vote. Please try again.'));
         // Revert UI on failure
         fetchAdminVotes();
       }
     } catch (err: any) {
-      setError(err.message || 'Network error.');
+      setError(getFriendlyError(err, 'Failed to delete vote. Please try again.'));
       fetchAdminVotes();
     }
   };
@@ -208,11 +209,11 @@ export default function DeanVotingAuditDashboard() {
       } else {
         const apiError = apiRes.status === 'rejected' ? apiRes.reason?.message : 'Server update failed';
         const fsError = fsRes.status === 'rejected' ? fsRes.reason?.message : fsRes.value?.message;
-        setError(apiError || fsError || 'Failed to update vote.');
+        setError(getFriendlyError(apiError || fsError, 'Failed to update vote. Please try again.'));
         fetchAdminVotes();
       }
     } catch (err: any) {
-      setError(err.message || 'Network error.');
+      setError(getFriendlyError(err, 'Failed to update vote. Please try again.'));
       fetchAdminVotes();
     }
   };
