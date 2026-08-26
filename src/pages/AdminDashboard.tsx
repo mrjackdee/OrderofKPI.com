@@ -37,7 +37,7 @@ import {
   Archive
 } from 'lucide-react';
 import { Member, Candidate } from '../types';
-import { prospectiveMembers, fetchAllApplications, syncApplicationsFromFirestore } from '../lib/memberDb';
+import { prospectiveMembers, defaultMembers, isTestUser, fetchAllApplications, syncApplicationsFromFirestore } from '../lib/memberDb';
 import { firebaseSyncPortalMember } from '../lib/firebase';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import { googleSignIn, getAccessToken } from '../lib/googleAuth';
@@ -145,6 +145,8 @@ export default function AdminDashboard() {
   // Members State
   const [members, setMembers] = useState<Member[]>([]);
   const [memberSearch, setMemberSearch] = useState('');
+  const [memberLastSynced, setMemberLastSynced] = useState<string>('');
+  const [isSyncingMembers, setIsSyncingMembers] = useState(false);
   
   // Candidates State
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -697,14 +699,132 @@ export default function AdminDashboard() {
   };
 
   const fetchMembers = async () => {
+    setIsSyncingMembers(true);
     try {
-      const response = await fetch('/api/members');
-      const data = await response.json();
-      if (data.success) {
-        setMembers(data.members);
+      const memberMap = new Map<string, Member>();
+
+      // 1. Primary: Fetch from REST API (/api/members?includeTest=true)
+      try {
+        const response = await fetch('/api/members?includeTest=true');
+        const data = await response.json();
+        if (data && data.success && Array.isArray(data.members)) {
+          data.members.forEach((m: Member) => {
+            if (m && m.email) {
+              const normEmail = m.email.toLowerCase().trim();
+              memberMap.set(normEmail, {
+                ...m,
+                email: normEmail,
+                name: m.name || normEmail,
+                role: m.role || 'member',
+                financial_status: m.financial_status || 'active',
+                is_first_login: m.is_first_login ?? false
+              });
+            }
+          });
+        }
+      } catch (apiErr) {
+        console.warn('REST API /api/members fetch notice:', apiErr);
       }
+
+      // 2. Dual-Sync: Query Cloud Firestore directly across portal_members, members, and users collections
+      try {
+        const { collection, getDocs } = await import('firebase/firestore');
+        const collectionsToQuery = ['portal_members', 'members', 'users'];
+        for (const colName of collectionsToQuery) {
+          try {
+            const snap = await getDocs(collection(db, colName));
+            snap.docs.forEach(d => {
+              const data = d.data();
+              const email = (data.email || d.id || '').toLowerCase().trim();
+              if (email && email.includes('@')) {
+                const existing = memberMap.get(email);
+                const name = data.name || data.fullName || (existing ? existing.name : email);
+                const role = data.role || (existing ? existing.role : 'member');
+                const title = data.title || (existing ? existing.title : '');
+                const financial_status = data.financial_status || (existing ? existing.financial_status : 'active');
+                
+                memberMap.set(email, {
+                  email,
+                  name,
+                  first_name: data.first_name || data.firstName || (existing ? existing.first_name : name.split(' ')[0]),
+                  last_name: data.last_name || data.lastName || (existing ? existing.last_name : name.split(' ').slice(1).join(' ')),
+                  role,
+                  roles: Array.isArray(data.roles) ? data.roles : (existing?.roles || [role]),
+                  title,
+                  committees: Array.isArray(data.committees) ? data.committees : (existing?.committees || []),
+                  committeeRoles: data.committeeRoles || data.committee_roles || existing?.committeeRoles || {},
+                  is_first_login: data.is_first_login ?? existing?.is_first_login ?? false,
+                  financial_status,
+                  profile_photo: data.profile_photo || existing?.profile_photo || '',
+                  industry: data.industry || existing?.industry || '',
+                  is_test_credential: data.is_test_credential ?? existing?.is_test_credential ?? (email.startsWith('qa.') || email.startsWith('test.') ? 1 : 0)
+                });
+              }
+            });
+          } catch (colErr) {
+            console.warn(`Firestore collection '${colName}' query notice:`, colErr);
+          }
+        }
+      } catch (fsErr) {
+        console.warn('Cloud Firestore members query notice:', fsErr);
+      }
+
+      // 3. Robust Fallback: If both API and Firestore return 0 members, hydrate from defaultMembers
+      if (memberMap.size === 0) {
+        console.warn('Notice: API and Firestore returned 0 members. Hydrating from official default members roster.');
+        defaultMembers.forEach((dm: any) => {
+          if (dm && dm.email) {
+            const normEmail = dm.email.toLowerCase().trim();
+            memberMap.set(normEmail, {
+              email: normEmail,
+              name: dm.name || normEmail,
+              first_name: dm.first_name || dm.name.split(' ')[0],
+              last_name: dm.last_name || dm.name.split(' ').slice(1).join(' '),
+              role: dm.role || 'member',
+              roles: dm.roles || [dm.role || 'member'],
+              title: dm.title || '',
+              committees: dm.committees || [],
+              committeeRoles: dm.committeeRoles || {},
+              is_first_login: false,
+              financial_status: 'active',
+              is_test_credential: (normEmail.startsWith('qa.') || normEmail.startsWith('test.')) ? 1 : 0
+            });
+          }
+        });
+      }
+
+      let combinedMembers = Array.from(memberMap.values());
+
+      // Sort members: Officers first, then Admin, then Members, alphabetically
+      const roleOrder: Record<string, number> = { officer: 1, admin: 2, 'Committee Chair': 2, member: 3 };
+      combinedMembers.sort((a, b) => {
+        const orderA = roleOrder[a.role] || 4;
+        const orderB = roleOrder[b.role] || 4;
+        if (orderA !== orderB) return orderA - orderB;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+
+      setMembers(combinedMembers);
+      setMemberLastSynced(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (error) {
-      console.error('Error fetching members:', error);
+      console.error('Error in fetchMembers:', error);
+      if (defaultMembers && defaultMembers.length > 0) {
+        setMembers(defaultMembers.map((dm: any) => ({
+          email: dm.email.toLowerCase().trim(),
+          name: dm.name,
+          first_name: dm.name.split(' ')[0],
+          last_name: dm.name.split(' ').slice(1).join(' '),
+          role: dm.role || 'member',
+          roles: dm.roles || [dm.role || 'member'],
+          title: dm.title || '',
+          committees: dm.committees || [],
+          committeeRoles: dm.committeeRoles || {},
+          is_first_login: false,
+          financial_status: 'active'
+        })));
+      }
+    } finally {
+      setIsSyncingMembers(false);
     }
   };
 
@@ -1400,15 +1520,35 @@ export default function AdminDashboard() {
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-gold/20 shadow-soft">
               <div>
-                <h2 className="text-xl font-display font-bold text-ivy uppercase italic">
-                  User Directory <span className="text-gold">Administration</span>
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-display font-bold text-ivy uppercase italic">
+                    User Directory <span className="text-gold">Administration</span>
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-200 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                    {members.length} Members Loaded
+                  </span>
+                </div>
                 <p className="text-ivy/60 text-xs mt-1">
                   Add new users, assign roles (Administrator, Committee Chair, Committee Member, Officer, Member), or delete existing accounts.
+                  {memberLastSynced && <span className="ml-1 text-gold/80 font-mono">(Last Synced: {memberLastSynced})</span>}
                 </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => {
+                    fetchMembers();
+                    showToast('success', 'Synchronizing user directory from Cloud Firestore and server database...');
+                  }}
+                  disabled={isSyncingMembers}
+                  className="bg-gold/20 hover:bg-gold/30 text-ivy border border-gold/40 px-3 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+                  title="Force re-sync member roster from Cloud Firestore & local API"
+                >
+                  <RefreshCcw className={`w-3.5 h-3.5 text-gold ${isSyncingMembers ? 'animate-spin' : ''}`} />
+                  <span>{isSyncingMembers ? 'Syncing...' : 'Sync Roster'}</span>
+                </button>
+
                 <a 
                   href="/test_credentials.md" 
                   download="kpi_test_credentials.md"
@@ -1442,7 +1582,7 @@ export default function AdminDashboard() {
                   }}
                   className="bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-sm"
                 >
-                  <Trash2 className="w-3.5 h-3.5" /> Cleanse All Committee Assignments
+                  <Trash2 className="w-3.5 h-3.5" /> Cleanse All Committees
                 </button>
 
                 <div className="relative">
@@ -1471,7 +1611,7 @@ export default function AdminDashboard() {
                     });
                     setShowMemberModal(true);
                   }}
-                  className="bg-ivy text-cream px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-ivy/90 transition-all shadow-md"
+                  className="bg-ivy text-cream px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-ivy/90 transition-all shadow-md cursor-pointer"
                 >
                   <UserPlus className="w-4 h-4 text-gold" /> Add New User
                 </button>
@@ -1491,7 +1631,46 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gold/10 text-xs text-ivy font-body">
-                    {filteredMembers.map(member => (
+                    {filteredMembers.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-12 text-center">
+                          <div className="flex flex-col items-center justify-center max-w-md mx-auto space-y-3">
+                            <div className="p-3 bg-gold/10 rounded-2xl text-gold border border-gold/20">
+                              <Users className="w-8 h-8 text-gold" />
+                            </div>
+                            <div>
+                              <h3 className="font-display font-bold text-ivy text-sm uppercase">
+                                {memberSearch ? 'No Matching Users Found' : 'User Directory Syncing'}
+                              </h3>
+                              <p className="text-xs text-ivy/60 mt-1">
+                                {memberSearch 
+                                  ? `No user records matched "${memberSearch}". Try clearing your search query or refreshing the roster.`
+                                  : 'No member accounts were returned from local DB or Cloud Firestore. Click below to synchronize.'}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 pt-2">
+                              {memberSearch && (
+                                <button
+                                  onClick={() => setMemberSearch('')}
+                                  className="px-3 py-1.5 bg-cream text-ivy border border-gold/20 rounded-xl text-xs font-bold hover:bg-gold/10 transition-all cursor-pointer"
+                                >
+                                  Clear Search
+                                </button>
+                              )}
+                              <button
+                                onClick={() => fetchMembers()}
+                                disabled={isSyncingMembers}
+                                className="px-4 py-1.5 bg-ivy text-cream rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-ivy/90 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                              >
+                                <RefreshCcw className={`w-3.5 h-3.5 text-gold ${isSyncingMembers ? 'animate-spin' : ''}`} />
+                                <span>Sync Member Directory</span>
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredMembers.map(member => (
                       <tr key={member.email} className="hover:bg-gold/5 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -1573,7 +1752,7 @@ export default function AdminDashboard() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    )))}
                   </tbody>
                 </table>
               </div>

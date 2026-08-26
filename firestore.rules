@@ -148,6 +148,14 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /members/{memberId} {
+      allow read, write: if true;
+    }
+
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
     match /settings/{settingId} {
       allow read, write: if true;
     }
