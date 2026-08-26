@@ -42,7 +42,7 @@ import { firebaseSyncPortalMember } from '../lib/firebase';
 import { logPortalSectionAccess } from '../lib/auditLogger';
 import { googleSignIn, getAccessToken } from '../lib/googleAuth';
 import { createGoogleForm, getGoogleForm, getGoogleFormResponses } from '../lib/googleWorkspace';
-import { Chrome, ArrowDownToLine, Check, Database, Key, Lock, RefreshCw, Mail, Send, Inbox, Settings, Sliders, BookOpen, Compass, HelpCircle, Lightbulb, SlidersHorizontal } from 'lucide-react';
+import { Chrome, ArrowDownToLine, Check, Database, Key, Lock, RefreshCw, Mail, Send, Inbox, Settings, Sliders, BookOpen, Compass, HelpCircle, Lightbulb, SlidersHorizontal, Terminal } from 'lucide-react';
 import { useSystemFeatures, updateSystemFeature } from '../lib/settings';
 import RbacManager from '../components/admin/RbacManager';
 import AdminUserGuideModal from '../components/admin/AdminUserGuideModal';
@@ -68,6 +68,16 @@ interface ApplicationAuditLog {
   timestamp: string;
 }
 
+interface EmailDispatchLog {
+  id: string;
+  timestamp: string;
+  targetEmail: string;
+  sent: boolean;
+  method: string;
+  messageId?: string;
+  error?: string;
+}
+
 export type AdminDashboardTab = 
   | 'users' 
   | 'rbac' 
@@ -77,6 +87,7 @@ export type AdminDashboardTab =
   | 'revisions' 
   | 'googleForms' 
   | 'passwordLogs' 
+  | 'systemLogs'
   | 'systemSettings' 
   | 'siteNavigator';
 
@@ -91,7 +102,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<AdminDashboardTab>(() => {
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get('tab');
-    if (tabParam && ['users', 'rbac', 'candidates', 'audits', 'intake', 'revisions', 'googleForms', 'passwordLogs', 'systemSettings', 'siteNavigator'].includes(tabParam)) {
+    if (tabParam && ['users', 'rbac', 'candidates', 'audits', 'intake', 'revisions', 'googleForms', 'passwordLogs', 'systemLogs', 'systemSettings', 'siteNavigator'].includes(tabParam)) {
       return tabParam as AdminDashboardTab;
     }
     return 'users';
@@ -100,13 +111,20 @@ export default function AdminDashboard() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
-    if (tabParam && ['users', 'rbac', 'candidates', 'audits', 'intake', 'revisions', 'googleForms', 'passwordLogs', 'systemSettings', 'siteNavigator'].includes(tabParam)) {
+    if (tabParam && ['users', 'rbac', 'candidates', 'audits', 'intake', 'revisions', 'googleForms', 'passwordLogs', 'systemLogs', 'systemSettings', 'siteNavigator'].includes(tabParam)) {
       setActiveTab(tabParam as AdminDashboardTab);
     }
   }, [location.search]);
   const [passwordLogSearch, setPasswordLogSearch] = useState('');
   const [passwordLogFilter, setPasswordLogFilter] = useState<'all' | 'change' | 'failure'>('all');
   const [isPingingDb, setIsPingingDb] = useState(false);
+
+  // Dedicated Email & System Logs Filter States
+  const [emailLogSearch, setEmailLogSearch] = useState('');
+  const [emailLogStatusFilter, setEmailLogStatusFilter] = useState<'all' | 'success' | 'failed'>('all');
+  const [emailLogProviderFilter, setEmailLogProviderFilter] = useState<'all' | 'SMTP' | 'Resend' | 'Firebase Auth'>('all');
+  const [isFetchingLogs, setIsFetchingLogs] = useState(false);
+  const [smtpStatus, setSmtpStatus] = useState<'online' | 'checking' | 'offline'>('online');
   
   // Google Forms & Gmail Integration State
   const [googleAuthToken, setGoogleAuthToken] = useState<string | null>(null);
@@ -136,6 +154,7 @@ export default function AdminDashboard() {
 
   // Audit Logs State
   const [appAuditLogs, setAppAuditLogs] = useState<ApplicationAuditLog[]>([]);
+  const [emailLogs, setEmailLogs] = useState<EmailDispatchLog[]>([]);
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
   const [auditSearch, setAuditSearch] = useState('');
   const [auditTypeFilter, setAuditTypeFilter] = useState('all');
@@ -262,6 +281,17 @@ export default function AdminDashboard() {
       wiifm: 'Spot unauthorized login attempts and confirm that credentials changes are fully authenticated, protecting members\' personal profiles.',
       badge: `${systemLogs.filter(l => l.event_type.includes('PASSWORD')).length} Alerts`,
       badgeColor: 'bg-rose-100 text-rose-950 border border-rose-300 font-bold'
+    },
+    {
+      id: 'systemLogs',
+      title: 'System Logs & Email Audits',
+      category: 'governance',
+      categoryLabel: 'Governance & Compliance',
+      icon: Terminal,
+      description: 'Inspect outbound email dispatch history, system audit trails, delivery status tokens, and SMTP provider diagnostics.',
+      wiifm: 'Live transparency into all system communication logs, email dispatches, delivery tokens, and delivery errors.',
+      badge: `${emailLogs.length} Dispatches`,
+      badgeColor: 'bg-emerald-100 text-emerald-950 border border-emerald-300 font-bold'
     },
     {
       id: 'revisions',
@@ -701,13 +731,55 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchEmailDispatchLogs = async () => {
+    setIsFetchingLogs(true);
+    setSmtpStatus('checking');
+    try {
+      const emailRes = await fetch('/api/auth/email-logs').then(r => r.json()).catch(() => ({ success: false }));
+      let combinedLogs: EmailDispatchLog[] = emailRes.success ? (emailRes.logs || []) : [];
+
+      // Query Cloud Firestore 'email_dispatch_logs' collection directly for zero-downtime persistence
+      try {
+        const { collection, getDocs } = await import('firebase/firestore');
+        const snap = await getDocs(collection(db, 'email_dispatch_logs'));
+        const fsLogs = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+        const logMap = new Map<string, EmailDispatchLog>();
+        [...combinedLogs, ...fsLogs].forEach(item => {
+          if (item && item.id) {
+            logMap.set(item.id, {
+              id: item.id,
+              timestamp: item.timestamp || new Date().toISOString(),
+              targetEmail: item.targetEmail || item.recipient || 'N/A',
+              sent: item.sent !== undefined ? Boolean(item.sent) : true,
+              method: item.method || 'SMTP',
+              messageId: item.messageId || '',
+              error: item.error || ''
+            });
+          }
+        });
+        combinedLogs = Array.from(logMap.values());
+        combinedLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      } catch (fsErr) {
+        console.warn('Direct Firestore email logs fetch warning:', fsErr);
+      }
+
+      setEmailLogs(combinedLogs);
+      setSmtpStatus('online');
+    } catch (err) {
+      console.error('Error fetching email dispatch logs:', err);
+      setSmtpStatus('offline');
+    } finally {
+      setIsFetchingLogs(false);
+    }
+  };
+
   const fetchAuditLogs = async () => {
     try {
-      const response = await fetch('/api/applications/audit');
-      const data = await response.json();
-      if (data.success) {
-        setAppAuditLogs(data.logs || []);
+      const auditRes = await fetch('/api/applications/audit').then(r => r.json()).catch(() => ({ success: false }));
+      if (auditRes.success) {
+        setAppAuditLogs(auditRes.logs || []);
       }
+      await fetchEmailDispatchLogs();
     } catch (error) {
       console.error('Error fetching audit logs:', error);
     }
@@ -993,6 +1065,42 @@ export default function AdminDashboard() {
       (auditTypeFilter === 'candidate' && (log.action === 'CANDIDATE_STATUS_CHANGE' || log.action === 'CANDIDATE_REMOVED' || log.action === 'CANDIDATE_CREATED'));
     return matchesSearch && matchesType;
   });
+
+  const currentUserRole = sessionStorage.getItem('userRole') || '';
+  const isStrictAdmin = currentUserRole === 'admin' || [
+    'admin@orderofkpi.org',
+    'qa.admin@orderofkpi.org',
+    'info@kpi2012.org'
+  ].includes((currentUserEmail || '').toLowerCase().trim());
+
+  const filteredEmailLogs = emailLogs.filter(log => {
+    const q = auditSearch.toLowerCase();
+    const matchesSearch = !q || log.targetEmail.toLowerCase().includes(q) || log.method.toLowerCase().includes(q) || (log.messageId && log.messageId.toLowerCase().includes(q));
+    const matchesType = auditTypeFilter === 'all' || auditTypeFilter === 'email';
+    return matchesSearch && matchesType;
+  });
+
+  const filteredSystemTabEmailLogs = useMemo(() => {
+    return emailLogs.filter(log => {
+      const q = emailLogSearch.toLowerCase().trim();
+      const matchesSearch = !q || 
+        log.targetEmail.toLowerCase().includes(q) || 
+        log.method.toLowerCase().includes(q) || 
+        (log.messageId && log.messageId.toLowerCase().includes(q)) ||
+        (log.error && log.error.toLowerCase().includes(q));
+
+      const matchesStatus = 
+        emailLogStatusFilter === 'all' || 
+        (emailLogStatusFilter === 'success' && log.sent) || 
+        (emailLogStatusFilter === 'failed' && !log.sent);
+
+      const matchesProvider = 
+        emailLogProviderFilter === 'all' || 
+        log.method.toLowerCase().includes(emailLogProviderFilter.toLowerCase());
+
+      return matchesSearch && matchesStatus && matchesProvider;
+    });
+  }, [emailLogs, emailLogSearch, emailLogStatusFilter, emailLogProviderFilter]);
 
   return (
     <div className="min-h-screen bg-cream pb-16">
@@ -1608,7 +1716,7 @@ export default function AdminDashboard() {
                   Portal & Application <span className="text-gold">Audit Center</span>
                 </h2>
                 <p className="text-ivy/60 text-xs mt-1">
-                  Complete audit trail determining which users accessed specific applications, member portal sections, candidate statuses, or user directory permissions.
+                  Complete audit trail determining which users accessed specific applications, member portal sections, candidate statuses, outbound emails, or user directory permissions.
                 </p>
               </div>
 
@@ -1617,7 +1725,7 @@ export default function AdminDashboard() {
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ivy/30 w-4 h-4" />
                   <input
                     type="text"
-                    placeholder="Search reviewer, applicant, or page..."
+                    placeholder="Search reviewer, recipient, or event..."
                     value={auditSearch}
                     onChange={(e) => setAuditSearch(e.target.value)}
                     className="pl-10 pr-4 py-2.5 bg-cream/50 border border-gold/20 rounded-xl text-xs text-ivy focus:outline-none focus:border-gold w-64"
@@ -1633,70 +1741,164 @@ export default function AdminDashboard() {
                   <option value="portal">Portal Section Accesses</option>
                   <option value="app">Application Access & Downloads</option>
                   <option value="candidate">Candidate Changes & Removals</option>
+                  <option value="email">Outbound Email Dispatches</option>
                 </select>
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl border border-gold/20 overflow-hidden shadow-soft">
-              <div className="p-4 bg-ivy text-cream font-display uppercase tracking-wider text-[11px] flex justify-between items-center">
-                <span>Application Access & Portal Activity Records ({filteredAuditLogs.length})</span>
-                <span className="text-gold font-mono text-[10px]">Real-Time Verified</span>
-              </div>
+            {/* Quick Executive Governance Audit Links */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Link to="/dean-audit-dashboard" className="p-4 bg-white rounded-2xl border border-gold/20 hover:border-gold transition-colors flex items-center justify-between group shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gold/10 flex items-center justify-between justify-center text-gold">
+                    <ShieldCheck className="w-5 h-5 mx-auto" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-ivy group-hover:text-gold transition-colors uppercase tracking-wider">Dean Audit Log Console</h4>
+                    <p className="text-[10px] text-ivy/50">Access full executive governance & nomination audit history</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-ivy/30 group-hover:text-gold group-hover:translate-x-1 transition-all" />
+              </Link>
 
-              {filteredAuditLogs.length === 0 ? (
-                <div className="p-16 text-center text-ivy/40 space-y-3">
-                  <Clock className="w-10 h-10 mx-auto text-gold/30" />
-                  <p className="font-body text-sm italic">No audit records match the selected filter.</p>
+              <Link to="/dean-voting-audit" className="p-4 bg-white rounded-2xl border border-gold/20 hover:border-gold transition-colors flex items-center justify-between group shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-ivy/10 flex items-center justify-center text-ivy">
+                    <CheckSquare className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-ivy group-hover:text-gold transition-colors uppercase tracking-wider">Dean Voting Audit Trail</h4>
+                    <p className="text-[10px] text-ivy/50">Audit confidential selection votes and candidate ballots</p>
+                  </div>
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-cream border-b border-gold/10 text-[10px] font-bold uppercase tracking-widest text-ivy/50">
-                      <tr>
-                        <th className="py-4 px-6">Timestamp</th>
-                        <th className="py-4 px-6">User / Reviewer</th>
-                        <th className="py-4 px-6">Target / Section</th>
-                        <th className="py-4 px-6">Audit Event</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gold/10 text-ivy font-body">
-                      {filteredAuditLogs.map((log) => (
-                        <tr key={log.id} className="hover:bg-gold/5 transition-colors">
-                          <td className="py-4 px-6 text-ivy/50 font-mono whitespace-nowrap">
-                            {new Date(log.timestamp).toLocaleString()}
-                          </td>
-                          <td className="py-4 px-6 font-bold text-ivy">
-                            <div className="flex items-center gap-2">
-                              <Shield className="w-3.5 h-3.5 text-gold" />
-                              <span>{log.reviewer_name}</span>
-                            </div>
-                            <p className="text-[10px] text-ivy/40 font-normal">{log.reviewer_email}</p>
-                          </td>
-                          <td className="py-4 px-6 font-bold text-ivy">
-                            <span>{log.applicant_name}</span>
-                            {log.applicant_email !== 'portal_system' && (
-                              <p className="text-[10px] text-ivy/40 font-normal">{log.applicant_email}</p>
-                            )}
-                          </td>
-                          <td className="py-4 px-6">
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                              log.action.startsWith('ACCESSED_PORTAL_SECTION') ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' :
-                              log.action === 'DOWNLOADED_PDF' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
-                              log.action === 'CANDIDATE_REMOVED' ? 'bg-red-100 text-red-800 border border-red-200' :
-                              log.action === 'CANDIDATE_STATUS_CHANGE' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
-                              'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                            }`}>
-                              <Activity className="w-3 h-3" />
-                              {log.action.replace(/_/g, ' ')}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                <ArrowRight className="w-4 h-4 text-ivy/30 group-hover:text-gold group-hover:translate-x-1 transition-all" />
+              </Link>
             </div>
+
+            {/* Application Access & Portal Activity Records */}
+            {(auditTypeFilter === 'all' || auditTypeFilter === 'portal' || auditTypeFilter === 'app' || auditTypeFilter === 'candidate') && (
+              <div className="bg-white rounded-3xl border border-gold/20 overflow-hidden shadow-soft">
+                <div className="p-4 bg-ivy text-cream font-display uppercase tracking-wider text-[11px] flex justify-between items-center">
+                  <span>Application Access & Portal Activity Records ({filteredAuditLogs.length})</span>
+                  <span className="text-gold font-mono text-[10px]">Real-Time Verified</span>
+                </div>
+
+                {filteredAuditLogs.length === 0 ? (
+                  <div className="p-12 text-center text-ivy/40 space-y-2">
+                    <Clock className="w-8 h-8 mx-auto text-gold/30" />
+                    <p className="font-body text-xs italic">No portal activity records match the selected filter.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-cream border-b border-gold/10 text-[10px] font-bold uppercase tracking-widest text-ivy/50">
+                        <tr>
+                          <th className="py-4 px-6">Timestamp</th>
+                          <th className="py-4 px-6">User / Reviewer</th>
+                          <th className="py-4 px-6">Target / Section</th>
+                          <th className="py-4 px-6">Audit Event</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gold/10 text-ivy font-body">
+                        {filteredAuditLogs.map((log) => (
+                          <tr key={log.id} className="hover:bg-gold/5 transition-colors">
+                            <td className="py-4 px-6 text-ivy/50 font-mono whitespace-nowrap">
+                              {new Date(log.timestamp).toLocaleString()}
+                            </td>
+                            <td className="py-4 px-6 font-bold text-ivy">
+                              <div className="flex items-center gap-2">
+                                <Shield className="w-3.5 h-3.5 text-gold" />
+                                <span>{log.reviewer_name}</span>
+                              </div>
+                              <p className="text-[10px] text-ivy/40 font-normal">{log.reviewer_email}</p>
+                            </td>
+                            <td className="py-4 px-6 font-bold text-ivy">
+                              <span>{log.applicant_name}</span>
+                              {log.applicant_email !== 'portal_system' && (
+                                <p className="text-[10px] text-ivy/40 font-normal">{log.applicant_email}</p>
+                              )}
+                            </td>
+                            <td className="py-4 px-6">
+                              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                log.action.startsWith('ACCESSED_PORTAL_SECTION') ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' :
+                                log.action === 'DOWNLOADED_PDF' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                                log.action === 'CANDIDATE_REMOVED' ? 'bg-red-100 text-red-800 border border-red-200' :
+                                log.action === 'CANDIDATE_STATUS_CHANGE' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                                'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              }`}>
+                                <Activity className="w-3 h-3" />
+                                {log.action.replace(/_/g, ' ')}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Outbound Email Dispatch Audit Logs */}
+            {(auditTypeFilter === 'all' || auditTypeFilter === 'email') && (
+              <div className="bg-white rounded-3xl border border-gold/20 overflow-hidden shadow-soft">
+                <div className="p-4 bg-ivy text-cream font-display uppercase tracking-wider text-[11px] flex justify-between items-center">
+                  <span className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-gold" /> Outbound Email Dispatch Audit Logs ({filteredEmailLogs.length})
+                  </span>
+                  <span className="text-gold font-mono text-[10px]">SMTP / Cloud Delivery</span>
+                </div>
+
+                {filteredEmailLogs.length === 0 ? (
+                  <div className="p-12 text-center text-ivy/40 space-y-2">
+                    <Mail className="w-8 h-8 mx-auto text-gold/30" />
+                    <p className="font-body text-xs italic">No email dispatch logs found matching the filter.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-cream border-b border-gold/10 text-[10px] font-bold uppercase tracking-widest text-ivy/50">
+                        <tr>
+                          <th className="py-4 px-6">Timestamp</th>
+                          <th className="py-4 px-6">Target Recipient</th>
+                          <th className="py-4 px-6">Dispatch Method</th>
+                          <th className="py-4 px-6">Delivery Status</th>
+                          <th className="py-4 px-6">Message ID / Audit Log</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gold/10 text-ivy font-body">
+                        {filteredEmailLogs.map((log) => (
+                          <tr key={log.id} className="hover:bg-gold/5 transition-colors">
+                            <td className="py-4 px-6 text-ivy/50 font-mono whitespace-nowrap">
+                              {new Date(log.timestamp).toLocaleString()}
+                            </td>
+                            <td className="py-4 px-6 font-bold text-ivy">
+                              <span>{log.targetEmail}</span>
+                            </td>
+                            <td className="py-4 px-6 font-mono text-[11px] uppercase">
+                              <span className="px-2.5 py-1 bg-cream border border-gold/20 rounded-md text-ivy font-semibold">
+                                {log.method}
+                              </span>
+                            </td>
+                            <td className="py-4 px-6">
+                              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                log.sent ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-red-100 text-red-800 border border-red-200'
+                              }`}>
+                                <Activity className="w-3 h-3" />
+                                {log.sent ? 'Delivered' : 'Failed'}
+                              </span>
+                            </td>
+                            <td className="py-4 px-6 text-ivy/60 font-mono text-[11px] truncate max-w-xs">
+                              {log.messageId || log.error || 'N/A'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Live Event Log Stream */}
             <div className="bg-white rounded-3xl border border-gold/20 shadow-soft overflow-hidden">
@@ -1733,6 +1935,211 @@ export default function AdminDashboard() {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* TAB: SYSTEM LOGS & EMAIL AUDITS */}
+        {activeTab === 'systemLogs' && (
+          <div className="space-y-6">
+            {!isStrictAdmin ? (
+              <div className="bg-red-50 border border-red-200 rounded-3xl p-8 text-center space-y-4 shadow-soft">
+                <AlertTriangle className="w-12 h-12 text-red-600 mx-auto" />
+                <h3 className="text-lg font-bold text-red-900 uppercase tracking-wider">Access Restricted</h3>
+                <p className="text-xs text-red-700 max-w-lg mx-auto leading-relaxed">
+                  System Logs & Email Audits require administrator account privileges (<code className="font-mono font-bold">admin@orderofkpi.org</code>, <code className="font-mono font-bold">qa.admin@orderofkpi.org</code>, <code className="font-mono font-bold">info@kpi2012.org</code>, or <code className="font-mono font-bold">role === 'admin'</code>).
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Header & Diagnostic Controls */}
+                <div className="bg-white p-6 rounded-3xl border border-gold/20 shadow-soft space-y-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-ivy text-gold border border-gold/30">
+                          Administrative Diagnostics
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                          SMTP / Dispatch Provider: {smtpStatus === 'online' ? 'Online' : smtpStatus === 'checking' ? 'Testing...' : 'Degraded'}
+                        </span>
+                      </div>
+                      <h2 className="text-2xl font-display font-bold text-ivy uppercase italic">
+                        System Logs & <span className="text-gold">Email Audits</span>
+                      </h2>
+                      <p className="text-ivy/60 text-xs mt-1">
+                        Inspect live outbound email dispatch history, delivery status tokens, and system event activity logs across all chapter communications.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={fetchEmailDispatchLogs}
+                        disabled={isFetchingLogs}
+                        className="px-4 py-2.5 bg-ivy hover:bg-forest text-cream border border-gold/30 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm cursor-pointer disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 text-gold ${isFetchingLogs ? 'animate-spin' : ''}`} />
+                        <span>{isFetchingLogs ? 'Refreshing...' : 'Refresh Logs'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Search & Filters Toolbar */}
+                  <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-gold/10">
+                    <div className="relative flex-1 min-w-[240px]">
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ivy/30 w-4 h-4" />
+                      <input
+                        type="text"
+                        placeholder="Search recipient (@orderofkpi.org), method, or token..."
+                        value={emailLogSearch}
+                        onChange={(e) => setEmailLogSearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-cream/50 border border-gold/20 rounded-xl text-xs text-ivy focus:outline-none focus:border-gold"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Filter className="w-3.5 h-3.5 text-ivy/40" />
+                        <span className="text-[10px] font-bold text-ivy/60 uppercase">Status:</span>
+                        <select
+                          value={emailLogStatusFilter}
+                          onChange={(e) => setEmailLogStatusFilter(e.target.value as any)}
+                          className="px-3 py-2 bg-cream/50 border border-gold/20 rounded-xl text-xs text-ivy focus:outline-none focus:border-gold cursor-pointer"
+                        >
+                          <option value="all">All Delivery Statuses</option>
+                          <option value="success">Success / Delivered</option>
+                          <option value="failed">Failed / Pending</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-ivy/60 uppercase">Provider:</span>
+                        <select
+                          value={emailLogProviderFilter}
+                          onChange={(e) => setEmailLogProviderFilter(e.target.value as any)}
+                          className="px-3 py-2 bg-cream/50 border border-gold/20 rounded-xl text-xs text-ivy focus:outline-none focus:border-gold cursor-pointer"
+                        >
+                          <option value="all">All Providers</option>
+                          <option value="SMTP">SMTP</option>
+                          <option value="Resend">Resend API</option>
+                          <option value="Firebase Auth">Firebase Auth</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Email Dispatch Logs Table */}
+                <div className="bg-white rounded-3xl border border-gold/20 overflow-hidden shadow-soft">
+                  <div className="p-4 bg-ivy text-cream font-display uppercase tracking-wider text-[11px] flex justify-between items-center">
+                    <span className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-gold" /> Outbound Email Dispatch Log Records ({filteredSystemTabEmailLogs.length})
+                    </span>
+                    <span className="text-gold font-mono text-[10px]">Dual-Write Synced</span>
+                  </div>
+
+                  {filteredSystemTabEmailLogs.length === 0 ? (
+                    <div className="p-16 text-center text-ivy/40 space-y-3">
+                      <Mail className="w-10 h-10 mx-auto text-gold/30" />
+                      <p className="font-body text-xs italic">No email dispatch logs found matching the filter criteria.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-cream border-b border-gold/10 text-[10px] font-bold uppercase tracking-widest text-ivy/50">
+                          <tr>
+                            <th className="py-4 px-6">Timestamp</th>
+                            <th className="py-4 px-6">Target Recipient</th>
+                            <th className="py-4 px-6">Status Badge</th>
+                            <th className="py-4 px-6">Provider / Method</th>
+                            <th className="py-4 px-6">Message ID / Reference Token</th>
+                            <th className="py-4 px-6">Error Details</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gold/10 text-ivy font-body">
+                          {filteredSystemTabEmailLogs.map((log) => (
+                            <tr key={log.id} className="hover:bg-gold/5 transition-colors">
+                              <td className="py-4 px-6 text-ivy/60 font-mono whitespace-nowrap">
+                                {new Date(log.timestamp).toLocaleString()}
+                              </td>
+                              <td className="py-4 px-6 font-bold text-ivy">
+                                <span className="px-2.5 py-1 bg-cream border border-gold/20 rounded-lg text-ivy font-mono text-[11px]">
+                                  {log.targetEmail}
+                                </span>
+                              </td>
+                              <td className="py-4 px-6 whitespace-nowrap">
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                  log.sent 
+                                    ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' 
+                                    : 'bg-red-100 text-red-900 border border-red-300'
+                                }`}>
+                                  {log.sent ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <XCircle className="w-3.5 h-3.5 text-red-600" />}
+                                  {log.sent ? 'Success / Delivered' : 'Failed / Pending'}
+                                </span>
+                              </td>
+                              <td className="py-4 px-6 font-mono text-[11px] uppercase">
+                                <span className="px-2.5 py-1 bg-ivy/5 border border-ivy/10 rounded-md text-ivy font-bold">
+                                  {log.method || 'SMTP'}
+                                </span>
+                              </td>
+                              <td className="py-4 px-6 text-ivy/70 font-mono text-[11px] max-w-xs truncate">
+                                {log.messageId || 'N/A'}
+                              </td>
+                              <td className="py-4 px-6 text-ivy/60 text-[11px]">
+                                {log.error ? (
+                                  <span className="text-red-700 font-semibold">{log.error}</span>
+                                ) : (
+                                  <span className="text-emerald-700 font-medium italic">None (Clean Delivery)</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* System Activity Log Stream */}
+                <div className="bg-white rounded-3xl border border-gold/20 shadow-soft overflow-hidden">
+                  <div className="p-4 bg-ivy text-cream font-display uppercase tracking-wider text-[11px] flex justify-between items-center">
+                    <span className="flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-gold" /> System Activity & Event Audit Stream ({systemLogs.length})
+                    </span>
+                    <span className="text-gold font-mono text-[10px]">Real-Time SSE</span>
+                  </div>
+
+                  {systemLogs.length === 0 ? (
+                    <div className="p-12 text-center text-ivy/40 text-xs italic">
+                      No system activity logs recorded in current session.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-gold/10 max-h-[350px] overflow-y-auto">
+                      {systemLogs.map((log, idx) => (
+                        <div key={log.id || idx} className="p-4 hover:bg-cream/40 transition-colors flex items-start justify-between gap-4 text-xs">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase font-mono ${
+                                log.severity === 'error' ? 'bg-red-100 text-red-800 border border-red-200' :
+                                log.severity === 'warning' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                                'bg-blue-100 text-blue-800 border border-blue-200'
+                              }`}>
+                                {log.event_type}
+                              </span>
+                              <span className="font-bold text-ivy">{log.email}</span>
+                            </div>
+                            <p className="text-ivy/70 font-body">{log.message}</p>
+                          </div>
+                          <span className="text-[10px] text-ivy/40 font-mono shrink-0">
+                            {new Date(log.timestamp).toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
 

@@ -2347,7 +2347,7 @@ async function startServer() {
     id: string;
     timestamp: string;
     targetEmail: string;
-    recipients: string[];
+    recipients?: string[];
     sent: boolean;
     method: string;
     messageId?: string;
@@ -2361,26 +2361,6 @@ async function startServer() {
     const fromHeader = `"${senderName}" <${senderUser}>`;
     const replyToHeader = supportEmail;
     const emailSubject = "Password Reset Request - Member Portal";
-
-    // Find any linked secondary or personal email addresses from member records to maximize delivery reliability
-    const secondaryEmails: string[] = [];
-    const normTarget = targetEmail.toLowerCase().trim();
-    if (cachedSheetData?.data?.members && Array.isArray(cachedSheetData.data.members)) {
-      const match = cachedSheetData.data.members.find((m: any) => 
-        (m.kpiEmail && m.kpiEmail.toLowerCase().trim() === normTarget) ||
-        (m.personalEmail && m.personalEmail.toLowerCase().trim() === normTarget)
-      );
-      if (match) {
-        if (match.personalEmail && match.personalEmail.toLowerCase().trim() !== normTarget) {
-          secondaryEmails.push(match.personalEmail.toLowerCase().trim());
-        }
-        if (match.kpiEmail && match.kpiEmail.toLowerCase().trim() !== normTarget) {
-          secondaryEmails.push(match.kpiEmail.toLowerCase().trim());
-        }
-      }
-    }
-
-    const allRecipients = Array.from(new Set([targetEmail, ...secondaryEmails]));
 
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1f2937; background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
@@ -2428,13 +2408,12 @@ async function startServer() {
           from: fromHeader,
           replyTo: replyToHeader,
           to: targetEmail,
-          cc: secondaryEmails.length > 0 ? secondaryEmails : undefined,
           subject: emailSubject,
           text: plainText,
           html: emailHtml
         });
 
-        console.log(`[AUTH SMTP] Password reset email successfully dispatched to ${targetEmail} (CC: ${secondaryEmails.join(', ') || 'none'}). MessageId: ${info.messageId}`);
+        console.log(`[AUTH SMTP] Password reset email successfully dispatched exclusively to ${targetEmail}. MessageId: ${info.messageId}`);
         dispatchResult = { sent: true, method: "smtp", messageId: info.messageId };
       } catch (err: any) {
         console.error("[AUTH SMTP] Delivery error for " + targetEmail + ":", err?.message || err);
@@ -2453,7 +2432,7 @@ async function startServer() {
           },
           body: JSON.stringify({
             from: fromHeader,
-            to: allRecipients,
+            to: [targetEmail],
             subject: emailSubject,
             html: emailHtml
           })
@@ -2501,7 +2480,6 @@ async function startServer() {
       id: "email_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
       timestamp: new Date().toISOString(),
       targetEmail,
-      recipients: allRecipients,
       sent: dispatchResult.sent,
       method: dispatchResult.method,
       messageId: dispatchResult.messageId || "",
@@ -2519,10 +2497,24 @@ async function startServer() {
     return dispatchResult;
   }
 
-  app.get("/api/auth/email-logs", (req, res) => {
+  app.get("/api/auth/email-logs", async (req, res) => {
+    let logs = [...emailDispatchHistory];
+    if (serverFirestoreDb) {
+      try {
+        const snap = await fsGetDocs(fsCollection(serverFirestoreDb, "email_dispatch_logs"));
+        const fsLogs = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+        // Merge and deduplicate by id
+        const logMap = new Map<string, any>();
+        [...logs, ...fsLogs].forEach(item => {
+          if (item && item.id) logMap.set(item.id, item);
+        });
+        logs = Array.from(logMap.values());
+        logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      } catch (e) {}
+    }
     res.json({
       success: true,
-      logs: emailDispatchHistory
+      logs
     });
   });
 
