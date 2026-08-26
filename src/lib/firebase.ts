@@ -1138,3 +1138,20 @@ export async function firebaseUpdateCommitteeMembers(committeeId: string, member
   }
 }
 
+export async function firebaseRemoveCommitteeMember(committeeId: string, memberEmail: string) {
+  try {
+    const committeeRef = doc(db, 'committees', committeeId);
+    const snap = await getDoc(committeeRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      const existingMembers = data.members || [];
+      const updated = existingMembers.filter((m: any) => m.email?.toLowerCase().trim() !== memberEmail.toLowerCase().trim());
+      await setDoc(committeeRef, { members: updated }, { merge: true });
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.warn('Notice removing committee member from Firestore:', err);
+    return { success: false, message: err.message };
+  }
+}
+

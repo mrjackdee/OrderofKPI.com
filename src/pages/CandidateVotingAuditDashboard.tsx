@@ -66,9 +66,14 @@ export default function CandidateVotingAuditDashboard() {
 
   const handleSync = async () => {
     setIsSyncing(true);
-    await syncCandidateVotesFromFirestore().catch(() => {});
-    await fetchVotes();
-    setIsSyncing(false);
+    try {
+      await syncCandidateVotesFromFirestore().catch(() => {});
+      await fetchVotes();
+    } catch (err) {
+      console.error('Error during manual sync:', err);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   useEffect(() => {

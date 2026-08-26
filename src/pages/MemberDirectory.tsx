@@ -180,57 +180,64 @@ export default function MemberDirectory() {
     setSaving(true);
     const targetEmail = editingMember.email.toLowerCase().trim();
 
-    // Dual-write: 1) Cloud Firestore
-    const firestoreTask = firebaseSyncPortalMember({
-      email: targetEmail,
-      name: editForm.name || editingMember.name || targetEmail,
-      role: editForm.role || 'member',
-      title: editForm.title || '',
-      financial_status: editForm.financial_status || 'active',
-      industry: editForm.industry || '',
-      committees: editingMember.committees || [],
-      committeeRoles: editingMember.committeeRoles || {}
-    });
+    try {
+      // Dual-write: 1) Cloud Firestore
+      const firestoreTask = firebaseSyncPortalMember({
+        email: targetEmail,
+        name: editForm.name || editingMember.name || targetEmail,
+        role: editForm.role || 'member',
+        title: editForm.title || '',
+        financial_status: editForm.financial_status || 'active',
+        industry: editForm.industry || '',
+        committees: editingMember.committees || [],
+        committeeRoles: editingMember.committeeRoles || {}
+      });
 
-    // Dual-write: 2) Server API
-    const apiTask = (async () => {
-      try {
-        const res = await fetch(`/api/members/${encodeURIComponent(targetEmail)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...editForm,
-            adminEmail: currentUserEmail
-          })
-        });
-        const contentType = res.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-          return await res.json();
+      // Dual-write: 2) Server API
+      const apiTask = (async () => {
+        try {
+          const res = await fetch(`/api/members/${encodeURIComponent(targetEmail)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...editForm,
+              adminEmail: currentUserEmail
+            })
+          });
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            return await res.json();
+          }
+          return { success: res.ok };
+        } catch (e) {
+          return { success: false, error: e };
         }
-        return { success: res.ok };
-      } catch (e) {
-        return { success: false, error: e };
+      })();
+
+      const [fsRes, apiRes] = await Promise.allSettled([firestoreTask, apiTask]);
+
+      const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
+      const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success;
+
+      if (fsSuccess || apiSuccess) {
+        setMembers(prev => prev.map(m => m.email.toLowerCase() === targetEmail ? {
+          ...m,
+          ...editForm
+        } : m));
+        setEditingMember(null);
+        setToastMessage({ type: 'success', text: `Successfully updated profile details and Industry/Profession for "${editForm.name}".` });
+        setTimeout(() => setToastMessage(null), 4000);
+      } else {
+        setToastMessage({ type: 'error', text: 'Failed to update member profile in database. Please verify connection.' });
+        setTimeout(() => setToastMessage(null), 4000);
       }
-    })();
-
-    const [fsRes, apiRes] = await Promise.allSettled([firestoreTask, apiTask]);
-
-    const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
-    const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success;
-
-    if (fsSuccess || apiSuccess) {
-      setMembers(prev => prev.map(m => m.email.toLowerCase() === targetEmail ? {
-        ...m,
-        ...editForm
-      } : m));
-      setEditingMember(null);
-      setToastMessage({ type: 'success', text: `Successfully updated profile details and Industry/Profession for "${editForm.name}".` });
+    } catch (err: any) {
+      console.error('Error saving member edit:', err);
+      setToastMessage({ type: 'error', text: err?.message || 'Error updating member profile.' });
       setTimeout(() => setToastMessage(null), 4000);
-    } else {
-      setToastMessage({ type: 'error', text: 'Failed to update member profile in database. Please verify connection.' });
-      setTimeout(() => setToastMessage(null), 4000);
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const filteredMembers = members.filter(member => {

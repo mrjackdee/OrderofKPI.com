@@ -3798,7 +3798,7 @@ async function startServer() {
 
   // --- STANDING COMMITTEE MEMBER ENDPOINTS ---
 
-  app.get("/api/committee/members", (req, res) => {
+  const handleCommitteeMembersGet = (req: express.Request, res: express.Response) => {
     try {
       const slug = (req.query.slug || req.query.committee || "") as string;
       let allUsers: any[] = [];
@@ -3867,9 +3867,12 @@ async function startServer() {
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
-  });
+  };
 
-  app.post("/api/committee/members", (req, res) => {
+  app.get("/api/committee/members", handleCommitteeMembersGet);
+  app.get("/api/committees/members", handleCommitteeMembersGet);
+
+  const handleCommitteeMemberPost = (req: express.Request, res: express.Response) => {
     try {
       const { email, chairEmail, committeeSlug, committeeRole, role } = req.body;
       if (!email) return res.status(400).json({ success: false, message: "Member email is required" });
@@ -3985,7 +3988,10 @@ async function startServer() {
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message });
     }
-  });
+  };
+
+  app.post("/api/committee/members", handleCommitteeMemberPost);
+  app.post("/api/committees/members", handleCommitteeMemberPost);
 
   const handleCommitteeMemberDelete = (req: express.Request, res: express.Response) => {
     try {
@@ -4059,6 +4065,8 @@ async function startServer() {
 
   app.delete("/api/committee/members/:email", handleCommitteeMemberDelete);
   app.delete("/api/committee/members", handleCommitteeMemberDelete);
+  app.delete("/api/committees/members/:email", handleCommitteeMemberDelete);
+  app.delete("/api/committees/members", handleCommitteeMemberDelete);
 
   // --- ADMIN: CLEAR ALL COMMITTEES ---
   app.post("/api/admin/clear-all-committees", async (req, res) => {

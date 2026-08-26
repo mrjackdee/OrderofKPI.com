@@ -70,55 +70,62 @@ export default function FinancialRoster() {
     const newIndustry = industryInput.trim();
     const targetEmail = selectedProfileMember.email.toLowerCase().trim();
 
-    // Dual-write: 1) Cloud Firestore
-    const firestoreTask = firebaseSyncPortalMember({
-      email: targetEmail,
-      name: selectedProfileMember.name || targetEmail,
-      role: selectedProfileMember.role || 'member',
-      title: selectedProfileMember.title || '',
-      financial_status: selectedProfileMember.financial_status || 'active',
-      industry: newIndustry,
-      committees: selectedProfileMember.committees || [],
-      committeeRoles: selectedProfileMember.committeeRoles || {}
-    });
+    try {
+      // Dual-write: 1) Cloud Firestore
+      const firestoreTask = firebaseSyncPortalMember({
+        email: targetEmail,
+        name: selectedProfileMember.name || targetEmail,
+        role: selectedProfileMember.role || 'member',
+        title: selectedProfileMember.title || '',
+        financial_status: selectedProfileMember.financial_status || 'active',
+        industry: newIndustry,
+        committees: selectedProfileMember.committees || [],
+        committeeRoles: selectedProfileMember.committeeRoles || {}
+      });
 
-    // Dual-write: 2) Server API
-    const apiTask = (async () => {
-      try {
-        const res = await fetch(`/api/members/${encodeURIComponent(targetEmail)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            industry: newIndustry,
-            adminEmail: currentUserEmail
-          })
-        });
-        const contentType = res.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-          return await res.json();
+      // Dual-write: 2) Server API
+      const apiTask = (async () => {
+        try {
+          const res = await fetch(`/api/members/${encodeURIComponent(targetEmail)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              industry: newIndustry,
+              adminEmail: currentUserEmail
+            })
+          });
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            return await res.json();
+          }
+          return { success: res.ok };
+        } catch (e) {
+          return { success: false, error: e };
         }
-        return { success: res.ok };
-      } catch (e) {
-        return { success: false, error: e };
+      })();
+
+      const [fsRes, apiRes] = await Promise.allSettled([firestoreTask, apiTask]);
+
+      const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
+      const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success;
+
+      if (fsSuccess || apiSuccess) {
+        setSelectedProfileMember(prev => prev ? { ...prev, industry: newIndustry } : null);
+        setMembers(prev => prev.map(m => m.email.toLowerCase() === targetEmail ? { ...m, industry: newIndustry } : m));
+        setIsEditingIndustry(false);
+        setActionMessage({ type: 'success', text: `Industry/Profession for "${selectedProfileMember.name || targetEmail}" has been saved.` });
+        setTimeout(() => setActionMessage(null), 5000);
+      } else {
+        setActionMessage({ type: 'error', text: 'We were unable to update Industry/Profession. Please verify connection and try again.' });
+        setTimeout(() => setActionMessage(null), 5000);
       }
-    })();
-
-    const [fsRes, apiRes] = await Promise.allSettled([firestoreTask, apiTask]);
-
-    const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
-    const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success;
-
-    if (fsSuccess || apiSuccess) {
-      setSelectedProfileMember(prev => prev ? { ...prev, industry: newIndustry } : null);
-      setMembers(prev => prev.map(m => m.email.toLowerCase() === targetEmail ? { ...m, industry: newIndustry } : m));
-      setIsEditingIndustry(false);
-      setActionMessage({ type: 'success', text: `Industry/Profession for "${selectedProfileMember.name || targetEmail}" has been saved.` });
+    } catch (err: any) {
+      console.error('Error saving industry:', err);
+      setActionMessage({ type: 'error', text: err?.message || 'Error updating industry/profession.' });
       setTimeout(() => setActionMessage(null), 5000);
-    } else {
-      setActionMessage({ type: 'error', text: 'We were unable to update Industry/Profession. Please verify connection and try again.' });
-      setTimeout(() => setActionMessage(null), 5000);
+    } finally {
+      setIsSavingIndustry(false);
     }
-    setIsSavingIndustry(false);
   };
 
   // Admin states and handlers for absolute CRUD controls across the Member Portal
@@ -161,63 +168,70 @@ export default function FinancialRoster() {
     setSavingAdmin(true);
     const targetEmail = selectedProfileMember.email.toLowerCase().trim();
 
-    const updatedCommittees = editAdminForm.committees as CommitteeSlug[];
-    const updatedRoles = editAdminForm.committeeRoles as Record<string, CommitteeRole>;
+    try {
+      const updatedCommittees = editAdminForm.committees as CommitteeSlug[];
+      const updatedRoles = editAdminForm.committeeRoles as Record<string, CommitteeRole>;
 
-    // Dual-write: 1) Cloud Firestore
-    const firestoreTask = firebaseSyncPortalMember({
-      email: targetEmail,
-      name: editAdminForm.name || targetEmail,
-      role: editAdminForm.role || 'member',
-      title: editAdminForm.title || '',
-      financial_status: editAdminForm.financial_status || 'active',
-      industry: editAdminForm.industry || '',
-      committees: updatedCommittees,
-      committeeRoles: updatedRoles
-    });
-
-    // Dual-write: 2) Server API
-    const apiTask = (async () => {
-      try {
-        const res = await fetch(`/api/members/${encodeURIComponent(targetEmail)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...editAdminForm,
-            adminEmail: currentUserEmail
-          })
-        });
-        const contentType = res.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-          return await res.json();
-        }
-        return { success: res.ok };
-      } catch (e) {
-        return { success: false, error: e };
-      }
-    })();
-
-    const [fsRes, apiRes] = await Promise.allSettled([firestoreTask, apiTask]);
-
-    const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
-    const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success;
-
-    if (fsSuccess || apiSuccess) {
-      const merged = {
-        ...editAdminForm,
+      // Dual-write: 1) Cloud Firestore
+      const firestoreTask = firebaseSyncPortalMember({
+        email: targetEmail,
+        name: editAdminForm.name || targetEmail,
+        role: editAdminForm.role || 'member',
+        title: editAdminForm.title || '',
+        financial_status: editAdminForm.financial_status || 'active',
+        industry: editAdminForm.industry || '',
         committees: updatedCommittees,
         committeeRoles: updatedRoles
-      };
-      setSelectedProfileMember(prev => prev ? { ...prev, ...merged } : null);
-      setMembers(prev => prev.map(m => m.email.toLowerCase() === targetEmail ? { ...m, ...merged } : m));
-      setIsEditingAdmin(false);
-      setActionMessage({ type: 'success', text: `Details for "${editAdminForm.name || targetEmail}" have been saved.` });
+      });
+
+      // Dual-write: 2) Server API
+      const apiTask = (async () => {
+        try {
+          const res = await fetch(`/api/members/${encodeURIComponent(targetEmail)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...editAdminForm,
+              adminEmail: currentUserEmail
+            })
+          });
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            return await res.json();
+          }
+          return { success: res.ok };
+        } catch (e) {
+          return { success: false, error: e };
+        }
+      })();
+
+      const [fsRes, apiRes] = await Promise.allSettled([firestoreTask, apiTask]);
+
+      const fsSuccess = fsRes.status === 'fulfilled' && (fsRes.value as any)?.success !== false;
+      const apiSuccess = apiRes.status === 'fulfilled' && (apiRes.value as any)?.success;
+
+      if (fsSuccess || apiSuccess) {
+        const merged = {
+          ...editAdminForm,
+          committees: updatedCommittees,
+          committeeRoles: updatedRoles
+        };
+        setSelectedProfileMember(prev => prev ? { ...prev, ...merged } : null);
+        setMembers(prev => prev.map(m => m.email.toLowerCase() === targetEmail ? { ...m, ...merged } : m));
+        setIsEditingAdmin(false);
+        setActionMessage({ type: 'success', text: `Details for "${editAdminForm.name || targetEmail}" have been saved.` });
+        setTimeout(() => setActionMessage(null), 5000);
+      } else {
+        setActionMessage({ type: 'error', text: 'Failed to update member profile in database. Please check connection and try again.' });
+        setTimeout(() => setActionMessage(null), 5000);
+      }
+    } catch (err: any) {
+      console.error('Error saving admin edit:', err);
+      setActionMessage({ type: 'error', text: err?.message || 'Error updating member profile.' });
       setTimeout(() => setActionMessage(null), 5000);
-    } else {
-      setActionMessage({ type: 'error', text: 'Failed to update member profile in database. Please check connection and try again.' });
-      setTimeout(() => setActionMessage(null), 5000);
+    } finally {
+      setSavingAdmin(false);
     }
-    setSavingAdmin(false);
   };
 
   const handleDeleteAdminMember = async () => {
