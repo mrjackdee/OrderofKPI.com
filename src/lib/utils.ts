@@ -96,11 +96,14 @@ export function getFriendlyError(err: any, defaultMsg = "An unexpected error occ
     return "The password reset link is invalid or has expired. Please request a new password reset link.";
   }
 
-  // Block technical stack trace leaks
+  // Block technical stack trace leaks & browser DOMExceptions
   if (
     lower.includes('typeerror') ||
     lower.includes('referenceerror') ||
     lower.includes('syntaxerror') ||
+    lower.includes('domexception') ||
+    lower.includes('string did not match') ||
+    lower.includes('expected pattern') ||
     lower.includes('at ') ||
     lower.includes('eval(') ||
     lower.includes('object') ||

@@ -175,25 +175,51 @@ export default function CandidateVotingForm() {
         const candidateName = cand.displayName;
         const decision = (votesMap[candidateId] || 'yes') as 'yes' | 'no';
 
-        const res = await fetch('/api/candidate-votes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            voter_email: userEmail,
-            candidate_id: candidateId,
-            candidate_name: candidateName,
-            decision
-          })
-        });
-        const data = await res.json();
-        if (!data.success) throw new Error(data.message || 'Failed to record vote');
+        let apiSuccess = false;
+        let apiMessage = '';
+        try {
+          const res = await fetch('/api/candidate-votes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              voter_email: userEmail,
+              candidate_id: candidateId,
+              candidate_name: candidateName,
+              decision
+            })
+          });
+          const data = await res.json();
+          if (data && data.success) {
+            apiSuccess = true;
+          } else if (data && data.message) {
+            apiMessage = data.message;
+          }
+        } catch (apiErr) {
+          console.warn('API candidate vote save warning:', apiErr);
+        }
 
-        await firebaseSaveCandidateVote(userEmail, candidateId, candidateName, decision);
+        let fsSuccess = false;
+        try {
+          const fsRes = await firebaseSaveCandidateVote(userEmail, candidateId, candidateName, decision);
+          if (fsRes && fsRes.success) {
+            fsSuccess = true;
+          }
+        } catch (fsErr) {
+          console.warn('Firestore candidate vote save warning:', fsErr);
+        }
+
+        if (!apiSuccess && !fsSuccess) {
+          throw new Error(apiMessage || 'Failed to record candidate vote on server or cloud database.');
+        }
       });
 
       await Promise.all(promises);
       setSuccessMessage('Your ballot has been submitted. Thank you for participating in the FY27 selection.');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      try {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (e) {
+        window.scrollTo(0, 0);
+      }
     } catch (err: any) {
       setError(getFriendlyError(err, 'Failed to submit ballot. Please try again.'));
     } finally {
