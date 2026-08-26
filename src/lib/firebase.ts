@@ -563,13 +563,30 @@ export async function firebaseSaveApplication(email: string, data: any, status: 
 
         try {
           const candRef = doc(db, 'candidates', normEmail);
-          setDoc(candRef, {
-            email: normEmail,
-            status: 'Applied',
-            applicationDate: now,
-            appliedDate: now,
-            submittedAt: now
-          }, { merge: true }).catch(cErr => console.warn('Candidate setDoc async notice:', cErr));
+          getDoc(candRef).then(candSnap => {
+            let nextStatus = 'Applied';
+            if (candSnap.exists()) {
+              const currentStatus = candSnap.data()?.status || candSnap.data()?.stage;
+              if (currentStatus && currentStatus !== 'Inquiry') {
+                nextStatus = currentStatus;
+              }
+            }
+            setDoc(candRef, {
+              email: normEmail,
+              status: nextStatus,
+              applicationDate: now,
+              appliedDate: now,
+              submittedAt: now
+            }, { merge: true }).catch(cErr => console.warn('Candidate setDoc async notice:', cErr));
+          }).catch(() => {
+            setDoc(candRef, {
+              email: normEmail,
+              status: 'Applied',
+              applicationDate: now,
+              appliedDate: now,
+              submittedAt: now
+            }, { merge: true }).catch(cErr => console.warn('Candidate setDoc async notice:', cErr));
+          });
         } catch (cErr) {
           console.warn('Could not sync candidate doc in Firestore:', cErr);
         }

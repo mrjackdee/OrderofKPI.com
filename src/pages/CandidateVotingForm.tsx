@@ -58,30 +58,59 @@ export default function CandidateVotingForm() {
       })
       .catch(err => console.warn('Roster fetch error:', err));
 
-    // 2. Fetch candidates & user votes from Firestore directly
+    // 2. Fetch candidates & user votes with dual-source fallback
     const fetchCandidates = async () => {
       try {
-        const candidatesRef = collection(db, "candidates");
-        const q = query(candidatesRef);
-        const querySnapshot = await getDocs(q);
-        const list: any[] = [];
-        querySnapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          const docId = docSnap.id;
-          
-          // Case-insensitive check for SELECTION stage/status
-          const stage = (data.stage || data.status || "").toUpperCase().trim();
-          if (stage === "SELECTION") {
-            list.push({
-              id: docId,
-              ...data,
-              displayName: data.name || data.fullName || data.applicantName || docId,
-              displayProfession: data.industry || data.profession || data.email || 'Candidate',
-              displayStage: data.stage || data.status || 'Selection'
+        const candidateMap = new Map<string, any>();
+
+        // 1. Fetch from Firestore
+        try {
+          const candidatesRef = collection(db, "candidates");
+          const q = query(candidatesRef);
+          const querySnapshot = await getDocs(q);
+          querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const docId = docSnap.id;
+            const normEmail = (data.email || docId || '').toLowerCase().trim();
+            const stage = (data.stage || data.status || "").toUpperCase().trim();
+            if (stage === "SELECTION") {
+              candidateMap.set(normEmail, {
+                id: docId,
+                ...data,
+                displayName: data.name || data.fullName || data.applicantName || docId,
+                displayProfession: data.industry || data.profession || data.email || 'Candidate',
+                displayStage: data.stage || data.status || 'Selection'
+              });
+            }
+          });
+        } catch (fsErr) {
+          console.warn("Firestore candidates fetch error:", fsErr);
+        }
+
+        // 2. Secondary fetch from API to ensure complete roster hydration
+        try {
+          const apiRes = await fetch('/api/candidates');
+          const apiData = await apiRes.json();
+          if (apiData?.success && Array.isArray(apiData.candidates)) {
+            apiData.candidates.forEach((c: any) => {
+              const normEmail = (c.email || c.id || '').toLowerCase().trim();
+              const stage = (c.stage || c.status || "").toUpperCase().trim();
+              if (stage === "SELECTION" && !candidateMap.has(normEmail)) {
+                candidateMap.set(normEmail, {
+                  id: c.id || 'cand_' + normEmail.replace(/[^a-z0-9]/g, '_'),
+                  ...c,
+                  displayName: c.name || c.fullName || normEmail,
+                  displayProfession: c.industry || c.profession || c.email || 'Candidate',
+                  displayStage: c.status || c.stage || 'Selection'
+                });
+              }
             });
           }
-        });
-        setCandidates(list);
+        } catch (apiErr) {
+          console.warn("API candidates fetch fallback error:", apiErr);
+        }
+
+        setCandidates(Array.from(candidateMap.values()));
       } catch (err) {
         console.error("Error fetching candidates:", err);
         setCandidates([]);

@@ -3531,7 +3531,9 @@ async function startServer() {
           const foundCand = fallbackCandidates.find(c => c.email.toLowerCase().trim() === email);
           const dateStr = (submitted_at || last_saved_at).split('T')[0];
           if (foundCand) {
-            foundCand.status = 'Applied';
+            if (!foundCand.status || foundCand.status === 'Inquiry') {
+              foundCand.status = 'Applied';
+            }
             foundCand.application_date = dateStr;
             if (appPhone) foundCand.phone = appPhone;
           } else {
