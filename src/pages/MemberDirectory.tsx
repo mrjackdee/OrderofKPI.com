@@ -251,14 +251,14 @@ export default function MemberDirectory() {
   });
 
   return (
-    <div className="min-h-screen bg-cream pb-12 w-full overflow-x-hidden">
+    <div className="min-h-screen bg-cream pb-12 w-full max-w-full overflow-x-hidden">
       {/* Hero Section */}
-      <div className="bg-ivy py-16 px-4 mb-8">
+      <div className="bg-ivy py-12 sm:py-16 px-4 mb-8">
         <div className="max-w-7xl mx-auto text-center">
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-4xl md:text-5xl font-display text-cream mb-4"
+            className="text-3xl sm:text-4xl md:text-5xl font-display text-cream mb-4"
           >
             Member Directory
           </motion.h1>
@@ -266,14 +266,14 @@ export default function MemberDirectory() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-cream/80 max-w-2xl mx-auto font-body"
+            className="text-cream/80 max-w-2xl mx-auto font-body text-xs sm:text-base"
           >
             Directory of active member accounts and contact emails.
           </motion.p>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 min-w-0">
         {/* Search and Filters */}
         <div className="bg-white p-6 rounded-lg shadow-soft border-gold/20 mb-8">
           <div className="flex flex-col md:flex-row gap-4">

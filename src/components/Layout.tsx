@@ -89,7 +89,7 @@ export default function Layout() {
   ];
 
   return (
-    <div className={`relative flex min-h-screen w-full flex-col group/design-root overflow-x-clip ${isCreamPage ? 'bg-[#FDFCF0]' : 'bg-[#000000]'} text-primary font-display antialiased transition-colors duration-300`}>
+    <div className={`relative flex min-h-screen w-full max-w-full flex-col group/design-root overflow-x-hidden ${isCreamPage ? 'bg-[#FDFCF0]' : 'bg-[#000000]'} text-primary font-display antialiased transition-colors duration-300`}>
       {isAuthenticated && (
         userRole === 'admin' ? (
           <div className="bg-red-600 text-white text-[10px] font-black uppercase tracking-[0.2em] py-2 px-4 flex items-center justify-center gap-4 block md:fixed top-0 left-0 right-0 z-[60] shadow-lg shadow-red-900/20">
@@ -265,7 +265,7 @@ export default function Layout() {
           )}
         </AnimatePresence>
 
-        <main className="flex-1 flex flex-col items-center justify-center w-full min-w-0">
+        <main className="flex-1 flex flex-col items-center justify-center w-full min-w-0 max-w-full overflow-x-hidden">
           <Outlet />
         </main>
 

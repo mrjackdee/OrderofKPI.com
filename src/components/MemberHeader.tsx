@@ -188,7 +188,7 @@ export default function MemberHeader() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-md bg-pure-black border border-primary/40 rounded-3xl p-6 md:p-8 shadow-[0_20px_50px_rgba(212,175,55,0.15)]"
+              className="relative w-full max-w-md bg-pure-black border border-primary/40 rounded-3xl p-5 sm:p-6 md:p-8 shadow-[0_20px_50px_rgba(212,175,55,0.15)] max-h-[90vh] overflow-y-auto"
             >
               <button
                 onClick={closeChangePasswordModal}

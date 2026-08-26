@@ -233,8 +233,8 @@ export default function DeanVotingForm() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFCF0] font-sans pb-24 overflow-x-hidden">
-      <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-6 sm:space-y-10">
+    <div className="min-h-screen bg-[#FDFCF0] font-sans pb-24 w-full max-w-full overflow-x-hidden">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6 sm:space-y-10 min-w-0">
         <MemberHeader />
 
         <div>

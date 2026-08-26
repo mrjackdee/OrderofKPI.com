@@ -117,7 +117,7 @@ export default function ResetPassword() {
   const isResetMode = Boolean(token || oobCode);
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 relative overflow-hidden bg-cream/30">
+    <div className="min-h-[85vh] flex items-center justify-center px-3 sm:px-6 py-8 sm:py-12 relative overflow-hidden bg-cream/30 w-full max-w-full">
       {/* Background radial decorations */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gold/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -125,9 +125,9 @@ export default function ResetPassword() {
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md relative z-10"
+        className="w-full max-w-md relative z-10 min-w-0"
       >
-        <div className="bg-ivy text-cream border-2 border-gold/40 rounded-3xl p-8 shadow-2xl overflow-hidden relative">
+        <div className="bg-ivy text-cream border-2 border-gold/40 rounded-3xl p-5 sm:p-8 shadow-2xl overflow-hidden relative">
           
           {/* Header */}
           <div className="text-center space-y-2 mb-8">

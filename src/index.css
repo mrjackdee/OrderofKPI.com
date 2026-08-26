@@ -21,6 +21,11 @@
 }
 
 @layer base {
+  html, body, #root {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-pure-black text-primary font-display antialiased;
   }

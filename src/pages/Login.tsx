@@ -112,7 +112,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12 relative overflow-hidden">
+    <div className="min-h-[80vh] flex items-center justify-center px-3 sm:px-6 py-8 sm:py-12 relative overflow-hidden w-full max-w-full">
       {/* Background decoration */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
 
@@ -120,9 +120,9 @@ export default function Login() {
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="w-full max-w-md"
+        className="w-full max-w-md min-w-0"
       >
-        <div className="bg-pure-black/90 border border-primary/30 rounded-3xl p-8 shadow-[0_10px_40px_rgba(212,175,55,0.08)] backdrop-blur-md relative overflow-hidden">
+        <div className="bg-pure-black/90 border border-primary/30 rounded-3xl p-5 sm:p-8 shadow-[0_10px_40px_rgba(212,175,55,0.08)] backdrop-blur-md relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-primary to-transparent" />
           
           <div className="flex justify-center mb-6">
@@ -234,7 +234,7 @@ export default function Login() {
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading}
-              className="w-fit flex items-center justify-center gap-2 bg-primary hover:bg-white text-black py-3.5 px-10 rounded-xl font-black uppercase tracking-widest text-xs transition-colors mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-white text-black py-3.5 px-6 rounded-xl font-black uppercase tracking-widest text-xs transition-colors mt-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {loading ? (
                 <>

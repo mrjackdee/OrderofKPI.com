@@ -400,7 +400,7 @@ export default function FinancialRoster() {
   });
 
   return (
-    <div className="min-h-screen w-full bg-[#FDFCF0] font-sans pb-20 relative overflow-x-clip">
+    <div className="min-h-screen w-full max-w-full bg-[#FDFCF0] font-sans pb-20 relative overflow-x-hidden">
       {/* Draft Watermark */}
       <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-0 opacity-10">
         <h1 className="text-[15rem] md:text-[25rem] font-black uppercase text-[#1E3F20] -rotate-45 select-none whitespace-nowrap">
@@ -506,7 +506,7 @@ export default function FinancialRoster() {
         </div>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-4 md:px-8">
+      <div className="max-w-[1200px] mx-auto px-3 sm:px-6 lg:px-8 min-w-0">
         {error && (
           <div className="max-w-xl mx-auto mb-8 p-4 bg-red-50 border border-red-200 text-red-600 rounded-lg flex items-center gap-3 text-sm">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />

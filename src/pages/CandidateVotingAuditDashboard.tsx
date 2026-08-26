@@ -147,30 +147,30 @@ export default function CandidateVotingAuditDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans w-full max-w-full overflow-x-hidden">
       <MemberHeader />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 min-w-0">
+        <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <Link 
             to="/member-portal" 
             className="inline-flex items-center text-sm font-medium text-amber-700 hover:text-amber-800 transition-colors"
           >
-            <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to Member Portal
+            <ArrowLeft className="w-4 h-4 mr-1.5 shrink-0" /> Back to Member Portal
           </Link>
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={handleSync}
               disabled={isSyncing}
-              className="inline-flex items-center px-3 py-2 bg-white border border-stone-300 text-stone-700 rounded-lg text-sm font-medium hover:bg-stone-50 transition-colors"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center px-3 py-2 bg-white border border-stone-300 text-stone-700 rounded-lg text-sm font-medium hover:bg-stone-50 transition-colors cursor-pointer"
             >
-              <RefreshCw className={`w-4 h-4 mr-1.5 ${isSyncing ? 'animate-spin' : ''}`} /> Sync Data
+              <RefreshCw className={`w-4 h-4 mr-1.5 shrink-0 ${isSyncing ? 'animate-spin text-amber-700' : ''}`} /> Sync Data
             </button>
             <button
               onClick={exportPDF}
-              className="inline-flex items-center px-4 py-2 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors shadow-sm"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center px-4 py-2 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors shadow-sm cursor-pointer"
             >
-              <Download className="w-4 h-4 mr-2" /> Export Audit PDF
+              <Download className="w-4 h-4 mr-2 shrink-0" /> Export Audit PDF
             </button>
           </div>
         </div>
@@ -178,7 +178,7 @@ export default function CandidateVotingAuditDashboard() {
         <motion.div 
           initial={{ opacity: 0, y: 12 }} 
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-sm border border-stone-200 p-4 sm:p-8 mb-8 overflow-hidden"
+          className="bg-white rounded-xl shadow-sm border border-stone-200 p-4 sm:p-6 md:p-8 mb-8 overflow-hidden"
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center space-x-3">
@@ -186,12 +186,12 @@ export default function CandidateVotingAuditDashboard() {
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-serif font-bold text-stone-900">FY27 Candidate Voting Mgmt & Audit</h1>
-                <p className="text-xs sm:text-sm text-stone-600">Administrative audit log displaying voter records, candidate selections, and decisions.</p>
+                <h1 className="text-xl sm:text-2xl font-serif font-bold text-stone-900 break-words">FY27 Candidate Voting Mgmt & Audit</h1>
+                <p className="text-xs sm:text-sm text-stone-600 break-words">Administrative audit log displaying voter records, candidate selections, and decisions.</p>
               </div>
             </div>
-            <div className="text-left sm:text-right">
-              <span className="text-xl sm:text-2xl font-bold text-stone-900">{votes.length}</span>
+            <div className="text-left sm:text-right shrink-0">
+              <span className="text-xl sm:text-2xl font-bold text-stone-900 font-mono">{votes.length}</span>
               <p className="text-[10px] sm:text-xs text-stone-500 uppercase tracking-wider font-medium">Total Votes Cast</p>
             </div>
           </div>
@@ -223,8 +223,8 @@ export default function CandidateVotingAuditDashboard() {
             </div>
           </div>
 
-          <div className="border border-stone-200 rounded-lg overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="border border-stone-200 rounded-lg overflow-x-auto w-full min-w-0">
+            <table className="w-full text-left border-collapse min-w-[640px]">
               <thead>
                 <tr className="bg-stone-100 text-stone-700 text-xs uppercase tracking-wider font-semibold border-b border-stone-200">
                   <th className="py-3 px-4">Voter Email</th>

@@ -90,7 +90,7 @@ export default function SelectionVoting() {
   }
 
   return (
-    <div className="min-h-screen bg-cream pb-20">
+    <div className="min-h-screen bg-cream pb-20 w-full max-w-full overflow-x-hidden">
       <div className="bg-ivy py-8 sm:py-16 px-4 mb-6 sm:mb-12">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-gold/20 text-gold px-3 sm:px-4 py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-4 sm:mb-6">

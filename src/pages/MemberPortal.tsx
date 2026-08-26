@@ -35,6 +35,7 @@ import { getLiveGoogleSheetRoster } from '../lib/googleSheetRoster';
 import { CommitteeSlug, STANDING_COMMITTEES, CommitteeDefinition, Member } from '../types';
 import { useSystemFeatures, isCommitteeFeatureActive } from '../lib/settings';
 import { getCandidateVotingStatus, CANDIDATE_VOTING_WINDOW_TEXT } from '../lib/votingWindow';
+import { VotingCountdownClock } from '../components/VotingCountdownClock';
 
 export default function MemberPortal() {
   const userRole = sessionStorage.getItem('userRole');
@@ -263,6 +264,11 @@ export default function MemberPortal() {
         {/* KP Support Center Feature Preview */}
         <motion.div variants={itemVariants} className="w-full">
           <SupportCenterPreview />
+        </motion.div>
+
+        {/* Candidate Voting Live Countdown Clock */}
+        <motion.div variants={itemVariants} className="w-full">
+          <VotingCountdownClock isEligible={isCandidateVoterEligible} />
         </motion.div>
 
         {/* Core Member Tools Grid */}

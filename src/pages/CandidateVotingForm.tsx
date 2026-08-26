@@ -243,10 +243,10 @@ export default function CandidateVotingForm() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans w-full max-w-full overflow-x-hidden">
       <MemberHeader />
 
-      <main className="flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8 overflow-x-hidden">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 min-w-0">
         <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <Link 
             to="/member-portal" 
