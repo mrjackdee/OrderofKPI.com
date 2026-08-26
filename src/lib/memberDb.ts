@@ -747,7 +747,7 @@ export async function performApplicantLogin(email: string, pass: string): Promis
 }
 
 /**
- * Trigger self-service password reset email via Firebase Auth.
+ * Trigger self-service password reset email via server SMTP / Firebase Auth.
  */
 export async function requestApplicantPasswordReset(email: string): Promise<{
   success: boolean;
@@ -757,10 +757,11 @@ export async function requestApplicantPasswordReset(email: string): Promise<{
   const normEmail = email.toLowerCase().trim();
   let serverMessage = '';
   let resetLink = '';
+  let emailDispatched = false;
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     const resp = await fetch('/api/auth/forgot-password', {
       method: 'POST',
@@ -770,33 +771,52 @@ export async function requestApplicantPasswordReset(email: string): Promise<{
     });
     clearTimeout(timeoutId);
 
-    if (resp.ok) {
-      const data = await resp.json();
-      if (data && data.message) {
-        serverMessage = data.message;
-      }
-      if (data && data.resetLink) {
-        resetLink = data.resetLink;
-      }
+    const data = await resp.json().catch(() => null);
+
+    if (resp.ok && data?.success) {
+      emailDispatched = true;
+      serverMessage = data.message;
+      resetLink = data.resetLink || '';
+      return {
+        success: true,
+        message: serverMessage,
+        resetLink
+      };
+    } else if (data?.message) {
+      serverMessage = data.message;
+      resetLink = data.resetLink || '';
     }
   } catch (e) {
     console.warn('Server forgot password log notice:', e);
   }
 
+  // If server outbound email did not complete, attempt client Firebase Auth
   try {
     const firebaseRes = await firebaseResetApplicantPassword(normEmail);
+    if (firebaseRes.success) {
+      return {
+        success: true,
+        message: firebaseRes.message,
+        resetLink: resetLink || (firebaseRes as any)?.resetLink
+      };
+    }
+  } catch (e: any) {
+    console.warn('Firebase reset applicant password notice:', e?.message || e);
+  }
+
+  if (serverMessage) {
     return {
-      success: true,
-      message: serverMessage || firebaseRes.message,
-      resetLink: resetLink || (firebaseRes as any)?.resetLink
-    };
-  } catch (e) {
-    return {
-      success: true,
-      message: serverMessage || `Password reset instructions have been sent to ${normEmail}. Please check your assigned @orderofkpi.org email inbox to set a new password.`,
+      success: emailDispatched,
+      message: serverMessage,
       resetLink
     };
   }
+
+  return {
+    success: false,
+    message: 'Unable to send password reset email at this time. Please contact info@kpi2012.org.',
+    resetLink
+  };
 }
 
 /**

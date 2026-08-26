@@ -2344,41 +2344,178 @@ async function startServer() {
   // In-memory store for active password reset tokens
   const passwordResetTokens: Record<string, { token: string; expiresAt: number }> = {};
 
-  app.post("/api/auth/forgot-password", (req, res) => {
-    const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ success: false, message: "Email address is required" });
+  async function sendOutboundPasswordResetEmail(targetEmail: string, resetLink: string, userName: string = ""): Promise<{ sent: boolean; method: string; error?: string }> {
+    const supportEmail = process.env.SUPPORT_EMAIL || "info@kpi2012.org";
+    const emailSubject = "Password Reset Request - Member Portal";
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1f2937; background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <h2 style="color: #111827; margin-bottom: 8px; font-weight: 700;">Password Reset Request</h2>
+          <p style="color: #6b7280; font-size: 14px; margin: 0;">Member Portal Authentication</p>
+        </div>
+        <div style="background-color: #ffffff; padding: 24px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 20px;">
+          <p style="margin-top: 0; font-size: 15px; line-height: 1.5;">Hello ${userName || targetEmail},</p>
+          <p style="font-size: 15px; line-height: 1.5;">We received a request to reset your password. Click the button below to establish a new password for your account:</p>
+          <div style="text-align: center; margin: 28px 0;">
+            <a href="${resetLink}" style="display: inline-block; background-color: #15803d; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px;">Reset Password</a>
+          </div>
+          <p style="font-size: 13px; color: #6b7280; line-height: 1.4; margin-bottom: 8px;">If the button above does not work, copy and paste the following link into your browser:</p>
+          <p style="font-size: 12px; color: #2563eb; word-break: break-all; margin: 0;"><a href="${resetLink}" style="color: #2563eb;">${resetLink}</a></p>
+        </div>
+        <div style="font-size: 12px; color: #9ca3af; text-align: center; line-height: 1.4;">
+          <p style="margin: 0 0 4px 0;">This link is valid for 1 hour. If you did not request a password reset, you can safely ignore this message.</p>
+          <p style="margin: 0;">For assistance, contact <a href="mailto:${supportEmail}" style="color: #6b7280;">${supportEmail}</a>.</p>
+        </div>
+      </div>
+    `;
+
+    // Method 1: Production SMTP (e.g. Gmail / Workspace SMTP)
+    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      try {
+        const port = parseInt(process.env.SMTP_PORT || "587", 10);
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: port,
+          secure: port === 465 || process.env.SMTP_SECURE === "true",
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+          },
+          connectionTimeout: 10000,
+          greetingTimeout: 10000
+        });
+
+        const info = await transporter.sendMail({
+          from: process.env.SMTP_FROM || `"Order of KPI" <${process.env.SMTP_USER}>`,
+          to: targetEmail,
+          subject: emailSubject,
+          text: `Hello,\n\nYou requested a password reset for your account. Please use the following link to establish a new password:\n\n${resetLink}\n\nThis link is valid for 1 hour. If you did not request this, you can safely ignore this email.\n\nFor assistance, contact ${supportEmail}.`,
+          html: emailHtml
+        });
+
+        console.log(`[AUTH SMTP] Password reset email successfully dispatched to ${targetEmail}. MessageId: ${info.messageId}`);
+        return { sent: true, method: "smtp" };
+      } catch (err: any) {
+        console.error("[AUTH SMTP] Delivery error for " + targetEmail + ":", err?.message || err);
+      }
     }
-    const normEmail = email.toLowerCase().trim();
-    const user = findUser(normEmail);
-    if (!user) {
-      return res.json({ 
-        success: true, 
-        message: `If an account associated with ${normEmail} exists, a password reset link has been dispatched to their assigned email address.` 
+
+    // Method 2: Resend API
+    if (process.env.RESEND_API_KEY) {
+      try {
+        const resendRes = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            from: process.env.SMTP_FROM || "Member Portal <onboarding@resend.dev>",
+            to: [targetEmail],
+            subject: emailSubject,
+            html: emailHtml
+          })
+        });
+
+        if (resendRes.ok) {
+          const data = await resendRes.json();
+          console.log(`[AUTH Resend] Password reset email successfully dispatched to ${targetEmail}:`, data.id);
+          return { sent: true, method: "resend" };
+        } else {
+          const errData = await resendRes.text();
+          console.error(`[AUTH Resend] Delivery failed (${resendRes.status}):`, errData);
+        }
+      } catch (err: any) {
+        console.error("[AUTH Resend] Request exception:", err?.message);
+      }
+    }
+
+    // Method 3: Firebase Auth sendOobCode REST API
+    if (firebaseApiKey) {
+      try {
+        const fbUrl = `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${firebaseApiKey}`;
+        const fbRes = await fetch(fbUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            requestType: "PASSWORD_RESET",
+            email: targetEmail
+          })
+        });
+
+        if (fbRes.ok) {
+          console.log(`[AUTH Firebase Auth] Triggered password reset email for ${targetEmail}`);
+          return { sent: true, method: "firebase_auth" };
+        }
+      } catch (err: any) {
+        console.warn("[AUTH Firebase Auth] Notice:", err?.message);
+      }
+    }
+
+    return { sent: false, method: "none", error: "No outbound email provider is currently active or configured." };
+  }
+
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ success: false, message: "Email address is required." });
+      }
+
+      const normEmail = email.toLowerCase().trim();
+      const user = findUser(normEmail);
+
+      if (!user) {
+        return res.status(404).json({ success: false, message: "No account found matching this email address." });
+      }
+
+      logEvent(normEmail, "PASSWORD_RESET_REQUEST", `Password reset link requested for ${normEmail}`);
+
+      // Generate a secure reset token valid for 1 hour (3600000 ms)
+      const token = crypto.randomBytes(32).toString("hex");
+      passwordResetTokens[normEmail] = {
+        token,
+        expiresAt: Date.now() + 3600000
+      };
+
+      const host = req.get("host") || "localhost:3000";
+      const protocol = req.protocol === "https" || req.get("x-forwarded-proto") === "https" || host.includes("run.app") ? "https" : "http";
+      const resetLink = `${protocol}://${host}/reset-password?token=${token}&email=${encodeURIComponent(normEmail)}`;
+
+      console.log(`[AUTH] Password reset requested for ${normEmail}`);
+      console.log(`[AUTH] Reset Link: ${resetLink}`);
+
+      // Attempt outbound email dispatch via configured provider (SMTP / Resend / Firebase)
+      const dispatchResult = await sendOutboundPasswordResetEmail(normEmail, resetLink, user.name || "");
+
+      if (dispatchResult.sent) {
+        return res.json({
+          success: true,
+          emailSent: true,
+          message: `A password reset link has been dispatched to ${normEmail}. Please check your inbox and spam folder.`,
+          resetLink,
+          token
+        });
+      }
+
+      // If email delivery was unable to send via SMTP
+      const supportEmail = process.env.SUPPORT_EMAIL || "info@kpi2012.org";
+      return res.status(503).json({
+        success: false,
+        emailSent: false,
+        requiresAdmin: true,
+        message: `Automated email delivery is currently unavailable. Please contact ${supportEmail} to reset your password.`,
+        supportEmail,
+        resetLink,
+        token
+      });
+    } catch (err: any) {
+      console.error("[AUTH] Forgot password server error:", err);
+      return res.status(500).json({
+        success: false,
+        message: "An unexpected error occurred while processing your request. Please try again later."
       });
     }
-
-    logEvent(normEmail, "PASSWORD_RESET_REQUEST", `Password reset link requested for ${normEmail}`);
-
-    // Generate a secure reset token valid for 1 hour (3600000 ms)
-    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    passwordResetTokens[normEmail] = {
-      token,
-      expiresAt: Date.now() + 3600000
-    };
-
-    const host = req.get('host') || 'localhost:3000';
-    const protocol = req.protocol === 'https' || host.includes('run.app') ? 'https' : 'http';
-    const resetLink = `${protocol}://${host}/reset-password?token=${token}&email=${encodeURIComponent(normEmail)}`;
-
-    console.log(`[AUTH] Local Dev Reset Link generated for ${normEmail}: ${resetLink}`);
-
-    return res.json({ 
-      success: true, 
-      message: `A password reset link has been dispatched to ${normEmail}. Please check your inbox or click the reset link to complete your password change.`,
-      resetLink,
-      token
-    });
   });
 
   app.post("/api/auth/reset-password-with-token", (req, res) => {
