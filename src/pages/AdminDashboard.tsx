@@ -795,6 +795,13 @@ export default function AdminDashboard() {
 
       let combinedMembers = Array.from(memberMap.values());
 
+      // Filter out prospective candidates and applicant accounts from the Chapter Member directory
+      combinedMembers = combinedMembers.filter(m => {
+        const role = (m.role || '').toLowerCase().trim();
+        const title = (m.title || '').toLowerCase().trim();
+        return role !== 'prospective' && role !== 'applicant' && role !== 'candidate' && title !== 'candidate';
+      });
+
       // Production Safety Guard: Strictly filter out QA and test accounts in production environments
       const isProd = (import.meta as any).env?.PROD || process.env.NODE_ENV === 'production';
       if (isProd) {
@@ -1118,6 +1125,11 @@ export default function AdminDashboard() {
 
   // Filtered lists
   const filteredMembers = members.filter(m => {
+    const role = (m.role || '').toLowerCase().trim();
+    const title = (m.title || '').toLowerCase().trim();
+    if (role === 'prospective' || role === 'applicant' || role === 'candidate' || title === 'candidate') {
+      return false;
+    }
     const isProd = (import.meta as any).env?.PROD || process.env.NODE_ENV === 'production';
     if (isProd && isTestUser(m)) return false;
     return (

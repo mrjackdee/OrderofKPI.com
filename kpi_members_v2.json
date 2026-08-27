@@ -13,7 +13,7 @@
     "email": "james.haywood@orderofkpi.org",
     "name": "James Haywood Jr",
     "first_name": "James",
-    "password_hash": "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900",
+    "password_hash": "8360c2586427cb1148f89b649ee9303bd0b8cc2e55d1a23b95d5e7c560e1be25",
     "is_first_login": 0,
     "role": "Membership Committee Chair",
     "title": "2nd Anti-Basileus / Committee Chair",
@@ -274,8 +274,8 @@
     "email": "anthony.jones@orderofkpi.org",
     "name": "Anthony Jones",
     "first_name": "Anthony",
-    "password_hash": "d3ecc5b7fe38ffd3397473362f2c42321fb82deb23083ed13cf6f20320ab6c92",
-    "is_first_login": 1,
+    "password_hash": "4f22294ce550e0065bb6976054771b0ed4803696354e49da5e1837cad1197ed0",
+    "is_first_login": 0,
     "role": "Super Committee",
     "title": "1st Anti-Basileus",
     "is_test_credential": 0
@@ -394,7 +394,7 @@
     "email": "donald.mitchell@orderofkpi.org",
     "name": "Donald Mitchell",
     "first_name": "Donald",
-    "password_hash": "fb4a379d44cab4220bc5596ffa1f8eb9b169ba098d2c98b20d110881c92b9299",
+    "password_hash": "c968be1093658bd11104862b04ad8445c17a48db3a37e5d79656d7a4e449158d",
     "is_first_login": 0,
     "role": "member",
     "title": "",
@@ -838,18 +838,6 @@
     "is_first_login": 0,
     "role": "admin",
     "title": "Administrator",
-    "is_test_credential": 0
-  },
-  "nobody_nonexistent_user@orderofkpi.org": {
-    "email": "nobody_nonexistent_user@orderofkpi.org",
-    "name": "Nobody_nonexistent_user",
-    "first_name": "Nobody_nonexistent_user",
-    "last_name": "",
-    "password_hash": "d267796cc68ca77b78bd57431e246b7991756d255f1a97b9d9b6b55fb8be8856",
-    "is_first_login": 0,
-    "role": "member",
-    "title": "",
-    "financial_status": "active",
     "is_test_credential": 0
   },
   "candidate@gmail.com": {

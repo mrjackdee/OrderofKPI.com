@@ -241,6 +241,12 @@ export default function MemberDirectory() {
   };
 
   const filteredMembers = members.filter(member => {
+    const memberRole = (member.role || '').toLowerCase().trim();
+    const memberTitle = (member.title || '').toLowerCase().trim();
+    if (memberRole === 'prospective' || memberRole === 'applicant' || memberRole === 'candidate' || memberTitle === 'candidate') {
+      return false;
+    }
+
     const isProd = (import.meta as any).env?.PROD || process.env.NODE_ENV === 'production';
     if (isProd && isTestUser(member)) return false;
 

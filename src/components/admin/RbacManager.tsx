@@ -161,8 +161,14 @@ export default function RbacManager({ members, onMembersUpdated, adminEmail }: R
       const email = (m.email || '').toLowerCase();
       const name = (m.name || '').toLowerCase();
       const title = (m.title || '').toLowerCase();
+      const role = (m.role || '').toLowerCase();
       const roles = m.roles && m.roles.length > 0 ? m.roles : [m.role || 'member'];
       
+      // Exclude candidate applicants / prospective accounts from Member RBAC
+      if (role === 'prospective' || role === 'applicant' || role === 'candidate' || title === 'candidate') {
+        return false;
+      }
+
       const searchMatch = !userSearch || 
         email.includes(userSearch.toLowerCase()) || 
         name.includes(userSearch.toLowerCase()) || 
