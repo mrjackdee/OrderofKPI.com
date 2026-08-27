@@ -515,7 +515,7 @@ export default function MemberPortal() {
               icon: Award,
               path: '/candidate-voting-report',
               color: 'bg-gold text-ivy',
-              roles: ['admin', 'Membership Committee Chair', 'Membership Intake Chair', 'brian.johnson@orderofkpi.org']
+              roles: ['admin', 'officer', 'Membership Committee Chair', 'Membership Intake Chair', 'james.haywood@orderofkpi.org', 'brian.johnson@orderofkpi.org']
             }
           ].filter(tool => {
             if (tool.title === 'FY27 Candidate Voting Report') {

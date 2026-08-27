@@ -101,9 +101,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         if (role === userRole) return true;
         if (role === 'officer' && isOfficer) return true;
         if (role === 'member' && normUser.role !== 'applicant' && normUser.role !== 'prospective') return true;
-        if ((role === 'Membership Committee' || role === 'membership_intake') && isCommittee && committeeFeatureActive) return true;
-        if ((role === 'Membership Committee Chair' || role === 'Membership Intake Chair' || role === 'membership_chair') && (isChair || normEmail === 'james.haywood@orderofkpi.org') && committeeFeatureActive) return true;
+        if ((role === 'Membership Committee' || role === 'membership_intake') && isCommittee) return true;
+        if ((role === 'Membership Committee Chair' || role === 'Membership Intake Chair' || role === 'membership_chair') && (isChair || normEmail === 'james.haywood@orderofkpi.org')) return true;
         if ((role === 'brian' || role === 'brian.johnson@orderofkpi.org') && normEmail === 'brian.johnson@orderofkpi.org') return true;
+        if ((role === 'james' || role === 'james.haywood@orderofkpi.org') && normEmail === 'james.haywood@orderofkpi.org') return true;
         if (role === 'Super Committee Chair') return true;
         if (role === normEmail) return true;
         return false;
