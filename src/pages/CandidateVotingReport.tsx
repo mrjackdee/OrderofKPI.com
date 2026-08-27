@@ -59,15 +59,11 @@ export default function CandidateVotingReport() {
     committeeRoles: userCommitteeRoles
   });
 
-  const isAdmin = normUser.role === 'admin' || normEmail === 'admin@orderofkpi.org' || normEmail === 'qa.admin@orderofkpi.org';
-  const isMembershipIntakeChair = 
-    userRole === 'Membership Committee Chair' || 
-    userRole === 'Membership Intake Chair' || 
-    isCommitteeChair('membership_intake', normUser) || 
-    normEmail === 'james.haywood@orderofkpi.org';
+  const isAdmin = normUser.role === 'admin' || normEmail === 'admin@orderofkpi.org' || normEmail === 'qa.admin@orderofkpi.org' || normEmail === 'info@kpi2012.org';
+  const isJames = normEmail === 'james.haywood@orderofkpi.org';
   const isBrian = normEmail === 'brian.johnson@orderofkpi.org';
   
-  const hasAccess = isAdmin || isMembershipIntakeChair || isBrian;
+  const hasAccess = isAdmin || isJames || isBrian;
 
   if (!hasAccess) {
     return <Navigate to="/member-portal" replace />;

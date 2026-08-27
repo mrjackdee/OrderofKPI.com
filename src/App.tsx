@@ -99,7 +99,7 @@ export default function App() {
           <Route path="dean-voting-audit" element={<ProtectedRoute allowedRoles={['admin']}><DeanVotingAuditDashboard /></ProtectedRoute>} />
           <Route path="candidate-voting" element={<ProtectedRoute><CandidateVotingForm /></ProtectedRoute>} />
           <Route path="candidate-voting-audit" element={<ProtectedRoute allowedRoles={['admin']}><CandidateVotingAuditDashboard /></ProtectedRoute>} />
-          <Route path="candidate-voting-report" element={<ProtectedRoute allowedRoles={['admin', 'officer', 'Membership Committee Chair', 'Membership Intake Chair', 'james.haywood@orderofkpi.org', 'brian.johnson@orderofkpi.org']}><CandidateVotingReport /></ProtectedRoute>} />
+          <Route path="candidate-voting-report" element={<ProtectedRoute allowedRoles={['admin', 'james.haywood@orderofkpi.org', 'brian.johnson@orderofkpi.org']}><CandidateVotingReport /></ProtectedRoute>} />
           <Route path="governance-archives" element={<ProtectedRoute><GovernanceArchives /></ProtectedRoute>} />
           <Route path="privacy-policy" element={<PrivacyPolicy />} />
           <Route path="terms-of-service" element={<TermsOfService />} />
